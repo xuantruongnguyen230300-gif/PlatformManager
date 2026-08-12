@@ -72,6 +72,8 @@ function mapImportResultDto(dto: CsvImportResultDto): IImportResult {
     SuccessCount: dto.SuccessCount,
     ErrorCount: dto.ErrorCount,
     CriteriaCreatedCount: dto.CriteriaCreatedCount,
+    GroupsCreatedCount: dto.GroupsCreatedCount,
+    OwnersCreatedCount: dto.OwnersCreatedCount,
     Errors: dto.Errors.map((e) => ({ RowNumber: e.RowNumber, Code: e.Code, Message: e.Message }))
   };
 }

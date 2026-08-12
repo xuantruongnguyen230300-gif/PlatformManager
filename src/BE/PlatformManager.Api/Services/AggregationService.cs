@@ -416,11 +416,15 @@ public class AggregationService(AppDbContext db)
                 .ToListAsync(ct);
 
             var criteriaIds = records.Select(r => r.CriteriaId).Distinct().ToList();
-            // Chỉ tiêu có thể đã bị soft-delete sau đó — vẫn phải hiển thị lịch sử.
-            var criteriaMap = await db.Criteria.IgnoreQueryFilters().Include(c => c.Group)
-                .Where(c => criteriaIds.Contains(c.Id))
-                .AsNoTracking()
-                .ToDictionaryAsync(c => c.Id, ct);
+            // Chỉ tiêu có thể đã bị soft-delete sau đó — vẫn phải hiển thị lịch sử, NHƯNG chỉ khi
+            // đang xem đúng LỊCH SỬ (năm khác/period cụ thể). Ở trạng thái Live (năm hiện tại +
+            // "Tất cả"), một chỉ tiêu vừa bị soft-delete phải BIẾN MẤT khỏi grid ngay — đúng rule
+            // đã chốt ở spec/danh-muc-dti/business-rules.md mục 1.3 ("Không xuất hiện trong danh
+            // sách... khi tạo/sửa kỳ hiện tại"). Dùng query filter mặc định (IsDeleted=false) khi
+            // isLive, chỉ IgnoreQueryFilters() khi thực sự xem lịch sử.
+            var criteriaQuery = db.Criteria.Include(c => c.Group).Where(c => criteriaIds.Contains(c.Id));
+            if (!isLive) criteriaQuery = criteriaQuery.IgnoreQueryFilters();
+            var criteriaMap = await criteriaQuery.AsNoTracking().ToDictionaryAsync(c => c.Id, ct);
 
             rows = records
                 .Select(a => MapRow(a, criteriaMap.GetValueOrDefault(a.CriteriaId), ownerMap, isLive))

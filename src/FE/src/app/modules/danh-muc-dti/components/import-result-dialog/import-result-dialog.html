@@ -13,6 +13,12 @@
         @if (r.CriteriaCreatedCount > 0) {
           — đã tự tạo <b>{{ r.CriteriaCreatedCount }}</b> chỉ tiêu mới.
         }
+        @if (r.GroupsCreatedCount > 0) {
+          — đã tự tạo <b>{{ r.GroupsCreatedCount }}</b> nhóm mới.
+        }
+        @if (r.OwnersCreatedCount > 0) {
+          — đã tự tạo <b>{{ r.OwnersCreatedCount }}</b> người phụ trách mới.
+        }
       </p>
       @if (errorRows().length > 0) {
         <ul>

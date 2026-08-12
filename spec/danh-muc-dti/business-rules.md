@@ -184,13 +184,13 @@ mã hiển thị trên báo cáo lịch sử, cần thiết kế snapshot riêng
 | --- | --- | --- | --- |
 | Mã | `Criteria` | `Code` | Khoá để match `Criteria` đã có trong danh mục (theo `Code`, trong tập chưa xoá mềm) |
 | Chỉ tiêu | `Criteria` | `Name` | Chỉ dùng khi **tạo `Criteria` mới** — nếu `Code` đã tồn tại, **không** ghi đè `Name` hiện có qua import **[SUY LUẬN]** (tránh import vô tình sửa danh mục ngoài ý muốn — sửa `Name` nên đi qua CRUD tường minh ở tab "Chỉ tiêu") |
-| Nhóm | `Criteria` | `GroupId` | Resolve theo tên nhóm khớp `CriteriaGroup.Name` — nếu không khớp nhóm nào đã seed → **lỗi dòng đó**, không tự tạo `CriteriaGroup` mới (khớp mục 5 câu hỏi #4 đã chốt: không CRUD nhóm ở màn này) |
+| Nhóm | `Criteria` | `GroupId` | Resolve theo tên nhóm khớp `CriteriaGroup.Name` — **✅ Đã chốt (2026-08-12 vòng 3)**: nếu không khớp nhóm nào đã có → **tự động tạo `CriteriaGroup` mới** (cùng tinh thần "hứng đủ dữ liệu, không mất data" đã áp dụng cho `Criteria` ở câu #5), map `Name` ← tên nhóm trong file, `Code` tự sinh (số nguyên lớn nhất trong các `Code` hiện có + 1, vì file không có cột mã nhóm riêng), `DisplayOrder` nối vào cuối. Đây là **thay đổi quyết định** so với bản trước (từng suy luận "báo lỗi, không tự tạo") — xem mục 5 câu hỏi #10 |
 | Điểm tối đa | `Criteria` | `MaxScore` | Tương tự `Name` — chỉ áp dụng khi tạo `Criteria` mới |
 | Tự đánh giá | `CriteriaAssessment` (kỳ import) | `SelfScore` | **✅ Đã chốt: ghi đè theo đúng nội dung file** — xem quyết định ở dưới (không còn tách biệt "field tĩnh") |
 | Thẩm định | `CriteriaAssessment` (kỳ import) | `VerifiedScore` | Tương tự — ghi đè theo file |
 | Chênh lệch | — | *(không lưu cột riêng)* | Chỉ dùng **cross-check**: nếu khác `Tự đánh giá - Thẩm định` tính lại → cảnh báo dòng đó, không chặn import **[SUY LUẬN]** |
 | Trạng thái | `CriteriaAssessment` (kỳ import) | `Status` | Ghi đè theo file — tương tự |
-| Phụ trách | `CriteriaAssessment` (kỳ import) | `OwnerId` | Cột là **text tên người**, field DB là FK `AppUser.Id` — ghi đè theo file, nhưng cách resolve text → `AppUser` (theo `FullName`? xử lý sao khi trùng tên/không tìm thấy?) **chưa rõ**, xem câu hỏi mở #8 |
+| Phụ trách | `CriteriaAssessment` (kỳ import) | `OwnerId` | Cột là **text tên người**, field DB là FK `AppUser.Id` — ghi đè theo file. **✅ Đã chốt (2026-08-12 vòng 3)**: resolve theo `AppUser.FullName` khớp chính xác (trim); **chưa từng có** `AppUser` nào tên này → **tự động tạo mới**; **đã có nhưng trùng tên ≥2 user** (ambiguous, không rõ chọn ai) → giữ `OwnerId = null`, KHÔNG tự đoán/tự tạo thêm bản trùng. Xem mục 5 câu hỏi #8 |
 | Hạn xử lý | `CriteriaAssessment` (kỳ import) | `Deadline` | Ghi đè theo file |
 | Minh chứng/Ghi chú | `CriteriaEvidence` (gắn vào `CriteriaAssessment` kỳ import) | `Content` (tách theo dòng bắt đầu `"*"`, đúng rule đã có ở `doc/ERD/ERD.md` mục 5) | **Không** map vào `CriteriaAssessment.Note` — đó là "Ghi chú tuần" tự do, khái niệm khác; mẫu file hiện không có cột riêng cho "Ghi chú tuần" nên field này để trống sau import, chỉ điền được qua nhập tay (mục 2.3) |
 | *(không có trong mẫu — "Tiến độ %")* | `CriteriaAssessment` (kỳ import) | `ProgressPercent` | Mẫu CSV **không có cột % tiến độ tuần** — đề xuất tính theo đúng công thức seed đã có ở `doc/ERD/ERD.md` (`ProgressPercent = SelfScore / MaxScore × 100`, kẹp `[0,100]`) **[SUY LUẬN]**; nếu mẫu Excel thật có cột riêng, ưu tiên đọc trực tiếp thay vì suy ra |
@@ -438,26 +438,52 @@ Câu hỏi cụ thể: xem mục 5.
    `doc/ERD/ERD.md` mục "Câu hỏi còn mở",
    `spec/dashboard-dti-weekly/business-rules.md` mục 6) — placeholder,
    không tự bịa role.
-8. **Cách resolve cột "Phụ trách" (text tên người) sang `OwnerId`
-   (FK `AppUser`) khi import** — match theo `FullName` chính xác? Xử lý ra
-   sao khi trùng tên hoặc không tìm thấy user nào khớp (bỏ qua field, báo
-   lỗi dòng, hay tạo `AppUser` mới — nhiều khả năng KHÔNG nên tự tạo user
-   qua import vì liên quan tới auth, nhưng cần người dùng xác nhận)? Xem
-   mục 2.2.
+8. **✅ Đã chốt (2026-08-12 vòng 3)** — xem mục "Đã chốt (2026-08-12, vòng 3)"
+   bên dưới.
 9. **Mẫu file Import thật (Excel) có cột ngày riêng cho kỳ báo cáo không?**
    `doc/ERD/example_db_ver1.csv` hiện tại **không có** cột ngày — mục 2.1
    tạm mặc định dùng ngày hệ thống lúc import làm phần ngày của `CreatedAt`.
    Cần xác nhận lại khi có mẫu Excel chính thức (có thể khác cấu trúc CSV
    mẫu ban đầu).
-10. **[MỚI, phát sinh từ câu #5 đã chốt]** Khi tự động tạo `Criteria` mới
-    từ `Code` lạ, nếu tên nhóm ở cột "Nhóm" trong file **cũng không khớp**
-    bất kỳ `CriteriaGroup.Name` nào đã seed (nhóm lạ, không chỉ mã lạ) —
-    xử lý sao? Vì câu #3 đã chốt "KHÔNG CRUD `CriteriaGroup` ở màn này",
-    đề xuất **[SUY LUẬN]**: báo lỗi/liệt kê riêng dòng đó (không tự tạo
-    `CriteriaGroup` mới ngầm, khác tinh thần "hứng đủ dữ liệu" áp dụng cho
-    `Criteria` ở câu #5) — nhưng đây là suy luận theo tính nhất quán với
-    câu #3, **chưa được người dùng xác nhận trực tiếp** cho đúng trường
-    hợp "nhóm lạ" này. Xem mục 2.2.
+10. **✅ Đã chốt (2026-08-12 vòng 3)** — xem mục "Đã chốt (2026-08-12, vòng 3)"
+    bên dưới.
+
+### ✅ Đã chốt (2026-08-12, vòng 3) — Import tự tạo dữ liệu nền còn thiếu (Nhóm, Người phụ trách)
+
+> **Quyết định người dùng (nguyên văn)**: *"nếu CriteriaGroup chưa tồn tại
+> thì hãy tạo mới cho dòng đó vào CriteriaGroup"*, mở rộng thành nguyên tắc
+> chung: *"khi import thì thông tin các bảng liên quan nếu chưa có sẽ được
+> thêm mới đúng theo thông tin được import"*. Đây là **thay đổi quyết định**
+> so với suy luận trước đó ở câu hỏi #10 (từng nghiêng về báo lỗi để tránh
+> tạo nhóm rác do lỗi chính tả) — người dùng chấp nhận đánh đổi đó để ưu
+> tiên tuyệt đối "không mất dữ liệu khi import", cùng tinh thần đã chốt cho
+> `Criteria` ở câu #5.
+
+15. **Nhóm lạ (câu hỏi #10 cũ)**: khi tạo `Criteria` mới mà tên ở cột "Nhóm"
+    không khớp `CriteriaGroup.Name` nào đã có → **tự động tạo `CriteriaGroup`
+    mới** trong cùng giao dịch import (không còn báo lỗi/bỏ qua dòng đó).
+    `Code` của nhóm mới tự sinh (số nguyên lớn nhất trong các `Code` hiện có
+    + 1) vì file CSV không có cột mã nhóm riêng; `DisplayOrder` nối vào cuối
+    danh sách nhóm hiện có. **Rủi ro đã biết, được người dùng chấp nhận**:
+    tên nhóm gõ sai chính tả giữa các lần import sẽ tạo nhóm trùng/gần trùng
+    thay vì báo lỗi rõ ràng — không có cơ chế fuzzy-match, chỉ so khớp chính
+    xác (trim, không phân biệt hoa/thường). Xem mục 2.2.
+16. **Phụ trách không khớp `AppUser` nào (câu hỏi #8 cũ)**: resolve theo
+    `AppUser.FullName` khớp chính xác — **chưa từng có** user nào tên này
+    → **tự động tạo `AppUser` mới** (chỉ có `FullName`, không có field auth
+    nào khác — entity `AppUser` ở bản này **không phải** ASP.NET Core
+    Identity thật, xem comment tại `Entities/AppUser.cs`); **đã có nhưng
+    trùng tên ≥2 user** (ambiguous) → **giữ nguyên hành vi cũ**, để
+    `OwnerId = null`, không tự đoán chọn user nào (khác trường hợp "chưa
+    có" — trường hợp này dữ liệu đã tồn tại, chỉ là không rõ ý người nhập).
+    Xem mục 2.2.
+    **Lưu ý khi nâng cấp lên ASP.NET Core Identity thật** (theo hướng đã
+    chốt ở `doc/ERD/ERD.md` mục "Quyết định đã CHỐT" #3, chưa triển khai ở
+    bản này): quyết định tự-tạo-user-từ-text-tên ở đây **chỉ phù hợp cho
+    bản demo** hiện tại (không có password/email/login) — khi `AppUser`
+    chuyển sang `IdentityUser<Guid>` thật, cần xem lại rule này (không thể
+    tự tạo tài khoản đăng nhập hợp lệ chỉ từ 1 cột tên trong CSV, cần
+    email tối thiểu + quy trình cấp mật khẩu/kích hoạt riêng).
 
 ### ✅ Đã chốt (2026-08-12, vòng 2) — 4 câu hỏi phát sinh từ việc bỏ `AssessmentPeriod` NAY ĐÃ CÓ QUYẾT ĐỊNH
 

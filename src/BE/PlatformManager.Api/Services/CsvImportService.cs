@@ -73,16 +73,32 @@ public class CsvImportService(AppDbContext db, AssessmentUpsertService upsertSer
                 if (!criteriaByCode.TryGetValue(code, out var criteria))
                 {
                     // Code lạ -> tự động tạo Criteria mới (đã chốt, xem business-rules mục 2.2 câu #5)
-                    if (string.IsNullOrWhiteSpace(groupName) || !groupByName.TryGetValue(groupName, out var group))
+                    if (string.IsNullOrWhiteSpace(groupName))
                     {
                         result.Errors.Add(new CsvImportRowErrorDto
                         {
                             RowNumber = rowNumber,
                             Code = code,
-                            Message = $"Nhóm '{groupName}' không khớp CriteriaGroup nào đã seed — không tự tạo nhóm mới (Code lạ bị bỏ qua).",
+                            Message = "Thiếu cột 'Nhóm' — không thể tạo chỉ tiêu mới.",
                         });
                         result.ErrorCount++;
                         continue;
+                    }
+                    if (!groupByName.TryGetValue(groupName, out var group))
+                    {
+                        // Nhóm lạ -> tự động tạo CriteriaGroup mới (đã chốt, xem business-rules mục 2.2 câu #10)
+                        group = new CriteriaGroup
+                        {
+                            Id = Guid.NewGuid(),
+                            Code = NextGroupCode(groupByName.Values),
+                            Name = groupName,
+                            DisplayOrder = groupByName.Values.Count > 0 ? groupByName.Values.Max(g => g.DisplayOrder) + 1 : 1,
+                            CreatedAt = DateTimeOffset.UtcNow,
+                        };
+                        db.CriteriaGroups.Add(group);
+                        groupByName[groupName] = group;
+                        result.GroupsCreatedCount++;
+                        await db.SaveChangesAsync(ct);
                     }
                     if (!TryParseDecimal(maxScoreRaw, out var maxScore) || maxScore <= 0)
                     {
@@ -119,10 +135,22 @@ public class CsvImportService(AppDbContext db, AssessmentUpsertService upsertSer
                 Guid? ownerId = null;
                 if (!string.IsNullOrWhiteSpace(ownerRaw))
                 {
-                    // Giả định đã tự quyết định (không chặn): match chính xác theo AppUsers.FullName;
-                    // không khớp hoặc trùng tên nhiều user -> để OwnerId=null, KHÔNG tự tạo AppUser mới.
-                    if (userByName.TryGetValue(ownerRaw, out var matchedUser) && matchedUser != null)
-                        ownerId = matchedUser.Id;
+                    // Match chính xác theo AppUsers.FullName (đã chốt, xem business-rules mục 2.2 câu #8):
+                    // - Trùng tên nhiều user đã có sẵn (ambiguous) -> để OwnerId=null, KHÔNG tự đoán.
+                    // - Chưa từng có AppUser nào tên này -> tự tạo mới.
+                    if (userByName.TryGetValue(ownerRaw, out var matchedUser))
+                    {
+                        if (matchedUser != null) ownerId = matchedUser.Id;
+                    }
+                    else
+                    {
+                        var newUser = new AppUser { Id = Guid.NewGuid(), FullName = ownerRaw };
+                        db.AppUsers.Add(newUser);
+                        userByName[ownerRaw] = newUser;
+                        ownerId = newUser.Id;
+                        result.OwnersCreatedCount++;
+                        await db.SaveChangesAsync(ct);
+                    }
                 }
 
                 DateOnly? deadline = DateOnly.TryParse(deadlineRaw, CultureInfo.InvariantCulture, DateTimeStyles.None, out var d) ? d : null;
@@ -166,6 +194,18 @@ public class CsvImportService(AppDbContext db, AssessmentUpsertService upsertSer
         }
 
         return result;
+    }
+
+    /// <summary>Mã nhóm mới = số nguyên lớn nhất trong các Code hiện có (nếu parse được) + 1 — CSV không có cột mã nhóm riêng.</summary>
+    private static string NextGroupCode(IEnumerable<CriteriaGroup> existingGroups)
+    {
+        var maxNumeric = existingGroups
+            .Select(g => int.TryParse(g.Code, out var n) ? n : (int?)null)
+            .Where(n => n.HasValue)
+            .Select(n => n!.Value)
+            .DefaultIfEmpty(0)
+            .Max();
+        return (maxNumeric + 1).ToString();
     }
 
     private static bool TryParseDecimal(string? raw, out decimal value)

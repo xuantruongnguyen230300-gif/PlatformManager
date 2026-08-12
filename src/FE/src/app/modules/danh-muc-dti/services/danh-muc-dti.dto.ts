@@ -77,6 +77,8 @@ export interface CsvImportResultDto {
   SuccessCount: number;
   ErrorCount: number;
   CriteriaCreatedCount: number;
+  GroupsCreatedCount: number;
+  OwnersCreatedCount: number;
   Errors: CsvImportRowErrorDto[];
 }
 

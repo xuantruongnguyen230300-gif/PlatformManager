@@ -80,6 +80,8 @@ export interface IImportResult {
   SuccessCount: number;
   ErrorCount: number;
   CriteriaCreatedCount: number;
+  GroupsCreatedCount: number;
+  OwnersCreatedCount: number;
   Errors: IImportRowError[];
 }
 
