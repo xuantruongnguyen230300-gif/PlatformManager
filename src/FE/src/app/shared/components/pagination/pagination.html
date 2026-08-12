@@ -1,0 +1,16 @@
+@if (total() > 0) {
+  <div class="pagination no-print">
+    <label>
+      Dòng/trang
+      <select [value]="pageSize()" (change)="onPageSizeChange($any($event.target).value)">
+        @for (opt of pageSizeOptions(); track opt) {
+          <option [value]="opt" [selected]="opt === pageSize()">{{ opt }}</option>
+        }
+      </select>
+    </label>
+    <span class="pg-info">{{ rangeStart() }}–{{ rangeEnd() }}/{{ total() }}</span>
+    <button type="button" class="pg-btn" [disabled]="page() <= 1" (click)="goPrev()">‹ Trước</button>
+    <span class="pg-info">Trang {{ page() }}/{{ totalPages() }}</span>
+    <button type="button" class="pg-btn" [disabled]="page() >= totalPages()" (click)="goNext()">Sau ›</button>
+  </div>
+}

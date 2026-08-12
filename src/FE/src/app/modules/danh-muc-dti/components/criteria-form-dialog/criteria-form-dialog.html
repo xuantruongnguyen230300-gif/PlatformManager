@@ -1,0 +1,46 @@
+<dialog #dialogRef class="form-dialog" (close)="onNativeClose()">
+  <div class="title">
+    <h2>{{ title }}</h2>
+    <button type="button" class="btn" (click)="onCancel()">Đóng</button>
+  </div>
+
+  <div class="form-row">
+    <label for="cfCode">Mã <span class="bad">*</span></label>
+    <input id="cfCode" maxlength="20" placeholder="vd 1.1" [value]="code()" (input)="code.set($any($event.target).value)" />
+  </div>
+  <div class="form-row">
+    <label for="cfName">Tên chỉ tiêu <span class="bad">*</span></label>
+    <textarea id="cfName" placeholder="Nhập tên đầy đủ chỉ tiêu..." [value]="name()" (input)="name.set($any($event.target).value)"></textarea>
+  </div>
+  <div class="form-grid">
+    <div class="form-row">
+      <label for="cfGroup">Nhóm <span class="bad">*</span></label>
+      <select id="cfGroup" [value]="groupId()" (change)="groupId.set($any($event.target).value)">
+        @for (g of groups(); track g.Id) {
+          <option [value]="g.Id" [selected]="g.Id === groupId()">{{ g.Code }}. {{ g.Name }}</option>
+        }
+      </select>
+    </div>
+    <div class="form-row">
+      <label for="cfMax">Điểm tối đa <span class="bad">*</span></label>
+      <input
+        id="cfMax"
+        type="number"
+        min="0.01"
+        step="0.01"
+        placeholder="vd 10"
+        [value]="maxScore() ?? ''"
+        (input)="onMaxScoreInput($any($event.target).value)"
+      />
+    </div>
+  </div>
+
+  @if (error()) {
+    <div class="form-error">{{ error() }}</div>
+  }
+
+  <div class="dialog-actions">
+    <button type="button" class="btn" (click)="onCancel()">Huỷ</button>
+    <button type="button" class="btn primary" (click)="onSubmit()">Lưu chỉ tiêu</button>
+  </div>
+</dialog>

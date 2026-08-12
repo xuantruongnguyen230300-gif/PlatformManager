@@ -1,0 +1,72 @@
+<app-table-scroll [fillHeight]="true">
+  <table class="dti-grid-table">
+    <thead>
+      <tr>
+        <th style="width:5%">Mã</th>
+        <th style="width:16%">Tên</th>
+        <th style="width:8%">Nhóm</th>
+        <th class="num" style="width:6%">Điểm tối đa</th>
+        <th class="num" style="width:6%">Tự đánh giá</th>
+        <th class="num" style="width:6%">Thẩm định</th>
+        <th style="width:7%">Trạng thái</th>
+        <th style="width:7%">Phụ trách</th>
+        <th style="width:6%">Hạn xử lý</th>
+        <th class="num" style="width:9%">Tiến độ %</th>
+        <th style="width:14%">Ghi chú</th>
+        <th style="width:10%">Hành động</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (row of rows(); track row.AssessmentId ?? row.CriteriaId) {
+        <tr>
+          <td>{{ row.Code }}</td>
+          <td>{{ row.Name }}</td>
+          <td>{{ row.GroupCode }}. {{ row.GroupName }}</td>
+          <td class="num">{{ formatScore(row.MaxScore) }}</td>
+          <td class="num">{{ formatScore(row.SelfScore) }}</td>
+          <td class="num">{{ formatScore(row.VerifiedScore) }}</td>
+          <td>
+            @if (row.Status) {
+              <span class="badge bwork">{{ row.Status }}</span>
+            } @else {
+              <span class="muted">—</span>
+            }
+          </td>
+          <td>{{ row.OwnerName || '—' }}</td>
+          <td>{{ formatDate(row.Deadline) }}</td>
+          <td class="num">
+            <app-editable-cell
+              [value]="row.ProgressPercent"
+              [editable]="isEditable()"
+              [editing]="isEditingCell(row, 'progress')"
+              type="number"
+              suffix="%"
+              (editStart)="onCellStart(row.CriteriaId, 'progress')"
+              (confirm)="onCellConfirm(row.CriteriaId, 'progress', $event)"
+              (cancel)="cellEditCancel.emit()"
+            ></app-editable-cell>
+          </td>
+          <td>
+            <app-editable-cell
+              [value]="row.Note"
+              [editable]="isEditable()"
+              [editing]="isEditingCell(row, 'note')"
+              type="text"
+              (editStart)="onCellStart(row.CriteriaId, 'note')"
+              (confirm)="onCellConfirm(row.CriteriaId, 'note', $event)"
+              (cancel)="cellEditCancel.emit()"
+            ></app-editable-cell>
+          </td>
+          <td>
+            @if (isEditable()) {
+              <button type="button" class="action-btn" (click)="edit.emit(row.CriteriaId)">Sửa</button>
+              <button type="button" class="action-btn danger" (click)="delete.emit(row.CriteriaId)">Xoá</button>
+            } @else {
+              <span class="muted">—</span>
+            }
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</app-table-scroll>

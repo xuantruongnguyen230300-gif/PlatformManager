@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//d//**)",
+      "Bash(find 'C:\\\\Users\\\\truong.nguyenxuan' -maxdepth 6 -iname *plugin*)"
+    ]
+  }
+}

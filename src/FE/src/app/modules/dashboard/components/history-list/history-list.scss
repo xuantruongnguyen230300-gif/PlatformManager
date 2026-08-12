@@ -1,0 +1,17 @@
+.history {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  max-height: 240px;
+  overflow: auto;
+}
+
+.histrow {
+  display: grid;
+  grid-template-columns: 110px 1fr 80px;
+  gap: var(--sp-3);
+  align-items: center;
+  padding: var(--sp-2);
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+}

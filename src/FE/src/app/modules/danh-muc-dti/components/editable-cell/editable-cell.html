@@ -1,0 +1,29 @@
+@if (editing()) {
+  <div class="cell-edit">
+    <input
+      #cellInput
+      class="cell-input"
+      [class.progress-input]="type() === 'number'"
+      [class.note-input]="type() === 'text'"
+      [type]="type() === 'number' ? 'text' : 'text'"
+      [attr.inputmode]="type() === 'number' ? 'decimal' : null"
+      [value]="value() ?? ''"
+      (keydown)="onKeydown($event, $any($event.target).value)"
+    />
+    <button
+      type="button"
+      class="cell-icon-btn ok"
+      title="Lưu"
+      (click)="confirm.emit($any(cellInput).value)"
+    >✓</button>
+    <button type="button" class="cell-icon-btn cancel" title="Huỷ" (click)="cancel.emit()">✗</button>
+  </div>
+} @else {
+  <span
+    class="cell-view"
+    [class.cell-editable]="editable()"
+    [attr.tabindex]="editable() ? 0 : null"
+    (click)="onStart()"
+    (keydown.enter)="onStart()"
+  >{{ displayValue() }}</span>
+}

@@ -1,0 +1,52 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Port từ doc/Prototype/danh-muc-dti.html — cột "Mã" sticky trái + "Hành động"
+   sticky phải, tier z-index theo mục 6.11 của spec/danh-muc-dti/ui-spec.md:
+   góc header (5) > header thường (4, đặt ở styles.scss global cho mọi `th`) >
+   cột sticky body trái/phải (2) > ô thường (auto). */
+
+.dti-grid-table {
+  min-width: 1900px;
+
+  th:first-child,
+  td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: #fff;
+  }
+
+  th:first-child {
+    z-index: 5;
+    background: #f8fafc;
+  }
+
+  th:last-child,
+  td:last-child {
+    position: sticky;
+    right: 0;
+    z-index: 2;
+    background: #fff;
+    box-shadow: -2px 0 6px rgba(23, 39, 67, 0.08);
+  }
+
+  th:last-child {
+    z-index: 5;
+    background: #f8fafc;
+  }
+
+  tbody tr:nth-child(even) td:first-child,
+  tbody tr:nth-child(even) td:last-child {
+    background: #f8fafc;
+  }
+
+  tbody tr:hover td:first-child,
+  tbody tr:hover td:last-child {
+    background: var(--bg);
+  }
+}

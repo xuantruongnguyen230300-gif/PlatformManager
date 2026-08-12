@@ -1,0 +1,23 @@
+<div class="topbar no-print">
+  <div class="topin">
+    <button
+      class="btn sidebar-hamburger no-print"
+      type="button"
+      (click)="openDrawer()"
+      aria-label="Mở menu điều hướng"
+      aria-controls="sidebar"
+    >
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" width="20" height="20">
+        <line x1="3" y1="5.5" x2="17" y2="5.5" />
+        <line x1="3" y1="10" x2="17" y2="10" />
+        <line x1="3" y1="14.5" x2="17" y2="14.5" />
+      </svg>
+    </button>
+    <div class="logo">
+      <h1>{{ title() }}</h1>
+      @if (subtitle()) {
+        <small>{{ subtitle() }}</small>
+      }
+    </div>
+  </div>
+</div>

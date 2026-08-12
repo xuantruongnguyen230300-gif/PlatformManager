@@ -1,0 +1,27 @@
+<section class="kpis">
+  <div class="card kpi">
+    <div class="label">{{ progressLabel() }}</div>
+    <div class="value">{{ formatPercent(kpi().OverallProgress) }}</div>
+    <div class="sub">Bình quân gia quyền theo điểm</div>
+  </div>
+  <div class="card kpi">
+    <div class="label">{{ deltaLabel() }}</div>
+    <div class="value" [class]="deltaClass()">{{ formatDelta(kpi().Delta) }}</div>
+    <div class="sub">{{ kpi().PreviousPeriodLabel || 'Chưa có kỳ trước' }}</div>
+  </div>
+  <div class="card kpi">
+    <div class="label">Chỉ tiêu tăng</div>
+    <div class="value good">{{ kpi().Up }}</div>
+    <div class="sub">Có tiến bộ so với kỳ trước</div>
+  </div>
+  <div class="card kpi">
+    <div class="label">Không tăng</div>
+    <div class="value warn">{{ kpi().Flat }}</div>
+    <div class="sub">Cần chú ý theo dõi</div>
+  </div>
+  <div class="card kpi">
+    <div class="label">Hoàn thành 100%</div>
+    <div class="value">{{ kpi().Done }}/{{ kpi().TotalCriteria }}</div>
+    <div class="sub">Số chỉ tiêu đạt đủ tiến độ</div>
+  </div>
+</section>

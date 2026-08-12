@@ -1,0 +1,63 @@
+.weekbar {
+  display: flex;
+  gap: var(--sp-3);
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: var(--sp-5);
+
+  input:disabled {
+    background: var(--bg);
+    color: var(--muted);
+    cursor: not-allowed;
+  }
+}
+
+.weekbar-actions {
+  margin-left: auto;
+  flex: none;
+  display: flex;
+  gap: var(--sp-3);
+}
+
+.segmented {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  flex: none;
+}
+
+.seg-btn {
+  border: 0;
+  background: #fff;
+  padding: var(--sp-2) var(--sp-4);
+  font-weight: 700;
+  font-size: var(--fs-sm);
+  color: var(--muted);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+
+  &:hover {
+    background: var(--bg);
+  }
+
+  &.active {
+    background: var(--brand);
+    color: #fff;
+  }
+
+  & + & {
+    border-left: 1px solid var(--line);
+  }
+}
+
+@media (max-width: 560px) {
+  .weekbar > * {
+    flex: 1;
+  }
+
+  .weekbar-actions {
+    margin-left: 0;
+    width: 100%;
+  }
+}

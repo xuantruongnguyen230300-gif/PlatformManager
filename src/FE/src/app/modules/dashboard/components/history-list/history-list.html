@@ -1,0 +1,17 @@
+<div class="card" style="margin-top:16px">
+  <div class="title">
+    <h2>Lịch sử các kỳ đã lưu</h2>
+    <span class="muted">Các kỳ-tuần có dữ liệu trong năm {{ year() }}</span>
+  </div>
+  <div class="history">
+    @for (item of items(); track item.Value) {
+      <div class="histrow">
+        <span>{{ formatDate(item.Date) }}</span>
+        <span class="num">{{ formatPercent(item.OverallProgress) }}</span>
+        <button type="button" class="btn" (click)="view.emit(item)">Xem</button>
+      </div>
+    } @empty {
+      <span class="muted">Chưa có kỳ nào được lưu trong năm này.</span>
+    }
+  </div>
+</div>

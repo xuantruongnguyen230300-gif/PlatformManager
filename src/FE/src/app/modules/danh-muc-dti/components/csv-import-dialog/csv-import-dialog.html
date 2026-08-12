@@ -1,0 +1,27 @@
+<dialog #dialogRef class="form-dialog" (close)="onNativeClose()">
+  <div class="title">
+    <h2>Import CSV</h2>
+    <button type="button" class="btn" (click)="closed.emit()">Đóng</button>
+  </div>
+
+  <p class="muted">
+    Mẫu cột: Mã, Chỉ tiêu, Nhóm, Điểm tối đa, Tự đánh giá, Thẩm định, Chênh lệch,
+    Trạng thái, Phụ trách, Hạn xử lý, Minh chứng/Ghi chú. Chỉ hỗ trợ <b>.csv</b>.
+  </p>
+
+  <div class="form-row">
+    <label for="csvFile">Chọn file</label>
+    <input id="csvFile" type="file" accept=".csv" (change)="onFileSelected($any($event.target).files[0])" />
+  </div>
+
+  @if (selectedFile()) {
+    <p class="muted">Đã chọn: {{ selectedFile()!.name }}</p>
+  }
+
+  <div class="dialog-actions">
+    <button type="button" class="btn" (click)="closed.emit()">Huỷ</button>
+    <button type="button" class="btn primary" [disabled]="!selectedFile() || loading()" (click)="onSubmit()">
+      {{ loading() ? 'Đang import…' : 'Import' }}
+    </button>
+  </div>
+</dialog>

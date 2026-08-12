@@ -1,0 +1,30 @@
+.page-main {
+  max-width: var(--container-max-width);
+  margin: auto;
+  padding: var(--sp-5);
+}
+
+.grid-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  /* app-criteria-grid-table tự set :host{flex:1;min-height:0} — các phần còn
+     lại (title/notice/filters/muted/app-pagination) giữ flex mặc định (không
+     co giãn), đúng cơ chế "gói bảng trong 1 màn hình" ở mục 6.11 spec. */
+}
+
+.readonly-banner {
+  margin-bottom: 12px;
+}
+
+@media (max-width: 560px) {
+  .page-main {
+    padding: 10px;
+  }
+}
+
+@media print {
+  .grid-card {
+    height: auto !important;
+  }
+}

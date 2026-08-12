@@ -1,0 +1,28 @@
+<dialog #dialogRef class="form-dialog" (close)="onNativeClose()">
+  <div class="title">
+    <h2>Kết quả Import</h2>
+    <button type="button" class="btn" (click)="closed.emit()">Đóng</button>
+  </div>
+
+  @if (result(); as r) {
+    <div class="import-summary">
+      <p>
+        Tổng <b>{{ r.TotalRows }}</b> dòng —
+        <span class="good">{{ r.SuccessCount }} thành công</span>,
+        <span class="bad">{{ r.ErrorCount }} lỗi</span>
+        @if (r.CriteriaCreatedCount > 0) {
+          — đã tự tạo <b>{{ r.CriteriaCreatedCount }}</b> chỉ tiêu mới.
+        }
+      </p>
+      @if (errorRows().length > 0) {
+        <ul>
+          @for (row of errorRows(); track row.RowNumber) {
+            <li class="bad">
+              Dòng {{ row.RowNumber }}{{ row.Code ? ' (' + row.Code + ')' : '' }}: {{ row.Message }}
+            </li>
+          }
+        </ul>
+      }
+    </div>
+  }
+</dialog>

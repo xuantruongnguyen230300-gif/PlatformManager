@@ -1,0 +1,32 @@
+.trend-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.chart-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chart {
+  width: 100%;
+  height: 220px;
+  display: block;
+}
+
+.baseline {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.trend-line {
+  stroke: var(--brand);
+  stroke-width: 2;
+}
+
+.trend-dot {
+  fill: var(--brand);
+}

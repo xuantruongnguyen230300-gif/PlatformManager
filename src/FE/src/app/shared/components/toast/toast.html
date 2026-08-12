@@ -1,0 +1,7 @@
+<div class="toast-stack no-print">
+  @for (item of items(); track item.Id) {
+    <div class="toast" [class]="item.Kind" (click)="dismiss(item.Id)">
+      {{ item.Message }}
+    </div>
+  }
+</div>

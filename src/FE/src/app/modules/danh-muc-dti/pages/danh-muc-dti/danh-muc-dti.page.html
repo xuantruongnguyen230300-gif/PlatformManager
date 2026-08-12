@@ -1,0 +1,108 @@
+<app-topbar title="Danh mục" subtitle="Quản lý chỉ tiêu &amp; đánh giá theo tuần · DTI"></app-topbar>
+
+<main class="page-main">
+  <div class="notice">
+    Đây là nơi <b>duy nhất</b> để nhập/sửa dữ liệu DTI: <b>Import CSV</b> theo mẫu là cách nhập chính; có
+    thể <b>sửa trực tiếp</b> ô "Tiến độ %"/"Ghi chú" ngay trong lưới (bấm vào ô → sửa → ✓ lưu / ✗ huỷ);
+    "+ Thêm chỉ tiêu"/"Sửa"/"Xoá" quản lý danh mục chỉ tiêu. <b>Chỉ sửa được khi đang xem "Tất cả (mới
+    nhất trong năm)" của năm hiện tại</b> — xem dữ liệu năm khác/1 kỳ cụ thể sẽ chuyển sang chỉ đọc. Xem
+    lại kết quả (chỉ đọc, có bộ lọc Tuần/Tháng/Năm) tại <a routerLink="/dashboard">Dashboard</a>.
+  </div>
+
+  <div class="card grid-card" #gridCard [style.height.px]="cardHeightPx()">
+    <div class="title">
+      <h2>Danh mục &amp; Đánh giá theo tuần</h2>
+      <span class="muted">{{ rangeLabel() }} chỉ tiêu</span>
+    </div>
+
+    @if (!isEditable()) {
+      <div class="notice readonly-banner">
+        Đang xem dữ liệu lịch sử — chỉ đọc. Quay lại "Tất cả (mới nhất trong năm)" của năm hiện tại để chỉnh sửa.
+      </div>
+    }
+
+    <div class="filters no-print">
+      <input placeholder="Tìm mã hoặc tên chỉ tiêu..." (input)="onSearchInput($any($event.target).value)" />
+      <select [value]="groupFilter()" (change)="onGroupFilterChange($any($event.target).value)">
+        <option value="" [selected]="groupFilter() === ''">Tất cả nhóm</option>
+        @for (g of groups(); track g.Id) {
+          <option [value]="g.Id" [selected]="g.Id === groupFilter()">{{ g.Code }}. {{ g.Name }}</option>
+        }
+      </select>
+      <select [value]="year()" (change)="onYearChange($any($event.target).value)" title="Chọn năm">
+        @for (y of years(); track y) {
+          <option [value]="y" [selected]="y === year()">{{ y }}</option>
+        }
+      </select>
+      <select [value]="period()" (change)="onPeriodChange($any($event.target).value)" title="Tất cả hoặc 1 kỳ cụ thể trong năm">
+        <option [value]="periodAll" [selected]="period() === periodAll">Tất cả (mới nhất trong năm)</option>
+        @for (opt of periodOptions(); track opt.Value) {
+          <option [value]="opt.Value" [selected]="opt.Value === period()">{{ opt.Label }}</option>
+        }
+      </select>
+
+      @if (isEditable()) {
+        <div class="filters-actions">
+          <button type="button" class="btn" (click)="openCsvDialog()">Import CSV</button>
+          <button type="button" class="btn primary" (click)="openCreateDialog()">+ Thêm chỉ tiêu</button>
+        </div>
+      }
+    </div>
+
+    <p class="muted">
+      Mẫu cột: Mã, Chỉ tiêu, Nhóm, Điểm tối đa, Tự đánh giá, Thẩm định, Chênh lệch, Trạng thái, Phụ trách,
+      Hạn xử lý, Minh chứng/Ghi chú. Chỉ hỗ trợ .csv.
+    </p>
+
+    <app-criteria-grid-table
+      [rows]="rows()"
+      [editingCell]="editingCell()"
+      [isEditable]="isEditable()"
+      (cellEditStart)="onCellEditStart($event)"
+      (cellEditConfirm)="onCellEditConfirm($event)"
+      (cellEditCancel)="onCellEditCancel()"
+      (edit)="openEditDialog($event)"
+      (delete)="openDeleteConfirm($event)"
+    ></app-criteria-grid-table>
+
+    <app-pagination
+      [page]="page()"
+      [pageSize]="pageSize()"
+      [total]="totalCount()"
+      [pageSizeOptions]="pageSizeOptions"
+      (pageChange)="onPageChange($event)"
+      (pageSizeChange)="onPageSizeChange($event)"
+    ></app-pagination>
+  </div>
+
+  <div class="footer">Đây là bản demo — gọi API thật tới backend PlatformManager.</div>
+</main>
+
+<app-criteria-form-dialog
+  [open]="criteriaDialogState() !== null"
+  [groups]="groups()"
+  [editing]="criteriaDialogState()?.editing ?? null"
+  (submit)="onCriteriaSubmit($event)"
+  (closed)="onCriteriaDialogClosed()"
+></app-criteria-form-dialog>
+
+<app-confirm-dialog
+  [open]="confirmDeleteState() !== null"
+  [message]="confirmDeleteState()?.message ?? ''"
+  confirmLabel="Xoá"
+  (confirmed)="onDeleteConfirmed()"
+  (closed)="onDeleteCancel()"
+></app-confirm-dialog>
+
+<app-csv-import-dialog
+  [open]="csvDialogOpen()"
+  [loading]="importLoading()"
+  (imported)="onCsvImport($event)"
+  (closed)="onCsvDialogClosed()"
+></app-csv-import-dialog>
+
+<app-import-result-dialog
+  [open]="importResultDialogOpen()"
+  [result]="importResult()"
+  (closed)="onImportResultClosed()"
+></app-import-result-dialog>

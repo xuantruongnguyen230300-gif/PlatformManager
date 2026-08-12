@@ -1,0 +1,55 @@
+.group-progress-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.groups {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+
+.group-row {
+  display: grid;
+  grid-template-columns: 230px 1fr 90px;
+  gap: var(--sp-3);
+  align-items: center;
+  margin: 0;
+  font-size: 13px;
+}
+
+.group-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bar {
+  height: 9px;
+  background: #edf1f6;
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+  display: block;
+}
+
+.fill {
+  height: 100%;
+  background: var(--brand);
+  border-radius: var(--radius-pill);
+  display: block;
+}
+
+@media (max-width: 980px) {
+  .group-row {
+    grid-template-columns: 140px 1fr 75px;
+  }
+}
+
+@media (max-width: 560px) {
+  .group-row {
+    grid-template-columns: 110px 1fr 68px;
+  }
+}

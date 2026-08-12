@@ -1,0 +1,15 @@
+<div class="card group-progress-card">
+  <div class="title">
+    <h2>Tiến độ theo nhóm</h2>
+    <span class="muted">{{ subtitle() }}</span>
+  </div>
+  <div class="groups">
+    @for (g of groups(); track g.GroupId) {
+      <div class="group-row">
+        <span class="group-name">{{ g.GroupCode }}. {{ g.GroupName }}</span>
+        <span class="bar"><span class="fill" [style.width.%]="g.Progress ?? 0"></span></span>
+        <span class="group-value num">{{ formatPercent(g.Progress) }}</span>
+      </div>
+    }
+  </div>
+</div>

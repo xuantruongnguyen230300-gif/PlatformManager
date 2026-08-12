@@ -1,0 +1,95 @@
+<app-topbar title="Dashboard" subtitle="Theo dõi tiến độ chuyển đổi số · Chỉ xem"></app-topbar>
+
+<main class="page-main">
+  <div class="notice">
+    Màn hình này <b>chỉ hiển thị</b> (không nhập liệu) — xem tiến độ theo tuần, so với kỳ gần nhất,
+    biểu đồ xu hướng và lịch sử các kỳ đã lưu. Có thể chuyển xem theo <b>Tuần</b> hoặc <b>Tháng</b>
+    (tổng hợp trung bình các kỳ-tuần trong tháng) qua bộ lọc bên dưới. Để nhập/cập nhật dữ liệu, vào
+    <a routerLink="/danh-muc/dti">Danh mục &gt; DTI</a>.
+  </div>
+
+  <app-period-toolbar
+    [mode]="mode()"
+    [periodLabel]="periodLabelText()"
+    [weekDate]="weekDate()"
+    [weeksInYear]="weeksInYear()"
+    [years]="years()"
+    [year]="year()"
+    [monthValue]="monthValue()"
+    (modeChange)="onModeChange($event)"
+    (yearChange)="onYearChange($event)"
+    (weekSelect)="onWeekSelect($event)"
+    (monthChange)="onMonthChange($event)"
+    (exportReport)="openReport()"
+  ></app-period-toolbar>
+
+  @if (summary(); as s) {
+    <app-kpi-summary [kpi]="s.Kpi" [mode]="mode()"></app-kpi-summary>
+
+    <section class="layout">
+      <app-group-progress-list [groups]="s.Groups" [subtitle]="groupsSubtitle()"></app-group-progress-list>
+      <app-trend-chart [points]="s.Trend" subtitle="Tiến độ chung"></app-trend-chart>
+    </section>
+
+    <section class="card table-card">
+      <div class="title">
+        <h2>62 chỉ tiêu DTI</h2>
+        <span class="muted">{{ pagedTableRows().length ? (((tablePage() - 1) * tablePageSize()) + 1) + '–' + (((tablePage() - 1) * tablePageSize()) + pagedTableRows().length) : 0 }}/{{ filteredTableRows().length }} chỉ tiêu (tổng {{ s.Table.length }})</span>
+      </div>
+      <div class="filters no-print">
+        <input placeholder="Tìm mã hoặc tên chỉ tiêu..." (input)="onTableSearch($any($event.target).value)" />
+        <select (change)="onTableGroupFilter($any($event.target).value)">
+          <option value="">Tất cả nhóm</option>
+          @for (g of groupFilterOptions(); track g.GroupCode) {
+            <option [value]="g.GroupCode">{{ g.GroupCode }}. {{ g.GroupName }}</option>
+          }
+        </select>
+        <select (change)="onTableChangeFilter($any($event.target).value)">
+          <option value="">Tất cả mức thay đổi</option>
+          <option value="up">Chỉ tiêu tăng</option>
+          <option value="flat">Không tăng</option>
+          <option value="down">Giảm</option>
+          <option value="done">Hoàn thành</option>
+        </select>
+        <select (change)="onTableSortBy($any($event.target).value)">
+          <option value="id">Theo mã chỉ tiêu</option>
+          <option value="delta">Tăng nhiều nhất</option>
+          <option value="low">Tiến độ thấp nhất</option>
+        </select>
+      </div>
+
+      <app-dashboard-criteria-table
+        [rows]="pagedTableRows()"
+        [prevColumnLabel]="prevColumnLabel()"
+        [currentColumnLabel]="currentColumnLabel()"
+      ></app-dashboard-criteria-table>
+
+      <app-pagination
+        [page]="tablePage()"
+        [pageSize]="tablePageSize()"
+        [total]="filteredTableRows().length"
+        [pageSizeOptions]="tablePageSizeOptions"
+        (pageChange)="onTablePageChange($event)"
+        (pageSizeChange)="onTablePageSizeChange($event)"
+      ></app-pagination>
+    </section>
+  } @else if (loading()) {
+    <p class="muted">Đang tải dữ liệu…</p>
+  } @else {
+    <p class="muted">Chưa có dữ liệu cho kỳ đang chọn.</p>
+  }
+
+  <app-history-list [items]="weeksInYear()" [year]="year()" (view)="onHistoryView($event)"></app-history-list>
+
+  <div class="footer">
+    Dữ liệu được nạp qua API PlatformManager. Màn hình này chỉ hiển thị — nhập/cập nhật dữ liệu thực hiện ở
+    <a routerLink="/danh-muc/dti">Danh mục &gt; DTI</a>.
+  </div>
+</main>
+
+<app-report-dialog
+  [open]="reportDialogOpen()"
+  [title]="reportTitle()"
+  [contentHtml]="reportContentHtml()"
+  (closed)="onReportClosed()"
+></app-report-dialog>

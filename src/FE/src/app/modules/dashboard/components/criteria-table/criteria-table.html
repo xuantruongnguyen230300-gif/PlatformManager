@@ -1,0 +1,38 @@
+<app-table-scroll>
+  <table class="dashboard-criteria-table">
+    <thead>
+      <tr>
+        <th style="width:6%">Mã</th>
+        <th style="width:30%">Chỉ tiêu</th>
+        <th style="width:13%">Nhóm</th>
+        <th class="num" style="width:8%">Điểm tối đa</th>
+        <th class="num" style="width:8%">{{ prevColumnLabel() }}</th>
+        <th class="num" style="width:11%">{{ currentColumnLabel() }}</th>
+        <th class="num" style="width:9%">Tăng/giảm</th>
+        <th style="width:10%">Trạng thái</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (row of rows(); track row.CriteriaId) {
+        <tr>
+          <td>{{ row.Code }}</td>
+          <td>{{ row.Name }}</td>
+          <td>{{ row.GroupCode }}. {{ row.GroupName }}</td>
+          <td class="num">{{ row.MaxScore }}</td>
+          <td class="num">{{ formatPercent(row.PreviousValue) }}</td>
+          <td class="num">{{ formatPercent(row.CurrentValue) }}</td>
+          <td class="num">
+            <span class="delta" [class]="deltaClass(row.Delta)">{{ formatDelta(row.Delta) }}</span>
+          </td>
+          <td>
+            @if (row.Badge && row.Badge !== 'Chưa có dữ liệu') {
+              <span class="badge" [class]="badgeClass(row.Badge)">{{ row.Badge }}</span>
+            } @else {
+              <span class="muted">—</span>
+            }
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</app-table-scroll>

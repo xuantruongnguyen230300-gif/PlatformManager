@@ -1,0 +1,408 @@
+/* Global styles — token bridge từ prototype đã verify (doc/Prototype/dashboard.html,
+   doc/Prototype/danh-muc-dti.html). Giá trị màu khớp 100% với
+   doc/Design/Frontend/PlatformManager/Tokens/colors.md. Giá trị font-size/spacing dùng
+   đúng bộ token "mật độ hiển thị (compact)" (fs, sp, radius, sidebar-w) hiện
+   có trong 2 file prototype — bản mới nhất, muộn hơn Tokens/typography.md +
+   Tokens/spacing.md (2 file đó được trích xuất từ 1 bản prototype cũ hơn, trước khi
+   density compact được áp dụng — pipeline /design-extract-tokens chưa chạy lại). Theo
+   đúng yêu cầu "tái tạo 1:1" prototype hiện tại, dùng giá trị compact trực tiếp từ
+   prototype làm nguồn — ghi chú lại đây để design-expert biết khi chạy lại tokens. */
+:root {
+  --bg: #f3f6fb;
+  --card: #fff;
+  --text: #152033;
+  --muted: #6d788b;
+  --line: #dfe6ef;
+  --brand: #0f5bd7;
+  --brand2: #174ca8;
+  --good: #14855b;
+  --warn: #c07a00;
+  --bad: #c83c3c;
+  --shadow: 0 7px 24px rgba(23, 39, 67, 0.08);
+
+  --fs-xs: 11px;
+  --fs-sm: 12px;
+  --fs-base: 13px;
+  --fs-md: 14px;
+  --fs-lg: 15px;
+
+  --sp-1: 4px;
+  --sp-2: 6px;
+  --sp-3: 8px;
+  --sp-4: 10px;
+  --sp-5: 14px;
+
+  --radius-sm: 7px;
+  --radius-md: 9px;
+  --radius-lg: 14px;
+  --radius-dialog: 15px;
+  --radius-table: 12px;
+  --radius-pill: 999px;
+
+  --sidebar-w: 220px;
+  --sidebar-w-collapsed: 60px;
+
+  --container-max-width: 1600px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  font-family: Inter, 'Segoe UI', Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: var(--fs-base);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+.no-print {
+  /* đánh dấu phần tử ẩn khi in — dùng chung ở @media print các component */
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}
+
+/* ===== Primitive classes dùng chung nhiều component (card/btn/notice/badge/dialog/
+   filters/form) — port nguyên xi từ doc/Prototype/*.html. Đặt ở global thay vì lặp lại
+   trong từng component SCSS vì đây là các "nguyên tử" style xuất hiện > 5 nơi khác nhau
+   (page + nhiều dumb component); mỗi component vẫn có SCSS riêng cho phần layout đặc thù
+   của nó, chỉ dùng lại các class nền tảng này cho phần "trông giống nhau ở mọi nơi". */
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  border-radius: var(--radius-lg);
+  padding: var(--sp-5);
+}
+
+.btn {
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  padding: var(--sp-2) var(--sp-3);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+
+  &.primary {
+    background: var(--brand);
+    border-color: var(--brand);
+    color: #fff;
+
+    &:hover {
+      background: var(--brand2);
+      border-color: var(--brand2);
+      box-shadow: 0 8px 20px rgba(15, 91, 215, 0.35);
+    }
+  }
+
+  &.danger {
+    color: var(--bad);
+  }
+
+  &:hover {
+    background: var(--bg);
+    border-color: #c7d4e5;
+    box-shadow: 0 3px 10px rgba(23, 39, 67, 0.14);
+  }
+
+  &:active {
+    transform: translateY(1px);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.action-btn {
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: var(--radius-sm);
+  padding: 4px var(--sp-2);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  cursor: pointer;
+  color: var(--text);
+  transition: background 0.15s ease, border-color 0.15s ease;
+  margin-right: var(--sp-1);
+
+  &:hover {
+    background: var(--bg);
+  }
+
+  &.danger {
+    color: var(--bad);
+    border-color: #f3caca;
+
+    &:hover {
+      background: #fdecec;
+    }
+  }
+}
+
+.notice {
+  background: #edf4ff;
+  border: 1px solid #cfe0ff;
+  padding: var(--sp-3) var(--sp-5);
+  border-radius: 12px;
+  font-size: var(--fs-sm);
+  margin-bottom: var(--sp-5);
+
+  a {
+    color: var(--brand);
+    font-weight: 700;
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-4);
+
+  h2 {
+    font-size: var(--fs-md);
+    margin: 0;
+  }
+}
+
+.muted {
+  color: var(--muted);
+  font-size: var(--fs-xs);
+}
+
+.good {
+  color: var(--good);
+}
+
+.bad {
+  color: var(--bad);
+}
+
+.warn {
+  color: var(--warn);
+}
+
+.badge {
+  display: inline-block;
+  border-radius: var(--radius-pill);
+  padding: 3px 6px;
+  font-size: 10px;
+  font-weight: 750;
+
+  &.bdone {
+    background: #e7f7f0;
+    color: var(--good);
+  }
+
+  &.bwork {
+    background: #fff3da;
+    color: var(--warn);
+  }
+
+  &.bstall {
+    background: #fdecec;
+    color: var(--bad);
+  }
+}
+
+.filters {
+  display: flex;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  align-items: center;
+  margin: var(--sp-4) 0;
+
+  input {
+    flex: 1;
+    min-width: 220px;
+  }
+}
+
+.filters-actions {
+  display: flex;
+  gap: var(--sp-3);
+  margin-left: auto;
+  flex: none;
+}
+
+.filters input,
+.filters select,
+.weekbar input,
+.weekbar select {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  padding: var(--sp-2) var(--sp-3);
+  font-size: var(--fs-sm);
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  background: #fff;
+}
+
+th,
+td {
+  border-bottom: 1px solid var(--line);
+  padding: var(--sp-2) var(--sp-3);
+  font-size: var(--fs-sm);
+  line-height: 1.4;
+  vertical-align: top;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background: #f8fafc;
+  z-index: 4;
+  color: #536076;
+  text-align: left;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+tbody tr:nth-child(even) {
+  background: #f8fafc;
+}
+
+tbody tr:hover {
+  background: var(--bg);
+}
+
+.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.delta {
+  font-weight: 850;
+  white-space: nowrap;
+
+  &.up {
+    color: var(--good);
+  }
+
+  &.down {
+    color: var(--bad);
+  }
+
+  &.flat {
+    color: var(--muted);
+  }
+}
+
+/* ===== Form (dialog) ===== */
+.form-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-4);
+
+  label {
+    font-size: var(--fs-sm);
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  input,
+  select,
+  textarea {
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: var(--sp-2) var(--sp-3);
+    background: #fff;
+    width: 100%;
+    font-size: var(--fs-sm);
+  }
+
+  textarea {
+    min-height: 64px;
+    resize: vertical;
+  }
+}
+
+.form-error {
+  color: var(--bad);
+  font-size: var(--fs-sm);
+  margin: var(--sp-2) 0;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 var(--sp-5);
+}
+
+/* ===== Dialog (native <dialog>) ===== */
+dialog {
+  border: 0;
+  border-radius: var(--radius-dialog);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.25);
+  width: min(700px, 92vw);
+  padding: var(--sp-5);
+
+  &::backdrop {
+    background: rgba(20, 28, 40, 0.45);
+  }
+
+  &.form-dialog {
+    width: min(560px, 92vw);
+  }
+
+  &.confirm-dialog {
+    width: min(420px, 92vw);
+  }
+}
+
+.footer {
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  padding: 12px 4px;
+
+  a {
+    color: var(--brand);
+    font-weight: 700;
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}

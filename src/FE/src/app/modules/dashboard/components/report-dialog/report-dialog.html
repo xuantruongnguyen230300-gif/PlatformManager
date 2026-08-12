@@ -1,0 +1,11 @@
+<dialog #dialogRef (close)="onNativeClose()">
+  <div class="title">
+    <h2>{{ title() }}</h2>
+    <button type="button" class="btn" (click)="closed.emit()">Đóng</button>
+  </div>
+  <div class="report" #reportBox [innerHTML]="safeContent"></div>
+  <div class="dialog-actions">
+    <button type="button" class="btn" (click)="copyReport()">Sao chép</button>
+    <button type="button" class="btn primary" (click)="printReport()">In</button>
+  </div>
+</dialog>

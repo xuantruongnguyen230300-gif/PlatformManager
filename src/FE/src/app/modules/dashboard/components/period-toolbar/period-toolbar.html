@@ -1,0 +1,42 @@
+<section class="card weekbar no-print">
+  <strong>{{ periodLabel() }}</strong>
+
+  @if (mode() === 'year') {
+    <span class="badge bwork">Tất cả · {{ year() }}</span>
+  } @else if (mode() === 'week') {
+    <input type="date" disabled [value]="weekDate() ?? ''" title="Ngày của kỳ đang xem — chọn kỳ khác qua danh sách bên cạnh" />
+  }
+
+  <select [value]="year()" (change)="yearChange.emit(+$any($event.target).value)" title="Chọn năm">
+    @for (y of years(); track y) {
+      <option [value]="y" [selected]="y === year()">{{ y }}</option>
+    }
+  </select>
+
+  @if (mode() !== 'month') {
+    <select [value]="selectedWeekValue()" (change)="weekSelect.emit($any($event.target).value)" title="Chọn 1 tuần cụ thể hoặc xem Tất cả">
+      <option value="" [selected]="selectedWeekValue() === ''">— Chọn kỳ đã lưu —</option>
+      <option [value]="allWeeksValue" [selected]="mode() === 'year'">— Tất cả (tổng hợp dữ liệu trong năm {{ year() }}) —</option>
+      @for (w of weeksInYear(); track w.Value) {
+        <option [value]="w.Value" [selected]="w.Value === selectedWeekValue()">{{ formatDate(w.Date) }} · {{ w.OverallProgress?.toFixed(1) ?? '—' }}%</option>
+      }
+    </select>
+  }
+
+  @if (mode() === 'month') {
+    <select [value]="monthValue()" (change)="monthChange.emit(+$any($event.target).value)" title="Chọn tháng">
+      @for (m of monthNumbers; track m) {
+        <option [value]="m" [selected]="m === monthValue()">{{ monthLabels[m - 1] }}</option>
+      }
+    </select>
+  }
+
+  <div class="segmented" role="group" aria-label="Chế độ xem theo Tuần hoặc Tháng">
+    <button type="button" class="seg-btn" [class.active]="mode() !== 'month'" (click)="modeChange.emit('week')">Tuần</button>
+    <button type="button" class="seg-btn" [class.active]="mode() === 'month'" (click)="modeChange.emit('month')">Tháng</button>
+  </div>
+
+  <div class="weekbar-actions">
+    <button type="button" class="btn primary" (click)="exportReport.emit()">Xuất báo cáo</button>
+  </div>
+</section>

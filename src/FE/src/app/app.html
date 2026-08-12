@@ -1,0 +1,7 @@
+<div class="app-shell">
+  <app-sidebar></app-sidebar>
+  <div class="app-shell-content" [class.collapsed]="collapsed()">
+    <router-outlet></router-outlet>
+  </div>
+</div>
+<app-toast></app-toast>
