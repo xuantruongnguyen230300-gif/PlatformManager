@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "Read(//d//**)",
-      "Bash(find 'C:\\\\Users\\\\truong.nguyenxuan' -maxdepth 6 -iname *plugin*)"
+      "Bash(find 'C:\\\\Users\\\\truong.nguyenxuan' -maxdepth 6 -iname *plugin*)",
+      "Edit(/.claude/skills/core-reviewer/**)",
+      "Bash(grep -v \"^.*///\")",
+      "Bash(xargs wc -l)"
     ]
   }
 }

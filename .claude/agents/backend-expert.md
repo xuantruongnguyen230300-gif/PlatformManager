@@ -264,6 +264,32 @@ và vì sao. **Không** paste nguyên card vào tin nhắn.
 
 ---
 
+# 🔎 Sau khi hoàn thành việc chạm tới core — kích hoạt `core-reviewer`
+
+Khi task vừa hoàn thành **đụng tới thành phần core** (không phải feature
+nghiệp vụ đơn lẻ), kích hoạt agent `core-reviewer` để đối chiếu code với bộ
+quy tắc trong `doc/huong_dan/wiki-core/`:
+
+- `SendMessage(to: "core-reviewer", ...)` nếu nó đã là teammate đang chạy;
+  nếu chưa có, `Agent(subagent_type: "core-reviewer", ...)` **một lần**.
+- Nội dung gửi: phạm vi vừa sửa (file/thư mục) + thành phần core nào bị
+  chạm — không paste code.
+
+**Điều kiện kích hoạt** — task chạm tới bất kỳ mục nào trong
+`doc/huong_dan/wiki-core/be/01-core-components.md`, ví dụ: `BaseEntity`/soft
+delete, `Result<T>`/error handling, exception middleware, envelope response,
+auth/identity, caching/logging/config abstraction, metadata mechanism,
+import/export engine, background job, cross-module contract.
+
+**KHÔNG kích hoạt** cho: sửa 1 handler nghiệp vụ, thêm 1 field vào DTO của
+feature, sửa validation của 1 command, đổi text lỗi — những việc không đụng
+nền tảng dùng chung.
+
+`core-reviewer` chỉ audit và báo cáo, **không sửa code** — findings thuộc
+`{BE_ROOT}` quay lại chính bạn để xử lý.
+
+---
+
 # 🛑 Dừng lại và hỏi người dùng khi
 
 1. **Thay đổi schema DB** đã có dữ liệu thật — trình bày migration dự kiến,

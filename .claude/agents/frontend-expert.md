@@ -191,6 +191,31 @@ endpoint một card:
 
 ---
 
+# 🔎 Sau khi hoàn thành việc chạm tới core — kích hoạt `core-reviewer`
+
+Khi task vừa hoàn thành **đụng tới thành phần core của FE** (không phải màn
+hình/feature đơn lẻ), kích hoạt agent `core-reviewer` để đối chiếu code với
+bộ quy tắc trong `doc/huong_dan/wiki-core/` (phần FE hiện dùng
+`src/FE/.claude/docs/*.md` làm chuẩn — xem `wiki-core/fe/README.md`):
+
+- `SendMessage(to: "core-reviewer", ...)` nếu nó đã là teammate đang chạy;
+  nếu chưa có, `Agent(subagent_type: "core-reviewer", ...)` **một lần**.
+- Nội dung gửi: phạm vi vừa sửa (file/thư mục) + thành phần core nào bị
+  chạm — không paste code.
+
+**Điều kiện kích hoạt** — task chạm tới tầng dùng chung: `core/` (HTTP client
+config, interceptor, guard, auth), `shared/` (dumb component tái dùng >1
+feature), ranh giới DTO↔model/mapper ở mức convention chung, cấu trúc
+routing gốc, hệ thống design token/theming.
+
+**KHÔNG kích hoạt** cho: dựng thêm 1 màn hình trong `modules/<feature>/`,
+sửa 1 component dumb, thêm field vào model của 1 feature, chỉnh style cục bộ.
+
+`core-reviewer` chỉ audit và báo cáo, **không sửa code** — findings thuộc
+`{FE_ROOT}` quay lại chính bạn để xử lý.
+
+---
+
 # 🛑 Dừng lại và hỏi người dùng khi
 
 1. Endpoint chưa tồn tại ở backend → viết Contract Card, báo cần
