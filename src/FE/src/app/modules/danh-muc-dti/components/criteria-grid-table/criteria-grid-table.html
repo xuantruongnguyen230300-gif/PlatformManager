@@ -1,72 +1,129 @@
-<app-table-scroll [fillHeight]="true">
-  <table class="dti-grid-table">
-    <thead>
-      <tr>
-        <th style="width:5%">Mã</th>
-        <th style="width:16%">Tên</th>
-        <th style="width:8%">Nhóm</th>
-        <th class="num" style="width:6%">Điểm tối đa</th>
-        <th class="num" style="width:6%">Tự đánh giá</th>
-        <th class="num" style="width:6%">Thẩm định</th>
-        <th style="width:7%">Trạng thái</th>
-        <th style="width:7%">Phụ trách</th>
-        <th style="width:6%">Hạn xử lý</th>
-        <th class="num" style="width:9%">Tiến độ %</th>
-        <th style="width:14%">Ghi chú</th>
-        <th style="width:10%">Hành động</th>
-      </tr>
-    </thead>
-    <tbody>
-      @for (row of rows(); track row.AssessmentId ?? row.CriteriaId) {
-        <tr>
-          <td>{{ row.Code }}</td>
-          <td>{{ row.Name }}</td>
-          <td>{{ row.GroupCode }}. {{ row.GroupName }}</td>
-          <td class="num">{{ formatScore(row.MaxScore) }}</td>
-          <td class="num">{{ formatScore(row.SelfScore) }}</td>
-          <td class="num">{{ formatScore(row.VerifiedScore) }}</td>
-          <td>
-            @if (row.Status) {
-              <span class="badge bwork">{{ row.Status }}</span>
-            } @else {
-              <span class="muted">—</span>
-            }
-          </td>
-          <td>{{ row.OwnerName || '—' }}</td>
-          <td>{{ formatDate(row.Deadline) }}</td>
-          <td class="num">
-            <app-editable-cell
-              [value]="row.ProgressPercent"
-              [editable]="isEditable()"
-              [editing]="isEditingCell(row, 'progress')"
+<p-table
+  [value]="rows()"
+  [loading]="loading()"
+  [scrollable]="true"
+  [scrollHeight]="gridHeight() + 'px'"
+  [lazy]="true"
+  [paginator]="true"
+  [rows]="pageSize()"
+  [first]="(page() - 1) * pageSize()"
+  [totalRecords]="totalCount()"
+  [rowsPerPageOptions]="[10, 20, 50]"
+  (onLazyLoad)="onLazyLoad($event)"
+  dataKey="CriteriaId"
+  styleClass="dti-grid"
+>
+  <ng-template #header>
+    <tr>
+      <th pFrozenColumn style="min-width:70px">Mã</th>
+      <th style="min-width:220px">Tên</th>
+      <th style="min-width:120px">Nhóm</th>
+      <th class="num" style="min-width:90px">Điểm tối đa</th>
+      <th class="num" style="min-width:90px">Tự đánh giá</th>
+      <th class="num" style="min-width:90px">Thẩm định</th>
+      <th style="min-width:110px">Trạng thái</th>
+      <th style="min-width:110px">Phụ trách</th>
+      <th style="min-width:100px">Hạn xử lý</th>
+      <th class="num" style="min-width:130px">Tiến độ %</th>
+      <th style="min-width:180px">Ghi chú</th>
+      <th pFrozenColumn alignFrozen="right" style="min-width:120px">Hành động</th>
+    </tr>
+  </ng-template>
+
+  <ng-template #body let-row>
+    <tr>
+      <td pFrozenColumn><b>{{ row.Code }}</b></td>
+      <td>{{ row.Name }}</td>
+      <td>{{ row.GroupCode }}. {{ row.GroupName }}</td>
+      <td class="num">{{ formatScore(row.MaxScore) }}</td>
+      <td class="num">{{ formatScore(row.SelfScore) }}</td>
+      <td class="num">{{ formatScore(row.VerifiedScore) }}</td>
+      <td>{{ row.Status || '—' }}</td>
+      <td>{{ row.OwnerName || '—' }}</td>
+      <td>{{ formatDateVn(row.Deadline) }}</td>
+
+      <td class="num">
+        @if (isEditing(row.CriteriaId, 'progress')) {
+          <div class="cell-edit">
+            <input
+              #progressInput
+              appAutofocus
               type="number"
-              suffix="%"
-              (editStart)="onCellStart(row.CriteriaId, 'progress')"
-              (confirm)="onCellConfirm(row.CriteriaId, 'progress', $event)"
-              (cancel)="cellEditCancel.emit()"
-            ></app-editable-cell>
-          </td>
-          <td>
-            <app-editable-cell
-              [value]="row.Note"
-              [editable]="isEditable()"
-              [editing]="isEditingCell(row, 'note')"
+              min="0"
+              max="100"
+              step="0.1"
+              class="progressInput"
+              [value]="row.ProgressPercent ?? 0"
+              (keydown)="onCellKeydown($event, row, 'progress', progressInput)"
+            />
+            <button type="button" class="cell-icon-btn ok" title="Lưu" (click)="confirmEdit(row, 'progress', progressInput.value)">
+              <i class="pi pi-check"></i>
+            </button>
+            <button type="button" class="cell-icon-btn cancel" title="Huỷ" (click)="cancelEdit()">
+              <i class="pi pi-times"></i>
+            </button>
+          </div>
+        } @else if (row.IsEditable) {
+          <span
+            class="cell-editable"
+            tabindex="0"
+            role="button"
+            title="Bấm đúp để sửa Tiến độ %"
+            (dblclick)="startEdit(row, 'progress')"
+            (keydown.enter)="startEdit(row, 'progress')"
+          >
+            {{ formatPercent(row.ProgressPercent) }}
+          </span>
+        } @else {
+          {{ formatPercent(row.ProgressPercent) }}
+        }
+      </td>
+
+      <td>
+        @if (isEditing(row.CriteriaId, 'note')) {
+          <div class="cell-edit">
+            <input
+              #noteInput
+              appAutofocus
               type="text"
-              (editStart)="onCellStart(row.CriteriaId, 'note')"
-              (confirm)="onCellConfirm(row.CriteriaId, 'note', $event)"
-              (cancel)="cellEditCancel.emit()"
-            ></app-editable-cell>
-          </td>
-          <td>
-            @if (isEditable()) {
-              <button type="button" class="action-btn" (click)="edit.emit(row.CriteriaId)">Sửa</button>
-              <button type="button" class="action-btn danger" (click)="delete.emit(row.CriteriaId)">Xoá</button>
-            } @else {
-              <span class="muted">—</span>
-            }
-          </td>
-        </tr>
-      }
-    </tbody>
-  </table>
-</app-table-scroll>
+              class="noteInput"
+              placeholder="Nội dung đã làm / vướng mắc..."
+              [value]="row.Note ?? ''"
+              (keydown)="onCellKeydown($event, row, 'note', noteInput)"
+            />
+            <button type="button" class="cell-icon-btn ok" title="Lưu" (click)="confirmEdit(row, 'note', noteInput.value)">
+              <i class="pi pi-check"></i>
+            </button>
+            <button type="button" class="cell-icon-btn cancel" title="Huỷ" (click)="cancelEdit()">
+              <i class="pi pi-times"></i>
+            </button>
+          </div>
+        } @else if (row.IsEditable) {
+          <span
+            class="cell-editable"
+            tabindex="0"
+            role="button"
+            title="Bấm đúp để sửa Ghi chú"
+            (dblclick)="startEdit(row, 'note')"
+            (keydown.enter)="startEdit(row, 'note')"
+          >
+            {{ row.Note || '— bấm đúp để ghi chú' }}
+          </span>
+        } @else {
+          {{ row.Note || '—' }}
+        }
+      </td>
+
+      <td pFrozenColumn alignFrozen="right">
+        <button type="button" class="action-btn" (click)="editRow.emit(row)">Sửa</button>
+        <button type="button" class="action-btn danger" (click)="deleteRow.emit(row)">Xoá</button>
+      </td>
+    </tr>
+  </ng-template>
+
+  <ng-template #emptymessage>
+    <tr>
+      <td colspan="12" class="muted">Không có chỉ tiêu nào khớp bộ lọc.</td>
+    </tr>
+  </ng-template>
+</p-table>

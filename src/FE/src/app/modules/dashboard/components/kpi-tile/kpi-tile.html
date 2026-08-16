@@ -1,0 +1,7 @@
+<div class="card kpi">
+  <div class="label">{{ label() }}</div>
+  <div class="value" [class]="tone()">{{ value() }}</div>
+  @if (sub()) {
+    <div class="sub">{{ sub() }}</div>
+  }
+</div>

@@ -1,51 +1,122 @@
-import { Component, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, signal } from '@angular/core';
+import { TableModule } from 'primeng/table';
+import { CriteriaChangeFilter, CriteriaSortBy, DashboardViewMode, ICriteriaTableRow } from '../../models/dashboard.model';
+import { DeltaIndicator } from '../delta-indicator/delta-indicator';
+import { StatusBadge } from '../status-badge/status-badge';
 
-import { TableScroll } from '../../../../shared/components/table-scroll/table-scroll';
-import { IDashboardTableRow } from '../../models/dashboard.model';
+/** Epsilon so sánh Delta — khớp business rule BE, xem doc/contracts/dashboard.md. */
+const EPSILON = 0.001;
+const DONE_THRESHOLD = 99.999;
 
-const BADGE_CLASS: Record<string, string> = {
-  'Hoàn thành': 'bdone',
-  'Đang thực hiện': 'bwork',
-  'Không tăng': 'bstall'
-};
+function formatPercent(v: number | null): string {
+  return v === null ? '—' : `${v.toLocaleString('vi-VN', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
+}
+
+interface IGroupOption {
+  Code: string;
+  Name: string;
+}
 
 /**
- * Bảng "62 chỉ tiêu DTI" của Dashboard — dumb, 100% read-only. KHÔNG có cột
- * sticky (không có cột hành động Sửa/Xoá — xem
- * `spec/dashboard-dti-weekly/ui-spec.md` mục 2.4). `Badge` đã là chuỗi tiếng
- * Việt tính sẵn từ server (`statusFor()`), không cần map thêm — xem
- * `doc/contracts/dashboard.md` CONTRACT DB-1.
+ * Bảng chỉ tiêu đầy đủ (đọc-only) — `p-table`, mọi lọc/sắp xếp/phân trang CLIENT-SIDE (BE trả
+ * nguyên bảng của 1 kỳ, ~62 dòng, xem yêu cầu gốc task + doc/huong_dan/wiki-core/fe/11-grid-and-metadata.md
+ * §Mẫu dùng p-table — ở đây KHÔNG dùng `[lazy]` vì dữ liệu đã tải hết 1 lần). Dumb theo nghĩa
+ * không inject data service — state lọc/sắp xếp là UI state cục bộ của chính component, không
+ * phải state nghiệp vụ toàn app.
  */
 @Component({
-  selector: 'app-dashboard-criteria-table',
+  selector: 'app-criteria-table',
   standalone: true,
-  imports: [TableScroll],
+  imports: [TableModule, DeltaIndicator, StatusBadge],
   templateUrl: './criteria-table.html',
-  styleUrl: './criteria-table.scss'
+  styleUrl: './criteria-table.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class DashboardCriteriaTable {
-  readonly rows = input.required<IDashboardTableRow[]>();
-  readonly prevColumnLabel = input('Tuần trước');
-  readonly currentColumnLabel = input('Tuần này');
+export class CriteriaTable {
+  readonly rows = input.required<ICriteriaTableRow[]>();
+  readonly viewMode = input.required<DashboardViewMode>();
+  readonly isAllMode = input<boolean>(false);
 
-  formatPercent(value: number | null): string {
-    return value === null || value === undefined ? '—' : `${value.toFixed(1)}%`;
+  protected readonly searchText = signal('');
+  protected readonly groupFilter = signal('');
+  protected readonly changeFilter = signal<CriteriaChangeFilter>('');
+  protected readonly sortBy = signal<CriteriaSortBy>('id');
+
+  protected readonly formatPercent = formatPercent;
+
+  protected readonly prevHeader = computed(() =>
+    this.isAllMode() ? '—' : this.viewMode() === 'month' ? 'Tháng trước' : 'Tuần trước',
+  );
+  protected readonly curHeader = computed(() =>
+    this.isAllMode() ? 'Tất cả (TB)' : this.viewMode() === 'month' ? 'Tháng này' : 'Tuần này',
+  );
+
+  protected readonly groupOptions = computed<IGroupOption[]>(() => {
+    const map = new Map<string, string>();
+    for (const row of this.rows()) map.set(row.GroupCode, row.GroupName);
+    return [...map.entries()]
+      .map(([Code, Name]) => ({ Code, Name }))
+      .sort((a, b) => a.Code.localeCompare(b.Code, undefined, { numeric: true }));
+  });
+
+  protected readonly filteredRows = computed<ICriteriaTableRow[]>(() => {
+    const search = this.searchText().trim().toLowerCase();
+    const group = this.groupFilter();
+    const change = this.changeFilter();
+    const sort = this.sortBy();
+
+    let rows = this.rows().filter((r) => {
+      if (search && !`${r.Code} ${r.Name}`.toLowerCase().includes(search)) return false;
+      if (group && r.GroupCode !== group) return false;
+      return true;
+    });
+
+    if (change) {
+      rows = rows.filter((r) => this.matchesChangeFilter(r, change));
+    }
+
+    rows = [...rows];
+    if (sort === 'delta') {
+      rows.sort((a, b) => (b.Delta ?? -999) - (a.Delta ?? -999));
+    } else if (sort === 'low') {
+      rows.sort((a, b) => (a.CurrentValue ?? 0) - (b.CurrentValue ?? 0));
+    } else {
+      rows.sort((a, b) => a.Code.localeCompare(b.Code, undefined, { numeric: true }));
+    }
+    return rows;
+  });
+
+  protected readonly countLabel = computed(() => `${this.filteredRows().length}/${this.rows().length} chỉ tiêu`);
+
+  private matchesChangeFilter(row: ICriteriaTableRow, filter: CriteriaChangeFilter): boolean {
+    const d = row.Delta;
+    switch (filter) {
+      case 'up':
+        return d !== null && d > EPSILON;
+      case 'down':
+        return d !== null && d < -EPSILON;
+      case 'flat':
+        return d !== null && Math.abs(d) <= EPSILON;
+      case 'done':
+        return row.CurrentValue !== null && row.CurrentValue >= DONE_THRESHOLD;
+      default:
+        return true;
+    }
   }
 
-  formatDelta(value: number | null): string {
-    if (value === null || value === undefined) return '—';
-    const sign = value > 0 ? '+' : '';
-    return `${sign}${value.toFixed(1)}%`;
+  onSearchInput(event: Event): void {
+    this.searchText.set((event.target as HTMLInputElement).value);
   }
 
-  deltaClass(value: number | null): string {
-    if (value === null || value === undefined) return 'flat';
-    if (value > 0.001) return 'up';
-    if (value < -0.001) return 'down';
-    return 'flat';
+  onGroupFilterChange(event: Event): void {
+    this.groupFilter.set((event.target as HTMLSelectElement).value);
   }
 
-  badgeClass(badge: string | null): string {
-    return badge ? BADGE_CLASS[badge] ?? 'bwork' : '';
+  onChangeFilterChange(event: Event): void {
+    this.changeFilter.set((event.target as HTMLSelectElement).value as CriteriaChangeFilter);
+  }
+
+  onSortByChange(event: Event): void {
+    this.sortBy.set((event.target as HTMLSelectElement).value as CriteriaSortBy);
   }
 }

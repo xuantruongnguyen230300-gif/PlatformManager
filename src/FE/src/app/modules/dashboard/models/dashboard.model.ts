@@ -1,10 +1,73 @@
-/**
- * Model app cho feature Dashboard — prefix `I`, field PascalCase, KHÔNG hậu
- * tố. Khớp `doc/contracts/dashboard.md` (Status: IMPLEMENTED, backend-expert).
- * Dashboard 100% read-only.
- */
+// ===== Wire (DTO) — camelCase theo envelope mới (doc/contracts/dashboard.md). BE trả nguyên
+// dạng dưới đây LỒNG trong `IApiResult<T>.data` — xem core/http/api-result.model.ts. =====
 
-export type DashboardMode = 'week' | 'month' | 'year';
+export type DashboardApiMode = 'week' | 'month' | 'year';
+
+export type CriteriaBadgeDto = 'Hoàn thành' | 'Không tăng' | 'Đang thực hiện' | 'Chưa có dữ liệu';
+
+export interface IDashboardKpiDto {
+  overallProgress: number | null;
+  delta: number | null;
+  previousPeriodLabel: string | null;
+  up: number;
+  flat: number;
+  down: number;
+  done: number;
+  totalCriteria: number;
+}
+
+export interface IDashboardGroupProgressDto {
+  groupId: string;
+  groupCode: string;
+  groupName: string;
+  progress: number | null;
+}
+
+export interface IDashboardTrendPointDto {
+  label: string;
+  value: number | null;
+}
+
+export interface IDashboardTableRowDto {
+  criteriaId: string;
+  code: string;
+  name: string;
+  groupCode: string;
+  groupName: string;
+  maxScore: number;
+  previousValue: number | null;
+  currentValue: number | null;
+  delta: number | null;
+  badge: CriteriaBadgeDto | null;
+  note: string | null;
+}
+
+export interface IDashboardAggregateDto {
+  mode: DashboardApiMode;
+  periodLabel: string;
+  kpi: IDashboardKpiDto;
+  groups: IDashboardGroupProgressDto[];
+  trend: IDashboardTrendPointDto[];
+  table: IDashboardTableRowDto[];
+}
+
+export interface IReportDto {
+  title: string;
+  contentHtml: string;
+}
+
+// `IPeriodOptionDto`/`IPeriodOptionsDto` (`GET /api/dashboard/periods`) dùng CHUNG với
+// `modules/danh-muc-dti` — đã chuyển sang shared/models/period-options.model.ts, xem
+// shared/services/period-options.service.ts.
+
+// ===== Model app — PascalCase + prefix I, không hậu tố (src/FE/.claude/docs/api-client.md) =====
+
+export type DashboardViewMode = 'week' | 'month';
+
+/** Giá trị đặc biệt cho dropdown chọn kỳ ở mode Tuần — "Tất cả (tổng hợp theo năm)". */
+export const ALL_WEEKS_VALUE = '__ALL__';
+
+export type CriteriaBadge = CriteriaBadgeDto;
 
 export interface IDashboardKpi {
   OverallProgress: number | null;
@@ -17,19 +80,19 @@ export interface IDashboardKpi {
   TotalCriteria: number;
 }
 
-export interface IDashboardGroupProgress {
+export interface IGroupProgress {
   GroupId: string;
   GroupCode: string;
   GroupName: string;
   Progress: number | null;
 }
 
-export interface IDashboardTrendPoint {
+export interface ITrendPoint {
   Label: string;
-  Value: number;
+  Value: number | null;
 }
 
-export interface IDashboardTableRow {
+export interface ICriteriaTableRow {
   CriteriaId: string;
   Code: string;
   Name: string;
@@ -39,40 +102,31 @@ export interface IDashboardTableRow {
   PreviousValue: number | null;
   CurrentValue: number | null;
   Delta: number | null;
-  Badge: string | null;
+  Badge: CriteriaBadge | null;
+  Note: string | null;
 }
 
-export interface IDashboardSummary {
-  Mode: DashboardMode;
+export interface IDashboardAggregate {
+  Mode: DashboardApiMode;
   PeriodLabel: string;
   Kpi: IDashboardKpi;
-  Groups: IDashboardGroupProgress[];
-  Trend: IDashboardTrendPoint[];
-  Table: IDashboardTableRow[];
+  Groups: IGroupProgress[];
+  Trend: ITrendPoint[];
+  Table: ICriteriaTableRow[];
 }
 
-export interface IDashboardReport {
+export interface IReport {
   Title: string;
   ContentHtml: string;
 }
 
-export interface IPeriodOption {
-  Value: string;
-  Date: string;
-  OverallProgress: number | null;
+export interface IDashboardQueryParams {
+  Mode: DashboardApiMode;
+  Date?: string;
+  Year?: number;
 }
 
-export interface IPeriodOptions {
-  Years: number[];
-  WeeksInYear: IPeriodOption[];
-  MonthsInYear: IPeriodOption[];
-}
-
-export interface IDashboardQuery {
-  Mode: DashboardMode;
-  Date: string | null;
-  Year: number | null;
-}
-
-export type TableChangeFilter = '' | 'up' | 'flat' | 'down' | 'done';
-export type TableSortBy = 'id' | 'delta' | 'low';
+// ===== Filter/sort state của bảng chỉ tiêu (client-side hoàn toàn, xem
+// doc/ke-hoach-xay-lai-corebase.md yêu cầu gốc của task) =====
+export type CriteriaChangeFilter = '' | 'up' | 'flat' | 'down' | 'done';
+export type CriteriaSortBy = 'id' | 'delta' | 'low';

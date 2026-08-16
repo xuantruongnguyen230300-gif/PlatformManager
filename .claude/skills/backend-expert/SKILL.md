@@ -23,7 +23,7 @@ Chuyển giao một yêu cầu chạm tới `src/BE/` (scaffold solution, dựng
 EF configuration + migration, command/query + handler, validator,
 controller...) cho subagent `backend-expert` — thay vì tự xử lý trực tiếp
 trong phiên chính. Subagent này mang theo toàn bộ context kiến trúc (Clean
-Architecture, CQRS-lite qua MediatR, `Result<T>`, envelope response, cơ chế
+Architecture, CQRS-lite qua MediatR, `ErrorDescriptor`, envelope response, cơ chế
 bàn giao API Contract Card với `frontend-expert`) đã được ghi trong
 `.claude/agents/backend-expert.md` và `src/BE/CLAUDE.md` +
 `src/BE/.claude/rules/`.

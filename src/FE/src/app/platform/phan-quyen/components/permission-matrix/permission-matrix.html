@@ -1,0 +1,39 @@
+<div class="tablewrap">
+  <table>
+    <thead>
+      <tr>
+        <th style="width:40%">Màn hình</th>
+        @for (role of roles(); track role) {
+          <th class="num">{{ role }}</th>
+        }
+      </tr>
+    </thead>
+    <tbody>
+      @for (row of displayRows(); track row.SysMenuId) {
+        <tr>
+          <td [class.indent]="row.Indent">
+            @if (row.Indent) {
+              <span class="tree-branch">└</span>
+            }
+            {{ row.SysMenuName }}
+          </td>
+          @for (role of roles(); track role) {
+            <td class="num">
+              <input
+                type="checkbox"
+                [checked]="isChecked(row, role)"
+                [disabled]="loading()"
+                (change)="permissionToggle.emit({ SysMenuId: row.SysMenuId, Role: role })"
+                [attr.aria-label]="row.SysMenuName + ' — ' + role"
+              />
+            </td>
+          }
+        </tr>
+      } @empty {
+        <tr>
+          <td [attr.colspan]="roles().length + 1" class="muted">Chưa có mục menu nào.</td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>

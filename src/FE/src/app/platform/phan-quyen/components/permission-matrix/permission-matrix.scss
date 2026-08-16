@@ -1,0 +1,27 @@
+.tablewrap {
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-table);
+  overflow: auto;
+  max-height: 560px;
+}
+
+td.indent {
+  padding-left: 28px;
+}
+
+.tree-branch {
+  color: var(--muted);
+  margin-right: 4px;
+}
+
+input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--brand);
+}
+
+input[type='checkbox']:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}

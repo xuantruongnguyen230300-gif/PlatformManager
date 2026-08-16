@@ -34,6 +34,52 @@ bộ UI) và bắt buộc có mapper ở giữa là cách duy nhất chặn lỗ
    viết — DTO thuộc về server, model thuộc về app; gộp lại mất điểm chặn khi
    server đổi field sau này.
 
+## Envelope response từ BE — `IApiResult<T>`
+
+**Đã CHỐT (2026-08-15):** BE trả về đúng shape sau cho MỌI endpoint (xem
+`src/BE/.claude/rules/api-controller.md` §Envelope response) — FE phải có
+interface khớp 1:1, không tự đặt tên field khác:
+
+```ts
+// core/http/api-result.model.ts
+export interface IApiResult<T> {
+  data: T | null;
+  message: string | null;
+  status: 'SUCCESS' | 'VALIDATION_ERROR' | 'BUSINESS_ERROR' | 'SYSTEM_ERROR';
+  code: 'Success' | 'ValidationError' | 'AuthenticationError' | 'AuthorizationError'
+      | 'NotFound' | 'Conflict' | 'BusinessRuleError' | 'SystemError';
+  businessCode: string | null;   // "{ENTITY}.{ERROR}" — so lỗi cụ thể, KHÔNG so message
+  traceId: string | null;
+  retryable: boolean | null;
+  fields: Record<string, string[]> | null;   // lỗi validate theo field — key PascalCase khớp property C#
+}
+```
+
+- Đọc `message` để hiển thị cho user — **không phải** `Message`/`ErrorMessage`
+  (tên field của envelope cũ, đã bỏ cùng lúc BE đổi sang `IApiResult<T>`).
+- So sánh lỗi cụ thể (vd "hiện nút thử lại khi trùng mã") dùng `businessCode`
+  (chuỗi ổn định, `"CRITERIA.DUPLICATE_CODE"`) — **không** so `message`
+  (chuỗi hiển thị, đổi theo câu chữ UI).
+- `fields` bind trực tiếp vào lỗi từng control trên form — không gộp chung
+  vào 1 toast nếu BE đã trả `fields` cụ thể cho từng ô.
+- Interceptor lỗi HTTP dùng chung (`core/interceptors/http-error.interceptor.ts`)
+  đọc `IApiResult<T>` này để dựng thông báo — **không** tự đoán field, và
+  không còn field `Message`/`Success` cũ để đọc nhầm.
+
+## Auth — cookie session
+
+**Đã CHỐT (2026-08-15):** dùng cookie session của ASP.NET Core Identity
+— không tự lưu JWT bearer. Hệ quả cho FE:
+
+- Cấu hình `HttpClient` gửi kèm cookie mỗi request (`withCredentials`, qua
+  `provideHttpClient(...)` hoặc tương đương) — thiếu bước này, request luôn
+  bị coi là chưa đăng nhập dù đã login.
+- **Không** tự lưu token vào `localStorage`/biến JS — cookie do trình duyệt
+  quản lý.
+- Phía BE phải bật CORS kèm `AllowCredentials()` cho đúng origin FE —
+  **không** dùng chung với `AllowAnyOrigin()` (2 cấu hình loại trừ nhau ở
+  ASP.NET Core, xem `src/BE/.claude/rules/api-controller.md` §CORS).
+
 ## Service pattern
 
 ```ts

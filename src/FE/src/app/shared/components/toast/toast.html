@@ -1,7 +1,15 @@
-<div class="toast-stack no-print">
-  @for (item of items(); track item.Id) {
-    <div class="toast" [class]="item.Kind" (click)="dismiss(item.Id)">
-      {{ item.Message }}
+<div class="toast-stack no-print" aria-live="polite" role="status">
+  @for (toast of toasts(); track toast.Id) {
+    <div class="toast-item" [class]="toast.Severity">
+      <span class="toast-text">{{ toast.Text }}</span>
+      <button
+        type="button"
+        class="toast-close"
+        [attr.aria-label]="'Đóng thông báo'"
+        (click)="dismiss(toast.Id)"
+      >
+        <i class="pi pi-times"></i>
+      </button>
     </div>
   }
 </div>

@@ -2,20 +2,37 @@
 
 ## Base entity
 
+**Đã CHỐT (2026-08-15):** theo
+`doc/huong_dan/wiki-core/be/trien-khai/02-p1-platform-domain.md §5` —
+`BaseEntity` dùng `public get; set;` cho đúng 6 field kỹ thuật dưới đây,
+**khác** với field nghiệp vụ của entity con (luôn `private set`, xem mục
+Factory method bên dưới).
+
 ```csharp
 // Domain/Common/BaseEntity.cs
 public abstract class BaseEntity
 {
-    public Guid Id { get; protected set; }
-    public DateTimeOffset CreatedAt { get; protected set; }
-    public DateTimeOffset? UpdatedAt { get; protected set; }
-    public bool IsDeleted { get; protected set; }
+    public Guid Id { get; set; }
+    public string? UserCreate { get; set; }
+    public string? UserUpdate { get; set; }
+    public DateTimeOffset? DateCreate { get; set; }
+    public DateTimeOffset? DateUpdate { get; set; }
+    public bool IsDelete { get; set; }
 }
 ```
 
-- Setter **`protected`** — không public setter trên entity nghiệp vụ.
-- `IsDeleted`: soft delete, filter bằng EF global query filter khai trong
-  `DbContext.OnModelCreating` — không tự thêm `.Where(x => !x.IsDeleted)` ở
+- Setter **`public`** cho đúng 6 field kỹ thuật này — **không phải sơ suất**.
+  `AuditInterceptor`/`EntityIdGenerationInterceptor` (tầng Infrastructure,
+  chạy trong `SaveChangesAsync`) phải **ghi** được các field này từ bên ngoài
+  entity; nếu để `protected`/`private`, interceptor phải dùng reflection hoặc
+  shadow property — phức tạp hơn nhiều so với cái nó bảo vệ. Đánh đổi này chỉ
+  áp dụng cho đúng 6 field kỹ thuật ở trên — **không** mở rộng sang field
+  nghiệp vụ.
+- `UserCreate`/`UserUpdate` nullable — bản ghi seed/migration không có user
+  nào tạo; interceptor set `"system"` khi chưa có `ICurrentUser` (vd trước khi
+  auth thật được implement).
+- `IsDelete`: soft delete, filter bằng EF global query filter khai trong
+  `DbContext.OnModelCreating` — không tự thêm `.Where(x => !x.IsDelete)` ở
   từng query riêng lẻ.
 
 ## Factory method — không `new` + gán property
@@ -44,7 +61,7 @@ public class Criteria : BaseEntity
             Name = name,
             Group = group,
             MaxScore = maxScore,
-            CreatedAt = DateTimeOffset.UtcNow,
+            DateCreate = DateTimeOffset.UtcNow,
         };
     }
 
@@ -53,7 +70,7 @@ public class Criteria : BaseEntity
         if (maxScore <= 0)
             throw new DomainException("CRITERIA_MAX_SCORE_INVALID", "Điểm tối đa phải > 0.");
         MaxScore = maxScore;
-        UpdatedAt = DateTimeOffset.UtcNow;
+        DateUpdate = DateTimeOffset.UtcNow;
     }
 }
 ```
@@ -97,16 +114,26 @@ public class DomainException(string code, string message) : Exception(message)
 ```
 
 Ném từ Domain khi vi phạm invariant. Application layer bắt và chuyển thành
-`Result<T>.Validation(...)` — không để `DomainException` lọt thẳng ra
-`Api` layer thành lỗi 500 chung chung.
+`IApiResult<T>` lỗi qua `ErrorDescriptor` tương ứng (`ErrorCode.BusinessRuleError`,
+422 — xem `cqrs-handler.md` §ErrorDescriptor) — không để `DomainException`
+lọt thẳng ra `Api` layer thành lỗi 500 chung chung.
 
 ## Khi thêm entity mới
 
 1. Đối chiếu `doc/ERD/example_db_ver1.csv` nếu liên quan tới domain "theo
    dõi tiêu chí" — nhưng nhớ đây là **dữ liệu mẫu**, không phải schema đã
    chốt (xem `src/BE/CLAUDE.md`).
-2. Entity ở `Domain/Entities/{Name}.cs`.
-3. EF configuration ở `Infrastructure/Persistence/Configurations/{Name}Configuration.cs`.
-4. `DbSet<{Name}>` trong `DbContext`.
-5. Migration: `dotnet ef migrations add Add{Name}` — đọc lại file migration
-   sinh ra trước khi tin, đừng chạy `database update` mà không xem trước.
+2. Entity ở `{Core|Modules.<Ten>}.Domain/Entities/{Name}.cs` — Core nếu dùng
+   lại được cho mọi module, Modules.<Ten> nếu đặc thù 1 domain nghiệp vụ (xem
+   `doc/kien-truc-core-module.md`).
+3. EF configuration ở
+   `{Core|Modules.<Ten>}.Infrastructure/Persistence/Configurations/{Name}Configuration.cs`
+   — cùng project với entity ở bước 2.
+4. KHÔNG khai `DbSet<{Name}>` trên `PlatformManagerDbContext` nếu entity
+   thuộc 1 Module (Core không được reference Modules.*.Domain) — Module tự
+   gọi `Set<{Name}>()` trực tiếp trong repository của mình. Chỉ entity Core
+   mới có `DbSet<{Name}>` đặt tên.
+5. Migration: `dotnet ef migrations add Add{Name} --project
+   PlatformManager.Core.Infrastructure --startup-project PlatformManager.Api`
+   — đọc lại file migration sinh ra trước khi tin, đừng chạy `database
+   update` mà không xem trước.

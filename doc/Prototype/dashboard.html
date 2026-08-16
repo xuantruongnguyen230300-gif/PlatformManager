@@ -8,9 +8,14 @@
 <title>DTI Weekly - Theo dõi tiến độ chuyển đổi số</title>
 <style>
 :root{
-  --bg:#f3f6fb;--card:#fff;--text:#152033;--muted:#6d788b;--line:#dfe6ef;
-  --brand:#0f5bd7;--brand2:#174ca8;--good:#14855b;--warn:#c07a00;--bad:#c83c3c;
-  --shadow:0 7px 24px rgba(23,39,67,.08);
+  /* ===== Đã CHỐT LẠI (2026-08-15) — thiết kế lại màu, sửa tương phản thấp
+     giữa các bậc bề mặt (nền/card/nút gần như cùng màu, đo ~1.1–1.3:1, dưới
+     WCAG 2.2 3:1). Xem báo cáo "Kiểm Tra Tương Phản". Đồng bộ với
+     src/FE/src/styles.scss — sửa 1 nơi thì nhớ sửa cả 2. ===== */
+  /* LẦN 3 — fill-first thay border-first, xem artifact "Hướng Màu Sắc" */
+  --bg:#eef2f8;--card:#fff;--surface-2:#e1e7f1;--tonal-bg:#dbe7fa;--tonal-ink:#0f4a9e;--text:#152033;--muted:#57647a;--line:#dfe6ef;--border-strong:#7e91b4;
+  --brand:#0f5bd7;--brand2:#174ca8;--good:#0e7050;--good-bg:#d9f2e6;--warn:#a8690a;--warn-bg:#ffedc7;--bad:#b83232;--bad-bg:#fbdcdc;
+  --shadow:0 4px 16px rgba(23,39,67,.1),0 1px 3px rgba(23,39,67,.06);
   /* ===== Token mật độ hiển thị (compact) — bổ sung theo yêu cầu thu nhỏ font/menu/button, đồng bộ
      với danh-muc-dti.html để 2 trang cùng 1 hệ thống mật độ ===== */
   --fs-xs:11px;--fs-sm:12px;--fs-base:13px;--fs-md:14px;--fs-lg:15px;
@@ -25,11 +30,12 @@ button,input,select,textarea{font:inherit}
 .topin{max-width:1600px;margin:auto;padding:var(--sp-4) var(--sp-5);display:flex;align-items:center;justify-content:space-between;gap:var(--sp-3)}
 .logo h1{margin:0;font-size:var(--fs-lg)}.logo small{color:var(--muted);font-size:var(--fs-xs)}
 .toolbar{display:flex;gap:var(--sp-3);flex-wrap:wrap;justify-content:flex-end;margin-bottom:var(--sp-5)}
-.btn{border:1px solid var(--line);background:#fff;color:var(--text);border-radius:var(--radius-sm);padding:var(--sp-2) var(--sp-3);font-size:var(--fs-sm);font-weight:700;cursor:pointer;transition:background .15s ease,box-shadow .15s ease,border-color .15s ease,transform .1s ease}
+.btn{border:1px solid transparent;background:var(--tonal-bg);color:var(--tonal-ink);border-radius:var(--radius-sm);padding:var(--sp-2) var(--sp-3);font-size:var(--fs-sm);font-weight:700;cursor:pointer;transition:background .15s ease,box-shadow .15s ease,transform .1s ease}
 .btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}
-.btn:hover{background:var(--bg);border-color:#c7d4e5;box-shadow:0 3px 10px rgba(23,39,67,.14)}
+.btn:hover{background:#c7dbf5;box-shadow:0 3px 10px rgba(23,39,67,.1)}
 .btn.primary:hover{background:var(--brand2);border-color:var(--brand2);box-shadow:0 8px 20px rgba(15,91,215,.35)}
-.btn.danger{color:var(--bad)} .btn:active{transform:translateY(1px)}
+.btn.danger{background:var(--bad-bg);color:var(--bad)} .btn.danger:hover{background:#f5c6c6}
+.btn:active{transform:translateY(1px)} .btn:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 main{max-width:1600px;margin:auto;padding:var(--sp-5)}
 .notice{background:#edf4ff;border:1px solid #cfe0ff;padding:var(--sp-3) var(--sp-5);border-radius:12px;font-size:var(--fs-sm);margin-bottom:var(--sp-5)}
 .notice a{color:var(--brand);font-weight:700;text-decoration:none}
@@ -41,7 +47,7 @@ main{max-width:1600px;margin:auto;padding:var(--sp-5)}
 .seg-btn:hover{background:var(--bg)}
 .seg-btn.active{background:var(--brand);color:#fff}
 .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:var(--sp-4)}
-.card{background:var(--card);border:1px solid var(--line);box-shadow:var(--shadow);border-radius:14px;padding:var(--sp-5)}
+.card{background:var(--card);border:1px solid var(--line);box-shadow:var(--shadow);border-radius:16px;padding:var(--sp-5)}
 .kpi .label{font-size:var(--fs-xs);color:var(--muted)}.kpi .value{font-size:21px;font-weight:850;margin-top:var(--sp-1)}.kpi .sub{font-size:var(--fs-xs);color:var(--muted);margin-top:var(--sp-1);line-height:1.4;min-height:30px}
 .good{color:var(--good)}.bad{color:var(--bad)}.warn{color:var(--warn)}
 .layout{display:grid;grid-template-columns:1.15fr .85fr;gap:var(--sp-5);margin-top:var(--sp-5)}
@@ -52,31 +58,39 @@ main{max-width:1600px;margin:auto;padding:var(--sp-5)}
 .title{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-3);margin-bottom:var(--sp-4)}.title h2{font-size:var(--fs-md);margin:0}.muted{color:var(--muted);font-size:var(--fs-xs)}
 .weekbar{display:flex;gap:var(--sp-3);align-items:center;flex-wrap:wrap;margin-bottom:var(--sp-4)}
 .weekbar-actions{margin-left:auto;flex:none;display:flex;gap:var(--sp-3)}
-.weekbar input,.weekbar select,.filters input,.filters select{border:1px solid var(--line);border-radius:var(--radius-sm);background:#fff;padding:var(--sp-2) var(--sp-3);font-size:var(--fs-sm)}
+.weekbar input,.weekbar select,.filters input,.filters select{border:1px solid var(--border-strong);border-radius:var(--radius-sm);background:#fff;padding:var(--sp-2) var(--sp-3);font-size:var(--fs-sm)}
+.weekbar input:focus-visible,.weekbar select:focus-visible,.filters input:focus-visible,.filters select:focus-visible{outline:2px solid var(--brand);outline-offset:1px}
 .chart{width:100%;height:220px;display:block}
 .group-row{display:grid;grid-template-columns:210px 1fr 80px;gap:var(--sp-3);align-items:center;margin:0;font-size:var(--fs-sm)}
 .bar{height:9px;background:#edf1f6;border-radius:999px;overflow:hidden}.fill{height:100%;background:var(--brand);border-radius:999px}
 .filters{display:flex;gap:var(--sp-3);flex-wrap:wrap;margin:var(--sp-4) 0}.filters input{flex:1;min-width:220px}
-.tablewrap{overflow-x:auto;overflow-y:visible;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:12px}
+/* ===== Grid — height cố định + cuộn dọc riêng khi nhiều dòng, cuộn ngang khi
+   nhiều cột (theo yêu cầu "grid có height cố định và thanh cuộn nếu phần tử
+   quá nhiều", 2026-08-15). Cột đầu (Mã) ghim trái khi cuộn ngang để vẫn nhận
+   diện được dòng đang xem — cùng pattern đã có ở danh-muc-dti.html. ===== */
+.tablewrap{overflow-x:auto;overflow-y:auto;max-height:480px;-webkit-overflow-scrolling:touch;border:1px solid var(--border-strong);border-radius:12px}
 table{border-collapse:collapse;width:100%;min-width:1200px;background:#fff}
 th,td{border-bottom:1px solid var(--line);padding:var(--sp-2) var(--sp-3);font-size:var(--fs-sm);line-height:1.4;vertical-align:top}
-th{position:sticky;top:0;background:#f8fafc;z-index:2;color:#536076;text-align:left;font-size:var(--fs-xs);font-weight:700;letter-spacing:.01em}
+th{position:sticky;top:0;background:#f8fafc;z-index:3;color:#536076;text-align:left;font-size:var(--fs-xs);font-weight:700;letter-spacing:.01em}
+table th:first-child,table td:first-child{position:sticky;left:0;z-index:1;background:#fff}
+table th:first-child{z-index:4;background:#f8fafc}
 tbody tr:nth-child(even){background:#f8fafc}
+tbody tr:nth-child(even) td:first-child{background:#f8fafc}
 tbody tr:hover{background:var(--bg)}
 .num{text-align:right;font-variant-numeric:tabular-nums}
 /* ===== Phân trang bảng 62 chỉ tiêu — thay cho cuộn dọc liên tục (mục B) ===== */
 .pagination{display:flex;align-items:center;justify-content:flex-end;gap:var(--sp-3);margin-top:var(--sp-4);flex-wrap:wrap;font-size:var(--fs-sm);color:var(--text)}
 .pagination label{display:flex;align-items:center;gap:var(--sp-2);color:var(--muted)}
 .pagination select{border:1px solid var(--line);border-radius:var(--radius-sm);padding:5px var(--sp-2);background:#fff;font-size:var(--fs-sm)}
-.pagination .pg-btn{border:1px solid var(--line);background:#fff;border-radius:var(--radius-sm);padding:5px var(--sp-3);cursor:pointer;font-weight:700;color:var(--text);font-size:var(--fs-sm)}
-.pagination .pg-btn:hover:not(:disabled){background:var(--bg)}
+.pagination .pg-btn{border:1px solid transparent;background:transparent;border-radius:var(--radius-sm);padding:5px var(--sp-3);cursor:pointer;font-weight:700;color:var(--text);font-size:var(--fs-sm)}
+.pagination .pg-btn:hover:not(:disabled){background:var(--surface-2)}
 .pagination .pg-btn:disabled{opacity:.45;cursor:not-allowed}
 .pagination .pg-info{color:var(--muted)}
 .progressInput{width:80px;border:1px solid #cad4e1;border-radius:var(--radius-sm);padding:6px;text-align:right;font-size:var(--fs-sm)}
 .noteInput{width:100%;min-width:150px;border:1px solid #cad4e1;border-radius:var(--radius-sm);padding:6px;font-size:var(--fs-sm)}
 .delta{font-weight:850;white-space:nowrap}.delta.up{color:var(--good)}.delta.down{color:var(--bad)}.delta.flat{color:var(--muted)}
 .badge{display:inline-block;border-radius:999px;padding:3px 6px;font-size:10px;font-weight:750}
-.bdone{background:#e7f7f0;color:var(--good)}.bwork{background:#fff3da;color:var(--warn)}.bstall{background:#fdecec;color:var(--bad)}
+.bdone{background:var(--good-bg);color:var(--good)}.bwork{background:var(--warn-bg);color:var(--warn)}.bstall{background:var(--bad-bg);color:var(--bad)}
 .history{display:flex;flex-direction:column;gap:var(--sp-2);max-height:240px;overflow:auto}
 .histrow{display:grid;grid-template-columns:100px 1fr 90px 70px;gap:var(--sp-3);align-items:center;padding:var(--sp-2);border-bottom:1px solid var(--line);font-size:var(--fs-xs)}
 .fab{display:none;position:fixed;right:18px;bottom:18px;z-index:30;border:0;border-radius:999px;background:var(--brand);color:#fff;padding:10px 14px;font-weight:800;box-shadow:0 12px 30px rgba(15,91,215,.3)}
@@ -87,7 +101,7 @@ dialog{border:0;border-radius:15px;box-shadow:0 24px 70px rgba(0,0,0,.25);width:
 .footer a:hover{text-decoration:underline}
 @media(max-width:980px){.kpis{grid-template-columns:repeat(2,1fr)}.layout{grid-template-columns:1fr}.group-row{grid-template-columns:140px 1fr 75px}.fab{display:block}}
 @media(max-width:560px){main{padding:10px}.topin{padding:10px}.logo h1{font-size:var(--fs-md)}.kpis{gap:8px}.card{padding:12px}.kpi .value{font-size:18px}.kpis .card:last-child{grid-column:1/-1}.weekbar>*{flex:1}.weekbar-actions{margin-left:0;width:100%}.group-row{grid-template-columns:110px 1fr 68px}.title{align-items:flex-start}}
-@media print{.topbar,.filters,.fab,.no-print,.sidebar{display:none!important}.shell-content{margin-left:0!important}body{background:#fff}.card{box-shadow:none}.layout{grid-template-columns:1fr}main{max-width:none}.tablewrap{overflow:visible}table{min-width:0}}
+@media print{.topbar,.filters,.fab,.no-print,.sidebar{display:none!important}.shell-content{margin-left:0!important}body{background:#fff}.card{box-shadow:none}.layout{grid-template-columns:1fr}main{max-width:none}.tablewrap{overflow:visible;max-height:none}table{min-width:0}}
 
 /* ===== Sidebar shell (menu điều hướng trái) ===== */
 .shell{position:relative;min-height:100vh;min-height:100dvh}
@@ -98,8 +112,8 @@ dialog{border:0;border-radius:15px;box-shadow:0 24px 70px rgba(0,0,0,.25);width:
 .sidebar-brand{display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-4);border-bottom:1px solid var(--line);min-height:50px;flex:none}
 .sidebar-brand .brand-mark{width:26px;height:26px;border-radius:7px;background:var(--brand);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:var(--fs-xs);flex:none}
 .sidebar-brand .brand-text{font-weight:800;font-size:var(--fs-md);color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sidebar-toggle{margin-left:auto;border:1px solid var(--line);background:#fff;border-radius:7px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none;color:var(--muted)}
-.sidebar-toggle:hover{background:var(--bg)}
+.sidebar-toggle{margin-left:auto;border:1px solid transparent;background:transparent;border-radius:7px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none;color:var(--muted)}
+.sidebar-toggle:hover{background:var(--surface-2)}
 .sidebar-toggle:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .sidebar-toggle svg{transition:transform .2s ease}
 .sidebar.collapsed .sidebar-toggle svg{transform:rotate(180deg)}
@@ -196,6 +210,24 @@ dialog{border:0;border-radius:15px;box-shadow:0 24px 70px rgba(0,0,0,.25);width:
       </li>
      </ul>
     </li>
+    <!-- ===== MỚI (corebase) — nhóm "Quản trị hệ thống", cơ chế mở rộng children
+         đã thiết kế sẵn ở spec/sidebar-menu/ui-spec.md mục 1.2. Đồng bộ với
+         quan-tri-nguoi-dung.html — sửa 1 nơi thì nhớ sửa cả 3 trang. ===== -->
+    <li class="sidebar-navgroup open" data-group="quan-tri">
+     <button type="button" class="sidebar-navitem sidebar-navparent" aria-expanded="true" aria-controls="submenu-quan-tri" onclick="toggleSidebarSubmenu(this)">
+      <span class="navicon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><circle cx="10" cy="10" r="2.6"/><path d="M10 3v2M10 15v2M4.2 5.2l1.4 1.4M14.4 13.4l1.4 1.4M3 10h2M15 10h2M4.2 14.8l1.4-1.4M14.4 6.6l1.4-1.4"/></svg></span>
+      <span class="sidebar-navlabel">Quản trị hệ thống</span>
+      <span class="navchevron" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><polyline points="6,8 10,12 14,8"/></svg></span>
+     </button>
+     <ul class="sidebar-submenu" id="submenu-quan-tri">
+      <li>
+       <a href="quan-tri-nguoi-dung.html" class="sidebar-navitem sidebar-subitem" data-id="sys-user" title="Người dùng" onclick="onSidebarNavItemClick(event)">
+        <span class="navicon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><circle cx="10" cy="7" r="3"/><path d="M4 17c0-3 2.7-5 6-5s6 2 6 5"/></svg></span>
+        <span class="sidebar-navlabel">Người dùng</span>
+       </a>
+      </li>
+     </ul>
+    </li>
    </ul>
   </nav>
  </aside>
@@ -206,17 +238,11 @@ dialog{border:0;border-radius:15px;box-shadow:0 24px 70px rgba(0,0,0,.25);width:
   <button class="btn sidebar-hamburger no-print" id="sidebarHamburger" onclick="openSidebarDrawer()" aria-label="Mở menu điều hướng" aria-controls="sidebar" aria-expanded="false">
    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" width="20" height="20"><line x1="3" y1="5.5" x2="17" y2="5.5"/><line x1="3" y1="10" x2="17" y2="10"/><line x1="3" y1="14.5" x2="17" y2="14.5"/></svg>
   </button>
-  <div class="logo"><h1>Dashboard</h1><small>Theo dõi tiến độ chuyển đổi số · Chỉ xem</small></div>
+  <div class="logo"><h1>Dashboard</h1></div>
  </div>
 </div>
 
 <main>
- <div class="notice">
-  Màn hình này <b>chỉ hiển thị</b> (không nhập liệu) — xem tiến độ theo tuần, so với kỳ gần nhất,
-  biểu đồ xu hướng và lịch sử các kỳ đã lưu. Có thể chuyển xem theo <b>Tuần</b> hoặc <b>Tháng</b>
-  (tổng hợp trung bình các kỳ-tuần trong tháng) qua bộ lọc bên dưới. Để nhập/cập nhật dữ liệu, vào
-  <a href="danh-muc-dti.html">Danh mục &gt; DTI</a>.
- </div>
 
  <!-- ===== [MỤC D, ĐÃ CHỐT bởi backend-expert] Tuần: chọn 1 tuần cụ thể (theo createdDate, tạm dùng
       savedWeeks hiện có) + lựa chọn "Tất cả" = tổng hợp dữ liệu trong 1 NĂM được chọn (select#allHistoryYearFilter,

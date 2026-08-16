@@ -1,85 +1,77 @@
-<aside class="sidebar" id="sidebar" [class.collapsed]="collapsed()" [class.drawer-open]="drawerOpen()">
+<aside class="sidebar" [class.collapsed]="state.collapsed()" [class.drawer-open]="state.mobileOpen()">
   <div class="sidebar-brand">
     <span class="brand-mark">PM</span>
     <span class="brand-text">PlatformManager</span>
     <button
-      class="sidebar-toggle"
       type="button"
-      (click)="toggleCollapse()"
-      [attr.aria-label]="collapsed() ? 'Mở rộng menu' : 'Thu gọn menu'"
-      [attr.aria-expanded]="!collapsed()"
+      class="sidebar-toggle no-print"
+      [attr.aria-label]="state.collapsed() ? 'Mở rộng menu' : 'Thu gọn menu'"
+      [attr.aria-expanded]="!state.collapsed()"
+      (click)="state.toggleCollapse()"
     >
-      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
-        <polyline points="12,4 6,10 12,16" />
-      </svg>
+      <i class="pi pi-angle-left"></i>
     </button>
   </div>
-
   <nav aria-label="Main">
     <ul class="sidebar-nav">
-      <li>
-        <a
-          routerLink="/dashboard"
-          routerLinkActive="active"
-          class="sidebar-navitem"
-          title="Dashboard"
-          (click)="onNavItemClick()"
+      @for (item of items(); track item.Id) {
+        <li
+          [class.sidebar-navgroup]="item.Children.length > 0"
+          [class.open]="item.Children.length > 0 && isGroupOpen(item.Id)"
         >
-          <span class="navicon" aria-hidden="true">
-            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" width="20" height="20">
-              <rect x="2.5" y="2.5" width="6" height="6" rx="1.2" />
-              <rect x="11.5" y="2.5" width="6" height="6" rx="1.2" />
-              <rect x="2.5" y="11.5" width="6" height="6" rx="1.2" />
-              <rect x="11.5" y="11.5" width="6" height="6" rx="1.2" />
-            </svg>
-          </span>
-          <span class="sidebar-navlabel">Dashboard</span>
-        </a>
-      </li>
-      <li class="sidebar-navgroup" [class.open]="danhMucOpen()">
-        <button
-          type="button"
-          class="sidebar-navitem sidebar-navparent"
-          [attr.aria-expanded]="danhMucOpen()"
-          aria-controls="submenu-danh-muc"
-          (click)="toggleDanhMuc()"
-        >
-          <span class="navicon" aria-hidden="true">
-            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" width="20" height="20">
-              <path d="M2.5 5.5a1 1 0 0 1 1-1h4l1.5 2h7a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1h-12a1 1 0 0 1-1-1v-9Z" />
-            </svg>
-          </span>
-          <span class="sidebar-navlabel">Danh mục</span>
-          <span class="navchevron" aria-hidden="true">
-            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
-              <polyline points="6,8 10,12 14,8" />
-            </svg>
-          </span>
-        </button>
-        <ul class="sidebar-submenu" id="submenu-danh-muc">
-          <li>
+          @if (item.Children.length > 0) {
+            <button
+              type="button"
+              class="sidebar-navitem sidebar-navparent"
+              [class.active]="isGroupActive(item)"
+              [attr.aria-expanded]="isGroupOpen(item.Id)"
+              [attr.aria-controls]="'submenu-' + item.Id"
+              (click)="toggleGroup(item.Id)"
+            >
+              <span class="navicon" aria-hidden="true"><i class="pi" [class]="iconClass(item.Icon)"></i></span>
+              <span class="sidebar-navlabel">{{ item.Label }}</span>
+              <span class="navchevron" aria-hidden="true"><i class="pi pi-chevron-down"></i></span>
+            </button>
+            <ul class="sidebar-submenu" [id]="'submenu-' + item.Id">
+              @for (child of item.Children; track child.Id) {
+                <li>
+                  <a
+                    [routerLink]="child.Route"
+                    class="sidebar-navitem sidebar-subitem"
+                    routerLinkActive="active"
+                    [title]="child.Label"
+                    (click)="onNavItemClick()"
+                  >
+                    <span class="navicon" aria-hidden="true"><i class="pi" [class]="iconClass(child.Icon)"></i></span>
+                    <span class="sidebar-navlabel">{{ child.Label }}</span>
+                  </a>
+                </li>
+              }
+            </ul>
+          } @else {
             <a
-              routerLink="/danh-muc/dti"
+              [routerLink]="item.Route"
+              class="sidebar-navitem"
               routerLinkActive="active"
-              class="sidebar-navitem sidebar-subitem"
-              title="DTI"
+              [title]="item.Label"
               (click)="onNavItemClick()"
             >
-              <span class="navicon" aria-hidden="true">
-                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" width="20" height="20">
-                  <rect x="3" y="3" width="14" height="14" rx="2" />
-                  <line x1="6" y1="7.5" x2="14" y2="7.5" />
-                  <line x1="6" y1="10.5" x2="14" y2="10.5" />
-                  <line x1="6" y1="13.5" x2="11" y2="13.5" />
-                </svg>
-              </span>
-              <span class="sidebar-navlabel">DTI</span>
+              <span class="navicon" aria-hidden="true"><i class="pi" [class]="iconClass(item.Icon)"></i></span>
+              <span class="sidebar-navlabel">{{ item.Label }}</span>
             </a>
-          </li>
-        </ul>
-      </li>
+          }
+        </li>
+      }
     </ul>
   </nav>
 </aside>
-
-<div class="sidebar-backdrop no-print" [class.show]="drawerOpen()" (click)="closeDrawer()"></div>
+<!-- Backdrop chỉ đóng bằng click chuột hoặc phím Escape (đã xử lý qua host listener
+     `(document:keydown.escape)` của Sidebar) — `aria-hidden="true"` đánh dấu đây là phần tử
+     decorative dismiss overlay, không phải nội dung điều hướng được, nên không cần làm nó thành
+     1 tab-stop bàn phím riêng. -->
+<div
+  class="sidebar-backdrop no-print"
+  [class.show]="state.mobileOpen()"
+  aria-hidden="true"
+  (click)="state.closeDrawer()"
+></div>

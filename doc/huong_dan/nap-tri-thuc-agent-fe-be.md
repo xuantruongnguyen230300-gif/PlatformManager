@@ -34,7 +34,7 @@ src/BE/
 └── .claude/rules/
     ├── architecture.md            # layer rule, dependency direction, vertical slice
     ├── entity-domain.md           # base entity, factory method, Value Object
-    ├── cqrs-handler.md            # Command/Query/Handler, Result<T>, validator
+    ├── cqrs-handler.md            # Command/Query/Handler, ErrorDescriptor, validator
     └── api-controller.md          # controller, envelope response, error → HTTP
 ```
 
@@ -137,9 +137,13 @@ Cấu trúc: `wiki-core/README.md` (mục lục) → 2 lớp con:
   thật, ArchTest thật — dùng khi cần biết chính xác "hình dạng" của 1 thành
   phần core, không chỉ "có nên có nó không".
 
-`fe/README.md` (**hiện là stub** — chưa có bộ quy tắc core FE riêng, tạm dùng
-`src/FE/.claude/docs/*.md`; xem TODO trong chính file đó — cũng chưa có bản
-`fe/trien-khai/` tương ứng).
+`fe/01-...` đến `fe/10-...` (10 chủ đề lý thuyết) + `fe/trien-khai/00-...`
+đến `05-...` (6 file thực hành, giai đoạn F0–F5) — cùng cấu trúc với `be/`,
+viết xong 2026-08-15. Khác biệt nguồn: không có "VNR.Successor frontend" để
+đối chiếu — nguồn là kiến trúc chính thức Angular + hệ thống thiết kế thật
+của PlatformManager (`doc/Design/Frontend/PlatformManager/`) + các quyết
+định đã chốt trực tiếp với người dùng, xem ghi chú đầu
+`wiki-core/README.md` § FE.
 
 ### Cách kích hoạt
 
@@ -156,10 +160,6 @@ về `backend-expert`/`frontend-expert`.
 
 ## Khi nào cần cập nhật `wiki-core/`
 
-- Viết xong phần core FE (hiện còn stub) → thay `fe/README.md` bằng bộ file
-  `fe/01-...`, `fe/02-...` và cập nhật mục lục ở `wiki-core/README.md`. Cân
-  nhắc thêm `fe/trien-khai/` tương ứng nếu FE cũng cần lộ trình thực hành
-  chi tiết như BE.
 - Chốt một quyết định kiến trúc mới cho hệ thống (auth, metadata, concurrency
   ...) → cập nhật đúng file chủ đề trong `be/`, không thêm file gộp mới.
 - Khi `PlatformManager` bắt đầu implement thật một phase (P0–P6) và phát hiện

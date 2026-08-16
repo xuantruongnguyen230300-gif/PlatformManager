@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <RootNamespace>PlatformManager.ArchTests</RootNamespace>
+    <NoWarn>$(NoWarn);CS8981</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <!-- Dùng trực tiếp API MediatR/FluentValidation trong test (dựng mini pipeline) — cùng
+         version với PlatformManager.Core.Application.csproj/PlatformManager.Modules.DtiWeekly.Application.csproj, dù vốn đã có transitive qua ProjectReference. -->
+    <PackageReference Include="MediatR" Version="12.5.0" />
+    <PackageReference Include="FluentValidation" Version="12.0.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.11" />
+  </ItemGroup>
+
+  <!-- ArchTests là NGOẠI LỆ có chủ đích — tham chiếu ĐỦ CẢ 6 project (kể cả 2 Infrastructure)
+       để có thể reflection-kiểm tra ranh giới Core↔Modules ở MỌI tầng (kể cả tầng dễ vi phạm
+       nhất trong thực tế: Core.Infrastructure lỡ tay reference Modules.Infrastructure). Đây
+       KHÔNG vi phạm luật "chỉ Api được biết Infrastructure" — luật đó áp cho project SẢN PHẨM,
+       test project luôn được phép thấy toàn bộ để kiểm tra chéo. -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\Core\PlatformManager.Core.Domain\PlatformManager.Core.Domain.csproj" />
+    <ProjectReference Include="..\..\Core\PlatformManager.Core.Application\PlatformManager.Core.Application.csproj" />
+    <ProjectReference Include="..\..\Core\PlatformManager.Core.Infrastructure\PlatformManager.Core.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Modules\DtiWeekly\PlatformManager.Modules.DtiWeekly.Domain\PlatformManager.Modules.DtiWeekly.Domain.csproj" />
+    <ProjectReference Include="..\..\Modules\DtiWeekly\PlatformManager.Modules.DtiWeekly.Application\PlatformManager.Modules.DtiWeekly.Application.csproj" />
+    <ProjectReference Include="..\..\Modules\DtiWeekly\PlatformManager.Modules.DtiWeekly.Infrastructure\PlatformManager.Modules.DtiWeekly.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

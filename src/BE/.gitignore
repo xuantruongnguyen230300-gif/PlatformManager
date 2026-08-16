@@ -1,0 +1,11 @@
+# Build output
+bin/
+obj/
+
+# Visual Studio / Rider
+.vs/
+*.user
+*.suo
+
+# User secrets / local overrides
+appsettings.*.local.json

@@ -129,6 +129,12 @@ erDiagram
 
 ### 0. `AppUser` — người dùng hệ thống (ASP.NET Core Identity)
 
+> **Đã tách chi tiết đầy đủ sang [`ERD-corebase.md`](./ERD-corebase.md)**
+> (2026-08-15) — file đó dùng đúng tên field `BaseEntity` mới nhất và liệt
+> kê đủ 7 bảng Identity + `SysMenu`. Mục này giữ lại **chỉ** để làm điểm neo
+> cho FK nghiệp vụ (`CriteriaAssessment.OwnerId`) — không phải nguồn đầy đủ
+> nữa, đọc `ERD-corebase.md` cho chi tiết auth/menu.
+
 Không đến từ CSV hay `dashboard.html` (2 nguồn gốc không có khái niệm
 người dùng/đăng nhập) — sinh ra từ quyết định chốt cơ chế auth =
 **ASP.NET Core Identity**.

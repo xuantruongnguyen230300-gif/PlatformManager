@@ -1,24 +1,18 @@
-import { Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ToastService } from '../../services/toast.service';
 
-import { NotificationService } from '../../../core/services/notification.service';
-
-/**
- * Toast list dùng chung toàn app — render `NotificationService.items()`
- * (lỗi HTTP từ interceptor + thông báo thành công từ các page). Dumb ở chỗ chỉ
- * đọc signal có sẵn + phát hành động dismiss, không tự gọi API nào.
- */
 @Component({
   selector: 'app-toast',
   standalone: true,
   templateUrl: './toast.html',
-  styleUrl: './toast.scss'
+  styleUrl: './toast.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Toast {
-  private readonly notification = inject(NotificationService);
-
-  readonly items = this.notification.items;
+  private readonly toastService = inject(ToastService);
+  protected readonly toasts = this.toastService.toasts;
 
   dismiss(id: number): void {
-    this.notification.dismiss(id);
+    this.toastService.dismiss(id);
   }
 }

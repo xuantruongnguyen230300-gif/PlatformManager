@@ -96,17 +96,42 @@ hiện thực bằng `href` trỏ thẳng tới file trang đích cùng thư m�
 chất kỹ thuật của prototype tĩnh nhiều trang, khi lên Angular thật sẽ đổi
 thành `routerLink` theo `route` đã khai ở trên, không đổi UI/IA.
 
-### 1.3. Icon set — quyết định hoãn, không phải thiếu sót
+### 1.3. Icon set — Đã CHỐT (2026-08-15): PrimeIcons
 
-Dự án `src/FE` chưa scaffold, chưa chốt icon library (Material Symbols,
-Lucide, Heroicons, hay SVG sprite tự quản lý). Spec này dùng **placeholder
-SVG outline 20×20px** (stroke, không fill, khớp phong cách outline hiện có
-trong `dashboard.html`). Đã hiện thực 3 icon placeholder trong
-`doc/Prototype/{dashboard,danh-muc-dti}.html`: `dashboard` (lưới 4 ô),
-`folder` (icon cặp tài liệu, cho item cha "Danh mục"), `list` (icon tài
-liệu có dòng kẻ, cho item con "DTI"). Khi FE scaffold và chọn icon library,
-thay các khoá `icon: '...'` bằng khoá đúng theo thư viện đã chọn — không
-block spec này, rủi ro đổi icon sau này thấp (chỉ 3 khoá cần map lại).
+Đi kèm quyết định PrimeNG làm component library chính (xem
+`doc/huong_dan/wiki-core/fe/04-design-token-system.md`). Bảng map đầy đủ
+placeholder → PrimeIcons class ở
+`doc/Prototype/components/icons.html`. Cho tới khi lên Angular thật, các
+trang `doc/Prototype/*.html` **vẫn giữ SVG outline vẽ tay** (không đổi
+ngược lại prototype tĩnh đã verify) — chỉ 5 khoá cần map lại lúc build
+Angular thật (`dashboard`→`pi-th-large`, `folder`→`pi-folder`,
+`list`→`pi-list`, `settings`→`pi-cog`, `user`→`pi-user`), đúng như dự
+đoán "rủi ro đổi thấp" ở bản trước.
+
+### 1.4. Nav item mới (2026-08-15) — "Quản trị hệ thống" > "Người dùng"
+
+Bổ sung theo đúng cơ chế mở rộng `children` đã thiết kế ở mục 1.1 — không
+đổi shape `NavItem`. Cấu hình hiện tại (thay cho mục 1.2, nay có 3 item
+gốc, 2 item có con):
+
+```
+[
+  { id: 'dti-weekly', label: 'Dashboard', icon: 'dashboard', route: '/dashboard' },
+  { id: 'danh-muc', label: 'Danh mục', icon: 'folder', children: [
+      { id: 'danh-muc-dti', label: 'DTI', icon: 'list', route: '/danh-muc/dti' }
+  ]},
+  { id: 'quan-tri', label: 'Quản trị hệ thống', icon: 'settings', children: [
+      { id: 'sys-user', label: 'Người dùng', icon: 'user', route: '/quan-tri/nguoi-dung' }
+  ]}
+]
+```
+
+Đã hiện thực trong `doc/Prototype/quan-tri-nguoi-dung.html` (trang mới) +
+đồng bộ ngược vào sidebar của `dashboard.html`/`danh-muc-dti.html`. Nhóm
+"Quản trị hệ thống" thuộc lớp **corebase** (auth, quản trị) — chưa gắn
+nghiệp vụ DTI, đúng phạm vi đang xây hiện tại (SysUser trước, SysMenu dự
+kiến thêm sau theo cùng cơ chế `children`, chưa dựng trang vì chưa có nhu
+cầu cụ thể — không tự bịa trang chưa cần).
 
 ## 2. Layout
 

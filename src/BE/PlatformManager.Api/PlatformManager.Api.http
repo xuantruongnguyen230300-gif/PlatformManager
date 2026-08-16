@@ -1,6 +1,108 @@
 @PlatformManager.Api_HostAddress = http://localhost:5027
 
-GET {{PlatformManager.Api_HostAddress}}/weatherforecast/
-Accept: application/json
+### Đăng nhập (cookie session — client HTTP giữ cookie qua các request sau nếu hỗ trợ cookie jar)
+POST {{PlatformManager.Api_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "UserName": "SuperAdmin",
+  "Password": "SuperAdmin@123"
+}
+
+### Thông tin user hiện tại — kỳ vọng MustChangePassword=true cho tài khoản bootstrap
+GET {{PlatformManager.Api_HostAddress}}/api/auth/me
 
 ###
+POST {{PlatformManager.Api_HostAddress}}/api/auth/change-password
+Content-Type: application/json
+
+{
+  "CurrentPassword": "SuperAdmin@123",
+  "NewPassword": "MatKhauMoi@123"
+}
+
+### Menu điều hướng theo role hiện tại
+GET {{PlatformManager.Api_HostAddress}}/api/meta/menu
+
+### Ma trận phân quyền (chỉ SuperAdmin)
+GET {{PlatformManager.Api_HostAddress}}/api/admin/permissions
+
+###
+PUT {{PlatformManager.Api_HostAddress}}/api/admin/permissions
+Content-Type: application/json
+
+{
+  "Entries": [
+    { "SysMenuId": "00000000-0000-0000-0000-000000000000", "Roles": ["SuperAdmin"] }
+  ]
+}
+
+### Danh sách người dùng (Admin+SuperAdmin)
+GET {{PlatformManager.Api_HostAddress}}/api/users?page=1&pageSize=20
+
+###
+POST {{PlatformManager.Api_HostAddress}}/api/users
+Content-Type: application/json
+
+{
+  "UserName": "nguyen.van.a",
+  "Email": "nguyen.van.a@example.com",
+  "FullName": "Nguyễn Văn A",
+  "TempPassword": "TempPass@123",
+  "Roles": ["User"]
+}
+
+### Danh mục nhóm chỉ tiêu
+GET {{PlatformManager.Api_HostAddress}}/api/criteria-groups
+
+### Grid Danh mục DTI — "Live" (năm hiện tại + Tất cả), editable
+GET {{PlatformManager.Api_HostAddress}}/api/criteria?page=1&pageSize=100
+
+### Grid Danh mục DTI — lịch sử 1 tháng cụ thể, read-only
+GET {{PlatformManager.Api_HostAddress}}/api/criteria?year=2026&period=month&periodValue=2026-08
+
+###
+POST {{PlatformManager.Api_HostAddress}}/api/criteria
+Content-Type: application/json
+
+{
+  "Code": "9.1",
+  "Name": "Chỉ tiêu thử nghiệm",
+  "GroupId": "00000000-0000-0000-0000-000000000000",
+  "MaxScore": 10
+}
+
+### Sửa tay Tiến độ %/Ghi chú — luôn ghi vào "hôm nay", có guard chặn khi FE đang xem lịch sử
+PUT {{PlatformManager.Api_HostAddress}}/api/criteria/00000000-0000-0000-0000-000000000000/assessment
+Content-Type: application/json
+
+{
+  "ProgressPercent": 75.5,
+  "Note": "Cập nhật tiến độ tuần này",
+  "ViewYear": 2026,
+  "ViewPeriod": "all",
+  "ViewPeriodValue": null
+}
+
+### Import CSV mẫu (multipart) — xem doc/ERD/example_db_ver1.csv
+POST {{PlatformManager.Api_HostAddress}}/api/import/csv
+Content-Type: multipart/form-data; boundary=BOUNDARY
+
+--BOUNDARY
+Content-Disposition: form-data; name="file"; filename="example_db_ver1.csv"
+Content-Type: text/csv
+
+< ../../../doc/ERD/example_db_ver1.csv
+--BOUNDARY--
+
+### Dashboard — KPI/tiến độ nhóm/trend/bảng đầy đủ
+GET {{PlatformManager.Api_HostAddress}}/api/dashboard
+
+### Dashboard — danh sách kỳ có dữ liệu trong 1 năm
+GET {{PlatformManager.Api_HostAddress}}/api/dashboard/periods?year=2026
+
+### Báo cáo nhanh (HTML tiếng Việt)
+GET {{PlatformManager.Api_HostAddress}}/api/dashboard/report
+
+### Đăng xuất
+POST {{PlatformManager.Api_HostAddress}}/api/auth/logout

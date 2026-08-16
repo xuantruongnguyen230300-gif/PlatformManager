@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>PlatformManager.Core.Domain</RootNamespace>
+    <AssemblyName>PlatformManager.Core.Domain</AssemblyName>
+  </PropertyGroup>
+
+  <!-- KHÔNG có PackageReference — zero NuGet dependencies (xem architecture.md).
+       Core.Domain phải compile được kể cả khi xoá sạch mọi project khác trong solution. -->
+
+</Project>

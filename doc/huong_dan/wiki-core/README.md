@@ -55,12 +55,37 @@ tầm rộng hơn — bao gồm cả những gì PlatformManager demo hiện t�
 7. [P6 — ArchTests gate](be/trien-khai/07-p6-archtests-gate.md) — 34 gate thật, khi nào cần cái nào
 8. [Tra cứu file/class](be/trien-khai/08-tra-cuu-file-class.md) — mục lục ngược toàn bộ series
 
-### FE — `fe/`
+### FE — lý thuyết (`fe/`)
 
-Xem [fe/README.md](fe/README.md) — **hiện là stub**, chưa có bộ quy tắc core
-FE ở độ sâu tương đương BE. `core-reviewer` tạm dùng
-`src/FE/.claude/docs/*.md` làm chuẩn đối chiếu cho tới khi phần này được
-viết đầy đủ.
+1. [Core components](fe/01-core-components.md) — 12 thành phần core FE thật sự, nguyên tắc Nhóm A/B
+2. [HTTP Client & Envelope](fe/02-http-envelope.md) — tiêu thụ `IApiResult<T>` từ BE
+3. [State management](fe/03-state-management.md) — `signal()` → `signalStore()` có điều kiện
+4. [Design-token system](fe/04-design-token-system.md) — bridge với `doc/Design/`
+5. [Component library](fe/05-component-library.md) — 12 component thật, 5 trạng thái bắt buộc
+6. [Testing strategy](fe/06-testing-strategy.md) — mapper/interceptor trước, không coverage dàn trải
+7. [Auth/Identity](fe/07-auth-identity.md) — cookie session của ASP.NET Core Identity
+8. [i18n](fe/08-i18n.md) — `@angular/localize`
+9. [Forms & Validation](fe/09-forms-validation.md)
+10. [Observability](fe/10-observability.md) — correlation với `traceId` của BE
+11. [Grid & Metadata sync](fe/11-grid-and-metadata.md) — PrimeNG `p-table`, hợp đồng menu/cột với BE
+12. [Charting](fe/12-charting.md) — PrimeNG `p-chart`, ngưỡng nâng cấp `ngx-echarts`
+13. [Performance](fe/13-performance.md) — zoneless, `@defer`, virtual scroll, bundle budget
+
+### FE — thực hành / lộ trình triển khai (`fe/trien-khai/`)
+
+0. [Lộ trình tổng thể](fe/trien-khai/00-lo-trinh-tong-the.md) — 6 giai đoạn F0–F5, khác cách đọc P0–P6 của BE vì Angular CLI đã scaffold sẵn
+1. [F0 — Đồng bộ envelope](fe/trien-khai/01-f0-dong-bo-envelope.md) — việc cấp bách nhất, chặn mọi việc khác
+2. [F1 — Đồng bộ Design](fe/trien-khai/02-f1-dong-bo-design.md) — re-run pipeline thiết kế, bổ sung 5 trạng thái
+3. [F2 — Dọn nợ kỹ thuật](fe/trien-khai/03-f2-don-no-ky-thuat.md) — hardcode hex, test còn thiếu
+4. [F3 — Auth](fe/trien-khai/04-f3-auth.md) — phụ thuộc BE scaffold Identity thật
+5. [Gate](fe/trien-khai/05-gate.md) — lint rule + CI check tương đương ArchTest
+
+> **Nguồn tham chiếu khác BE:** `fe/` không có "VNR.Successor frontend" để
+> đối chiếu — nguồn là kiến trúc chính thức của Angular, hệ thống thiết kế
+> thật của chính PlatformManager (`doc/Design/Frontend/PlatformManager/`),
+> và các quyết định đã chốt trực tiếp với người dùng (2026-08-15) khi đối
+> chiếu với BE. Xem [fe/01-core-components.md](fe/01-core-components.md)
+> § đầu file.
 
 ## Cách dùng
 
@@ -70,9 +95,9 @@ viết đầy đủ.
   (thứ tự thao tác cụ thể) hơn `be/01-…10-…` (lý thuyết) — dùng
   [be/trien-khai/08-tra-cuu-file-class.md](be/trien-khai/08-tra-cuu-file-class.md)
   để tra nhanh 1 class/interface cụ thể mà không đọc lại cả file phase.
-- **`core-reviewer`**: đọc toàn bộ `be/*.md` (+ `fe/README.md`) trước khi
-  audit, đối chiếu code thật, báo cáo PASS/PARTIAL/MISSING kèm bằng chứng.
-  Với review đụng tới các phase P0–P6 (scaffold solution, base class, pipeline
-  behavior, module đầu tiên...), đối chiếu thêm với `be/trien-khai/` — file lý
-  thuyết (`be/01-…`) nói *nên* có gì, file thực hành (`be/trien-khai/`) nói
-  *đúng hình dạng* của nó (chữ ký thật, thứ tự đăng ký, ArchTest tương ứng).
+- **`core-reviewer`**: đọc toàn bộ `be/*.md` + `fe/*.md` trước khi audit,
+  đối chiếu code thật, báo cáo PASS/PARTIAL/MISSING kèm bằng chứng. Với
+  review đụng tới các phase P0–P6 (BE) hoặc F0–F5 (FE), đối chiếu thêm với
+  `be/trien-khai/`/`fe/trien-khai/` tương ứng — file lý thuyết (`be/01-…`/
+  `fe/01-…`) nói *nên* có gì, file thực hành nói *đúng hình dạng* của nó
+  (chữ ký thật, thứ tự đăng ký, test tương ứng).

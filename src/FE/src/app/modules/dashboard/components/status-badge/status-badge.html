@@ -1,0 +1,5 @@
+@if (status()) {
+  <span class="badge" [class]="cssClass()">{{ status() }}</span>
+} @else {
+  <span class="muted">—</span>
+}

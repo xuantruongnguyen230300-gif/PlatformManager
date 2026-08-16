@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>PlatformManager.Modules.DtiWeekly.Domain</RootNamespace>
+    <AssemblyName>PlatformManager.Modules.DtiWeekly.Domain</AssemblyName>
+  </PropertyGroup>
+
+  <!-- KHÔNG có PackageReference riêng — chỉ ProjectReference tới Core.Domain (xem
+       doc/kien-truc-core-module.md). Entity đặc thù DTI Weekly kế thừa BaseEntity của Core. -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Core\PlatformManager.Core.Domain\PlatformManager.Core.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

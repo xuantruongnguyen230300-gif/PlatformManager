@@ -1,0 +1,25 @@
+.required {
+  color: var(--bad);
+}
+
+.role-checkboxes {
+  display: flex;
+  gap: var(--sp-4);
+  margin-top: var(--sp-1);
+}
+
+.role-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}

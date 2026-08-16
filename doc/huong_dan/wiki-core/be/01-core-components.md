@@ -29,4 +29,14 @@ Trước khi liệt kê, 1 nguyên tắc phải giữ xuyên suốt: **core khô
 
 ## Áp dụng vào PlatformManager
 
-PlatformManager (bản demo hiện tại) đã có #1, #2, #3, #5, #6, #9 (mức tối giản) qua `AssessmentUpsertService`/`AggregationService`/`ApiResponse<T>`/`ExceptionMiddleware`. Chưa có #7 (đã bỏ qua theo yêu cầu demo), #8/#10/#13/#14/#17/#18 (chưa cần ở quy mô này), #11/#12 (cố tình KHÔNG làm — xem [03-metadata-driven-design.md](03-metadata-driven-design.md), vì chỉ có 2 màn hình, làm engine generic lúc này là over-engineering).
+PlatformManager đã có #1, #2, #3, #5, #6, #9 (mức tối giản) qua
+`AssessmentUpsertService`/`AggregationService`/`IApiResult<T>`/
+`GlobalExceptionHandler` (xem `src/BE/.claude/rules/api-controller.md`,
+đã thay `ApiResponse<T>`/`ExceptionMiddleware` cũ). #7 **đã triển khai**
+qua ASP.NET Core Identity (xem `src/BE/CLAUDE.md` §Stack,
+`doc/ERD/ERD-corebase.md`), sống ở `PlatformManager.Core.Infrastructure`
+theo kiến trúc Modular Monolith (xem `doc/kien-truc-core-module.md`) —
+không phải Module nào; #8/#10/#13/#14/#17/#18 (chưa cần ở quy mô này),
+#11/#12 (cố tình KHÔNG làm — xem
+[03-metadata-driven-design.md](03-metadata-driven-design.md), vì chỉ có 2
+module nghiệp vụ, làm engine generic lúc này là over-engineering).

@@ -4,12 +4,6 @@
   align-items: center;
   flex-wrap: wrap;
   margin-bottom: var(--sp-5);
-
-  input:disabled {
-    background: var(--bg);
-    color: var(--muted);
-    cursor: not-allowed;
-  }
 }
 
 .weekbar-actions {
@@ -17,6 +11,28 @@
   flex: none;
   display: flex;
   gap: var(--sp-3);
+}
+
+.period-display {
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--muted);
+  padding: var(--sp-2) var(--sp-3);
+  font-size: var(--fs-sm);
+}
+
+select {
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  padding: var(--sp-2) var(--sp-3);
+  font-size: var(--fs-sm);
+
+  &:focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 1px;
+  }
 }
 
 .segmented {
@@ -37,17 +53,22 @@
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease;
 
+  & + .seg-btn {
+    border-left: 1px solid var(--line);
+  }
+
   &:hover {
     background: var(--bg);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: -2px;
   }
 
   &.active {
     background: var(--brand);
     color: #fff;
-  }
-
-  & + & {
-    border-left: 1px solid var(--line);
   }
 }
 

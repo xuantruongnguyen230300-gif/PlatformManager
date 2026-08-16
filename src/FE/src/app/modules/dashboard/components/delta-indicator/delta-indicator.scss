@@ -1,0 +1,7 @@
+// Style .delta/.up/.down/.flat đã có ở global src/styles.scss (dùng chung nhiều nơi ngoài
+// component này) — không lặp lại ở đây, xem doc/huong_dan/wiki-core/fe/04-design-token-system.md
+// §Quy tắc dùng token trong component (token global đặt ở styles.scss, không đẩy state cục bộ
+// lên global "cho tiện").
+:host {
+  display: inline-block;
+}

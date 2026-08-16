@@ -1,28 +1,52 @@
-.app-shell {
+:host {
+  display: block;
+}
+
+.shell {
   position: relative;
   min-height: 100vh;
   min-height: 100dvh;
 }
 
-.app-shell-content {
+.shell-content {
   margin-left: var(--sidebar-w);
   min-height: 100vh;
   min-height: 100dvh;
   transition: margin-left 0.2s ease;
+  display: flex;
+  flex-direction: column;
 
   &.collapsed {
     margin-left: var(--sidebar-w-collapsed);
   }
 }
 
+main {
+  max-width: var(--container-max-width);
+  margin: auto;
+  padding: var(--sp-5);
+  width: 100%;
+  flex: 1;
+}
+
 @media (max-width: 980px) {
-  .app-shell-content {
+  .shell-content {
     margin-left: 0 !important;
   }
 }
 
+@media (max-width: 560px) {
+  main {
+    padding: 10px;
+  }
+}
+
 @media print {
-  .app-shell-content {
+  .shell-content {
     margin-left: 0 !important;
+  }
+
+  main {
+    max-width: none;
   }
 }

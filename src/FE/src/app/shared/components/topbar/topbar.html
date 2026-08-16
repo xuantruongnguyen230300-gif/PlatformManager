@@ -1,23 +1,24 @@
-<div class="topbar no-print">
+<div class="topbar">
   <div class="topin">
     <button
-      class="btn sidebar-hamburger no-print"
       type="button"
-      (click)="openDrawer()"
+      class="btn sidebar-hamburger no-print"
       aria-label="Mở menu điều hướng"
       aria-controls="sidebar"
+      [attr.aria-expanded]="state.mobileOpen()"
+      (click)="state.openDrawer()"
     >
-      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" width="20" height="20">
-        <line x1="3" y1="5.5" x2="17" y2="5.5" />
-        <line x1="3" y1="10" x2="17" y2="10" />
-        <line x1="3" y1="14.5" x2="17" y2="14.5" />
-      </svg>
+      <i class="pi pi-bars"></i>
     </button>
-    <div class="logo">
-      <h1>{{ title() }}</h1>
-      @if (subtitle()) {
-        <small>{{ subtitle() }}</small>
-      }
-    </div>
+    <div class="logo"><h1>{{ title() }}</h1></div>
+
+    @if (currentUser.isAuthenticated()) {
+      <div class="topbar-user no-print">
+        <span class="topbar-user-name">{{ currentUser.fullName() }}</span>
+        <button type="button" class="btn" title="Đăng xuất" (click)="onLogout()">
+          <i class="pi pi-sign-out"></i> Đăng xuất
+        </button>
+      </div>
+    }
   </div>
 </div>

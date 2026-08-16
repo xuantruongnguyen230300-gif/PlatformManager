@@ -1,20 +1,33 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>PlatformManager.Api</RootNamespace>
+    <AssemblyName>PlatformManager.Api</AssemblyName>
+    <UserSecretsId>platformmanager-api</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="CsvHelper" Version="33.1.0" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.9" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="10.2.3" />
+    <!-- dotnet-ef yêu cầu chính startup project reference package Design (dù DbContext nằm
+         ở Infrastructure) — chỉ cần lúc build-time cho tooling, không chạy runtime. -->
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.11">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="10.2.3" />
+  </ItemGroup>
+
+  <!-- Api là composition root DUY NHẤT thấy toàn bộ Core.* + Modules.<Ten>.* — xem
+       doc/kien-truc-core-module.md. Tham chiếu tường minh đủ 6 project (dù Domain/Application
+       đã được kéo theo bắc cầu qua Infrastructure) để đồ thị phụ thuộc hiện rõ ràng ngay trong
+       .csproj, không dựa ngầm vào tính bắc cầu của ProjectReference. -->
+  <ItemGroup>
+    <ProjectReference Include="..\Core\PlatformManager.Core.Domain\PlatformManager.Core.Domain.csproj" />
+    <ProjectReference Include="..\Core\PlatformManager.Core.Application\PlatformManager.Core.Application.csproj" />
+    <ProjectReference Include="..\Core\PlatformManager.Core.Infrastructure\PlatformManager.Core.Infrastructure.csproj" />
+    <ProjectReference Include="..\Modules\DtiWeekly\PlatformManager.Modules.DtiWeekly.Domain\PlatformManager.Modules.DtiWeekly.Domain.csproj" />
+    <ProjectReference Include="..\Modules\DtiWeekly\PlatformManager.Modules.DtiWeekly.Application\PlatformManager.Modules.DtiWeekly.Application.csproj" />
+    <ProjectReference Include="..\Modules\DtiWeekly\PlatformManager.Modules.DtiWeekly.Infrastructure\PlatformManager.Modules.DtiWeekly.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,68 +1,68 @@
 <#
 .SYNOPSIS
-  Quan ly EF Core migration + database Postgres localhost cho PlatformManager.Api.
+  Ho tro tao migration EF Core + sinh file .sql cho PlatformManager (KHONG tu dong
+  ap migration len DB that).
 
 .DESCRIPTION
-  Wrap cac lenh `dotnet ef` (tu cai tool neu thieu) + tuy chon import luon file CSV
-  mau qua API sau khi DB da san sang, de co data that thao tac CRUD ngay.
-  Doc connection string tu appsettings.Development.json (Host=localhost;Port=5432;
-  Database=platformmanager_dev) - khong can truyen tham so ket noi.
+  Wrap `dotnet ef migrations add`/`dotnet ef migrations script` (tu cai tool neu
+  thieu) + tuy chon import file CSV mau qua API sau khi ban DA TU CHAY file .sql
+  tren Postgres. Script nay KHONG BAO GIO goi `dotnet ef database update` hay
+  `dotnet ef database drop` - theo dung quyet dinh cua nguoi dung "DB rat quan
+  trong khong the tuy tien sua doi" (xem doc/ke-hoach-xay-lai-corebase.md).
+
+  Quy trinh dung file .sql sinh ra: tu doc lai noi dung, tu chay bang psql/pgAdmin/
+  cong cu ban chon. Rieng migration InitialCreate da co san tay-patch index unique
+  loc theo ngay cho CriteriaAssessments trong doc/ERD/migrations/0003_corebase_v2.sql
+  - neu tao migration MOI sau nay co dung lai loai index tuong tu, nho vá tay lai.
 
 .PARAMETER AddMigration
-  Ten migration moi can tao (vd "AddOwnerIndex") - chay `dotnet ef migrations add`.
-  Bo qua neu chi muon ap migration hien co vao DB.
+  Ten migration moi can tao (vd "AddOwnerIndex") - chay `dotnet ef migrations add`
+  (chi sinh class C#, KHONG dung DB that).
 
-.PARAMETER Reset
-  XOA SACH database "platformmanager_dev" tren localhost truoc khi tao lai tu dau.
-  Co xac nhan truoc khi xoa - hanh dong pha huy du lieu, chi dung khi that su muon
-  lam lai tu dau.
-
-.PARAMETER SkipUpdate
-  Chi tao migration (khi dung cung -AddMigration), KHONG ap vao database.
+.PARAMETER ScriptOutput
+  Duong dan file .sql muon sinh ra (chay `dotnet ef migrations script --idempotent`).
+  Mac dinh in ra man hinh huong dan, khong tu sinh file neu khong truyen tham so nay.
 
 .PARAMETER Import
-  Sau khi database da update, import file CSV mau (doc/ERD/example_db_ver1.csv)
-  qua API POST /api/import/csv de co ngay data that cho CRUD/Dashboard. Neu API
-  chua chay, script tu start tam (giu chay sau khi xong de dung tiep Swagger).
+  Import file CSV mau (doc/ERD/example_db_ver1.csv) qua API POST /api/import/csv -
+  CHI dung SAU KHI ban da tu chay file .sql migration tren Postgres va API dang
+  chay duoc voi schema da co san.
 
 .PARAMETER ApiUrl
   Base URL cua API khi dung -Import. Mac dinh http://localhost:5027 (khop
   launchSettings.json).
 
 .EXAMPLE
-  ./db.ps1
-  Ap toan bo migration hien co vao DB localhost (dung sau khi clone moi hoac pull
-  migration moi tu nguoi khac).
-
-.EXAMPLE
   ./db.ps1 -AddMigration AddCriteriaEvidenceOrderIndex
-  Tao migration moi tu thay doi entity, roi ap luon vao DB localhost.
+  Chi tao migration moi (class C#) tu thay doi entity - KHONG dung DB.
 
 .EXAMPLE
-  ./db.ps1 -Reset -Import
-  Xoa sach DB, tao lai tu dau, roi import 62 dong CSV mau de co data that ngay.
+  ./db.ps1 -ScriptOutput ../../../doc/ERD/migrations/0004_add_owner_index.sql
+  Sinh file .sql moi tu cac migration chua duoc ap - tu doc lai, tu chay tay tren
+  Postgres, KHONG co buoc nao trong script nay dung vao DB that.
+
+.EXAMPLE
+  ./db.ps1 -Import
+  (Sau khi da tu chay file .sql va API dang chay) import 62 dong CSV mau qua API.
 #>
 [CmdletBinding()]
 param(
     [string]$AddMigration,
-    [switch]$Reset,
-    [switch]$SkipUpdate,
+    [string]$ScriptOutput,
     [switch]$Import,
     [string]$ApiUrl = "http://localhost:5027"
 )
 
 $ErrorActionPreference = "Stop"
-$apiProject = Resolve-Path (Join-Path $PSScriptRoot "..\PlatformManager.Api")
+$beRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
+# DbContext song o Core.Infrastructure (Modular Monolith - xem doc/kien-truc-core-module.md) -
+# dung project nay cho --project, KHONG phai Modules.DtiWeekly.Infrastructure. Duong dan tinh
+# tu $beRoot (src/BE/) - Core/Modules la thu muc vat ly nhom project, PlatformManager.Api KHONG
+# nam trong Core/ hay Modules/ (khong phai "thu vien").
+$infraProject = "Core/PlatformManager.Core.Infrastructure"
+$apiProject = "PlatformManager.Api"
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..\..\..")
 $sampleCsv = Join-Path $repoRoot "doc\ERD\example_db_ver1.csv"
-
-function Test-Postgres {
-    $test = Test-NetConnection -ComputerName localhost -Port 5432 -WarningAction SilentlyContinue
-    if (-not $test.TcpTestSucceeded) {
-        Write-Host "Khong ket noi duoc Postgres tai localhost:5432 - kiem tra service Postgres da chay chua (Get-Service postgresql*)." -ForegroundColor Red
-        exit 1
-    }
-}
 
 function Test-EfTool {
     $installed = dotnet tool list -g | Select-String "dotnet-ef"
@@ -73,90 +73,46 @@ function Test-EfTool {
     }
 }
 
-function Test-ApiNotRunning {
-    if ($SkipUpdate -and -not $AddMigration -and -not $Reset) { return }
-    $proc = Get-Process -Name "PlatformManager.Api" -ErrorAction SilentlyContinue
-    if ($proc) {
-        Write-Host "API dang chay (PID $($proc.Id), start luc $($proc.StartTime)) - lenh 'dotnet ef' can build lai project nen se bi khoa file .exe." -ForegroundColor Red
-        Write-Host "Dung API lai truoc (dong cua so debug Visual Studio, hoac chay: Stop-Process -Id $($proc.Id) -Force) roi chay lai script nay." -ForegroundColor Red
-        exit 1
-    }
-}
-
-Write-Host "== PlatformManager.Api - DB localhost ==" -ForegroundColor Magenta
-Test-Postgres
+Write-Host "== PlatformManager - EF Core migration (KHONG dung DB that) ==" -ForegroundColor Magenta
 Test-EfTool
-Test-ApiNotRunning
 
-Push-Location $apiProject
+Push-Location $beRoot
 try {
-    if ($Reset) {
-        Write-Host ""
-        Write-Host "Sap XOA SACH database 'platformmanager_dev' tren localhost." -ForegroundColor Yellow
-        $confirm = Read-Host "Go 'yes' de xac nhan xoa"
-        if ($confirm -ne "yes") {
-            Write-Host "Da huy." -ForegroundColor Yellow
-            exit 0
-        }
-        dotnet ef database drop --force
-        if ($LASTEXITCODE -ne 0) { throw "Xoa database that bai." }
-    }
-
     if ($AddMigration) {
         Write-Host ""
-        Write-Host "Tao migration '$AddMigration'..." -ForegroundColor Cyan
-        dotnet ef migrations add $AddMigration
+        Write-Host "Tao migration '$AddMigration' (chi sinh class C#, khong dung DB)..." -ForegroundColor Cyan
+        dotnet ef migrations add $AddMigration --project $infraProject --startup-project $apiProject --output-dir Persistence/Migrations
         if ($LASTEXITCODE -ne 0) { throw "Tao migration that bai." }
+        Write-Host "Da sinh migration - doc lai class vua tao truoc khi tin, xem PlatformManager.Core.Infrastructure/Persistence/Migrations/." -ForegroundColor Green
     }
 
-    if (-not $SkipUpdate) {
+    if ($ScriptOutput) {
         Write-Host ""
-        Write-Host "Ap migration vao DB localhost (platformmanager_dev)..." -ForegroundColor Cyan
-        dotnet ef database update
-        if ($LASTEXITCODE -ne 0) { throw "Update database that bai." }
+        Write-Host "Sinh file .sql idempotent tai '$ScriptOutput' (chi xuat file, khong dung DB)..." -ForegroundColor Cyan
+        dotnet ef migrations script --idempotent --project $infraProject --startup-project $apiProject -o $ScriptOutput
+        if ($LASTEXITCODE -ne 0) { throw "Sinh script that bai." }
+        Write-Host ""
+        Write-Host "Da sinh '$ScriptOutput' - TU DOC LAI, TU CHAY TAY tren Postgres (psql/pgAdmin). Script nay KHONG tu chay len DB." -ForegroundColor Yellow
     }
 
-    Write-Host ""
-    Write-Host "DB localhost da san sang." -ForegroundColor Green
+    if (-not $AddMigration -and -not $ScriptOutput -and -not $Import) {
+        Write-Host ""
+        Write-Host "Khong truyen tham so nao - xem -AddMigration / -ScriptOutput / -Import. Vi du: ./db.ps1 -AddMigration TenMigration" -ForegroundColor Yellow
+    }
 
     if ($Import) {
-        $startedHere = $false
+        Write-Host ""
         $health = $null
         try { $health = Invoke-RestMethod -Uri "$ApiUrl/api/criteria-groups" -TimeoutSec 3 } catch {}
-
         if (-not $health) {
-            Write-Host ""
-            Write-Host "API chua chay o $ApiUrl - tu start tam (giu chay sau khi xong)..." -ForegroundColor Cyan
-            Start-Process -FilePath "dotnet" -ArgumentList "run", "--urls", $ApiUrl -WorkingDirectory $apiProject -WindowStyle Hidden
-            $startedHere = $true
-            $ready = $false
-            for ($i = 0; $i -lt 30; $i++) {
-                Start-Sleep -Seconds 1
-                try {
-                    $health = Invoke-RestMethod -Uri "$ApiUrl/api/criteria-groups" -TimeoutSec 2
-                    $ready = $true
-                    break
-                } catch {}
-            }
-            if (-not $ready) { throw "API khong len sau 30s - kiem tra log/port." }
+            throw "API chua chay tai $ApiUrl (hoac schema chua duoc ap) - tu chay 'dotnet run' trong $apiProject SAU KHI da tu chay file .sql migration tren Postgres, roi chay lai -Import."
         }
 
-        Write-Host ""
         Write-Host "Import $sampleCsv qua $ApiUrl/api/import/csv..." -ForegroundColor Cyan
         $curlExe = (Get-Command curl.exe -ErrorAction SilentlyContinue).Source
         if (-not $curlExe) { throw "Khong tim thay curl.exe (co san tu Windows 10+) de upload multipart." }
         $result = & $curlExe -s -X POST "$ApiUrl/api/import/csv" -F "file=@$sampleCsv"
         Write-Host $result
-
-        if ($startedHere) {
-            Write-Host ""
-            Write-Host "API dang chay nen tai $ApiUrl (tu start boi script nay) - vao Swagger $ApiUrl/swagger de CRUD tiep, hoac Stop-Process theo ten 'PlatformManager.Api' khi xong." -ForegroundColor Yellow
-        }
-    }
-    else {
-        Write-Host ""
-        Write-Host "Chay 'dotnet run' (hoac F5 Visual Studio) trong $apiProject de start API - tu seed danh muc (6 nhom, 62 chi tieu) neu DB rong." -ForegroundColor Yellow
-        Write-Host "Sau do CRUD/Import qua Swagger ($ApiUrl/swagger) hoac tu FE." -ForegroundColor Yellow
     }
 }
 finally {

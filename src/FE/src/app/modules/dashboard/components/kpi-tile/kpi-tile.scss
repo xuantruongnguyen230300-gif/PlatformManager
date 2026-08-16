@@ -1,0 +1,42 @@
+:host {
+  display: contents;
+}
+
+.kpi {
+  .label {
+    font-size: var(--fs-xs);
+    color: var(--muted);
+  }
+
+  .value {
+    font-size: 21px;
+    font-weight: 850;
+    margin-top: var(--sp-1);
+
+    &.good {
+      color: var(--good);
+    }
+
+    &.warn {
+      color: var(--warn);
+    }
+
+    &.bad {
+      color: var(--bad);
+    }
+  }
+
+  .sub {
+    font-size: var(--fs-xs);
+    color: var(--muted);
+    margin-top: var(--sp-1);
+    line-height: 1.4;
+    min-height: 30px;
+  }
+}
+
+@media (max-width: 560px) {
+  .kpi .value {
+    font-size: 18px;
+  }
+}

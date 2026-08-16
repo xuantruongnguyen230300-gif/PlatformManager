@@ -1,46 +1,42 @@
-<dialog #dialogRef class="form-dialog" (close)="onNativeClose()">
+<dialog #dialogEl class="form-dialog" (close)="onNativeClose()">
   <div class="title">
-    <h2>{{ title }}</h2>
-    <button type="button" class="btn" (click)="onCancel()">Đóng</button>
+    <h2>{{ title() }}</h2>
+    <button type="button" class="btn" (click)="dialogEl.close()">Đóng</button>
   </div>
 
   <div class="form-row">
-    <label for="cfCode">Mã <span class="bad">*</span></label>
-    <input id="cfCode" maxlength="20" placeholder="vd 1.1" [value]="code()" (input)="code.set($any($event.target).value)" />
+    <label for="cfCode">Mã <span class="required">*</span></label>
+    <input id="cfCode" #codeInput appAutofocus maxlength="20" placeholder="vd 1.1" [value]="editing()?.Code ?? ''" />
   </div>
+
   <div class="form-row">
-    <label for="cfName">Tên chỉ tiêu <span class="bad">*</span></label>
-    <textarea id="cfName" placeholder="Nhập tên đầy đủ chỉ tiêu..." [value]="name()" (input)="name.set($any($event.target).value)"></textarea>
+    <label for="cfName">Tên chỉ tiêu <span class="required">*</span></label>
+    <textarea id="cfName" #nameInput placeholder="Nhập tên đầy đủ chỉ tiêu...">{{ editing()?.Name ?? '' }}</textarea>
   </div>
+
   <div class="form-grid">
     <div class="form-row">
-      <label for="cfGroup">Nhóm <span class="bad">*</span></label>
-      <select id="cfGroup" [value]="groupId()" (change)="groupId.set($any($event.target).value)">
+      <label for="cfGroup">Nhóm <span class="required">*</span></label>
+      <select id="cfGroup" #groupSelect [value]="editing()?.GroupId ?? (groups()[0]?.Id ?? '')">
         @for (g of groups(); track g.Id) {
-          <option [value]="g.Id" [selected]="g.Id === groupId()">{{ g.Code }}. {{ g.Name }}</option>
+          <option [value]="g.Id">{{ g.Code }}. {{ g.Name }}</option>
         }
       </select>
     </div>
     <div class="form-row">
-      <label for="cfMax">Điểm tối đa <span class="bad">*</span></label>
-      <input
-        id="cfMax"
-        type="number"
-        min="0.01"
-        step="0.01"
-        placeholder="vd 10"
-        [value]="maxScore() ?? ''"
-        (input)="onMaxScoreInput($any($event.target).value)"
-      />
+      <label for="cfMax">Điểm tối đa <span class="required">*</span></label>
+      <input id="cfMax" #maxScoreInput type="number" min="0.01" step="0.01" placeholder="vd 10" [value]="editing()?.MaxScore ?? ''" />
     </div>
   </div>
 
-  @if (error()) {
-    <div class="form-error">{{ error() }}</div>
+  @if (errorMessage()) {
+    <div class="form-error">{{ errorMessage() }}</div>
   }
 
   <div class="dialog-actions">
-    <button type="button" class="btn" (click)="onCancel()">Huỷ</button>
-    <button type="button" class="btn primary" (click)="onSubmit()">Lưu chỉ tiêu</button>
+    <button type="button" class="btn" (click)="dialogEl.close()">Huỷ</button>
+    <button type="button" class="btn primary" (click)="onSubmit(codeInput, nameInput, groupSelect, maxScoreInput)">
+      Lưu chỉ tiêu
+    </button>
   </div>
 </dialog>

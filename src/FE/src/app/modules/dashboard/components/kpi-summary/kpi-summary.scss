@@ -4,47 +4,6 @@
   gap: var(--sp-4);
 }
 
-.kpi {
-  .label {
-    font-size: var(--fs-xs);
-    color: var(--muted);
-  }
-
-  .value {
-    font-size: 21px;
-    font-weight: 850;
-    margin-top: var(--sp-1);
-
-    &.good {
-      color: var(--good);
-    }
-
-    &.warn {
-      color: var(--warn);
-    }
-
-    &.up {
-      color: var(--good);
-    }
-
-    &.down {
-      color: var(--bad);
-    }
-
-    &.flat {
-      color: var(--muted);
-    }
-  }
-
-  .sub {
-    font-size: var(--fs-xs);
-    color: var(--muted);
-    margin-top: var(--sp-1);
-    line-height: 1.4;
-    min-height: 30px;
-  }
-}
-
 @media (max-width: 980px) {
   .kpis {
     grid-template-columns: repeat(2, 1fr);
@@ -56,11 +15,7 @@
     gap: 8px;
   }
 
-  .kpi .value {
-    font-size: 18px;
-  }
-
-  .kpis .card:last-child {
+  .kpis ::ng-deep .card:last-child {
     grid-column: 1 / -1;
   }
 }

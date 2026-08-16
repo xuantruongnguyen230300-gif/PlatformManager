@@ -1,0 +1,13 @@
+<Project>
+
+  <!-- Cấu hình build tập trung cho toàn bộ solution PlatformManager (P0).
+       Mọi .csproj con kế thừa các property này — không lặp lại ở từng project. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <WarningsAsErrors>Nullable</WarningsAsErrors>
+  </PropertyGroup>
+
+</Project>

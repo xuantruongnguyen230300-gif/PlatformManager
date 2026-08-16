@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>PlatformManager.Modules.DtiWeekly.Application</RootNamespace>
+    <AssemblyName>PlatformManager.Modules.DtiWeekly.Application</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MediatR" Version="12.5.0" />
+    <PackageReference Include="FluentValidation" Version="12.0.0" />
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.0.0" />
+    <!-- CsvHelper: thư viện parse thuần, không phải hạ tầng DB/web — CsvImportService
+         (Assessments/) cần nó để đọc file Import CSV tiếng Việt. -->
+    <PackageReference Include="CsvHelper" Version="33.1.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Core\PlatformManager.Core.Application\PlatformManager.Core.Application.csproj" />
+    <ProjectReference Include="..\..\..\Core\PlatformManager.Core.Domain\PlatformManager.Core.Domain.csproj" />
+    <ProjectReference Include="..\PlatformManager.Modules.DtiWeekly.Domain\PlatformManager.Modules.DtiWeekly.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

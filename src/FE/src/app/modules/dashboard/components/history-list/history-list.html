@@ -1,17 +1,19 @@
-<div class="card" style="margin-top:16px">
-  <div class="title">
-    <h2>Lịch sử các kỳ đã lưu</h2>
-    <span class="muted">Các kỳ-tuần có dữ liệu trong năm {{ year() }}</span>
-  </div>
-  <div class="history">
-    @for (item of items(); track item.Value) {
-      <div class="histrow">
-        <span>{{ formatDate(item.Date) }}</span>
-        <span class="num">{{ formatPercent(item.OverallProgress) }}</span>
-        <button type="button" class="btn" (click)="view.emit(item)">Xem</button>
-      </div>
-    } @empty {
-      <span class="muted">Chưa có kỳ nào được lưu trong năm này.</span>
-    }
-  </div>
+<div class="history">
+  @for (row of rows(); track row.Value) {
+    <div class="histrow">
+      <b>{{ row.DateLabel }}</b>
+      <span>
+        Tiến độ chung
+        <b>{{ row.Progress === null ? '—' : row.Progress.toLocaleString('vi-VN', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%' }}</b>
+      </span>
+      @if (row.IsFirst) {
+        <span class="muted">Kỳ đầu</span>
+      } @else {
+        <app-delta-indicator [value]="row.Delta" />
+      }
+      <button type="button" class="btn" (click)="view.emit(row.Value)">Xem</button>
+    </div>
+  } @empty {
+    <div class="muted">Chưa có tuần nào trong năm đang chọn.</div>
+  }
 </div>

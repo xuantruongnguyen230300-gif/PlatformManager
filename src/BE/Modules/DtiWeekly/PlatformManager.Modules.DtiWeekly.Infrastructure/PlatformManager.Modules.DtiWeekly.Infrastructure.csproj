@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>PlatformManager.Modules.DtiWeekly.Infrastructure</RootNamespace>
+    <AssemblyName>PlatformManager.Modules.DtiWeekly.Infrastructure</AssemblyName>
+  </PropertyGroup>
+
+  <!-- Chỉ cần Microsoft.EntityFrameworkCore (IEntityTypeConfiguration/ModelBuilder/Set<T>()) —
+       KHÔNG cần Npgsql/Identity/FrameworkReference AspNetCore.App riêng: DbContext thật + kết
+       nối DB + Identity đã được Core.Infrastructure sở hữu, module này chỉ định nghĩa entity
+       configuration + repository cho entity của chính mình. -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.11" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Core\PlatformManager.Core.Infrastructure\PlatformManager.Core.Infrastructure.csproj" />
+    <ProjectReference Include="..\PlatformManager.Modules.DtiWeekly.Application\PlatformManager.Modules.DtiWeekly.Application.csproj" />
+    <ProjectReference Include="..\PlatformManager.Modules.DtiWeekly.Domain\PlatformManager.Modules.DtiWeekly.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

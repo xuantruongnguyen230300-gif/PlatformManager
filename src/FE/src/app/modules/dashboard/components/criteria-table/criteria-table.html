@@ -1,38 +1,78 @@
-<app-table-scroll>
-  <table class="dashboard-criteria-table">
-    <thead>
-      <tr>
-        <th style="width:6%">Mã</th>
-        <th style="width:30%">Chỉ tiêu</th>
-        <th style="width:13%">Nhóm</th>
-        <th class="num" style="width:8%">Điểm tối đa</th>
-        <th class="num" style="width:8%">{{ prevColumnLabel() }}</th>
-        <th class="num" style="width:11%">{{ currentColumnLabel() }}</th>
-        <th class="num" style="width:9%">Tăng/giảm</th>
-        <th style="width:10%">Trạng thái</th>
-      </tr>
-    </thead>
-    <tbody>
-      @for (row of rows(); track row.CriteriaId) {
+<section class="card criteria-table-card">
+  <div class="title">
+    <h2>{{ rows().length }} chỉ tiêu DTI</h2>
+    <span class="muted">{{ countLabel() }}</span>
+  </div>
+
+  <div class="filters no-print">
+    <input placeholder="Tìm mã hoặc tên chỉ tiêu..." [value]="searchText()" (input)="onSearchInput($event)" />
+    <select [value]="groupFilter()" (change)="onGroupFilterChange($event)">
+      <option value="">Tất cả nhóm</option>
+      @for (g of groupOptions(); track g.Code) {
+        <option [value]="g.Code">{{ g.Code }}. {{ g.Name }}</option>
+      }
+    </select>
+    <select [value]="changeFilter()" (change)="onChangeFilterChange($event)">
+      <option value="">Tất cả mức thay đổi</option>
+      <option value="up">Chỉ tiêu tăng</option>
+      <option value="flat">Không tăng</option>
+      <option value="down">Giảm</option>
+      <option value="done">Hoàn thành</option>
+    </select>
+    <select [value]="sortBy()" (change)="onSortByChange($event)">
+      <option value="id">Theo mã chỉ tiêu</option>
+      <option value="delta">Tăng nhiều nhất</option>
+      <option value="low">Tiến độ thấp nhất</option>
+    </select>
+  </div>
+
+  <div class="tablewrap">
+    <p-table
+      [value]="filteredRows()"
+      [paginator]="true"
+      [rows]="20"
+      [rowsPerPageOptions]="[10, 20, 50]"
+      [scrollable]="true"
+      scrollHeight="480px"
+      dataKey="CriteriaId"
+    >
+      <ng-template #header>
         <tr>
-          <td>{{ row.Code }}</td>
+          <th style="width:6%">Mã</th>
+          <th style="width:24%">Chỉ tiêu</th>
+          <th style="width:12%">Nhóm</th>
+          <th class="num" style="width:7%">Điểm tối đa</th>
+          <th class="num" style="width:9%">{{ prevHeader() }}</th>
+          <th class="num" style="width:9%">{{ curHeader() }}</th>
+          <th class="num" style="width:8%">Tăng/giảm</th>
+          <th style="width:9%">Trạng thái</th>
+          <th style="width:16%">Ghi chú tuần</th>
+        </tr>
+      </ng-template>
+      <ng-template #body let-row>
+        <tr>
+          <td><b>{{ row.Code }}</b></td>
           <td>{{ row.Name }}</td>
           <td>{{ row.GroupCode }}. {{ row.GroupName }}</td>
           <td class="num">{{ row.MaxScore }}</td>
           <td class="num">{{ formatPercent(row.PreviousValue) }}</td>
           <td class="num">{{ formatPercent(row.CurrentValue) }}</td>
-          <td class="num">
-            <span class="delta" [class]="deltaClass(row.Delta)">{{ formatDelta(row.Delta) }}</span>
-          </td>
+          <td class="num"><app-delta-indicator [value]="row.Delta" /></td>
+          <td><app-status-badge [status]="row.Badge" /></td>
           <td>
-            @if (row.Badge && row.Badge !== 'Chưa có dữ liệu') {
-              <span class="badge" [class]="badgeClass(row.Badge)">{{ row.Badge }}</span>
+            @if (row.Note) {
+              {{ row.Note }}
             } @else {
               <span class="muted">—</span>
             }
           </td>
         </tr>
-      }
-    </tbody>
-  </table>
-</app-table-scroll>
+      </ng-template>
+      <ng-template #emptymessage>
+        <tr>
+          <td colspan="9" class="muted">Không có chỉ tiêu nào khớp bộ lọc.</td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </div>
+</section>

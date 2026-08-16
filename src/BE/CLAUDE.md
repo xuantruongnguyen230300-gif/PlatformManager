@@ -11,40 +11,45 @@ Agent chính chịu trách nhiệm vùng này: `backend-expert` (xem
 
 ## Stack
 
-- **.NET** (bản LTS/STS mới nhất tại thời điểm scaffold — ghi rõ version vào
-  đây sau khi chốt, vd. ".NET 9").
-- **Clean Architecture**: Domain / Application / Infrastructure / Api.
+- **.NET 10**.
+- **Clean Architecture, 2 tầng Core ↔ Business**: `Core.{Domain,Application,
+  Persistence,Infrastructure,Api}` (dùng lại được, không biết gì về nghiệp
+  vụ) + `Business.{Domain,Application,Persistence,Infrastructure,Api}` (1
+  khối duy nhất chứa MỌI tính năng nghiệp vụ — DTI Weekly là tính năng đầu
+  tiên, KHÔNG phải 1 "module" riêng) + `PlatformManager.Api` (host mỏng,
+  composition root duy nhất). Xem **`doc/kien-truc-core-module.md`** (root
+  repo) TRƯỚC khi tạo project mới hoặc thêm tính năng nghiệp vụ mới — quyết
+  định ranh giới Core/Business, lý do, ngưỡng nâng cấp tiếp theo (kể cả khi
+  nào mới tách thành nhiều module thật) đều nằm ở đó.
 - **CQRS-lite qua MediatR**: mỗi use case = 1 Command/Query + 1 Handler.
-- **EF Core + PostgreSQL** (mặc định — đổi nếu dự án chọn DB khác).
+- **EF Core + PostgreSQL**.
 - **FluentValidation** cho input validation.
 - **ASP.NET Core Identity** cho auth (đã chốt — xem
   `.claude/rules/api-controller.md` § Auth/Permission). Entity `AppUser`
-  (`IdentityUser<Guid>`) là bảng người dùng dùng chung cho toàn hệ thống.
+  (`IdentityUser<Guid>`) là bảng người dùng dùng chung cho toàn hệ thống,
+  sống ở `Core.Infrastructure` (không phải Module nào).
 
 ## Đọc theo chủ đề
 
 | File | Đọc khi |
 | --- | --- |
+| `doc/kien-truc-core-module.md` (root repo) | Ranh giới Core ↔ Business, thêm tính năng nghiệp vụ mới |
 | `.claude/rules/architecture.md` | Layer rule, dependency direction, project layout |
 | `.claude/rules/entity-domain.md` | Base entity, soft delete, Value Object, factory method |
-| `.claude/rules/cqrs-handler.md` | Command/Query, Handler, Validator, `Result<T>` |
+| `.claude/rules/cqrs-handler.md` | Command/Query, Handler, Validator, `ErrorDescriptor` |
 | `.claude/rules/api-controller.md` | Controller, envelope response, error → HTTP mapping |
 
-## Scaffold lần đầu (khi `.sln` chưa tồn tại)
+## Thêm tính năng nghiệp vụ mới — KHÔNG tạo project mới
 
-```bash
-cd src/BE
-dotnet new sln -n PlatformManager
-dotnet new classlib -n PlatformManager.Domain -o src/PlatformManager.Domain
-dotnet new classlib -n PlatformManager.Application -o src/PlatformManager.Application
-dotnet new classlib -n PlatformManager.Infrastructure -o src/PlatformManager.Infrastructure
-dotnet new webapi -n PlatformManager.Api -o src/PlatformManager.Api
-dotnet sln add src/**/*.csproj
-# Thiết lập project reference đúng chiều — xem .claude/rules/architecture.md
-```
+Cả 5 project `PlatformManager.Business.*` đã tồn tại — tính năng nghiệp vụ mới (sau DTI Weekly)
+chỉ thêm thư mục/file MỚI vào project đã có (entity → `Business.Domain/`, feature vertical-slice
+→ `Business.Application/<TênFeature>/`, EF config → `Business.Persistence/`, controller →
+`Business.Api/Controllers/`) — xem checklist đầy đủ ở `.claude/rules/architecture.md` §
+"Thêm tính năng nghiệp vụ mới". Chỉ tạo project mới (`PlatformManager.Modules.<Tên>.*`) khi đó là
+1 domain nghiệp vụ ĐỘC LẬP thật — đọc kỹ `doc/kien-truc-core-module.md` § Khi nào tách thành
+module độc lập thật trước khi tự quyết, hỏi người dùng nếu không chắc.
 
-Sau khi scaffold xong, `{BE_ROOT}` marker `*.sln` sẽ tồn tại và các
-skill/agent tự resolve bình thường.
+`{BE_ROOT}` marker `*.sln`/`*.slnx` đã tồn tại (`PlatformManager.slnx`).
 
 ## Maintenance Rules
 

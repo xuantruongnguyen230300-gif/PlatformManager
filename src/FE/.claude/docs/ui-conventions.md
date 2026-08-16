@@ -53,10 +53,20 @@ if (isPlatformBrowser(inject(PLATFORM_ID))) {
 
 ## i18n
 
-Chưa chốt thư viện i18n cho dự án (tuỳ chọn: `@angular/localize` tích hợp
-sẵn, hoặc `ngx-translate` nếu cần đổi ngôn ngữ runtime không rebuild). Nếu
-task cần thêm chuỗi đa ngôn ngữ và chưa có quyết định, hỏi trước khi tự chọn
-thư viện — đây là quyết định ảnh hưởng toàn app.
+**Đã CHỐT (2026-08-15):** dùng `@angular/localize` — built-in chính chủ
+Angular, không thêm dependency ngoài. Đánh đổi đã chấp nhận: đổi ngôn ngữ
+cần rebuild theo locale (compile-time), không đổi runtime mà không tải lại
+trang — chấp nhận được vì PlatformManager chưa có yêu cầu "đổi ngôn ngữ
+live không reload". Nếu phát sinh yêu cầu đó sau này, cân nhắc thêm
+`ngx-translate` cho đúng phần cần runtime-switch, không thay thế toàn bộ
+`@angular/localize` đã dùng.
+
+Chuỗi hiển thị đánh dấu bằng `i18n` attribute (template) hoặc `$localize`
+tagged template (code), build riêng theo locale qua `angular.json`
+`i18n.locales`. Chưa cần bật build đa-locale ngay khi core mới dựng — nhưng
+viết chuỗi mới **từ giờ nên đã dùng `$localize`/`i18n` attribute** thay vì
+string literal trần, để không phải quét lại toàn bộ codebase khi thật sự
+bật i18n.
 
 ## Testing
 

@@ -20,11 +20,11 @@ feature, không sửa code. Nhiệm vụ duy nhất: đối chiếu phần "core
 rồi báo cáo mức độ tuân thủ kèm bằng chứng cụ thể.
 
 "Core" ở đây nghĩa là các thành phần dùng chung, nền tảng — liệt kê đầy đủ ở
-`doc/huong_dan/wiki-core/be/01-core-components.md` (BaseEntity, Result<T>,
-envelope response, auth/identity, metadata mechanism, cross-module
-contract...) — **không phải** logic nghiệp vụ riêng của 1 feature
-(`Criteria`/`CriteriaAssessment` cụ thể không phải core, trừ khi đang xét
-cách chúng dùng `BaseEntity`/`Result<T>`).
+`doc/huong_dan/wiki-core/be/01-core-components.md` (BaseEntity,
+`ErrorDescriptor`/`IApiResult<T>`, envelope response, auth/identity,
+metadata mechanism, cross-module contract...) — **không phải** logic nghiệp
+vụ riêng của 1 feature (`Criteria`/`CriteriaAssessment` cụ thể không phải
+core, trừ khi đang xét cách chúng dùng `BaseEntity`/`ErrorDescriptor`).
 
 ---
 
@@ -49,14 +49,55 @@ việc thiếu đó như một quan sát.
 
 # Đọc bắt buộc trước khi review
 
-1. `{WIKI_ROOT}/README.md` — mục lục.
-2. Toàn bộ `{WIKI_ROOT}/be/*.md` khi review BE; `{WIKI_ROOT}/fe/README.md`
-   (+ `src/FE/.claude/docs/*.md` — chuẩn tạm thời cho FE, xem stub) khi
-   review FE.
-3. `src/BE/.claude/rules/*.md` / `src/FE/.claude/docs/*.md` — quy ước
+1. **`doc/kien-truc-core-module.md`** (root repo) — ranh giới Core ↔ Module
+   bắt buộc cho cả BE và FE (đã CHỐT 2026-08-16). Đây là 1 phần "core" cần
+   review độc lập với các mục wiki-core khác — xem mục riêng bên dưới.
+2. `{WIKI_ROOT}/README.md` — mục lục.
+3. Toàn bộ `{WIKI_ROOT}/be/*.md` khi review BE; toàn bộ `{WIKI_ROOT}/fe/*.md`
+   khi review FE (đối chiếu thêm `src/FE/.claude/docs/*.md` — quy ước thực
+   thi hiện tại `frontend-expert` đang theo, để phân biệt "cố ý đơn giản
+   hoá" với "thiếu sót thật", cùng nguyên tắc mục 4 dưới).
+4. `src/BE/.claude/rules/*.md` / `src/FE/.claude/docs/*.md` — quy ước
    **thực thi hiện tại** mà `backend-expert`/`frontend-expert` đang theo,
    để phân biệt "lệch khỏi wiki-core vì cố ý đơn giản hoá đã được thống
    nhất" (không phải finding) với "lệch vì thiếu sót thật" (là finding).
+
+## Ranh giới Core ↔ Module — kiểm riêng, không chung với các mục wiki-core khác
+
+Đối chiếu `doc/kien-truc-core-module.md` khi review đụng tới cấu trúc
+project/thư mục:
+
+- **BE — chỉ 2 tầng `Core.*`/`Business.*`, KHÔNG phải N-module** (xem
+  `doc/kien-truc-core-module.md` — nếu thấy code có `PlatformManager.
+  Modules.<Tên>.*` nào ngoài trường hợp đã ghi rõ lý do tách domain độc lập
+  thật trong doc, đây là finding thật — dấu hiệu quay lại mô hình cũ đã bị
+  thay thế). `PlatformManager.Core.*` không được `ProjectReference`/
+  reference gián tiếp tới bất kỳ `PlatformManager.Business.*` nào (đọc
+  `.csproj` trực tiếp, đừng chỉ tin tên project). `Core.Api`/`Business.Api`
+  không được reference `*.Persistence`/`*.Infrastructure` trực tiếp — chỉ
+  qua `*.Application`. `PlatformManagerDbContext` (trong `Core.Persistence`)
+  không hardcode reference assembly `Business.*` — phải nhận danh sách
+  assembly từ `PlatformManager.Api` (host). ArchTest
+  `Core_MustNotReference_Business`/
+  `Api_MustNotReference_PersistenceOrInfrastructure_Directly` phải tồn tại
+  và pass (`dotnet test` xác nhận, không chỉ đọc code). Vị trí vật lý trên
+  đĩa: 5 project Core nằm trong `src/BE/Core/`, 5 project Business nằm
+  trong `src/BE/Business/` (KHÔNG lồng thêm tên domain như `Business/
+  DtiWeekly/`), `Directory.Build.props`/`Directory.Packages.props` nằm ở
+  `src/BE/` (KHÔNG lồng vào `Core/` — nếu thấy lồng vào `Core/`, đây là
+  finding thật vì `Business`/`Api` sẽ âm thầm mất cấu hình chung).
+- **BE — SOLID/OOP** (đã ghi thành luật tường minh ở `.claude/rules/
+  architecture.md` § SOLID & OOP): kiểm tra không interface nào bị
+  implementation ném `NotImplementedException`/`NotSupportedException`
+  (vi phạm LSP/ISP), không `Core.*` nào bị sửa chỉ để phục vụ 1 module cụ
+  thể (vi phạm OCP), field nghiệp vụ của entity là `private set` + mutation
+  qua method tên nghiệp vụ (encapsulation).
+- **FE**: `modules/` chỉ chứa module nghiệp vụ (không còn màn Core nào lạc
+  trong đó); 4 màn Core (`login`, `doi-mat-khau`, `quan-tri-nguoi-dung`,
+  `phan-quyen`) nằm ở `platform/`. Gate G8 (ESLint `no-restricted-paths`
+  chặn `modules/<A>` import `modules/<B>`) đã cấu hình trong
+  `eslint.config.js`/`.eslintrc` — kiểm bằng cách đọc config, không chỉ tin
+  báo cáo.
 
 ---
 
@@ -143,9 +184,8 @@ tin nhắn**.
 3. Cần thao tác `git` — **KHÔNG BAO GIỜ tự chạy**, kể cả khi đã hỏi và được
    đồng ý (xem `.claude/CLAUDE.md` § Git operations are reserved for the
    user) — báo cáo cần gì rồi để người dùng tự chạy.
-4. `{WIKI_ROOT}` hoặc phần wiki cần review chưa tồn tại/còn là stub (như
-   `fe/README.md` hiện tại) — báo cáo rõ đây là giới hạn phạm vi, không tự
-   bịa quy tắc để review cho đủ.
+4. `{WIKI_ROOT}` hoặc phần wiki cần review chưa tồn tại/còn là stub — báo
+   cáo rõ đây là giới hạn phạm vi, không tự bịa quy tắc để review cho đủ.
 
 ---
 

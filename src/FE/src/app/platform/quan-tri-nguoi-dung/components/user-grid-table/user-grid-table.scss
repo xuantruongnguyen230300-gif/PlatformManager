@@ -1,0 +1,63 @@
+.tablewrap {
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-table);
+  overflow: hidden;
+}
+
+.user-cell {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--brand);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: var(--fs-xs);
+  flex: none;
+}
+
+.user-name {
+  font-weight: 700;
+}
+
+.user-email {
+  color: var(--muted);
+  font-size: var(--fs-xs);
+}
+
+.role-tag {
+  display: inline-block;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: var(--fs-xs);
+  color: var(--text);
+  background: #f8fafc;
+  margin-right: 4px;
+}
+
+// Biến thể trạng thái riêng cho màn này (khác .bdone/.bwork/.bstall của .badge global) — cùng
+// class .badge nền tảng (padding/radius/font) đã có ở styles.scss, chỉ thêm màu theo trạng thái.
+.badge.active {
+  background: var(--good-bg);
+  color: var(--good);
+}
+
+.badge.locked {
+  background: var(--bad-bg);
+  color: var(--bad);
+}
+
+.row-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}

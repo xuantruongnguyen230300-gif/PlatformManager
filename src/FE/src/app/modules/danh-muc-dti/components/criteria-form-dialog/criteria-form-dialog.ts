@@ -1,97 +1,98 @@
-import { Component, ElementRef, effect, input, output, signal, viewChild } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  PLATFORM_ID,
+  computed,
+  effect,
+  inject,
+  input,
+  output,
+  signal,
+  viewChild,
+} from '@angular/core';
+import { AutofocusDirective } from '../../../../shared/directives/autofocus.directive';
+import { ICriteria, ICriteriaGroup, ICriteriaUpsertPayload } from '../../models/danh-muc-dti.model';
 
-import { ICriteria, ICriteriaFormValue, ICriteriaGroup } from '../../models/danh-muc-dti.model';
+const MAX_CODE_LENGTH = 20;
 
 /**
- * Dialog "Thêm chỉ tiêu"/"Sửa" — dumb component, chỉ validate field cục bộ
- * (`spec/danh-muc-dti/business-rules.md` mục 1.1/1.2) rồi phát `submit`; page
- * cha mới gọi `DanhMucDtiService.createCriteria`/`updateCriteria`. Lỗi
- * business từ server (vd trùng Code) hiện qua toast dùng chung
- * (`core/interceptors/http-error.interceptor.ts`), không round-trip lại vào
- * dialog này.
+ * Dialog Thêm/Sửa chỉ tiêu (native `<dialog>`) — validate client trước (code≤20/tên bắt buộc/
+ * nhóm bắt buộc/điểm>0, khớp yêu cầu gốc task), `serverError` hiển thị lỗi 409 (trùng mã)/422 từ
+ * `DanhMucDtiPage` khi gọi API thất bại — page tự đọc `err.apiResult?.message`/`fields`, dialog
+ * chỉ render chuỗi đã có sẵn (không tự parse envelope).
  */
 @Component({
   selector: 'app-criteria-form-dialog',
   standalone: true,
+  imports: [AutofocusDirective],
   templateUrl: './criteria-form-dialog.html',
-  styleUrl: './criteria-form-dialog.scss'
+  styleUrl: './criteria-form-dialog.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CriteriaFormDialog {
-  readonly open = input.required<boolean>();
-  readonly groups = input.required<ICriteriaGroup[]>();
-  readonly editing = input<ICriteria | null>(null);
+  private readonly platformId = inject(PLATFORM_ID);
 
-  readonly submit = output<ICriteriaFormValue>();
+  readonly open = input.required<boolean>();
+  readonly editing = input<ICriteria | null>(null);
+  readonly groups = input<ICriteriaGroup[]>([]);
+  readonly serverError = input<string | null>(null);
+
+  readonly saved = output<ICriteriaUpsertPayload>();
   readonly closed = output<void>();
 
-  readonly code = signal('');
-  readonly name = signal('');
-  readonly groupId = signal('');
-  readonly maxScore = signal<number | null>(null);
-  readonly error = signal<string | null>(null);
+  protected readonly localError = signal<string | null>(null);
+  protected readonly title = computed(() => (this.editing() ? 'Sửa chỉ tiêu' : 'Thêm chỉ tiêu'));
+  protected readonly errorMessage = computed(() => this.localError() ?? this.serverError());
 
-  private readonly dialogEl = viewChild<ElementRef<HTMLDialogElement>>('dialogRef');
+  private readonly dialogEl = viewChild.required<ElementRef<HTMLDialogElement>>('dialogEl');
 
   constructor() {
     effect(() => {
-      const isOpen = this.open();
-      const dialog = this.dialogEl()?.nativeElement;
-      if (!dialog) return;
-
-      if (isOpen) {
-        const editing = this.editing();
-        this.code.set(editing?.Code ?? '');
-        this.name.set(editing?.Name ?? '');
-        this.groupId.set(editing?.GroupId ?? this.groups()[0]?.Id ?? '');
-        this.maxScore.set(editing?.MaxScore ?? null);
-        this.error.set(null);
-        if (!dialog.open) dialog.showModal();
-      } else if (dialog.open) {
-        dialog.close();
+      if (!isPlatformBrowser(this.platformId)) return;
+      const el = this.dialogEl().nativeElement;
+      if (this.open() && !el.open) {
+        this.localError.set(null);
+        el.showModal();
       }
+      if (!this.open() && el.open) el.close();
     });
-  }
-
-  get title(): string {
-    return this.editing() ? 'Sửa chỉ tiêu' : 'Thêm chỉ tiêu';
   }
 
   onNativeClose(): void {
     this.closed.emit();
   }
 
-  onCancel(): void {
-    this.closed.emit();
-  }
+  onSubmit(
+    codeInput: HTMLInputElement,
+    nameInput: HTMLTextAreaElement,
+    groupSelect: HTMLSelectElement,
+    maxScoreInput: HTMLInputElement,
+  ): void {
+    const code = codeInput.value.trim();
+    const name = nameInput.value.trim();
+    const groupId = groupSelect.value;
+    const maxScore = Number(maxScoreInput.value);
 
-  onMaxScoreInput(value: string): void {
-    this.maxScore.set(value === '' ? null : Number(value));
-  }
-
-  onSubmit(): void {
-    const code = this.code().trim();
-    const name = this.name().trim();
-    const groupId = this.groupId();
-    const maxScore = this.maxScore();
-
-    if (!code || code.length > 20) {
-      this.error.set('Mã bắt buộc, tối đa 20 ký tự.');
+    if (!code || code.length > MAX_CODE_LENGTH) {
+      this.localError.set('Mã bắt buộc, tối đa 20 ký tự.');
       return;
     }
     if (!name) {
-      this.error.set('Tên chỉ tiêu bắt buộc.');
+      this.localError.set('Tên chỉ tiêu bắt buộc.');
       return;
     }
     if (!groupId) {
-      this.error.set('Vui lòng chọn nhóm.');
+      this.localError.set('Vui lòng chọn nhóm.');
       return;
     }
-    if (!maxScore || maxScore <= 0) {
-      this.error.set('Điểm tối đa phải lớn hơn 0.');
+    if (!(maxScore > 0)) {
+      this.localError.set('Điểm tối đa phải lớn hơn 0.');
       return;
     }
 
-    this.error.set(null);
-    this.submit.emit({ Code: code, Name: name, GroupId: groupId, MaxScore: maxScore });
+    this.localError.set(null);
+    this.saved.emit({ Code: code, Name: name, GroupId: groupId, MaxScore: maxScore });
   }
 }

@@ -1,60 +1,48 @@
-import { Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { DashboardViewMode, IDashboardKpi } from '../../models/dashboard.model';
+import { KpiTile, KpiTone } from '../kpi-tile/kpi-tile';
 
-import { DashboardMode, IDashboardKpi } from '../../models/dashboard.model';
+function formatPercent(v: number | null): string {
+  return v === null ? '—' : `${v.toLocaleString('vi-VN', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
+}
 
-/**
- * 5 thẻ KPI đầu Dashboard — dumb component, chỉ render `kpi` đã tính sẵn từ
- * `GET /api/dashboard` (xem `doc/contracts/dashboard.md`). Nhãn 2 thẻ đầu đổi
- * động theo `mode` (week/month/year) — xem
- * `spec/dashboard-dti-weekly/ui-spec.md` mục 2.
- */
+function formatDelta(v: number | null): string {
+  if (v === null) return '—';
+  const prefix = v > 0 ? '↑ ' : v < 0 ? '↓ ' : '';
+  return `${prefix}${Math.abs(v).toLocaleString('vi-VN', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} đ.%`;
+}
+
+function deltaTone(v: number | null): KpiTone {
+  if (v === null) return 'default';
+  return v > 0 ? 'good' : v < 0 ? 'bad' : 'default';
+}
+
+/** 5 KPI card đầu Dashboard — nhãn đổi theo mode (Tuần/Tháng/"Tất cả"), xem yêu cầu gốc task. */
 @Component({
   selector: 'app-kpi-summary',
   standalone: true,
+  imports: [KpiTile],
   templateUrl: './kpi-summary.html',
-  styleUrl: './kpi-summary.scss'
+  styleUrl: './kpi-summary.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class KpiSummary {
   readonly kpi = input.required<IDashboardKpi>();
-  readonly mode = input.required<DashboardMode>();
+  readonly viewMode = input.required<DashboardViewMode>();
+  readonly isAllMode = input<boolean>(false);
 
-  readonly progressLabel = computed(() => {
-    switch (this.mode()) {
-      case 'week':
-        return 'Tiến độ chung tuần này';
-      case 'month':
-        return 'Tiến độ chung tháng này';
-      default:
-        return 'Tiến độ chung (Tất cả)';
-    }
+  protected readonly progressLabel = computed(() => {
+    if (this.isAllMode()) return 'Tiến độ chung (tổng hợp năm)';
+    return this.viewMode() === 'month' ? 'Tiến độ chung tháng này' : 'Tiến độ chung tuần này';
   });
 
-  readonly deltaLabel = computed(() => {
-    switch (this.mode()) {
-      case 'week':
-        return 'So với tuần trước';
-      case 'month':
-        return 'So với tháng trước';
-      default:
-        return 'So với năm trước';
-    }
-  });
+  protected readonly deltaLabel = computed(() =>
+    this.viewMode() === 'month' && !this.isAllMode() ? 'So với tháng trước' : 'So với tuần trước',
+  );
 
-  readonly deltaClass = computed(() => {
-    const d = this.kpi().Delta;
-    if (d === null || d === undefined) return 'flat';
-    if (d > 0.001) return 'up';
-    if (d < -0.001) return 'down';
-    return 'flat';
-  });
-
-  formatPercent(value: number | null): string {
-    return value === null || value === undefined ? '—' : `${value.toFixed(1)}%`;
-  }
-
-  formatDelta(value: number | null): string {
-    if (value === null || value === undefined) return '—';
-    const sign = value > 0 ? '+' : '';
-    return `${sign}${value.toFixed(1)}%`;
-  }
+  protected readonly progressValue = computed(() => formatPercent(this.kpi().OverallProgress));
+  protected readonly deltaValue = computed(() => formatDelta(this.kpi().Delta));
+  protected readonly deltaTone = computed(() => deltaTone(this.kpi().Delta));
+  protected readonly prevSub = computed(() => this.kpi().PreviousPeriodLabel ?? 'Chưa có kỳ trước');
+  protected readonly doneFraction = computed(() => `${this.kpi().Done}/${this.kpi().TotalCriteria}`);
 }

@@ -1,0 +1,62 @@
+<app-auth-card title="Đổi mật khẩu" [subtitle]="subtitle()">
+  @if (errorMessage()) {
+    <div class="login-error show">
+      <i class="pi pi-exclamation-circle"></i>
+      <span>{{ errorMessage() }}</span>
+    </div>
+  }
+
+  <form (submit)="$event.preventDefault(); onSubmit()">
+    <div class="field">
+      <label for="currentPassword">Mật khẩu hiện tại</label>
+      <div class="field-input">
+        <i class="pi pi-lock"></i>
+        <input
+          id="currentPassword"
+          type="password"
+          placeholder="Nhập mật khẩu hiện tại"
+          autocomplete="current-password"
+          required
+          [value]="currentPassword()"
+          (input)="onCurrentPasswordInput($event)"
+        />
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="newPassword">Mật khẩu mới</label>
+      <div class="field-input">
+        <i class="pi pi-key"></i>
+        <input
+          id="newPassword"
+          type="password"
+          placeholder="Nhập mật khẩu mới"
+          autocomplete="new-password"
+          required
+          [value]="newPassword()"
+          (input)="onNewPasswordInput($event)"
+        />
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="confirmPassword">Xác nhận mật khẩu mới</label>
+      <div class="field-input">
+        <i class="pi pi-key"></i>
+        <input
+          id="confirmPassword"
+          type="password"
+          placeholder="Nhập lại mật khẩu mới"
+          autocomplete="new-password"
+          required
+          [value]="confirmPassword()"
+          (input)="onConfirmPasswordInput($event)"
+        />
+      </div>
+    </div>
+
+    <button type="submit" class="btn primary btn-block" [disabled]="submitting()">
+      {{ submitting() ? 'Đang lưu…' : 'Đổi mật khẩu' }}
+    </button>
+  </form>
+</app-auth-card>

@@ -1,0 +1,32 @@
+<div class="card">
+  <div class="title">
+    <h2>Danh sách người dùng</h2>
+    <button type="button" class="btn primary" (click)="openCreateForm()">+ Thêm người dùng</button>
+  </div>
+
+  <div class="filters">
+    <div class="search">
+      <i class="pi pi-search"></i>
+      <input type="text" placeholder="Tìm theo tên hoặc email..." [value]="searchInput()" (input)="onSearchInputEvent($event)" />
+    </div>
+  </div>
+
+  <app-user-grid-table
+    [rows]="rows()"
+    [loading]="loading()"
+    [totalCount]="totalCount()"
+    [page]="page()"
+    [pageSize]="pageSize()"
+    (editRow)="openEditForm($event)"
+    (toggleLock)="onToggleLock($event)"
+    (pageChange)="onGridPageChange($event)"
+  />
+</div>
+
+<app-user-form-dialog
+  [open]="formOpen()"
+  [editing]="formEditing()"
+  [serverError]="formServerError()"
+  (saved)="onFormSaved($event)"
+  (closed)="onFormClosed()"
+/>

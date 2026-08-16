@@ -1,21 +1,7 @@
-<div class="card trend-card">
-  <div class="title">
-    <h2>Biểu đồ tiến độ hàng tuần</h2>
-    <span class="muted">{{ subtitle() }}</span>
-  </div>
-  <div class="chart-wrap">
-    @if (chartPoints().length > 0) {
-      <svg class="chart" [attr.viewBox]="viewBox" preserveAspectRatio="none">
-        <line class="baseline" x1="0" [attr.y1]="baselineY" x2="700" [attr.y2]="baselineY" />
-        <polyline class="trend-line" [attr.points]="polylinePoints()" fill="none" />
-        @for (p of chartPoints(); track $index) {
-          <circle class="trend-dot" [attr.cx]="p.X" [attr.cy]="p.Y" r="3">
-            <title>{{ p.Label }}: {{ p.Value.toFixed(1) }}%</title>
-          </circle>
-        }
-      </svg>
-    } @else {
-      <span class="muted">Chưa có dữ liệu để vẽ biểu đồ.</span>
-    }
-  </div>
+<div class="chart-wrap">
+  @if (hasData()) {
+    <p-chart type="line" [data]="chartData()" [options]="chartOptions()" [style]="{ height: '220px', width: '100%' }" />
+  } @else {
+    <p class="muted">Chưa có đủ dữ liệu để vẽ biểu đồ.</p>
+  }
 </div>

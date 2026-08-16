@@ -8,17 +8,39 @@
    đúng yêu cầu "tái tạo 1:1" prototype hiện tại, dùng giá trị compact trực tiếp từ
    prototype làm nguồn — ghi chú lại đây để design-expert biết khi chạy lại tokens. */
 :root {
-  --bg: #f3f6fb;
+  /* ===== Đã CHỐT LẠI (2026-08-15) — sửa tương phản thấp giữa các bậc bề mặt
+     (nền trang/card/nút gần như cùng 1 màu, đo được ~1.1:1–1.3:1, dưới ngưỡng
+     WCAG 2.2 3:1 cho thành phần UI — xem báo cáo "Kiểm Tra Tương Phản"). Giữ
+     nguyên tông xám-xanh + brand xanh gốc, chỉ tăng độ tách lớp thật bằng màu,
+     không chỉ dựa vào box-shadow. Sau khi đổi, chạy lại
+     `npx --yes --package=@google/design.md designmd lint` để xác nhận số đo
+     mới — giá trị dưới đây là hướng đã tính toán, không phải số cuối cùng
+     tuyệt đối, phải đối chiếu lại bằng công cụ thật. ===== */
+  --bg: #eef2f8;
   --card: #fff;
+  /* Đã CHỐT LẠI LẦN 3 (2026-08-15) — đổi chiến lược từ "border-first" sang
+     "fill-first", đúng hướng dashboard 2026 được đánh giá cao (Linear/Stripe/
+     Vercel/Notion) thay vì kiểu enterprise-software viền-khắp-nơi. Card tách
+     lớp bằng shadow (không phải viền đậm); nút phụ dùng nền tonal (sắc thái
+     nhạt của brand) thay vì xám+viền; viền đậm (--border-strong) giờ CHỈ dùng
+     cho input — nơi duy nhất viền thực sự có giá trị UX ("chỗ này gõ được").
+     Xem artifact "Hướng Màu Sắc" cho so sánh trực quan. */
+  --surface-2: #e1e7f1; /* giờ dùng làm hover tint cho nút ghost (icon-only), KHÔNG còn là nền nút mặc định */
+  --tonal-bg: #dbe7fa; /* nền nút phụ có nhãn chữ (Huỷ, Xuất báo cáo...) — sắc thái nhạt của --brand */
+  --tonal-ink: #0f4a9e; /* chữ trên nền tonal — đậm hơn --brand để đủ tương phản trên nền nhạt */
   --text: #152033;
-  --muted: #6d788b;
-  --line: #dfe6ef;
+  --muted: #57647a; /* đậm hơn bản cũ #6d788b để vượt an toàn 4.5:1 trên nền trắng */
+  --line: #dfe6ef; /* viền faint cho card/dòng kẻ bảng — KHÔNG phải component tương tác */
+  --border-strong: #7e91b4; /* viền CHỈ dùng cho input/select — không dùng cho nút/card nữa */
   --brand: #0f5bd7;
   --brand2: #174ca8;
-  --good: #14855b;
-  --warn: #c07a00;
-  --bad: #c83c3c;
-  --shadow: 0 7px 24px rgba(23, 39, 67, 0.08);
+  --good: #0e7050;
+  --good-bg: #d9f2e6;
+  --warn: #a8690a;
+  --warn-bg: #ffedc7;
+  --bad: #b83232;
+  --bad-bg: #fbdcdc;
+  --shadow: 0 4px 16px rgba(23, 39, 67, 0.1), 0 1px 3px rgba(23, 39, 67, 0.06); /* 2 lớp — đậm hơn để gánh việc tách lớp thay cho viền */
 
   --fs-xs: 11px;
   --fs-sm: 12px;
@@ -34,7 +56,7 @@
 
   --radius-sm: 7px;
   --radius-md: 9px;
-  --radius-lg: 14px;
+  --radius-lg: 16px; /* 14px→16px, theo xu hướng bo góc lớn hơn 2026 (breathing room) */
   --radius-dialog: 15px;
   --radius-table: 12px;
   --radius-pill: 999px;
@@ -100,15 +122,18 @@ p {
 }
 
 .btn {
-  border: 1px solid var(--line);
-  background: #fff;
-  color: var(--text);
+  /* Đã CHỐT LẠI LẦN 3: nền tonal (sắc thái brand) thay cho xám+viền — xem
+     ghi chú :root. Không viền (border: transparent giữ nguyên box model khi
+     hover/focus đổi màu, tránh layout nhảy 1px). */
+  border: 1px solid transparent;
+  background: var(--tonal-bg);
+  color: var(--tonal-ink);
   border-radius: var(--radius-sm);
   padding: var(--sp-2) var(--sp-3);
   font-size: var(--fs-sm);
   font-weight: 700;
   cursor: pointer;
-  transition: background 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
 
   &.primary {
     background: var(--brand);
@@ -123,13 +148,22 @@ p {
   }
 
   &.danger {
+    background: var(--bad-bg);
     color: var(--bad);
+
+    &:hover {
+      background: #f5c6c6;
+    }
   }
 
   &:hover {
-    background: var(--bg);
-    border-color: #c7d4e5;
-    box-shadow: 0 3px 10px rgba(23, 39, 67, 0.14);
+    background: #c7dbf5;
+    box-shadow: 0 3px 10px rgba(23, 39, 67, 0.1);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 2px;
   }
 
   &:active {
@@ -139,6 +173,34 @@ p {
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+  }
+}
+
+/* Nút icon-only tần suất cao (phân trang, thu gọn menu, hành động trong hàng
+   grid) — ghost: trong suốt mặc định, chỉ hiện nền khi hover/focus. Nhiều nút
+   cùng lúc trên 1 màn (mỗi dòng grid 2 nút) nên KHÔNG tonal-fill thường trực
+   như .btn — tránh rợp màu khi danh sách dài. */
+.action-btn {
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+
+  &:hover {
+    background: var(--surface-2);
+    color: var(--text);
+  }
+
+  &.danger:hover {
+    background: var(--bad-bg);
+    color: var(--bad);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 1px;
   }
 }
 
@@ -225,17 +287,17 @@ p {
   font-weight: 750;
 
   &.bdone {
-    background: #e7f7f0;
+    background: var(--good-bg);
     color: var(--good);
   }
 
   &.bwork {
-    background: #fff3da;
+    background: var(--warn-bg);
     color: var(--warn);
   }
 
   &.bstall {
-    background: #fdecec;
+    background: var(--bad-bg);
     color: var(--bad);
   }
 }
@@ -264,11 +326,18 @@ p {
 .filters select,
 .weekbar input,
 .weekbar select {
-  border: 1px solid var(--line);
+  /* Viền đậm hơn CÓ CHỦ ĐÍCH — input là nơi duy nhất viền thực sự giúp UX
+     ("chỗ này gõ được"), khác với nút/card giờ đã chuyển sang fill/shadow. */
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
   background: #fff;
   padding: var(--sp-2) var(--sp-3);
   font-size: var(--fs-sm);
+
+  &:focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 1px;
+  }
 }
 
 table {
@@ -335,7 +404,8 @@ tbody tr:hover {
   gap: var(--sp-2);
   margin-bottom: var(--sp-4);
 
-  label {
+  label,
+  .form-row-label {
     font-size: var(--fs-sm);
     font-weight: 700;
     color: var(--text);
@@ -404,5 +474,129 @@ dialog {
     &:hover {
       text-decoration: underline;
     }
+  }
+}
+
+/* ===== Form đăng nhập/đổi mật khẩu (F3) — port từ doc/Prototype/login.html. Đặt global (không
+   phải SCSS riêng của app-auth-card) vì nội dung form được project qua <ng-content> — style
+   scoped của Angular (emulated encapsulation) không xuyên qua nội dung project được, xem
+   doc/huong_dan/wiki-core/fe/04-design-token-system.md §Quy tắc dùng token trong component
+   (2 nơi dùng — platform/login + platform/doi-mat-khau — dưới ngưỡng "≥3 nơi" nhưng bắt buộc global
+   vì ràng buộc kỹ thuật content-projection, không phải sở thích). ===== */
+.field {
+  margin-bottom: var(--sp-4);
+
+  label {
+    display: block;
+    font-size: var(--fs-sm);
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: var(--sp-2);
+  }
+}
+
+.field-input {
+  position: relative;
+  display: flex;
+  align-items: center;
+
+  .pi {
+    position: absolute;
+    left: 12px;
+    color: var(--muted);
+    font-size: 15px;
+    pointer-events: none;
+  }
+
+  input {
+    width: 100%;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    background: #fff;
+    padding: 10px 12px 10px 36px;
+    font-size: var(--fs-sm);
+    color: var(--text);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+
+    &:focus-visible {
+      outline: none;
+      border-color: var(--brand);
+      box-shadow: 0 0 0 3px rgba(15, 91, 215, 0.12);
+    }
+  }
+
+  .toggle-visibility {
+    position: absolute;
+    right: 10px;
+    border: 0;
+    background: none;
+    color: var(--muted);
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    border-radius: 6px;
+
+    &:hover {
+      color: var(--text);
+      background: var(--bg);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--brand);
+      outline-offset: 1px;
+    }
+  }
+}
+
+.field-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  font-size: var(--fs-sm);
+
+  label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text);
+    cursor: pointer;
+  }
+
+  a {
+    color: var(--brand);
+    font-weight: 700;
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+.btn-block {
+  width: 100%;
+  padding: 11px;
+  font-size: var(--fs-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.login-error {
+  display: none;
+  background: var(--bad-bg);
+  border: 1px solid #e5a8a8;
+  color: var(--bad);
+  border-radius: var(--radius-sm);
+  padding: var(--sp-3);
+  font-size: var(--fs-sm);
+  margin-bottom: var(--sp-4);
+  align-items: center;
+  gap: 8px;
+
+  &.show {
+    display: flex;
   }
 }

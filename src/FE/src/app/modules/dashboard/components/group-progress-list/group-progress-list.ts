@@ -1,22 +1,25 @@
-import { Component, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { IGroupProgress } from '../../models/dashboard.model';
 
-import { IDashboardGroupProgress } from '../../models/dashboard.model';
+function formatPercent(v: number | null): string {
+  return v === null ? '—' : `${v.toLocaleString('vi-VN', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
+}
 
-/**
- * "Tiến độ theo nhóm" — dumb component, render 6 thanh tiến độ theo
- * `IDashboardGroupProgress[]` đã tính sẵn từ server.
- */
+function clampWidth(v: number | null): number {
+  if (v === null) return 0;
+  return Math.min(100, Math.max(0, v));
+}
+
+/** ProgressBar — 1 trong 12 component đã tài liệu hoá (Components/ProgressBar.md), danh sách tiến độ theo nhóm. */
 @Component({
   selector: 'app-group-progress-list',
   standalone: true,
   templateUrl: './group-progress-list.html',
-  styleUrl: './group-progress-list.scss'
+  styleUrl: './group-progress-list.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class GroupProgressList {
-  readonly groups = input.required<IDashboardGroupProgress[]>();
-  readonly subtitle = input('');
-
-  formatPercent(value: number | null): string {
-    return value === null || value === undefined ? '—' : `${value.toFixed(1)}%`;
-  }
+  readonly groups = input.required<IGroupProgress[]>();
+  protected readonly formatPercent = formatPercent;
+  protected readonly clampWidth = clampWidth;
 }

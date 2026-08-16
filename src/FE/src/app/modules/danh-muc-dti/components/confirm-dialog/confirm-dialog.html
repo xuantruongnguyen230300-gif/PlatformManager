@@ -1,10 +1,10 @@
-<dialog #dialogRef class="confirm-dialog" (close)="onNativeClose()">
+<dialog #dialogEl class="confirm-dialog" (close)="onNativeClose()">
   <div class="title">
-    <h2>Xác nhận</h2>
+    <h2>{{ title() }}</h2>
   </div>
-  <div class="confirm-message">{{ message() }}</div>
+  <p class="confirm-message">{{ message() }}</p>
   <div class="dialog-actions">
-    <button type="button" class="btn" (click)="closed.emit()">Huỷ</button>
-    <button type="button" class="btn danger" (click)="confirmed.emit()">{{ confirmLabel() }}</button>
+    <button type="button" class="btn" (click)="dialogEl.close()">Huỷ</button>
+    <button type="button" class="btn danger" (click)="confirmed.emit(); dialogEl.close()">{{ confirmLabel() }}</button>
   </div>
 </dialog>

@@ -1,11 +1,11 @@
-<dialog #dialogRef (close)="onNativeClose()">
+<dialog #dialogEl (close)="onNativeClose()">
   <div class="title">
     <h2>{{ title() }}</h2>
-    <button type="button" class="btn" (click)="closed.emit()">Đóng</button>
+    <button type="button" class="btn" (click)="dialogEl.close()">Đóng</button>
   </div>
-  <div class="report" #reportBox [innerHTML]="safeContent"></div>
+  <div #reportBoxEl class="report" [innerHTML]="safeContent()"></div>
   <div class="dialog-actions">
-    <button type="button" class="btn" (click)="copyReport()">Sao chép</button>
-    <button type="button" class="btn primary" (click)="printReport()">In</button>
+    <button type="button" class="btn" (click)="onCopy()">Sao chép</button>
+    <button type="button" class="btn primary" (click)="onPrint()">In</button>
   </div>
 </dialog>

@@ -61,12 +61,10 @@ Table AppUsers {
   FullName varchar(200) [note: 'Field mở rộng ngoài IdentityUser mặc định — tên hiển thị đầy đủ, phục vụ hiển thị "Phụ trách" trên UI thay vì chỉ UserName']
 
   Note: '''
-    Bảng đại diện cho AppUser : IdentityUser<Guid> của ASP.NET Core Identity.
-    KHÔNG vẽ lại toàn bộ lược đồ chuẩn (AspNetUsers/AspNetRoles/AspNetUserRoles/
-    AspNetUserClaims/AspNetUserLogins/AspNetUserTokens/AspNetRoleClaims) trong
-    DBML này — các bảng đó do Identity tự sinh qua migration
-    (IdentityDbContext<AppUser, AppRole, Guid>), chỉ liệt kê AppUsers ở đây làm
-    điểm neo cho các FK nghiệp vụ (vd CriteriaAssessments.OwnerId).
+    Chi tiết đầy đủ (7 bảng Identity + SysMenu) đã tách sang
+    doc/ERD/PlatformManager-corebase.dbml (2026-08-15) — file đó dùng đúng tên
+    field BaseEntity mới nhất. Bảng AppUsers ở ĐÂY chỉ còn là điểm neo cho FK
+    nghiệp vụ (CriteriaAssessments.OwnerId), không phải nguồn đầy đủ nữa.
   '''
 }
 

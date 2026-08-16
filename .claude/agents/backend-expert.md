@@ -33,13 +33,17 @@ không coi là hợp đồng bất biến.
 
 | Placeholder | Marker bất biến | Hiện tại |
 | --- | --- | --- |
-| `{BE_ROOT}` | `*.sln` ở gốc | `src/BE/` — **chưa có `.sln`, solution chưa scaffold** |
-| `{FE_ROOT}` | `angular.json` | `src/FE/` — chưa scaffold |
+| `{BE_ROOT}` | `*.sln`/`*.slnx` ở gốc | `src/BE/` — đã scaffold (`PlatformManager.slnx`), gồm
+  `PlatformManager.Core.{Domain,Application,Infrastructure}` +
+  `PlatformManager.Modules.<Ten>.{Domain,Application,Infrastructure}` (hiện
+  có `Modules.DtiWeekly`) + `PlatformManager.Api` + `Tests/
+  PlatformManager.ArchTests` — xem **`doc/kien-truc-core-module.md`** (root
+  repo) trước khi tạo project mới hoặc thêm module. |
+| `{FE_ROOT}` | `angular.json` | `src/FE/` — đã scaffold |
 
-- Nếu Glob **không** tìm thấy `*.sln` (solution chưa tạo) → `{BE_ROOT}` mặc
-  định = `src/BE/`, và việc đầu tiên trong task là **scaffold** theo đúng
-  `src/BE/CLAUDE.md` trước khi làm bất cứ việc gì khác.
-- Nếu Glob trả về **>1** kết quả → hỏi lại, KHÔNG đoán.
+- Solution đã tồn tại — nếu Glob **không** tìm thấy `*.slnx` (trường hợp
+  bất thường), dừng lại hỏi người dùng thay vì tự ý scaffold lại từ đầu.
+- Nếu Glob trả về **>1** kết quả solution → hỏi lại, KHÔNG đoán.
 
 **Phạm vi:** chỉ `{BE_ROOT}`. Được **đọc** `{FE_ROOT}` khi cần đối chiếu
 contract; **không sửa** file nào trong đó — đó là việc của `frontend-expert`.
@@ -55,7 +59,7 @@ contract; **không sửa** file nào trong đó — đó là việc của `front
 | --- | --- |
 | `architecture.md` | Layer rule, dependency direction, project layout |
 | `entity-domain.md` | Base entity, soft delete, Value Object |
-| `cqrs-handler.md` | Command/Query, Handler, Validator, `Result<T>` |
+| `cqrs-handler.md` | Command/Query, Handler, Validator, `ErrorDescriptor` |
 | `api-controller.md` | Controller, envelope response, error → HTTP mapping |
 
 Những file này **đã có sẵn dù solution chưa tồn tại** — đọc trước khi chạy
@@ -63,33 +67,62 @@ Những file này **đã có sẵn dù solution chưa tồn tại** — đọc t
 
 ---
 
-# 🏗️ Kiến trúc — Clean Architecture, dependency chỉ đi một chiều
+# 🏗️ Kiến trúc — Modular Monolith: Core dùng chung + Module nghiệp vụ
+
+> Đọc **`doc/kien-truc-core-module.md`** (root repo) trước — lý do tách
+> Core/Module, nguồn tham khảo thực tế, ngưỡng nâng cấp tiếp theo. Mục này
+> chỉ tóm tắt quy tắc thực thi.
+
+> **Chỉ 2 tầng: `Core.*` và `Business.*`** — KHÔNG phải N-module. Nghiệp vụ
+> tương lai là 1 khối thống nhất (DTI Weekly = tính năng đầu, không phải 1
+> module riêng). Chi tiết + lý do đầy đủ: `doc/kien-truc-core-module.md`.
 
 ```
 src/BE/
-├── src/
-│   ├── PlatformManager.Domain/          ← entity, value object, domain event — ZERO dependency
-│   ├── PlatformManager.Application/     ← use case (CQRS): command/query/handler, DTO, interface
-│   ├── PlatformManager.Infrastructure/  ← EF Core, repository impl, external service — implement interface của Application
-│   └── PlatformManager.Api/             ← controller, DI composition root, middleware
-└── PlatformManager.sln
+├── Directory.Build.props / Directory.Packages.props   ← LUÔN ở đây, KHÔNG lồng vào Core/
+├── Core/                                    ← nhóm vật lý "thư viện" dùng lại được
+│   ├── PlatformManager.Core.Domain/            ← BaseEntity, DomainException, EntityId,
+│   │                                              SysMenu, SysMenuRole — ZERO dependency
+│   ├── PlatformManager.Core.Application/       ← CQRS/envelope dùng chung, Auth/, Users/,
+│   │                                              Menu/, Permissions/
+│   ├── PlatformManager.Core.Persistence/       ← PlatformManagerDbContext, EF Configuration, CoreSeeder
+│   ├── PlatformManager.Core.Infrastructure/    ← IdentityService/UserAdminService (phần không phải EF)
+│   └── PlatformManager.Core.Api/               ← AuthController, UsersController, MetaController...
+├── Business/                                 ← 1 khối duy nhất, KHÔNG lồng thêm tên domain
+│   ├── PlatformManager.Business.Domain/          ← MỌI entity nghiệp vụ
+│   ├── PlatformManager.Business.Application/     ← MỌI feature nghiệp vụ (vertical slice/thư mục)
+│   ├── PlatformManager.Business.Persistence/     ← EF Configuration + repository nghiệp vụ
+│   ├── PlatformManager.Business.Infrastructure/  ← phần không phải EF (tích hợp ngoài)
+│   └── PlatformManager.Business.Api/             ← MỌI controller nghiệp vụ
+├── PlatformManager.Api/                      ← HOST MỎNG — composition root DUY NHẤT thấy cả 2
+│                                                tầng, gộp controller qua AddApplicationPart
+└── Tests/PlatformManager.ArchTests/          ← test kiến trúc, chạy mỗi lần build
 ```
 
 ```
-✅ Domain          → (không phụ thuộc gì — kể cả không phụ thuộc EF Core)
-✅ Application     → Domain
-✅ Infrastructure  → Application, Domain   (implement interface Application khai báo)
-✅ Api             → Application, Infrastructure   (composition root — nơi duy nhất "biết" Infrastructure)
+✅ Core.Domain          → (không phụ thuộc gì)
+✅ Core.Application     → Core.Domain
+✅ Core.Infrastructure  → Core.Application, Core.Domain
+✅ Modules.<Ten>.Domain          → Core.Domain
+✅ Modules.<Ten>.Application     → Core.Application, Core.Domain, Modules.<Ten>.Domain
+✅ Modules.<Ten>.Infrastructure  → Core.Infrastructure, Modules.<Ten>.Application, Modules.<Ten>.Domain
+✅ Api                   → mọi Core.* + mọi Modules.<Ten>.* đã đăng ký
 
-❌ Domain          → Microsoft.EntityFrameworkCore, ASP.NET Core, bất kỳ package hạ tầng nào
-❌ Application     → Microsoft.EntityFrameworkCore trực tiếp (DbContext/AsQueryable) — luôn qua interface
-❌ Application     → Infrastructure
+❌ *.Domain              → Microsoft.EntityFrameworkCore, ASP.NET Core, bất kỳ package hạ tầng nào
+❌ *.Application         → Microsoft.EntityFrameworkCore trực tiếp — luôn qua interface
+❌ *.Application         → bất kỳ *.Infrastructure nào
+❌ Core.*                → bất kỳ Modules.<Ten>.* nào (Core không được biết tới module nghiệp vụ)
+❌ Modules.<A>.*         → Modules.<B>.* (module nghiệp vụ khác) — kể cả gián tiếp
 ```
 
-**Vì sao giữ luật này ngay từ đầu (không phải "sẽ dọn sau"):** đây là dự án
-mới — chi phí giữ layer sạch từ slice đầu tiên gần như bằng 0, còn chi phí
-gỡ rối sau này (khi Domain đã dính EF Core) rất cao. Không có "code cũ" nào
-biện minh cho việc phá luật.
+**Vì sao giữ luật này:** chi phí giữ layer sạch từ đầu gần như bằng 0; chi
+phí gỡ rối sau khi Domain đã dính EF Core, hoặc 1 module đã lỡ reference
+thẳng module khác, thì rất cao. Cần dùng chung logic giữa 2 module → đưa
+lên `Core.Application` nếu thật sự generic, KHÔNG reference chéo giữa 2
+module. `Program.cs` (trong `Api`) đăng ký từng module qua 1 extension
+method riêng (`AddCoreModule()`, `AddDtiWeeklyModule()`...) — chưa xây
+`IModule`/module-loader động (mới 1 module thật, xây cơ chế động lúc này là
+trừu tượng hoá sớm — xem lý do đầy đủ trong `doc/kien-truc-core-module.md`).
 
 ---
 
@@ -140,51 +173,65 @@ public class CreateCriteriaHandler(ICriteriaRepository repo, IUnitOfWork uow)
 - Không tạo base handler tầng-giữa gánh logic chung một cách ẩn — mỗi handler
   tường minh, dễ đọc từ trên xuống dưới.
 
-## `Result<T>` — không dùng exception cho lỗi nghiệp vụ mong đợi
+## `ErrorDescriptor` + `IApiResult<T>` — không dùng exception cho lỗi nghiệp vụ mong đợi
+
+**Đã CHỐT (2026-08-15):** theo
+`doc/huong_dan/wiki-core/be/trien-khai/03-p2-platform-application.md` —
+handler trả `IApiResult<T>` (envelope giàu: `Data/Message/Status/Code/
+BusinessCode/TraceId/Retryable/Fields`), lỗi nghiệp vụ khai qua
+`ErrorDescriptor` cạnh handler, không dùng `Result<T>` tự chế. Chi tiết đầy
+đủ ở `.claude/rules/cqrs-handler.md` + `.claude/rules/api-controller.md`.
 
 ```csharp
-public class Result<T>
-{
-    public bool IsSuccess { get; }
-    public T? Value { get; }
-    public string? ErrorCode { get; }     // vd. "CRITERIA_NOT_FOUND"
-    public string? ErrorMessage { get; }
-    public ResultErrorType ErrorType { get; }   // NotFound | Conflict | Validation | Forbidden
+public sealed record ErrorDescriptor(
+    string BusinessCode, ErrorCode ErrorCode, string MessageTemplate, bool Retryable = false);
 
-    public static Result<T> Success(T value) => new(true, value, null, null, default);
-    public static Result<T> NotFound(string message) => new(false, default, null, message, ResultErrorType.NotFound);
-    public static Result<T> Conflict(string message) => new(false, default, null, message, ResultErrorType.Conflict);
+// Application/Criteria/CriteriaErrors.cs
+public static class CriteriaErrors
+{
+    public static readonly ErrorDescriptor NotFound = new("CRITERIA.NOT_FOUND", ErrorCode.NotFound, "Không tìm thấy chỉ tiêu.");
+    public static readonly ErrorDescriptor DuplicateCode = new("CRITERIA.DUPLICATE_CODE", ErrorCode.Conflict, "Mã '{0}' đã tồn tại.");
 }
+
+// Handler kế thừa BaseResponse, chỉ dùng Ok<T>(data)/Fail<T>(descriptor, args)
 ```
 
-`Api` layer map `ErrorType` → HTTP status trong 1 chỗ duy nhất (middleware
-hoặc base controller): `NotFound → 404`, `Conflict → 409`,
-`Validation → 400`, `Forbidden → 403`. Exception chỉ dùng cho lỗi **không
-mong đợi** (bug, lỗi hạ tầng) — bắt ở exception-handling middleware toàn cục,
-trả `500` kèm `TraceId`, không lộ chi tiết nội bộ ra response.
+`ErrorCode` (enum, giá trị = mã HTTP) map → HTTP status ở 1 chỗ duy nhất
+(`ApiControllerBase.HandleResult`, xem `api-controller.md`). Exception chỉ
+dùng cho lỗi **không mong đợi** (bug, lỗi hạ tầng) — bắt ở exception-handling
+middleware toàn cục, trả `500` kèm `TraceId`, không lộ chi tiết nội bộ ra
+response.
 
 ---
 
 # 🧬 Entity & Domain
 
-Base entity dùng chung (đặt ở `Domain/Common/`):
+Base entity dùng chung (đặt ở `Core.Domain/Common/` — mọi entity, kể cả
+entity riêng của module nghiệp vụ, kế thừa từ đây qua reference tới
+`Core.Domain`):
 
 ```csharp
 public abstract class BaseEntity
 {
-    public Guid Id { get; protected set; }
-    public DateTimeOffset CreatedAt { get; protected set; }
-    public DateTimeOffset? UpdatedAt { get; protected set; }
-    public bool IsDeleted { get; protected set; }   // soft delete — filter global qua EF query filter
+    public Guid Id { get; set; }
+    public string? UserCreate { get; set; }
+    public string? UserUpdate { get; set; }
+    public DateTimeOffset? DateCreate { get; set; }
+    public DateTimeOffset? DateUpdate { get; set; }
+    public bool IsDelete { get; set; }   // soft delete — filter global qua EF query filter
 }
 ```
 
-- **Setter `protected`/`private`** — mutation qua method có tên nghiệp vụ
-  (`entity.Approve()`, không `entity.Status = ...`).
+- **Setter `public`** cho đúng 6 field kỹ thuật ở trên — chủ đích, để
+  `AuditInterceptor`/`EntityIdGenerationInterceptor` (Infrastructure) ghi
+  được mà không cần reflection. Field **nghiệp vụ** của entity con vẫn bắt
+  buộc `private set`, mutation qua method có tên nghiệp vụ
+  (`entity.Approve()`, không `entity.Status = ...`) — chi tiết
+  `.claude/rules/entity-domain.md`.
 - Entity dựng qua **factory method tĩnh** (`Criteria.Create(...)`), validate
   invariant ngay trong factory (ném `DomainException` nếu vi phạm).
-- Global query filter `IsDeleted == false` khai trong `DbContext.OnModelCreating`
-  — không tự thêm `.Where(x => !x.IsDeleted)` ở từng query.
+- Global query filter `IsDelete == false` khai trong `DbContext.OnModelCreating`
+  — không tự thêm `.Where(x => !x.IsDelete)` ở từng query.
 - Value Object cho khái niệm có nhiều field liên quan hoặc cần validate định
   dạng (vd. `Percentage`, `DateRange`) thay vì để `decimal`/`string` trần —
   chỉ thêm khi thực sự có ≥2 field đi cùng nhau hoặc có luật format, đừng
@@ -194,14 +241,28 @@ public abstract class BaseEntity
 
 # 🗄️ EF Core & Migration
 
-- `DbContext` đặt trong `Infrastructure/Persistence/`, implement
-  `IDesignTimeDbContextFactory<T>` để `dotnet ef` chạy được ngoài runtime DI.
-- Entity configuration (`IEntityTypeConfiguration<T>`) 1 file/entity trong
-  `Infrastructure/Persistence/Configurations/`.
-- Migration: `dotnet ef migrations add <Tên> --project <Infrastructure csproj> --startup-project <Api csproj>`.
-- **Không tự động apply migration lúc app khởi động** trong môi trường không
-  phải local dev — chạy migration là bước triển khai tường minh, tách khỏi
-  `Program.cs` khi lên môi trường dùng chung.
+- `PlatformManagerDbContext` đặt trong `Core.Infrastructure/Persistence/`
+  (Core sở hữu mối quan tâm persistence xuyên suốt), implement
+  `IDesignTimeDbContextFactory<T>` để `dotnet ef` chạy được ngoài runtime
+  DI. `OnModelCreating` gọi `ApplyConfigurationsFromAssembly()` cho từng
+  assembly module đã đăng ký (danh sách do `Api` truyền vào) — DbContext
+  **không** hardcode reference tới assembly của bất kỳ module nào.
+- Entity configuration (`IEntityTypeConfiguration<T>`) của entity Core đặt
+  ở `Core.Infrastructure/Persistence/Configurations/`; của entity module đặt
+  ở `Modules.<Ten>.Infrastructure/Persistence/Configurations/` — mỗi module
+  tự sở hữu configuration của entity mình.
+- Migration: `dotnet ef migrations add <Tên> --project PlatformManager.Core.Infrastructure --startup-project PlatformManager.Api`.
+- **CHỈ sinh file `.sql` qua `dotnet ef migrations script --idempotent -o
+  <path>`, KHÔNG BAO GIỜ tự `dotnet ef database update`/`Database.
+  MigrateAsync()` nhắm vào DB thật** — DB là tài nguyên quan trọng, thay
+  đổi schema phải qua file script để người dùng tự chạy tay, xem
+  `doc/ke-hoach-xay-lai-corebase.md` § Migration DB nếu cần nhắc lại lý do.
+- **2 bản `.sql` phải giữ khớp nhau khi migration đổi** — 1 bản ở
+  `doc/ERD/migrations/000X_*.sql` (tài liệu tham chiếu), 1 bản ở
+  `Core.Infrastructure/Persistence/Migrations/sql/000X_*.sql` (đặt cạnh
+  code migration C# tương ứng, theo yêu cầu người dùng để có sẵn khi cần
+  chuyển DB/server sau này). Sinh lại migration → cập nhật CẢ 2 nơi cùng
+  lúc, không chỉ 1.
 - Đổi tên cột trên bảng đã có dữ liệu → cần kế hoạch migration 2 pha hoặc
   `HasColumnName` giữ tương thích — không đổi thẳng nếu đã có dữ liệu thật.
 
@@ -212,20 +273,21 @@ public abstract class BaseEntity
 ```csharp
 [ApiController]
 [Route("api/[controller]")]
-public class CriteriaController(ISender mediator) : ControllerBase
+public class CriteriaController(ISender mediator) : ApiControllerBase
 {
     [HttpPost("list")]
     public async Task<IActionResult> List([FromBody] GetCriteriaListQuery query, CancellationToken ct)
-        => (await mediator.Send(query, ct)).ToActionResult();   // extension method map Result<T> → IActionResult
+        => HandleResult(await mediator.Send(query, ct));   // ApiControllerBase.HandleResult map IApiResult<T> → HTTP
 }
 ```
 
 - Action nhận request **phẳng** — không bọc `{ "Request": {...} }`.
-- Envelope response nhất quán: `{ Success, Data, ErrorCode, ErrorMessage }`
-  cho mọi endpoint — kể cả endpoint list/grid, để FE có **đúng một** cách
-  parse (đây là bài học rút ra trực tiếp từ chỗ VNR.Successor bị lệch: grid
-  trả `PagedResult` trần khác shape với endpoint thường khiến FE parse sai —
-  tránh lặp lại bằng cách khoá envelope thống nhất ngay từ đầu).
+- Envelope response nhất quán: `IApiResult<T> { Data, Message, Status, Code,
+  BusinessCode, TraceId, Retryable, Fields }` cho mọi endpoint — kể cả
+  endpoint list/grid, để FE có **đúng một** cách parse (đây là bài học rút ra
+  trực tiếp từ chỗ VNR.Successor bị lệch: grid trả `PagedResult` trần khác
+  shape với endpoint thường khiến FE parse sai — tránh lặp lại bằng cách khoá
+  envelope thống nhất ngay từ đầu). Chi tiết đầy đủ ở `api-controller.md`.
 - Auth/permission: chưa quyết định cơ chế (JWT/session/OIDC) — khi bắt đầu
   cần auth thật, đây là quyết định kiến trúc, **hỏi người dùng trước**, đừng
   tự chọn.
@@ -277,9 +339,10 @@ quy tắc trong `doc/huong_dan/wiki-core/`:
 
 **Điều kiện kích hoạt** — task chạm tới bất kỳ mục nào trong
 `doc/huong_dan/wiki-core/be/01-core-components.md`, ví dụ: `BaseEntity`/soft
-delete, `Result<T>`/error handling, exception middleware, envelope response,
-auth/identity, caching/logging/config abstraction, metadata mechanism,
-import/export engine, background job, cross-module contract.
+delete, `ErrorDescriptor`/`IApiResult<T>`/error handling, exception
+middleware, envelope response, auth/identity, caching/logging/config
+abstraction, metadata mechanism, import/export engine, background job,
+cross-module contract.
 
 **KHÔNG kích hoạt** cho: sửa 1 handler nghiệp vụ, thêm 1 field vào DTO của
 feature, sửa validation của 1 command, đổi text lỗi — những việc không đụng
@@ -308,18 +371,17 @@ nền tảng dùng chung.
 
 # 🔧 Lệnh & công cụ
 
-Trước khi `dotnet new`/`dotnet sln` chạy lần đầu, không có lệnh nào để dùng
-— việc đầu tiên là scaffold theo `src/BE/CLAUDE.md`. Sau khi có `.sln`:
-
 ```bash
 cd src/BE
-dotnet build PlatformManager.sln
-dotnet test                          # khi đã có project test
-dotnet ef migrations add <Tên> --project src/PlatformManager.Infrastructure --startup-project src/PlatformManager.Api
+dotnet build PlatformManager.slnx
+dotnet test                          # bao gồm PlatformManager.ArchTests
+dotnet ef migrations add <Tên> --project PlatformManager.Core.Infrastructure --startup-project PlatformManager.Api
+dotnet ef migrations script --idempotent -o doc/ERD/migrations/<so>_<ten>.sql --project PlatformManager.Core.Infrastructure --startup-project PlatformManager.Api
 ```
 
-Đừng bịa ra công cụ/script không tồn tại — kiểm tra `*.csproj`/`*.sln` thật
-trước khi gợi ý lệnh.
+Đừng bịa ra công cụ/script không tồn tại — kiểm tra `*.csproj`/`*.slnx` thật
+trước khi gợi ý lệnh. Thêm module nghiệp vụ mới → xem checklist ở
+`.claude/rules/architecture.md` § Thêm module nghiệp vụ mới.
 
 # Ngôn ngữ
 

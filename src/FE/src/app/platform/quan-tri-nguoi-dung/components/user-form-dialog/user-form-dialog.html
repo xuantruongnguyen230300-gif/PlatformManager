@@ -1,0 +1,63 @@
+<dialog #dialogEl class="form-dialog" (close)="onNativeClose()">
+  <div class="title">
+    <h2>{{ title() }}</h2>
+    <button type="button" class="btn" (click)="dialogEl.close()">Đóng</button>
+  </div>
+
+  @if (!editing()) {
+    <div class="form-row">
+      <label for="ufUserName">Tên đăng nhập <span class="required">*</span></label>
+      <input
+        id="ufUserName"
+        appAutofocus
+        placeholder="vd nguyen.van.a"
+        [value]="userNameField()"
+        (input)="onUserNameInput($event)"
+      />
+    </div>
+  }
+
+  <div class="form-row">
+    <label for="ufEmail">Email <span class="required">*</span></label>
+    <input id="ufEmail" type="email" placeholder="ten@congty.vn" [value]="emailField()" (input)="onEmailInput($event)" />
+  </div>
+
+  <div class="form-row">
+    <label for="ufFullName">Họ tên <span class="required">*</span></label>
+    <input id="ufFullName" placeholder="Nguyễn Văn A" [value]="fullNameField()" (input)="onFullNameInput($event)" />
+  </div>
+
+  @if (!editing()) {
+    <div class="form-row">
+      <label for="ufTempPassword">Mật khẩu tạm <span class="required">*</span></label>
+      <input
+        id="ufTempPassword"
+        type="text"
+        placeholder="vd TempPass@123"
+        [value]="tempPasswordField()"
+        (input)="onTempPasswordInput($event)"
+      />
+    </div>
+  }
+
+  <div class="form-row">
+    <span id="ufRolesLabel" class="form-row-label">Vai trò <span class="required">*</span></span>
+    <div class="role-checkboxes" role="group" aria-labelledby="ufRolesLabel">
+      @for (role of assignableRoles; track role) {
+        <label class="role-checkbox">
+          <input type="checkbox" [checked]="isRoleSelected(role)" (change)="toggleRole(role)" />
+          {{ role }}
+        </label>
+      }
+    </div>
+  </div>
+
+  @if (errorMessage()) {
+    <div class="form-error">{{ errorMessage() }}</div>
+  }
+
+  <div class="dialog-actions">
+    <button type="button" class="btn" (click)="dialogEl.close()">Huỷ</button>
+    <button type="button" class="btn primary" (click)="onSubmit()">Lưu</button>
+  </div>
+</dialog>

@@ -1,0 +1,6 @@
+// Toàn bộ style (.field/.field-input/.login-error/.field-row/.btn-block) đã ở global
+// src/styles.scss (bắt buộc global vì content project qua <ng-content> của AuthCard — xem ghi
+// chú ở styles.scss). Không có style riêng nào cho component này.
+:host {
+  display: contents;
+}

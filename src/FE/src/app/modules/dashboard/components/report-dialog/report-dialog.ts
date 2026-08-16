@@ -1,65 +1,76 @@
 import { isPlatformBrowser } from '@angular/common';
-import { Component, ElementRef, PLATFORM_ID, effect, inject, input, output, viewChild } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  PLATFORM_ID,
+  computed,
+  effect,
+  inject,
+  input,
+  output,
+  viewChild,
+} from '@angular/core';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 
-import { NotificationService } from '../../../../core/services/notification.service';
+export type ReportCopyResult = 'success' | 'error';
 
 /**
- * Dialog "Xuất báo cáo" — dumb, hiển thị `title`/`contentHtml` do
- * `GET /api/dashboard/report` trả sẵn (server tự tính, mirror đúng
- * `generateReport()` gốc — xem `doc/contracts/dashboard.md` CONTRACT DB-2).
- * `contentHtml` chỉ chứa thẻ `<b>`/`<br>` từ server tin cậy nội bộ — sanitize
- * qua `DomSanitizer` trước khi bind `[innerHTML]`. "Sao chép"/"In" bọc
- * `isPlatformBrowser` theo `ui-conventions.md`.
+ * Dialog (native `<dialog>`) — báo cáo nhanh từ BE (`ContentHtml` đã render sẵn, xem
+ * doc/contracts/dashboard.md CONTRACT DB-2). Sanitize qua `DomSanitizer.bypassSecurityTrustHtml`
+ * NGAY TẠI ĐÂY (BE tự tính HTML, FE chỉ hiển thị, tin tưởng nguồn — không có input người dùng
+ * lẫn vào chuỗi này) theo đúng yêu cầu gốc.
+ *
+ * Dumb component (`modules/dashboard/components/`) — KHÔNG inject `ToastService` (ngoại lệ
+ * "app-shell" chỉ áp dụng sidebar/topbar/toast, xem
+ * doc/huong_dan/wiki-core/fe/05-component-library.md §Vị trí trong cây thư mục). Kết quả copy
+ * phát qua `copyResult` để `DashboardPage` (smart) tự quyết định cách báo cho user.
  */
 @Component({
   selector: 'app-report-dialog',
   standalone: true,
   templateUrl: './report-dialog.html',
-  styleUrl: './report-dialog.scss'
+  styleUrl: './report-dialog.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ReportDialog {
-  private readonly platformId = inject(PLATFORM_ID);
-  private readonly notification = inject(NotificationService);
   private readonly sanitizer = inject(DomSanitizer);
+  private readonly platformId = inject(PLATFORM_ID);
 
   readonly open = input.required<boolean>();
-  readonly title = input('Báo cáo tiến độ DTI');
-  readonly contentHtml = input('');
-
+  readonly title = input<string>('Báo cáo tiến độ DTI');
+  readonly contentHtml = input<string>('');
   readonly closed = output<void>();
+  readonly copyResult = output<ReportCopyResult>();
 
-  private readonly dialogEl = viewChild<ElementRef<HTMLDialogElement>>('dialogRef');
-  private readonly reportBox = viewChild<ElementRef<HTMLElement>>('reportBox');
+  protected readonly safeContent = computed<SafeHtml>(() => this.sanitizer.bypassSecurityTrustHtml(this.contentHtml()));
+
+  private readonly dialogEl = viewChild.required<ElementRef<HTMLDialogElement>>('dialogEl');
+  private readonly reportBoxEl = viewChild.required<ElementRef<HTMLDivElement>>('reportBoxEl');
 
   constructor() {
     effect(() => {
-      const isOpen = this.open();
-      const dialog = this.dialogEl()?.nativeElement;
-      if (!dialog) return;
-      if (isOpen && !dialog.open) dialog.showModal();
-      if (!isOpen && dialog.open) dialog.close();
+      if (!isPlatformBrowser(this.platformId)) return;
+      const el = this.dialogEl().nativeElement;
+      if (this.open() && !el.open) el.showModal();
+      if (!this.open() && el.open) el.close();
     });
-  }
-
-  get safeContent(): SafeHtml {
-    return this.sanitizer.bypassSecurityTrustHtml(this.contentHtml());
   }
 
   onNativeClose(): void {
     this.closed.emit();
   }
 
-  copyReport(): void {
+  onCopy(): void {
     if (!isPlatformBrowser(this.platformId)) return;
-    const text = this.reportBox()?.nativeElement.innerText ?? '';
+    const text = this.reportBoxEl().nativeElement.innerText;
     navigator.clipboard
       .writeText(text)
-      .then(() => this.notification.success('Đã sao chép báo cáo.'))
-      .catch(() => this.notification.error('Không thể sao chép — trình duyệt chặn quyền clipboard.'));
+      .then(() => this.copyResult.emit('success'))
+      .catch(() => this.copyResult.emit('error'));
   }
 
-  printReport(): void {
+  onPrint(): void {
     if (!isPlatformBrowser(this.platformId)) return;
     window.print();
   }

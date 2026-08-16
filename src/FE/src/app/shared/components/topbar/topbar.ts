@@ -1,26 +1,33 @@
-import { Component, inject, input } from '@angular/core';
-
+import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
+import { Router } from '@angular/router';
 import { SidebarStateService } from '../../services/sidebar-state.service';
+import { CurrentUserService } from '../../../core/auth/current-user.service';
+import { AuthService } from '../../../core/auth/auth.service';
 
 /**
- * Topbar dùng chung cho mọi trang (Dashboard, Danh mục > DTI) — chỉ hiện
- * hamburger (mobile, mở drawer sidebar) + tiêu đề/phụ đề trang. Dumb component:
- * nhận `title`/`subtitle` qua `input()`, không có action nào khác trong topbar
- * theo đúng 2 prototype (toolbar hành động nằm trong `main`, không phải topbar).
+ * Topbar cross-cutting — thuộc ngoại lệ "app-shell" (xem `Sidebar`), inject
+ * `SidebarStateService` để mở drawer mobile qua nút hamburger. Tiêu đề trang (`title`) do `App`
+ * suy ra từ route data (`data: { title: '...' }` của từng feature route) rồi truyền xuống qua
+ * `input()` — Topbar không tự biết route nào đang mở.
+ *
+ * F3: thêm khối user-info + đăng xuất — cùng thuộc ngoại lệ app-shell (đăng xuất là hành vi hạ
+ * tầng toàn app, không phải nghiệp vụ riêng 1 feature).
  */
 @Component({
   selector: 'app-topbar',
   standalone: true,
   templateUrl: './topbar.html',
-  styleUrl: './topbar.scss'
+  styleUrl: './topbar.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Topbar {
-  private readonly sidebarState = inject(SidebarStateService);
-
   readonly title = input.required<string>();
-  readonly subtitle = input<string>('');
+  protected readonly state = inject(SidebarStateService);
+  protected readonly currentUser = inject(CurrentUserService);
+  private readonly authService = inject(AuthService);
+  private readonly router = inject(Router);
 
-  openDrawer(): void {
-    this.sidebarState.openDrawer();
+  onLogout(): void {
+    this.authService.logout().subscribe(() => this.router.navigateByUrl('/dang-nhap'));
   }
 }

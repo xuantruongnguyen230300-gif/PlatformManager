@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0f5bd7" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/primeicons/primeicons.css" />
+<title>Đăng nhập - PlatformManager</title>
+<style>
+:root{
+  /* ===== Đã CHỐT LẠI (2026-08-15) — đồng bộ với dashboard.html/danh-muc-dti.html/
+     styles.scss, xem báo cáo "Kiểm Tra Tương Phản". ===== */
+  /* LẦN 3 — fill-first thay border-first, xem artifact "Hướng Màu Sắc" */
+  --bg:#eef2f8;--card:#fff;--surface-2:#e1e7f1;--tonal-bg:#dbe7fa;--tonal-ink:#0f4a9e;--text:#152033;--muted:#57647a;--line:#dfe6ef;--border-strong:#7e91b4;
+  --brand:#0f5bd7;--brand2:#174ca8;--good:#0e7050;--good-bg:#d9f2e6;--warn:#a8690a;--warn-bg:#ffedc7;--bad:#b83232;--bad-bg:#fbdcdc;
+  --shadow:0 4px 16px rgba(23,39,67,.1),0 1px 3px rgba(23,39,67,.06);
+  --fs-xs:11px;--fs-sm:12px;--fs-base:13px;--fs-md:14px;--fs-lg:15px;
+  --sp-1:4px;--sp-2:6px;--sp-3:8px;--sp-4:10px;--sp-5:14px;
+  --radius-sm:7px;--radius-md:9px
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--text);font-size:var(--fs-base)}
+button,input{font:inherit}
+
+/* ===== Màn hình đăng nhập — mới, chưa có trong prototype trước đây.
+   Không có sidebar (trước khi xác thực) — chỉ 1 card căn giữa viewport.
+   Token màu/spacing/radius tái dùng 100% từ dashboard.html, không phát minh giá trị mới. ===== */
+.login-shell{min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:var(--sp-5)}
+.login-card{width:100%;max-width:380px;background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:32px 28px}
+.login-brand{display:flex;flex-direction:column;align-items:center;gap:var(--sp-3);margin-bottom:24px;text-align:center}
+.login-brand .brand-mark{width:44px;height:44px;border-radius:12px;background:var(--brand);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:var(--fs-lg)}
+.login-brand h1{margin:0;font-size:18px;font-weight:800}
+.login-brand p{margin:0;color:var(--muted);font-size:var(--fs-sm)}
+
+.field{margin-bottom:var(--sp-4)}
+.field label{display:block;font-size:var(--fs-sm);font-weight:700;color:var(--text);margin-bottom:var(--sp-2)}
+.field-input{position:relative;display:flex;align-items:center}
+.field-input .pi{position:absolute;left:12px;color:var(--muted);font-size:15px;pointer-events:none}
+.field-input input{width:100%;border:1px solid var(--border-strong);border-radius:var(--radius-sm);background:#fff;padding:10px 12px 10px 36px;font-size:var(--fs-sm);color:var(--text);transition:border-color .15s ease,box-shadow .15s ease}
+.field-input input:focus-visible{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px rgba(15,91,215,.12)}
+.field-input .toggle-visibility{position:absolute;right:10px;border:0;background:none;color:var(--muted);cursor:pointer;padding:4px;display:flex;border-radius:6px}
+.field-input .toggle-visibility:hover{color:var(--text);background:var(--bg)}
+.field-input .toggle-visibility:focus-visible{outline:2px solid var(--brand);outline-offset:1px}
+
+.field-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;font-size:var(--fs-sm)}
+.field-row label{display:flex;align-items:center;gap:6px;color:var(--text);cursor:pointer}
+.field-row a{color:var(--brand);font-weight:700;text-decoration:none}
+.field-row a:hover{text-decoration:underline}
+
+.btn{border:1px solid transparent;background:var(--tonal-bg);color:var(--tonal-ink);border-radius:var(--radius-sm);padding:var(--sp-2) var(--sp-3);font-size:var(--fs-sm);font-weight:700;cursor:pointer;transition:background .15s ease,box-shadow .15s ease,transform .1s ease}
+.btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+.btn.primary:hover{background:var(--brand2);border-color:var(--brand2);box-shadow:0 8px 20px rgba(15,91,215,.35)}
+.btn:active{transform:translateY(1px)}
+.btn-block{width:100%;padding:11px;font-size:var(--fs-md);display:flex;align-items:center;justify-content:center;gap:8px}
+.btn:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+
+.login-error{display:none;background:var(--bad-bg);border:1px solid #e5a8a8;color:var(--bad);border-radius:var(--radius-sm);padding:var(--sp-3);font-size:var(--fs-sm);margin-bottom:var(--sp-4);align-items:center;gap:8px}
+.login-error.show{display:flex}
+
+.login-footer{text-align:center;margin-top:20px;font-size:var(--fs-xs);color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="login-shell">
+ <div class="login-card">
+  <div class="login-brand">
+   <span class="brand-mark">PM</span>
+   <h1>PlatformManager</h1>
+   <p>Đăng nhập để tiếp tục</p>
+  </div>
+
+  <div class="login-error" id="loginError">
+   <i class="pi pi-exclamation-circle"></i>
+   <span>Email hoặc mật khẩu không đúng.</span>
+  </div>
+
+  <form onsubmit="event.preventDefault();document.getElementById('loginError').classList.remove('show')">
+   <div class="field">
+    <label for="email">Email</label>
+    <div class="field-input">
+     <i class="pi pi-envelope"></i>
+     <input id="email" type="email" placeholder="ten@congty.vn" autocomplete="username" required>
+    </div>
+   </div>
+
+   <div class="field">
+    <label for="password">Mật khẩu</label>
+    <div class="field-input">
+     <i class="pi pi-lock"></i>
+     <input id="password" type="password" placeholder="Nhập mật khẩu" autocomplete="current-password" required>
+     <button type="button" class="toggle-visibility" onclick="togglePasswordVisibility()" aria-label="Hiện/ẩn mật khẩu" id="toggleBtn">
+      <i class="pi pi-eye" id="toggleIcon"></i>
+     </button>
+    </div>
+   </div>
+
+   <div class="field-row">
+    <label><input type="checkbox"> Ghi nhớ đăng nhập</label>
+    <a href="#">Quên mật khẩu?</a>
+   </div>
+
+   <button type="submit" class="btn primary btn-block">
+    <i class="pi pi-sign-in"></i> Đăng nhập
+   </button>
+  </form>
+
+ </div>
+</div>
+
+<script>
+function togglePasswordVisibility(){
+ const input=document.getElementById('password');
+ const icon=document.getElementById('toggleIcon');
+ const btn=document.getElementById('toggleBtn');
+ const showing=input.type==='text';
+ input.type=showing?'password':'text';
+ icon.className=showing?'pi pi-eye':'pi pi-eye-slash';
+ btn.setAttribute('aria-label',showing?'Hiện mật khẩu':'Ẩn mật khẩu');
+}
+</script>
+</body>
+</html>

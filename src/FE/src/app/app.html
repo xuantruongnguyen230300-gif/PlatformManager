@@ -1,7 +1,14 @@
-<div class="app-shell">
-  <app-sidebar></app-sidebar>
-  <div class="app-shell-content" [class.collapsed]="collapsed()">
-    <router-outlet></router-outlet>
+@if (showShell()) {
+  <div class="shell">
+    <app-sidebar />
+    <div class="shell-content" [class.collapsed]="sidebarState.collapsed()">
+      <app-topbar [title]="pageTitle()" />
+      <main>
+        <router-outlet />
+      </main>
+    </div>
   </div>
-</div>
-<app-toast></app-toast>
+} @else {
+  <router-outlet />
+}
+<app-toast />

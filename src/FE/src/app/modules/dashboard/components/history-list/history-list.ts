@@ -1,34 +1,55 @@
-import { Component, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
+import { IPeriodOption } from '../../../../shared/models/period-options.model';
+import { DeltaIndicator } from '../delta-indicator/delta-indicator';
 
-import { IPeriodOption } from '../../models/dashboard.model';
+function formatDateVn(iso: string): string {
+  const [y, m, d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+interface IHistoryRow {
+  Value: string;
+  DateLabel: string;
+  Progress: number | null;
+  Delta: number | null;
+  IsFirst: boolean;
+}
 
 /**
- * "Lịch sử các kỳ đã lưu" — dumb, liệt kê các kỳ-tuần có dữ liệu **trong năm
- * đang chọn** (`WeeksInYear` từ `GET /api/dashboard/periods?year=`, xem
- * `doc/contracts/danh-muc-dti.md` CONTRACT DM-8). Khác bản thiết kế gốc (từng
- * giả định 1 endpoint liệt kê MỌI kỳ mọi năm) — API thật chỉ cung cấp theo
- * từng năm, nên `frontend-expert` thu hẹp phạm vi UI đúng theo khả năng thật
- * của backend thay vì giữ giả định cũ. Bấm "Xem" phát `view(option)` — page
- * cha tự chuyển bộ lọc về "Tuần" đúng kỳ đó.
+ * HistoryRow (danh sách) — tái dùng chính `IPeriodOption` từ `GET /api/dashboard/periods`
+ * (không cần endpoint history riêng, xem doc/contracts/dashboard.md CONTRACT DB-3), tự tính
+ * delta so kỳ liền trước trong danh sách. Click "Xem" phát `view` để `DashboardPage` chuyển
+ * sang xem đúng kỳ đó (đóng vòng lặp lịch sử ↔ toolbar).
  */
 @Component({
   selector: 'app-history-list',
   standalone: true,
+  imports: [DeltaIndicator],
   templateUrl: './history-list.html',
-  styleUrl: './history-list.scss'
+  styleUrl: './history-list.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class HistoryList {
-  readonly items = input.required<IPeriodOption[]>();
-  readonly year = input.required<number>();
+  readonly weeks = input.required<IPeriodOption[]>();
+  readonly view = output<string>();
 
-  readonly view = output<IPeriodOption>();
-
-  formatDate(value: string): string {
-    const [y, m, d] = value.slice(0, 10).split('-');
-    return `${d}/${m}/${y}`;
-  }
-
-  formatPercent(value: number | null): string {
-    return value === null || value === undefined ? '—' : `${value.toFixed(1)}%`;
-  }
+  protected readonly rows = computed<IHistoryRow[]>(() => {
+    const sorted = [...this.weeks()].sort((a, b) => a.Date.localeCompare(b.Date));
+    return sorted
+      .map((w, i) => {
+        const prev = i > 0 ? sorted[i - 1] : null;
+        const delta =
+          prev && prev.OverallProgress !== null && w.OverallProgress !== null
+            ? w.OverallProgress - prev.OverallProgress
+            : null;
+        return {
+          Value: w.Value,
+          DateLabel: formatDateVn(w.Date),
+          Progress: w.OverallProgress,
+          Delta: delta,
+          IsFirst: i === 0,
+        };
+      })
+      .reverse();
+  });
 }

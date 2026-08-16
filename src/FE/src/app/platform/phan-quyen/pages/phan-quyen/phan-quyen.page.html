@@ -1,0 +1,19 @@
+<div class="card">
+  <div class="title">
+    <h2>Phân quyền màn hình</h2>
+    <button type="button" class="btn primary" [disabled]="saving() || loading()" (click)="onSave()">
+      {{ saving() ? 'Đang lưu…' : 'Lưu thay đổi' }}
+    </button>
+  </div>
+  <p class="muted">
+    Tick chọn role được thấy màn hình tương ứng. Mục không tick role nào = mở cho mọi user đã
+    đăng nhập.
+  </p>
+
+  <app-permission-matrix
+    [rows]="rows()"
+    [roles]="roles()"
+    [loading]="loading() || saving()"
+    (permissionToggle)="onToggle($event)"
+  />
+</div>

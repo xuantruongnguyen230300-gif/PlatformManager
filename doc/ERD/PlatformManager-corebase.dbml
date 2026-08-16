@@ -1,0 +1,155 @@
+// PlatformManager — ERD CoreBase (Identity/Auth + SysMenu)
+//
+// Phạm vi: CHỈ phần nền tảng dùng chung (corebase) — KHÔNG chứa entity
+// nghiệp vụ DTI (Criteria/CriteriaAssessment/CriteriaGroup — xem
+// doc/ERD/PlatformManager.dbml cho phần đó). Tách riêng theo đúng định
+// hướng người dùng đã chốt 2026-08-15: "hiện tại chỉ xây corebase chứ chưa
+// áp dụng business vào".
+//
+// Đây là ERD DỰ KIẾN cho lần migration đầu tiên của src/BE, chưa chạy thật.
+// Migration SQL tương ứng: doc/ERD/migrations/0001_corebase_identity_sysmenu.sql
+// (+ 0002_seed_corebase.sql cho dữ liệu khởi tạo Role/SysMenu).
+//
+// Khác biệt field BaseEntity so với doc/ERD/PlatformManager.dbml (file business
+// cũ): file NÀY dùng đúng tên field đã CHỐT LẠI 2026-08-15 trong
+// src/BE/.claude/rules/entity-domain.md — DateCreate/DateUpdate/UserCreate/
+// UserUpdate/IsDelete (KHÔNG phải CreatedAt/UpdatedAt/IsDeleted của file cũ).
+// File business ERD cũ vẫn đang dùng tên field cũ — đây là nợ tài liệu đã ghi
+// nhận ở audit "Rà Soát Toàn Bộ Doc" (2026-08-15), chưa sửa vì chưa tới lượt
+// làm ERD nghiệp vụ DTI. File corebase này KHÔNG kế thừa lỗi đó.
+
+Project PlatformManager_CoreBase {
+  database_type: 'PostgreSQL'
+  Note: '''
+    Schema CoreBase: Identity (đăng nhập) + SysMenu (metadata menu điều hướng).
+    Chạy TRƯỚC schema nghiệp vụ DTI (PlatformManager.dbml) — bảng nghiệp vụ có
+    FK trỏ vào AspNetUsers (vd CriteriaAssessments.OwnerId).
+    Auth: ASP.NET Core Identity, cookie session (đã CHỐT — xem
+    src/BE/.claude/rules/api-controller.md § Auth/Permission).
+    Trạng thái: DỰ KIẾN — chưa migrate thật.
+  '''
+}
+
+// ============================================================
+// AspNetRoles — vai trò (Identity chuẩn)
+// ============================================================
+Table AspNetRoles {
+  Id uuid [pk, note: 'PK chuẩn IdentityRole<Guid>']
+  Name varchar(256) [note: 'Tên vai trò, vd "Admin", "User"']
+  NormalizedName varchar(256) [unique, note: 'Tên viết hoa dùng để so sánh/tìm kiếm — Identity tự quản lý']
+  ConcurrencyStamp text [note: 'Identity tự sinh, đổi mỗi lần update để chống ghi đè đồng thời']
+
+  Note: 'Bảng AppRole : IdentityRole<Guid> — chuẩn Identity, không mở rộng field nào ở CoreBase v1.'
+}
+
+// ============================================================
+// AspNetUsers — người dùng hệ thống ("SysUser" theo cách gọi thường ngày)
+// ============================================================
+Table AspNetUsers {
+  Id uuid [pk, note: 'PK chuẩn IdentityUser<Guid> — KHÔNG kế thừa BaseEntity, Identity tự quản lý vòng đời (xem entity-domain.md)']
+  FullName varchar(255) [not null, note: '[MỞ RỘNG] tên hiển thị đầy đủ — phục vụ cột "Người dùng"/"Phụ trách" trên UI, Identity mặc định không có field này']
+  DateCreate timestamptz [note: '[MỞ RỘNG] AspNetUsers gốc KHÔNG có field ngày tạo — thêm để hiển thị cột "Ngày tạo" ở màn Quản trị người dùng. Tên khớp quy ước BaseEntity dù AppUser không kế thừa BaseEntity, cho nhất quán đọc hiểu']
+  DateUpdate timestamptz [note: '[MỞ RỘNG] cùng lý do DateCreate']
+  UserName varchar(256) [note: 'Cột chuẩn Identity']
+  NormalizedUserName varchar(256) [unique, note: 'Identity tự quản lý']
+  Email varchar(256) [note: 'Cột chuẩn Identity']
+  NormalizedEmail varchar(256) [note: 'Identity tự quản lý, có index để tìm theo email']
+  EmailConfirmed boolean [not null, default: false]
+  PasswordHash text [note: 'Identity tự hash (PBKDF2) — KHÔNG BAO GIỜ tự tay ghi giá trị vào cột này, luôn qua UserManager.CreateAsync/ResetPasswordAsync']
+  SecurityStamp text [note: 'Identity tự sinh, đổi khi đổi password/email để vô hiệu hoá session cũ']
+  ConcurrencyStamp text
+  PhoneNumber text
+  PhoneNumberConfirmed boolean [not null, default: false]
+  TwoFactorEnabled boolean [not null, default: false]
+  LockoutEnd timestamptz [note: 'NULL hoặc quá khứ = không bị khoá; tương lai = đang khoá — map thẳng vào badge "Đã khoá" ở UI quan-tri-nguoi-dung.html']
+  LockoutEnabled boolean [not null, default: true]
+  AccessFailedCount int [not null, default: 0, note: 'Đếm số lần đăng nhập sai liên tiếp — Identity tự tăng/reset']
+
+  Note: '''
+    Bảng AppUser : IdentityUser<Guid>. "SysUser" trong hội thoại = chính bảng
+    này, KHÔNG phải bảng riêng — tránh tạo 2 nguồn user song song.
+    7 bảng Identity chuẩn (AspNetUsers/AspNetRoles/AspNetUserRoles/
+    AspNetUserClaims/AspNetUserLogins/AspNetUserTokens/AspNetRoleClaims) do
+    IdentityDbContext<AppUser, AppRole, Guid> tự sinh qua migration — liệt kê
+    đủ trong DBML này (khác PlatformManager.dbml cũ chỉ stub AppUsers) vì đây
+    đúng là phạm vi CoreBase của file này.
+  '''
+}
+
+Table AspNetUserRoles {
+  UserId uuid [ref: > AspNetUsers.Id]
+  RoleId uuid [ref: > AspNetRoles.Id]
+
+  Note: 'Join table nhiều-nhiều User↔Role — PK ghép (UserId, RoleId), Identity tự quản lý.'
+}
+
+Table AspNetUserClaims {
+  Id integer [pk, increment]
+  UserId uuid [ref: > AspNetUsers.Id]
+  ClaimType text
+  ClaimValue text
+
+  Note: 'Claim cấp user — chưa dùng ở CoreBase v1 (role-based đã đủ), giữ vì Identity luôn sinh bảng này.'
+}
+
+Table AspNetUserLogins {
+  LoginProvider varchar(128) [note: 'PK ghép (LoginProvider, ProviderKey)']
+  ProviderKey varchar(128)
+  ProviderDisplayName text
+  UserId uuid [ref: > AspNetUsers.Id]
+
+  Note: 'Đăng nhập ngoài (Google/Microsoft...) — CHƯA có nhu cầu, chỉ tồn tại vì IdentityDbContext luôn sinh bảng này.'
+}
+
+Table AspNetUserTokens {
+  UserId uuid [ref: > AspNetUsers.Id, note: 'PK ghép (UserId, LoginProvider, Name)']
+  LoginProvider varchar(128)
+  Name varchar(128)
+  Value text
+
+  Note: 'Token nội bộ Identity (reset password, 2FA...) — không thao tác tay.'
+}
+
+Table AspNetRoleClaims {
+  Id integer [pk, increment]
+  RoleId uuid [ref: > AspNetRoles.Id]
+  ClaimType text
+  ClaimValue text
+
+  Note: 'Claim cấp role — chưa dùng ở CoreBase v1.'
+}
+
+// ============================================================
+// SysMenu — metadata menu điều hướng (Loại C theo
+// doc/huong_dan/wiki-core/be/03-metadata-driven-design.md) — dữ liệu thuần,
+// DB tự do 100%, không có Tầng 2/3 để lệch.
+// Khớp 1:1 hợp đồng IMenuItem đã thiết kế ở
+// doc/huong_dan/wiki-core/fe/11-grid-and-metadata.md §Metadata sync.
+// ============================================================
+Table SysMenu {
+  Id uuid [pk, note: 'BaseEntity.Id']
+  ParentId uuid [ref: > SysMenu.Id, note: 'Tự tham chiếu — NULL = item gốc. Khớp field children? trong spec/sidebar-menu/ui-spec.md mục 1.1 (nhóm cha không có Route)']
+  Code varchar(100) [not null, unique, note: 'Khoá ổn định, khớp NavItem.id — dùng làm key cho @for track phía FE, KHÔNG đổi sau khi đã dùng (route/permission có thể đổi, Code thì không)']
+  Label varchar(255) [not null, note: 'Tên hiển thị trên sidebar']
+  Icon varchar(100) [note: 'Tên class PrimeIcons (vd "pi-th-large") — xem doc/Prototype/components/icons.html §bảng map']
+  Route varchar(255) [note: 'routerLink đích — NULL cho item cha (chỉ toggle expand/collapse, xem ui-spec.md mục 2.5)']
+  RequiredRole varchar(100) [note: '[PHẠM VI RÚT GỌN] tên AspNetRoles.Name cần có để thấy menu — NULL = mọi user đã đăng nhập đều thấy. Chưa dùng permission-key chi tiết (resource-action) vì role Identity cụ thể "chưa được chốt" (xem ERD.md cũ mục Câu hỏi còn mở) — nâng cấp lên permission-key thật khi có nhu cầu rõ, không thiết kế trước']
+  DisplayOrder int [not null, default: 0]
+  IsActive boolean [not null, default: true]
+  UserCreate varchar(50)
+  UserUpdate varchar(50)
+  DateCreate timestamptz
+  DateUpdate timestamptz
+  IsDelete boolean [not null, default: false]
+
+  Note: '''
+    2 nhóm gốc đã biết + 2 item con (khớp đúng thực trạng UI hiện có, không bịa
+    thêm mục menu ngoài mục đã biết — cùng nguyên tắc ui-spec.md mục 1.2):
+      - "Dashboard" (phẳng, Route=/dashboard)
+      - "Danh mục" > "DTI" (Route=/danh-muc/dti)
+      - "Quản trị hệ thống" > "Người dùng" (Route=/quan-tri/nguoi-dung)
+    Seed data: doc/ERD/migrations/0002_seed_corebase.sql
+  '''
+}
+
+Ref: SysMenu.ParentId > SysMenu.Id

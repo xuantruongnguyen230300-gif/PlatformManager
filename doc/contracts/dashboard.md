@@ -1,117 +1,121 @@
 # API Contract — Dashboard DTI Weekly (`modules/dashboard`)
 
-> Owner FE: `src/FE/src/app/modules/dashboard/services/dashboard.service.ts`
-> Nguồn nghiệp vụ: `spec/dashboard-dti-weekly/business-rules.md`,
-> `spec/dashboard-dti-weekly/ui-spec.md`. Dashboard **100% read-only**.
-> Tất cả request/response **PascalCase, FLAT**. Trạng thái card: **IMPLEMENTED**
-> — đã code, build sạch, đã tự smoke-test bằng curl với dữ liệu import thật từ
-> `doc/ERD/example_db_ver1.csv`.
+> Owner FE: `src/FE/src/app/modules/dashboard/services/dashboard.service.ts` +
+> `src/FE/src/app/shared/services/period-options.service.ts`
+> Nguồn nghiệp vụ: `doc/ke-hoach-xay-lai-corebase.md` (mô tả hành vi cần port lại chính xác từ
+> `doc/Prototype/dashboard.html`), bản Contract Card cũ (đã xoá cùng đợt dọn `src/BE`, nội dung gốc
+> vẫn còn trong lịch sử git — dùng làm nền tham khảo route/shape, ĐÃ cập nhật lại theo envelope
+> mới). Dashboard **100% read-only**.
 >
-> **backend-expert đã SỬA route/shape khác với bản DRAFT** — người giao việc
-> (`main`) đã chỉ định chính xác 2 route `GET /api/dashboard` và
-> `GET /api/dashboard/report` trong yêu cầu gốc. Đọc mục "Khác biệt so với
-> DRAFT" cuối file trước khi cập nhật `DashboardService`.
+> **CASING**: xem cảnh báo ở `doc/contracts/menu.md` — toàn bộ DTO dưới đây giả định camelCase
+> xuyên suốt (envelope + payload), CHƯA XÁC NHẬN với `backend-expert`. Đây là điểm **QUAN TRỌNG
+> NHẤT cần chốt trước khi implement thật** — nếu sai, toàn bộ mapper của cả `dashboard` lẫn
+> `danh-muc-dti` phải sửa lại.
+>
+> Trạng thái card: **DRAFT** — FE đã code service/mapper theo đúng shape dưới đây (án theo hành vi
+> gốc + route đã có tiền lệ ở bản Contract Card cũ), nhưng BE `src/BE` hiện chưa có
+> `Infrastructure`/`DashboardController` để implement/verify — chưa gọi thật lần nào ở đợt F0+F1
+> này.
 
-## CONTRACT DB-1 — Tổng hợp Dashboard theo Tuần/Tháng/Năm ("Tất cả")
+## CONTRACT DB-1 — Tổng hợp Dashboard theo Tuần/Tháng/"Tất cả trong năm"
 
-- Status: **IMPLEMENTED**
-- Route: `GET /api/dashboard` *(KHÔNG phải `/api/dashboard/summary`)*
+- Status: **DRAFT**
+- Route: `GET /api/dashboard`
 - Query params:
   ```
-  mode: string           // "week" | "month" | "year"  ("year" = "Tất cả" của 1 năm) — chữ THƯỜNG
-  date: date?             // dùng cho mode=week (ngày bất kỳ trong tuần muốn xem) hoặc mode=month (ngày bất kỳ trong tháng); mặc định = hôm nay
-  year: int?              // dùng cho mode=year (mặc định = năm hiện tại nếu bỏ trống); mode=week/month vẫn nhận year để build Trend đúng năm đang chọn
+  mode: string        // "week" | "month" | "year" ("year" = "Tất cả" của 1 năm) — chữ thường
+  date: date?          // mode=week: ngày bất kỳ trong tuần muốn xem; mode=month: ngày bất kỳ trong tháng.
+                        // Bỏ trống = server tự dùng kỳ hiện tại (hôm nay) — FE dựa vào default này
+                        // cho trạng thái mặc định khi mới vào trang (xem dashboard.page.ts).
+  year: int?            // mode=year: năm cần tổng hợp (mặc định năm hiện tại nếu bỏ trống);
+                        // mode=week/month vẫn nên nhận year để BE build đúng Trend theo năm đang chọn
   ```
-- Response: `ApiResponse<DashboardResponseDto>`
+- Response: `IApiResult<IDashboardAggregateDto>`
   ```
-  Mode: string
-  PeriodLabel: string             // vd "Tuần 33/2026 (10/08–16/08/2026)", "Tháng 8/2026", "Năm 2026"
-  Kpi: DashboardKpiDto
-  Groups: DashboardGroupProgressDto[]
-  Trend: DashboardTrendPointDto[]
-  Table: DashboardTableRowDto[]
+  data: {
+    mode: "week"|"month"|"year",
+    periodLabel: string,        // vd "Tuần 33/2026 (10/08–16/08/2026)", "Tháng 8/2026", "Năm 2026"
+    kpi: {
+      overallProgress: number|null, delta: number|null, previousPeriodLabel: string|null,
+      up: int, flat: int, down: int, done: int, totalCriteria: int
+    },
+    groups: [ { groupId: guid, groupCode: string, groupName: string, progress: number|null } ],
+    trend: [ { label: string, value: number|null } ],
+      // mode=week: label="YYYY-Www" mọi tuần ISO CÓ dữ liệu trong `year`; mode=month|year:
+      // label="Th.{1..12}". CHỈ trả điểm CÓ dữ liệu — KHÔNG nội suy/không trả điểm null (FE
+      // `trend-chart` clamp [0,100] + không spanGaps, xem doc/huong_dan/wiki-core/fe/12-charting.md).
+    table: [
+      {
+        criteriaId: guid, code: string, name: string, groupCode: string, groupName: string,
+        maxScore: number, previousValue: number|null, currentValue: number|null, delta: number|null,
+        badge: "Hoàn thành"|"Không tăng"|"Đang thực hiện"|"Chưa có dữ liệu"|null,
+        note: string|null
+      }
+    ]
+  }
   ```
-  `DashboardKpiDto`:
-  ```
-  OverallProgress: number?      // null = "chưa có dữ liệu"
-  Delta: number?                 // null khi không có kỳ liền trước có dữ liệu
-  PreviousPeriodLabel: string?   // null khi không có kỳ trước
-  Up: number
-  Flat: number
-  Down: number
-  Done: number
-  TotalCriteria: number          // mẫu số "x/N" — LUÔN = tổng Criteria active (62), không đổi theo kỳ
-  ```
-  `DashboardGroupProgressDto`: `{ GroupId: guid, GroupCode: string, GroupName: string, Progress: number? }`
-  `DashboardTrendPointDto`: `{ Label: string, Value: number? }`
-  — `mode=week`: Label = `"YYYY-Www"` (mọi tuần ISO CÓ dữ liệu trong `year`);
-    `mode=month|year`: Label = `"Th.{1..12}"` (mọi tháng CÓ dữ liệu trong `year`).
-    Chỉ trả điểm CÓ dữ liệu — không nội suy/không trả điểm null.
-  `DashboardTableRowDto`:
-  ```
-  CriteriaId: guid
-  Code: string
-  Name: string
-  GroupCode: string
-  GroupName: string
-  MaxScore: number
-  PreviousValue: number?    // null nếu không có kỳ trước hoặc chỉ tiêu không có dữ liệu ở kỳ trước
-  CurrentValue: number?      // null = "chưa có dữ liệu" ở kỳ đang xem
-  Delta: number?              // null nếu 1 trong 2 giá trị trên null
-  Badge: string?               // "Hoàn thành" | "Không tăng" | "Đang thực hiện" | "Chưa có dữ liệu" — TÍNH RUNTIME theo statusFor(), KHÔNG phải field Status lưu DB (khớp doc/ERD/ERD.md mục 4)
-  ```
-  **Khác DRAFT**: không có field `Note` riêng trong Table row (Note đọc qua
-  `GET /api/criteria` ở màn Danh mục DTI, Dashboard không cần lặp lại) —
-  `Badge` là string tiếng Việt (`"Hoàn thành"/"Không tăng"/"Đang thực hiện"`),
-  KHÔNG phải enum tiếng Anh `"Done"|"Working"|"Stalled"` như DRAFT đề xuất —
-  giữ đúng nguyên văn 3 giá trị JS gốc trong `dashboard.html` (`statusFor()`).
-- Response thật đã gọi (curl, `mode=week`, rút gọn):
-  ```json
-  {"Success":true,"Data":{"Mode":"week","PeriodLabel":"Tuần 33/2026 (10/08–16/08/2026)","Kpi":{"OverallProgress":81.91,"Delta":null,"PreviousPeriodLabel":null,"Up":0,"Flat":0,"Down":0,"Done":39,"TotalCriteria":62},"Groups":[{"GroupId":"...","GroupCode":"1","GroupName":"Hạ tầng và Nền tảng số","Progress":72.475}, ...6 nhóm],"Trend":[...],"Table":[...62 dòng...]},"ErrorCode":null,"ErrorMessage":null,"TraceId":"..."}
-  ```
-  (`mode=month`, `mode=year` cũng đã verify — response shape giống hệt, chỉ
-  khác `Mode`/`PeriodLabel`/công thức tổng hợp bên trong.)
-- Công thức: `spec/dashboard-dti-weekly/business-rules.md` mục 3.3/3.4 (tuần,
-  không carry-forward) + `spec/danh-muc-dti/business-rules.md` mục 2.4/3
-  (tháng/năm = trung bình cộng các kỳ-tuần có dữ liệu). Implement tập trung ở
-  `AggregationService.ComputePeriodAggregate` — 1 hàm thuần cho cả 3 cấp độ.
+- **Khác bản Contract Card cũ (đã xoá)**: cũ ghi "Table row KHÔNG có field `note`" — bản DRAFT này
+  THÊM lại `note` vì `doc/Prototype/dashboard.html` (nguồn sống hiện tại, cột "Ghi chú tuần" trong
+  bảng 62 chỉ tiêu) vẫn hiển thị ghi chú ngay trong bảng đọc-only — port lại đúng 1:1 theo yêu cầu
+  gốc của task lượt này. `backend-expert` xác nhận lại field này có sẵn trong dữ liệu tổng hợp hay
+  cần JOIN thêm.
+- `badge` tính RUNTIME phía BE (epsilon so sánh Delta = `0.001`, ngưỡng "Hoàn thành" =
+  `currentValue >= 99.999`) — FE chỉ hiển thị, không tự tính lại (xem
+  `modules/dashboard/components/status-badge/`).
+- Công thức: trung bình gia quyền theo `MaxScore`; Tháng/"Tất cả trong năm" = trung bình cộng các
+  kỳ-tuần CÓ dữ liệu, KHÔNG carry-forward (kỳ không có thao tác cho 1 chỉ tiêu bị loại khỏi mẫu
+  tính trung bình của chỉ tiêu đó).
 
-## CONTRACT DB-2 — "Xuất báo cáo" (text/HTML báo cáo nhanh)
+## CONTRACT DB-2 — "Xuất báo cáo" (HTML báo cáo nhanh)
 
-- Status: **IMPLEMENTED** — [MỚI so với DRAFT, xem "Khác biệt so với DRAFT"]
+- Status: **DRAFT**
 - Route: `GET /api/dashboard/report`
 - Query params: giống hệt DB-1 (`mode`, `date`, `year`)
-- Response: `ApiResponse<ReportResponseDto>`
+- Response: `IApiResult<IReportDto>`
   ```
-  Title: string          // vd "Báo cáo tiến độ DTI — theo tuần"
-  ContentHtml: string     // HTML sẵn sàng render (tương đương innerHTML của #reportBox trong dashboard.html gốc)
+  data: { title: string, contentHtml: string }
   ```
-- Response thật đã gọi (`mode=week`):
-  ```json
-  {"Success":true,"Data":{"Title":"Báo cáo tiến độ DTI — theo tuần","ContentHtml":"<b>BÁO CÁO NHANH TIẾN ĐỘ CHỈ SỐ CHUYỂN ĐỔI SỐ</b><br>Kỳ cập nhật: <b>Tuần 33/2026 (10/08–16/08/2026)</b>.<br><br>\nTiến độ chung hiện đạt <b>81.91%</b>.\nCó <b>0 chỉ tiêu tăng</b>, <b>0 chỉ tiêu không thay đổi</b>, <b>0 chỉ tiêu giảm</b> và <b>39/62 chỉ tiêu hoàn thành 100%</b>.<br><br>\n<b>Chỉ tiêu tăng nhiều:</b> Chưa có.<br><br>\n<b>Chỉ tiêu chưa tăng cần chú ý:</b> Không có."},"ErrorCode":null,"ErrorMessage":null,"TraceId":"..."}
+- FE (`report-dialog`) bind `contentHtml` qua `DomSanitizer.bypassSecurityTrustHtml` rồi
+  `[innerHTML]` — BE tự tính sẵn HTML (tương đương `generateReport()`/`generateMonthlyReport()`/
+  `generateYearAggregateReport()` trong `doc/Prototype/dashboard.html`), FE không tự dựng lại text.
+
+## CONTRACT DB-3 — Danh sách Năm/Kỳ có dữ liệu (dùng CHUNG với Danh mục DTI)
+
+- Status: **AGREED** (2026-08-16)
+- Route: `GET /api/dashboard/periods`
+- Query params: `year: int?` (nếu có, trả thêm `weeksInYear`/`monthsInYear` của đúng năm đó)
+- Response: `IApiResult<IPeriodOptionsDto>`
   ```
-- FE chỉ cần bind `ContentHtml` thẳng vào dialog báo cáo (`[innerHTML]` hoặc
-  tương đương Angular an toàn — nhớ dùng `DomSanitizer` vì có thẻ `<b>`/`<br>`).
-  BE tự tính text báo cáo (mirror đúng `generateReport()`/`generateMonthlyReport()`/
-  `generateYearAggregateReport()` của `dashboard.html` gốc) — FE **không cần**
-  tự dựng lại text từ `Kpi`/`Table` như DRAFT đề xuất.
+  data: {
+    years: int[],                 // mọi năm có dữ liệu, LUÔN kèm năm hiện tại dù chưa có dữ liệu
+    weeksInYear: [ { value: string, date: date, overallProgress: number|null } ],
+    monthsInYear: [ { value: string, date: date, overallProgress: number|null } ]
+  }
+  ```
+  `value` là giá trị cần truyền vào `period` của `GET /api/criteria` (xem
+  `doc/contracts/danh-muc-dti.md` CONTRACT DM-2) và `date`/`mode` của `GET /api/dashboard` — vd
+  `"2026-W33"` (tuần ISO), `"2026-08"` (tháng).
+- Owner FE thật sự: `shared/services/period-options.service.ts` — dùng chung bởi
+  `modules/dashboard` (`period-toolbar`, `history-list`) VÀ `modules/danh-muc-dti`
+  (dropdown năm/kỳ lọc grid) — đặt ở `shared/` theo đúng quy tắc "≥2 feature dùng thì không còn ở
+  `modules/<feature>/`" (`src/FE/.claude/docs/architecture.md`).
+- `history-list` (Dashboard) KHÔNG có endpoint riêng — tái dùng `weeksInYear` của route này, tự
+  tính delta giữa các kỳ liền kề ở FE (không cần BE trả sẵn).
 
-## CONTRACT DB-3 — Danh sách năm/kỳ-tuần/kỳ-tháng có dữ liệu
+> ✅ **Đã sửa (2026-08-16, backend-expert)** — `DashboardPeriodsDto` nay trả đúng
+> `{years, weeksInYear, monthsInYear}` với `weeksInYear`/`monthsInYear` là mảng object
+> `{value, date, overallProgress}` (khớp `IPeriodOptionsDto` phía FE, không phải mảng giá trị
+> thuần như trước). `overallProgress` mỗi tuần/tháng tính qua `PeriodAggregateCalculator.Compute`
+> (cùng công thức bình quân gia quyền theo `MaxScore` dùng cho DB-1). `years` LUÔN kèm năm hiện
+> tại dù chưa có dữ liệu. Build xanh — chưa gọi thử được response THÀNH CÔNG có data thật (cần
+> DB đã migrate), CONTRACT DB-3 chuyển **AGREED** (đứng riêng, không phụ thuộc trạng thái DRAFT
+> chung của DB-1/DB-2 trong file này).
 
-- Status: **IMPLEMENTED** — dùng CHUNG route với Danh mục DTI, xem
-  `doc/contracts/danh-muc-dti.md` mục **CONTRACT DM-8**
-  (`GET /api/dashboard/periods?year=`) — thay thế cả 3 route riêng DB-2/DB-3/DB-4
-  mà bản DRAFT đề xuất tách rời (`/years`, `/weeks`, `/history`). Không lặp lại
-  chi tiết ở đây, xem DM-8.
+## Trạng thái hiện tại phía FE
 
----
-
-## Khác biệt so với bản DRAFT của frontend-expert — vì sao sửa
-
-| DRAFT | Đã đổi thành | Lý do |
-| --- | --- | --- |
-| `GET /api/dashboard/summary` | `GET /api/dashboard` | Route được `main` chỉ định trực tiếp trong yêu cầu gốc |
-| Không có endpoint report riêng — FE tự tính text từ DB-1 | `GET /api/dashboard/report` (endpoint riêng, BE tính sẵn `ContentHtml`) | Route được `main` chỉ định trực tiếp — BE tính để khớp 100% với 3 hàm `generateReport()`/`generateMonthlyReport()`/`generateYearAggregateReport()` gốc, tránh FE phải chép lại logic dựng text |
-| `StatusBadge: "Done"\|"Working"\|"Stalled"` | `Badge: "Hoàn thành"\|"Không tăng"\|"Đang thực hiện"\|"Chưa có dữ liệu"` | Giữ nguyên 3 giá trị tiếng Việt gốc từ `statusFor()` trong `dashboard.html`, không dịch sang enum tiếng Anh (đỡ 1 bước map ở FE) |
-| 3 route riêng `/years`, `/weeks`, `/history` | 1 route `GET /api/dashboard/periods` (dùng chung với Danh mục DTI, xem DM-8) | Tránh trùng lặp logic — cả 2 màn cùng cần "năm/kỳ nào có dữ liệu" |
-| `UpCount`/`FlatCount` nullable ở Mode=Year | `Up`/`Flat`/`Down`/`Done` luôn là số nguyên (0 nếu không áp dụng) | Đơn giản hoá — mode=year vẫn có "kỳ liền trước" (năm trước có dữ liệu) nên khái niệm up/down/flat vẫn tính được, không cần null hoá riêng cho Year |
+3 endpoint trên đã có service/mapper hoàn chỉnh (`dashboard.service.ts`,
+`shared/services/period-options.service.ts`), UI đầy đủ (period-toolbar, kpi-summary, trend-chart
+qua `p-chart`, group-progress-list, criteria-table qua `p-table` với lọc/sắp xếp/phân trang
+CLIENT-SIDE, history-list, report-dialog) — `ng build` xanh. Chưa gọi được thật vì `src/BE` chưa có
+`DashboardController`. Khi `backend-expert` có endpoint thật: xác nhận lại casing (xem cảnh báo đầu
+file) bằng 1 lần gọi thật/Swagger trước khi chuyển card sang AGREED.

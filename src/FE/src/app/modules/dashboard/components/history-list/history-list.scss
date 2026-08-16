@@ -8,10 +8,10 @@
 
 .histrow {
   display: grid;
-  grid-template-columns: 110px 1fr 80px;
+  grid-template-columns: 100px 1fr 90px 70px;
   gap: var(--sp-3);
   align-items: center;
   padding: var(--sp-2);
   border-bottom: 1px solid var(--line);
-  font-size: 12px;
+  font-size: var(--fs-xs);
 }

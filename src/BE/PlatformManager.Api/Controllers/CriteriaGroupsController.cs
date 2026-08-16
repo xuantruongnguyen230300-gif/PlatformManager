@@ -1,23 +1,17 @@
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using PlatformManager.Api.Common;
-using PlatformManager.Api.Data;
-using PlatformManager.Api.Dtos;
+using PlatformManager.Modules.DtiWeekly.Application.CriteriaGroups;
 
 namespace PlatformManager.Api.Controllers;
 
+// [Authorize] kế thừa từ ApiControllerBase — mọi user đã đăng nhập đều thao tác được (đã CHỐT
+// với người dùng, không phân biệt role cho nghiệp vụ DTI Weekly).
 [ApiController]
 [Route("api/criteria-groups")]
-public class CriteriaGroupsController(AppDbContext db) : ControllerBase
+public class CriteriaGroupsController(ISender mediator) : ApiControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> List(CancellationToken ct)
-    {
-        var groups = await db.CriteriaGroups
-            .AsNoTracking()
-            .OrderBy(g => g.DisplayOrder)
-            .Select(g => new CriteriaGroupDto { Id = g.Id, Code = g.Code, Name = g.Name, DisplayOrder = g.DisplayOrder })
-            .ToListAsync(ct);
-        return Ok(ApiResponse.Ok(groups, HttpContext.TraceIdentifier));
-    }
+        => HandleResult(await mediator.Send(new GetCriteriaGroupsListQuery(), ct));
 }

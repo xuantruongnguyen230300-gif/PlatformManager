@@ -1,47 +1,46 @@
-import { Component, ElementRef, effect, input, output, signal, viewChild } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import { ChangeDetectionStrategy, Component, ElementRef, PLATFORM_ID, effect, inject, input, output, signal, viewChild } from '@angular/core';
 
-/**
- * Dialog chọn file CSV để Import — dumb, chỉ giữ file đã chọn cục bộ rồi phát
- * `imported` (File) khi bấm "Import"; page cha gọi
- * `DanhMucDtiService.importCsv()` và mở `ImportResultDialog` với kết quả.
- */
+/** Dialog chọn file CSV trước khi gọi `POST /api/import/csv` — xem CONTRACT DM-7. */
 @Component({
   selector: 'app-csv-import-dialog',
   standalone: true,
   templateUrl: './csv-import-dialog.html',
-  styleUrl: './csv-import-dialog.scss'
+  styleUrl: './csv-import-dialog.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CsvImportDialog {
+  private readonly platformId = inject(PLATFORM_ID);
+
   readonly open = input.required<boolean>();
-  readonly loading = input(false);
+  readonly importing = input<boolean>(false);
 
   readonly imported = output<File>();
   readonly closed = output<void>();
 
-  readonly selectedFile = signal<File | null>(null);
+  protected readonly selectedFile = signal<File | null>(null);
 
-  private readonly dialogEl = viewChild<ElementRef<HTMLDialogElement>>('dialogRef');
+  private readonly dialogEl = viewChild.required<ElementRef<HTMLDialogElement>>('dialogEl');
 
   constructor() {
     effect(() => {
-      const isOpen = this.open();
-      const dialog = this.dialogEl()?.nativeElement;
-      if (!dialog) return;
-      if (isOpen) {
+      if (!isPlatformBrowser(this.platformId)) return;
+      const el = this.dialogEl().nativeElement;
+      if (this.open() && !el.open) {
         this.selectedFile.set(null);
-        if (!dialog.open) dialog.showModal();
-      } else if (dialog.open) {
-        dialog.close();
+        el.showModal();
       }
+      if (!this.open() && el.open) el.close();
     });
+  }
+
+  onFileChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.selectedFile.set(input.files?.[0] ?? null);
   }
 
   onNativeClose(): void {
     this.closed.emit();
-  }
-
-  onFileSelected(file: File | undefined): void {
-    this.selectedFile.set(file ?? null);
   }
 
   onSubmit(): void {

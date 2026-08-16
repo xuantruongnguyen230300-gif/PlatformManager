@@ -1,3 +1,9 @@
-.dashboard-criteria-table {
-  min-width: 1200px;
+.criteria-table-card {
+  margin-top: 16px;
+}
+
+.tablewrap {
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-table);
+  overflow: hidden;
 }

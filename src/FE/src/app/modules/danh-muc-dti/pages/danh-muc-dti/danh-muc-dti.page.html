@@ -1,108 +1,87 @@
-<app-topbar title="Danh mục" subtitle="Quản lý chỉ tiêu &amp; đánh giá theo tuần · DTI"></app-topbar>
-
-<main class="page-main">
-  <div class="notice">
-    Đây là nơi <b>duy nhất</b> để nhập/sửa dữ liệu DTI: <b>Import CSV</b> theo mẫu là cách nhập chính; có
-    thể <b>sửa trực tiếp</b> ô "Tiến độ %"/"Ghi chú" ngay trong lưới (bấm vào ô → sửa → ✓ lưu / ✗ huỷ);
-    "+ Thêm chỉ tiêu"/"Sửa"/"Xoá" quản lý danh mục chỉ tiêu. <b>Chỉ sửa được khi đang xem "Tất cả (mới
-    nhất trong năm)" của năm hiện tại</b> — xem dữ liệu năm khác/1 kỳ cụ thể sẽ chuyển sang chỉ đọc. Xem
-    lại kết quả (chỉ đọc, có bộ lọc Tuần/Tháng/Năm) tại <a routerLink="/dashboard">Dashboard</a>.
+<div class="card dti-grid-card">
+  <div class="title">
+    <h2>Danh mục &amp; Đánh giá theo tuần</h2>
+    <span class="muted">{{ totalCount() }} bản ghi</span>
   </div>
 
-  <div class="card grid-card" #gridCard [style.height.px]="cardHeightPx()">
-    <div class="title">
-      <h2>Danh mục &amp; Đánh giá theo tuần</h2>
-      <span class="muted">{{ rangeLabel() }} chỉ tiêu</span>
+  @if (!isLive()) {
+    <div class="notice">
+      Đang xem dữ liệu lịch sử — chỉ đọc. Quay lại "Tất cả (mới nhất trong năm)" của năm hiện tại để chỉnh sửa.
     </div>
+  }
 
-    @if (!isEditable()) {
-      <div class="notice readonly-banner">
-        Đang xem dữ liệu lịch sử — chỉ đọc. Quay lại "Tất cả (mới nhất trong năm)" của năm hiện tại để chỉnh sửa.
+  <div class="filters no-print">
+    <input placeholder="Tìm mã hoặc tên chỉ tiêu..." [value]="searchInput()" (input)="onSearchInputEvent($event)" />
+    <select [value]="selectedGroupId()" (change)="onGroupSelectChange($event)">
+      <option value="">Tất cả nhóm</option>
+      @for (g of groups(); track g.Id) {
+        <option [value]="g.Id">{{ g.Code }}. {{ g.Name }}</option>
+      }
+    </select>
+    <select [value]="selectedYear()" title="Chọn năm" (change)="onYearSelectChange($event)">
+      @for (y of periodOptions()?.Years ?? [selectedYear()]; track y) {
+        <option [value]="y">{{ y }}</option>
+      }
+    </select>
+    <select
+      [value]="selectedPeriod()"
+      title="Xem tổng hợp cả năm (mới nhất mỗi chỉ tiêu) hoặc 1 kỳ cụ thể đã lưu trong năm"
+      (change)="onPeriodSelectChange($event)"
+    >
+      <option value="all">Tất cả (mới nhất trong năm)</option>
+      @for (w of periodOptions()?.WeeksInYear ?? []; track w.Value) {
+        <option [value]="w.Value">{{ w.Value }}</option>
+      }
+    </select>
+    @if (isLive()) {
+      <div class="filters-actions">
+        <button type="button" class="btn" (click)="openCsvImportDialog()">Import CSV</button>
+        <button type="button" class="btn primary" (click)="openCreateForm()">+ Thêm chỉ tiêu</button>
       </div>
     }
-
-    <div class="filters no-print">
-      <input placeholder="Tìm mã hoặc tên chỉ tiêu..." (input)="onSearchInput($any($event.target).value)" />
-      <select [value]="groupFilter()" (change)="onGroupFilterChange($any($event.target).value)">
-        <option value="" [selected]="groupFilter() === ''">Tất cả nhóm</option>
-        @for (g of groups(); track g.Id) {
-          <option [value]="g.Id" [selected]="g.Id === groupFilter()">{{ g.Code }}. {{ g.Name }}</option>
-        }
-      </select>
-      <select [value]="year()" (change)="onYearChange($any($event.target).value)" title="Chọn năm">
-        @for (y of years(); track y) {
-          <option [value]="y" [selected]="y === year()">{{ y }}</option>
-        }
-      </select>
-      <select [value]="period()" (change)="onPeriodChange($any($event.target).value)" title="Tất cả hoặc 1 kỳ cụ thể trong năm">
-        <option [value]="periodAll" [selected]="period() === periodAll">Tất cả (mới nhất trong năm)</option>
-        @for (opt of periodOptions(); track opt.Value) {
-          <option [value]="opt.Value" [selected]="opt.Value === period()">{{ opt.Label }}</option>
-        }
-      </select>
-
-      @if (isEditable()) {
-        <div class="filters-actions">
-          <button type="button" class="btn" (click)="openCsvDialog()">Import CSV</button>
-          <button type="button" class="btn primary" (click)="openCreateDialog()">+ Thêm chỉ tiêu</button>
-        </div>
-      }
-    </div>
-
-    <p class="muted">
-      Mẫu cột: Mã, Chỉ tiêu, Nhóm, Điểm tối đa, Tự đánh giá, Thẩm định, Chênh lệch, Trạng thái, Phụ trách,
-      Hạn xử lý, Minh chứng/Ghi chú. Chỉ hỗ trợ .csv.
-    </p>
-
-    <app-criteria-grid-table
-      [rows]="rows()"
-      [editingCell]="editingCell()"
-      [isEditable]="isEditable()"
-      (cellEditStart)="onCellEditStart($event)"
-      (cellEditConfirm)="onCellEditConfirm($event)"
-      (cellEditCancel)="onCellEditCancel()"
-      (edit)="openEditDialog($event)"
-      (delete)="openDeleteConfirm($event)"
-    ></app-criteria-grid-table>
-
-    <app-pagination
-      [page]="page()"
-      [pageSize]="pageSize()"
-      [total]="totalCount()"
-      [pageSizeOptions]="pageSizeOptions"
-      (pageChange)="onPageChange($event)"
-      (pageSizeChange)="onPageSizeChange($event)"
-    ></app-pagination>
   </div>
 
-  <div class="footer">Đây là bản demo — gọi API thật tới backend PlatformManager.</div>
-</main>
+  <app-criteria-grid-table
+    [rows]="rows()"
+    [loading]="loading()"
+    [totalCount]="totalCount()"
+    [page]="page()"
+    [pageSize]="pageSize()"
+    (editProgress)="onEditProgress($event)"
+    (editNote)="onEditNote($event)"
+    (editRow)="openEditForm($event)"
+    (deleteRow)="onDeleteRow($event)"
+    (pageChange)="onGridPageChange($event)"
+  />
+</div>
 
 <app-criteria-form-dialog
-  [open]="criteriaDialogState() !== null"
+  [open]="formOpen()"
+  [editing]="formEditing()"
   [groups]="groups()"
-  [editing]="criteriaDialogState()?.editing ?? null"
-  (submit)="onCriteriaSubmit($event)"
-  (closed)="onCriteriaDialogClosed()"
-></app-criteria-form-dialog>
+  [serverError]="formServerError()"
+  (saved)="onFormSaved($event)"
+  (closed)="onFormClosed()"
+/>
 
 <app-confirm-dialog
-  [open]="confirmDeleteState() !== null"
-  [message]="confirmDeleteState()?.message ?? ''"
+  [open]="confirmOpen()"
+  title="Xác nhận"
+  [message]="confirmMessage()"
   confirmLabel="Xoá"
-  (confirmed)="onDeleteConfirmed()"
-  (closed)="onDeleteCancel()"
-></app-confirm-dialog>
+  (confirmed)="onConfirmDelete()"
+  (closed)="onConfirmClosed()"
+/>
 
-<app-csv-import-dialog
-  [open]="csvDialogOpen()"
-  [loading]="importLoading()"
-  (imported)="onCsvImport($event)"
-  (closed)="onCsvDialogClosed()"
-></app-csv-import-dialog>
+@defer (when csvDialogOpen()) {
+  <app-csv-import-dialog
+    [open]="csvDialogOpen()"
+    [importing]="csvImporting()"
+    (imported)="onCsvImported($event)"
+    (closed)="onCsvDialogClosed()"
+  />
+}
 
-<app-import-result-dialog
-  [open]="importResultDialogOpen()"
-  [result]="importResult()"
-  (closed)="onImportResultClosed()"
-></app-import-result-dialog>
+@defer (when importResultOpen()) {
+  <app-import-result-dialog [open]="importResultOpen()" [result]="importResult()" (closed)="onImportResultClosed()" />
+}

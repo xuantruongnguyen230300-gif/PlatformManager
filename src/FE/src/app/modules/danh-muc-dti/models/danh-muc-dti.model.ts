@@ -1,8 +1,88 @@
-/**
- * Model app cho feature Danh mục DTI — prefix `I`, field PascalCase, KHÔNG hậu
- * tố (khác DTO đặt trong `services/danh-muc-dti.dto.ts`, hậu tố `Dto`). Khớp
- * `doc/contracts/danh-muc-dti.md` (Status: IMPLEMENTED, backend-expert).
- */
+// ===== Wire (DTO) — camelCase theo envelope mới. Xem doc/contracts/danh-muc-dti.md. =====
+
+export interface ICriteriaGroupDto {
+  id: string;
+  code: string;
+  name: string;
+  displayOrder: number;
+}
+
+export interface IEvidenceDto {
+  id: string;
+  content: string;
+  orderIndex: number;
+}
+
+export interface ICriteriaRowDto {
+  criteriaId: string;
+  code: string;
+  name: string;
+  groupId: string;
+  groupCode: string;
+  groupName: string;
+  maxScore: number;
+  assessmentId: string | null;
+  progressPercent: number | null;
+  selfScore: number | null;
+  verifiedScore: number | null;
+  diff: number | null;
+  status: string | null;
+  ownerId: string | null;
+  ownerName: string | null;
+  deadline: string | null;
+  note: string | null;
+  assessmentDate: string | null;
+  evidences: IEvidenceDto[];
+  isEditable: boolean;
+}
+
+export interface ICriteriaDto {
+  id: string;
+  code: string;
+  name: string;
+  groupId: string;
+  groupName: string;
+  maxScore: number;
+}
+
+export interface ICriteriaUpsertRequestDto {
+  code: string;
+  name: string;
+  groupId: string;
+  maxScore: number;
+}
+
+export interface IAssessmentUpsertRequestDto {
+  progressPercent: number | null;
+  note: string | null;
+}
+
+export interface IAssessmentUpsertResultDto {
+  criteriaId: string;
+  progressPercent: number;
+  note: string | null;
+  createdAt: string;
+}
+
+export interface IDeleteCriteriaResultDto {
+  hardDeleted: boolean;
+}
+
+export interface ICsvImportRowErrorDto {
+  rowNumber: number;
+  code: string | null;
+  message: string;
+}
+
+export interface ICsvImportResultDto {
+  totalRows: number;
+  successCount: number;
+  errorCount: number;
+  criteriaCreatedCount: number;
+  errors: ICsvImportRowErrorDto[];
+}
+
+// ===== Model app — PascalCase + prefix I, không hậu tố =====
 
 export interface ICriteriaGroup {
   Id: string;
@@ -11,18 +91,13 @@ export interface ICriteriaGroup {
   DisplayOrder: number;
 }
 
-export type CellField = 'progress' | 'note';
-
-export interface IEditingCell {
-  CriteriaId: string;
-  Field: CellField;
+export interface IEvidence {
+  Id: string;
+  Content: string;
+  OrderIndex: number;
 }
 
-/** `Period` — "all" (mặc định) | "YYYY-Www" (tuần ISO) | "YYYY-MM" (tháng). */
-export type PeriodValue = string;
-export const PERIOD_ALL: PeriodValue = 'all';
-
-export interface ICriteriaGridRow {
+export interface ICriteriaRow {
   CriteriaId: string;
   Code: string;
   Name: string;
@@ -41,16 +116,8 @@ export interface ICriteriaGridRow {
   Deadline: string | null;
   Note: string | null;
   AssessmentDate: string | null;
+  Evidences: IEvidence[];
   IsEditable: boolean;
-}
-
-export interface ICriteriaGridResult {
-  IsEditable: boolean;
-  Items: ICriteriaGridRow[];
-  Page: number;
-  PageSize: number;
-  TotalCount: number;
-  TotalPages: number;
 }
 
 export interface ICriteria {
@@ -62,46 +129,42 @@ export interface ICriteria {
   MaxScore: number;
 }
 
-export interface ICriteriaFormValue {
+export interface ICriteriaUpsertPayload {
   Code: string;
   Name: string;
   GroupId: string;
   MaxScore: number;
 }
 
-export interface IImportRowError {
+export interface IAssessmentUpsertPayload {
+  ProgressPercent: number | null;
+  Note: string | null;
+}
+
+export interface IDeleteCriteriaResult {
+  HardDeleted: boolean;
+}
+
+export interface ICsvImportRowError {
   RowNumber: number;
   Code: string | null;
   Message: string;
 }
 
-export interface IImportResult {
+export interface ICsvImportResult {
   TotalRows: number;
   SuccessCount: number;
   ErrorCount: number;
   CriteriaCreatedCount: number;
-  GroupsCreatedCount: number;
-  OwnersCreatedCount: number;
-  Errors: IImportRowError[];
+  Errors: ICsvImportRowError[];
 }
 
-export interface IPeriodOption {
-  Value: PeriodValue;
-  Date: string;
-  OverallProgress: number | null;
-}
-
-export interface IPeriodOptions {
-  Years: number[];
-  WeeksInYear: IPeriodOption[];
-  MonthsInYear: IPeriodOption[];
-}
-
-export interface ICriteriaGridQuery {
-  Year: number;
-  Period: PeriodValue;
-  SearchText: string;
-  GroupId: string;
+/** `Period`: `'all'` | `'YYYY-Www'` (tuần ISO) | `'YYYY-MM'` (tháng) — xem doc/contracts/danh-muc-dti.md. */
+export interface ICriteriaListParams {
+  Year?: number;
+  Period?: string;
+  GroupId?: string;
+  Search?: string;
   Page: number;
   PageSize: number;
 }

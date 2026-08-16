@@ -30,15 +30,15 @@ chuẩn** kiến trúc dưới đây ngay từ slice đầu tiên.
 
 | Placeholder | Marker bất biến | Hiện tại |
 | --- | --- | --- |
-| `{FE_ROOT}` | `angular.json` | `src/FE/` — **chưa có `angular.json`, project chưa scaffold** |
-| `{BE_ROOT}` | `*.sln` hoặc `*.csproj` ở gốc | `src/BE/` — chưa scaffold |
+| `{FE_ROOT}` | `angular.json` | `src/FE/` — đã scaffold, xem
+  **`doc/kien-truc-core-module.md`** (root repo) trước khi thêm module
+  nghiệp vụ mới hoặc đụng tới `platform/`/`modules/` |
+| `{BE_ROOT}` | `*.sln`/`*.slnx` ở gốc | `src/BE/` — đã scaffold |
 
-- Nếu Glob **không** tìm thấy `angular.json` (dự án chưa `ng new`) →
-  `{FE_ROOT}` mặc định = `src/FE/`, và việc đầu tiên trong task là **scaffold**
-  theo đúng `src/FE/CLAUDE.md` trước khi làm bất cứ việc gì khác.
+- Solution/app đã tồn tại — nếu Glob **không** tìm thấy `angular.json`
+  (trường hợp bất thường), dừng lại hỏi người dùng thay vì tự ý scaffold
+  lại từ đầu.
 - Nếu Glob trả về **>1** kết quả → hỏi lại, KHÔNG đoán.
-- Một khi `angular.json` đã tồn tại, resolve `{FE_ROOT}` bằng marker đó như
-  bình thường — không hardcode `src/FE/` nữa (thư mục có thể đổi tên).
 
 **Phạm vi:** chỉ `{FE_ROOT}`. Được **đọc** `{BE_ROOT}` khi cần đối chiếu API
 contract; **không sửa** file nào trong đó — đó là việc của `backend-expert`.
@@ -82,10 +82,17 @@ không sửa mapper = vỡ runtime im lặng, build vẫn xanh. Giữ kỷ luậ
 
 ---
 
-# Cấu trúc một feature (đích đến ngay từ đầu — không phải đích tái cấu trúc)
+# Cấu trúc một feature
+
+> Đọc **`doc/kien-truc-core-module.md`** (root repo) trước — quyết định
+> ranh giới `platform/` (màn Core, dùng lại được cho mọi sản phẩm) ↔
+> `modules/` (module nghiệp vụ, đặc thù 1 domain). Thêm màn hình mới → tự
+> hỏi "màn này có ý nghĩa với MỌI sản phẩm dựng trên nền tảng, hay chỉ
+> riêng domain nghiệp vụ hiện tại?" để chọn `platform/` hay `modules/`,
+> đừng đoán.
 
 ```
-src/FE/src/app/modules/<feature>/
+src/FE/src/app/{platform|modules}/<feature>/
 ├── <feature>.routes.ts             # lazy routes riêng của feature
 ├── pages/<feature>/                # SMART — route target, điều hướng, inject store/service
 ├── components/<x>/                 # DUMB — input()/output(), KHÔNG inject data service
@@ -94,6 +101,11 @@ src/FE/src/app/modules/<feature>/
 ├── state/        (TUỲ CHỌN)        # signal store — chỉ khi state đủ phức tạp
 └── data/         (TUỲ CHỌN)        # enum, hằng số, dropdown options
 ```
+
+**Ranh giới bắt buộc (gate G8)**: `modules/<A>/` không được import trực
+tiếp nội bộ `modules/<B>/` (module nghiệp vụ khác) — chỉ được import từ
+`core/`, `shared/`, `platform/`. Thêm module nghiệp vụ mới → xem
+`doc/kien-truc-core-module.md` § Nguyên tắc áp dụng khi thêm module mới.
 
 ## Bảng trách nhiệm — quy tắc cứng
 
@@ -108,8 +120,10 @@ src/FE/src/app/modules/<feature>/
 ## Cross-cutting (tầng app — KHÔNG để trong feature)
 
 ```
-core/    → singleton toàn app: auth, guard, interceptor, HTTP client dùng chung
-shared/  → dumb UI tái dùng > 1 feature
+core/      → singleton toàn app: auth, guard, interceptor, HTTP client dùng chung
+shared/    → dumb UI tái dùng > 1 feature
+platform/  → màn hình Core (đăng nhập, đổi mật khẩu, quản trị người dùng, phân quyền)
+modules/   → module NGHIỆP VỤ (dashboard, danh-muc-dti...) — không chứa màn Core nào
 ```
 
 **Chốt chặn chống god component:** soft cap ~300–400 dòng/component — vượt
@@ -195,8 +209,8 @@ endpoint một card:
 
 Khi task vừa hoàn thành **đụng tới thành phần core của FE** (không phải màn
 hình/feature đơn lẻ), kích hoạt agent `core-reviewer` để đối chiếu code với
-bộ quy tắc trong `doc/huong_dan/wiki-core/` (phần FE hiện dùng
-`src/FE/.claude/docs/*.md` làm chuẩn — xem `wiki-core/fe/README.md`):
+bộ quy tắc trong `doc/huong_dan/wiki-core/fe/*.md` (đối chiếu thêm
+`src/FE/.claude/docs/*.md` — quy ước thực thi hiện tại):
 
 - `SendMessage(to: "core-reviewer", ...)` nếu nó đã là teammate đang chạy;
   nếu chưa có, `Agent(subagent_type: "core-reviewer", ...)` **một lần**.

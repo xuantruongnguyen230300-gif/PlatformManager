@@ -2,8 +2,22 @@
   font-size: var(--fs-sm);
   line-height: 1.6;
 
+  .err {
+    color: var(--bad);
+  }
+
+  .ok {
+    color: var(--good);
+  }
+
   ul {
     margin: 6px 0;
     padding-left: 20px;
   }
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
 }
