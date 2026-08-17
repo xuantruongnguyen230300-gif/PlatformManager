@@ -101,6 +101,88 @@ project/thư mục:
 
 ---
 
+## Đối chiếu API Contract Card — BE ↔ FE mapping (khi review cả hai phía)
+
+Khi được yêu cầu review **cả BE lẫn FE** (hoặc khi có `doc/contracts/*.md` ở
+trạng thái `IMPLEMENTED`), đối chiếu thêm khả năng "khớp nhau" giữa 2 phía —
+lớp kiểm tra này khác với tuân thủ kiến trúc core: mục đích là bắt lệch giữa
+cái BE thật sự trả về và cái FE thật sự gọi, thay vì tin vào tự báo cáo của
+Contract Card (BE/FE tự đánh dấu `IMPLEMENTED` không đồng nghĩa đã khớp).
+
+- Với mỗi card `IMPLEMENTED` trong `doc/contracts/*.md`: đối chiếu
+  `Route`/`Verb` với controller action thật (`[Route]`/`[Http*]` trong
+  `*.Business.Api`/`*.Core.Api`) — khớp route, khớp verb, request là
+  **phẳng** đúng như card ghi.
+- Đối chiếu `Response` fields trong card với DTO thật BE trả về (tên field,
+  casing PascalCase) và với model/mapper phía FE (`services/*.service.ts` +
+  `models/*.model.ts` của đúng feature) — field FE map có tồn tại thật ở
+  response BE không; FE map field không tồn tại ở BE (hoặc field BE đổi tên
+  mà FE không cập nhật) → **finding thật**, không phải chỉ là khác biệt vô
+  hại.
+- Đối chiếu `Lỗi mong đợi` (ErrorCode) trong card với `ErrorDescriptor` khai
+  ở BE và với logic bind lỗi phía FE (interceptor/handler đọc
+  `BusinessCode`) — ErrorCode BE khai nhưng FE không xử lý → MISSING phía
+  FE.
+- Card còn `DRAFT`/`AGREED` (chưa `IMPLEMENTED`) → không phải finding, chỉ
+  ghi nhận trạng thái "đang chờ" trong report, không đối chiếu code.
+
+Mức PASS/PARTIAL/MISSING áp dụng như các mục khác — bằng chứng là
+`file:line` của **cả 2 phía** đặt cạnh nhau trong cùng 1 finding.
+
+## Test coverage cho thay đổi mới (kiểm riêng, không phải kiến trúc)
+
+Ngoài kiến trúc, kiểm thêm — nhẹ, không thay QA/test suite thật —: mỗi
+command/query/handler mới hoặc đổi hành vi đáng kể (không phải sửa text lỗi
+hay thêm field nhỏ) có **ít nhất 1 test** phủ happy-path và **ít nhất 1
+test** phủ 1 edge-case/lỗi mong đợi (vd `ErrorDescriptor` trả đúng khi input
+sai) — tìm bằng Grep tên class test tương ứng trong `Tests/`. Không chạy lại
+toàn bộ test suite để chấm coverage % — chỉ xác nhận sự tồn tại test cho
+đúng phần vừa đổi. Thiếu hẳn test cho 1 handler mới → MISSING; có test
+nhưng chỉ phủ happy-path → PARTIAL, ghi rõ edge-case nào chưa phủ.
+
+## Permission theo hành động & RowVersion (2026-08-17, kiểm riêng)
+
+Đối chiếu thêm 2 quy tắc mới — `.claude/rules/api-controller.md`
+§"Phân quyền theo hành động" và `.claude/rules/entity-domain.md`
+§"RowVersion — optimistic concurrency":
+
+- Mỗi controller/action **ghi** dữ liệu nghiệp vụ mới (không phải chỉ đọc)
+  → có `[RequirePermission(key)]` khớp `PermissionMatrix`, hay chỉ
+  `[Authorize]` trần? Thiếu hẳn → MISSING — **trừ khi** quyết định "không
+  phân biệt role cho nghiệp vụ này" đã CHỐT tường minh với người dùng và ghi
+  rõ trong code (như DTI Weekly hiện tại — không phải finding, đã xác nhận ở
+  audit trước).
+- Entity mới/sửa có **≥2 luồng ghi độc lập** chạm cùng bản ghi (vd import
+  hàng loạt + sửa tay từng field) → có `RowVersion` không? Thiếu → MISSING.
+  Entity chỉ 1 luồng ghi (CRUD thường) → không áp dụng, không phải finding.
+
+**Cập nhật độ ưu tiên (2026-08-17):** finding "thiếu `[RequirePermission]`"
+ở mục trên giờ **luôn báo ở mức nghiêm trọng nhất trong report** (không gộp
+chung mức với các PARTIAL khác) — đây là [OWASP #1 Broken Access
+Control](https://owasp.org/Top10/2025/A01_2025-Broken_Access_Control/), và
+PlatformManager đã qua giai đoạn demo (xem
+`doc/huong_dan/wiki-core/be/01-core-components.md` §Áp dụng).
+
+## Chuẩn product bổ sung (2026-08-17): Rate limiting, config fail-fast, CI
+
+Đối chiếu thêm `.claude/rules/api-controller.md` §"Rate limiting" và
+`.claude/rules/architecture.md` §"Cấu hình — fail-fast validation":
+
+- `Program.cs` có `AddRateLimiter`/`UseRateLimiter` không, và endpoint
+  `/api/auth/login` có gắn policy riêng (`[EnableRateLimiting("login")]`,
+  giới hạn chặt hơn API thường) không? Thiếu → MISSING.
+- `IOptions<T>` mới thêm (SMTP, cấu hình bên ngoài...) có
+  `.ValidateDataAnnotations().ValidateOnStart()` không? Thiếu → PARTIAL (mức
+  nhẹ hơn 2 mục trên — hậu quả là lỗi runtime chậm phát hiện, không phải lỗ
+  hổng bảo mật).
+- `.github/workflows/*.yml` có tồn tại và chạy `dotnet build` + `dotnet test`
+  (bao gồm `PlatformManager.ArchTests`) trên mọi PR không? Đây là hạng mục
+  **duy nhất trong nhóm này không thuộc phạm vi review code C#/TS** — kiểm
+  bằng Glob/Read trực tiếp file YAML, không phải đọc rule wiki. Thiếu →
+  MISSING, ghi rõ đây là gap hạ tầng CI, không phải gap kiến trúc code.
+
+---
+
 # Quy trình review
 
 Theo mẫu `design-audit` đã có trong repo (`.claude/skills/design-audit/SKILL.md`)
@@ -108,7 +190,17 @@ Theo mẫu `design-audit` đã có trong repo (`.claude/skills/design-audit/SKIL
 đã thất bại**.
 
 1. Với mỗi quy tắc trong file wiki đang xét, tìm bằng chứng thật trong code
-   bằng Grep/Read (tên class, tên file, đoạn code cụ thể).
+   bằng Grep/Read (tên class, tên file, đoạn code cụ thể). Khi câu hỏi là
+   "X có đang được dùng/tham chiếu ở đâu" hoặc "sửa Y có kéo theo chỗ nào
+   khác không" (đặc biệt khi đối chiếu ranh giới Core↔Business hoặc mapping
+   BE↔FE ở trên) — ưu tiên dùng skill `/gitnexus-exploring` hoặc
+   `/gitnexus-impact-analysis` thay vì Grep thủ công, cho kết quả chính xác
+   hơn về quan hệ phụ thuộc. Trước khi dùng: `npx gitnexus status` để xác
+   nhận repo đã được index; nếu chưa có `.gitnexus/` hoặc index cũ, chạy
+   `npx gitnexus analyze` trước (đây không phải thao tác git — chỉ đọc
+   source và ghi vào `.gitnexus/`, an toàn). Nếu MCP GitNexus chưa kết nối
+   hoặc index lỗi, quay lại Grep/Read như bình thường — không để việc này
+   chặn review.
 2. Phán 1 trong 3 mức, không phán chung chung:
    - **PASS** — có bằng chứng rõ ràng tuân thủ.
    - **PARTIAL** — có làm nhưng chưa đủ/chưa đúng hoàn toàn (nêu rõ thiếu gì).
@@ -144,6 +236,25 @@ Ghi ra file `doc/huong_dan/wiki-core/audit/<YYYY-MM-DD>-<be|fe|be-fe>.md`
 ## PASS (tóm tắt, không cần bằng chứng chi tiết cho mỗi mục)
 - <danh sách quy tắc đã tuân thủ>
 ```
+
+Ngay sau đó, cập nhật (tạo nếu chưa có) `doc/huong_dan/wiki-core/audit/
+INDEX.md` — thêm 1 dòng bảng mỗi lần chạy, **không xoá dòng cũ**:
+
+```markdown
+# Audit Index
+
+| Ngày | Phạm vi | Kết luận | Finding mở | Finding đã đóng lần này | File |
+| --- | --- | --- | --- | --- | --- |
+| 2026-08-17 | BE | PARTIAL | 2 | 1 | audit/2026-08-17-be.md |
+```
+
+- "Finding mở" = số PARTIAL+MISSING của report vừa ghi (kể cả finding lặp
+  lại từ lần trước chưa fix).
+- "Finding đã đóng lần này" = finding từng PARTIAL/MISSING ở report **gần
+  nhất cùng phạm vi** (BE/FE) mà lần này đã lên PASS — đọc file report liền
+  trước cùng phạm vi trong `audit/` để đối chiếu trước khi điền số này.
+- Mục đích: 1 file duy nhất trả lời "đang tuân thủ core tới đâu" mà không
+  cần đọc lại toàn bộ lịch sử `audit/`.
 
 Sau khi ghi file, `SendMessage` báo cáo tóm tắt (đường dẫn file + số lượng
 finding theo mức + agent nào cần xử lý) — **không paste toàn bộ report vào

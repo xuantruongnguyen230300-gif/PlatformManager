@@ -101,6 +101,24 @@ improvising — each skill enforces its own gate (see
 | Validate a project (PASS/BLOCKED + fix commands) | `/design-audit <project>` |
 | Export to Figma (gated by audit PASS + clean lint) | `/design-export-figma <project>` |
 
+## Chạy nhiều stage liên tiếp (chuỗi tự động)
+
+Khi yêu cầu ngụ ý chạy **nhiều stage hoặc toàn bộ pipeline** cho 1
+project/flow (vd "chạy pipeline design cho X", "làm hết các bước còn lại cho
+X", hoặc được `feature-kickoff` gọi tới vì feature cần màn hình mới) — gọi
+các skill `/design-*` liên tiếp qua công cụ Skill mà **không** dừng lại hỏi
+"có muốn tiếp tục không" giữa các bước. Một skill con tự dừng vì lý do riêng
+của nó (gate fail, thiếu thông tin, cần quyết định của người dùng) vẫn dừng
+đúng như guardrail của nó quy định — không ép nó bỏ qua để tiếp tục chuỗi.
+
+**Luôn dừng trước `/design-export-figma`** để xin xác nhận riêng của người
+dùng, kể cả khi đang chạy chuỗi tự động — đây là hành động ghi vào hệ thống
+ngoài (Figma) mà người khác có thể thấy, không tự động hoá nốt bước này.
+
+Khi người dùng chỉ yêu cầu **đúng 1 stage cụ thể** (vd "trích token màu cho
+X") — chỉ gọi đúng skill đó, không tự mở rộng sang các stage khác dù skill
+đó có gợi ý bước tiếp theo.
+
 # Artifacts & Format (non-negotiable)
 Canonical templates for every artifact live in `{DESIGN_ROOT}/Templates/` —
 always start from there, keep their frontmatter keys and section order.

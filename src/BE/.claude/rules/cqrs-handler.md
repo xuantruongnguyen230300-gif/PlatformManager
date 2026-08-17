@@ -150,3 +150,85 @@ public class PagedList<T>
     public int PageSize { get; init; }
 }
 ```
+
+## Audit log tối thiểu cho hành động nhạy cảm
+
+`BaseEntity` (`UserCreate`/`UserUpdate`/`DateCreate`/`DateUpdate`) chỉ trả
+lời "ai sửa **lần cuối**" — không có lịch sử "ai từng làm gì". Cho vài hành
+động thật sự nhạy cảm (đổi `PermissionMatrix`, khoá/mở khoá user, xoá
+`Criteria`) cần thêm 1 bảng audit riêng — **không** audit mọi write, chỉ
+những hành động mà "ai làm, khi nào" có giá trị điều tra sau này.
+
+```csharp
+// Core.Application — 1 bảng duy nhất, đủ dùng ở quy mô hiện tại
+public class AuditLogEntry
+{
+    public Guid Id { get; init; }
+    public string EventType { get; init; } = default!;  // "Permission.Update", "User.Lock"...
+    public string? EntityId { get; init; }
+    public string UserId { get; init; } = default!;
+    public string? Data { get; init; }                  // JSON snapshot, tuỳ chọn
+    public DateTimeOffset DateCreate { get; init; }
+}
+
+public interface IAuditLogger
+{
+    void Log(string eventType, string? entityId, object? data = null);
+}
+```
+
+Ghi **đồng bộ, trong cùng transaction** với hành động chính (gọi
+`IAuditLogger.Log(...)` ngay trong handler, trước `SaveChangesAsync`) —
+**KHÔNG** cần Channel/background dispatch non-blocking ở quy mô hiện tại
+(traffic thấp, thêm 1 INSERT không đáng đo được độ trễ). Đây là bản rút gọn
+của `AuditLogBehavior` + 4 interface
+(`IAuditLogService`/`IAuditBackgroundChannel`/`IAuditLogger`/`IAuditLogReaderService`)
+ở
+[05-p4-hosting-api.md §12](../../../../doc/huong_dan/wiki-core/be/trien-khai/05-p4-hosting-api.md) —
+nâng cấp lên Channel non-blocking khi đo được ghi đồng bộ thật sự ảnh hưởng
+latency, không phải trước.
+
+## Command chạy lâu → job nền (Hangfire)
+
+**Finding thật (2026-08-17):** `ImportCsvCommand`/`CsvImportService.ImportAsync`
+chạy **đồng bộ trong request HTTP** — ghi từng dòng 1 (`SaveChangesAsync`
+mỗi dòng), giới hạn file 20MB. File lớn thật (vài nghìn dòng) có nguy cơ
+timeout request thật sự, không phải rủi ro lý thuyết.
+
+**Ngưỡng quyết định** — tách job nền (Hangfire) thay vì handler đồng bộ khi
+1 trong các điều sau đúng: xử lý số dòng/file không có giới hạn trên rõ ràng
+(import, export lớn), hoặc gọi ra ngoài mà latency không kiểm soát được
+(email, tích hợp HTTP bên thứ 3 — xem thêm mục Notification ở
+`architecture.md`). Command CRUD thường (tạo/sửa 1 bản ghi) **không** áp
+dụng — chỉ thêm phức tạp không cần thiết.
+
+**Pattern chuẩn — `202 + jobId + polling`:**
+
+```csharp
+// 1. Controller/Handler nhận request, lưu input, enqueue, trả ngay — KHÔNG đợi xử lý xong
+[HttpPost]
+public async Task<IActionResult> Import(IFormFile file, CancellationToken ct)
+{
+    var jobId = await mediator.Send(new StartImportCommand(file), ct);   // tạo ImportJob(Status=Pending), lưu file tạm
+    BackgroundJob.Enqueue<IImportJobRunner>(r => r.RunAsync(jobId, CancellationToken.None));
+    return Accepted(new { jobId });   // 202 — KHÔNG đợi Hangfire chạy xong
+}
+
+// 2. Endpoint riêng cho FE poll trạng thái
+[HttpGet("{jobId:guid}")]
+public async Task<IActionResult> GetStatus(Guid jobId, CancellationToken ct)
+    => HandleResult(await mediator.Send(new GetImportJobStatusQuery(jobId), ct));
+```
+
+- **Job chạy trong Hangfire worker KHÔNG có `HttpContext`** — `IImportJobRunner`
+  tự resolve scope DI riêng (`IServiceScopeFactory`), không inject
+  `ICurrentUser`/`IHttpContextAccessor` như handler thường.
+- File upload (`IFormFile`) **không sống sót** qua ranh giới request→job nền
+  — phải ghi ra storage tạm (`IImportFileStorage`) TRƯỚC khi enqueue, job đọc
+  lại từ đó, không truyền `Stream`/`IFormFile` vào job.
+- Kết quả job ghi vào chính bản ghi job (`Status`/`ResultJson`/`ErrorMessage`)
+  — FE poll qua `GetImportJobStatusQuery`, không qua cơ chế nào khác (SignalR/
+  WebSocket chưa cần ở quy mô hiện tại — polling vài giây/lần là đủ).
+- Pattern này dùng lại được cho bất kỳ command dài hơi nào khác sau này
+  (không riêng Import) — xem phía FE tương ứng ở
+  `src/FE/.claude/docs/api-client.md` §"Long-running operation — poll pattern".

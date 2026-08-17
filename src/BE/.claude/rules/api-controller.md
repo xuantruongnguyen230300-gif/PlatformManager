@@ -231,3 +231,98 @@ lỗ hổng bảo mật phổ biến.
   `spec/dashboard-dti-weekly/business-rules.md` mục Permission; nếu chưa đủ
   thông tin nghiệp vụ để chốt role, giữ nguyên placeholder trong spec đó,
   không tự bịa role ở tầng code.
+
+### Phân quyền theo hành động — bản rút gọn (khác role, khác menu)
+
+**Vấn đề thật đã tìm thấy (2026-08-17):** màn "Phân quyền" hiện chỉ điều khiển
+`SysMenuRole` — tức "role nào thấy menu nào". Không có gì chặn 1 user role
+`User` gọi thẳng `POST /api/criteria` dù matrix không cấp quyền — mọi
+controller nghiệp vụ chỉ có `[Authorize]` trần (đăng nhập là đủ). Đây là gap
+thật, không phải rủi ro lý thuyết.
+
+**Bản rút gọn áp dụng ngay** — KHÔNG phải hệ thống đầy đủ ở
+[05-p4-hosting-api.md §7](../../../../doc/huong_dan/wiki-core/be/trien-khai/05-p4-hosting-api.md)
+(cái đó có `CrudActionResolver` suy luận action tự động + 2 cơ chế enforcement
+song song — quá nặng cho 1 module hiện tại):
+
+```csharp
+// Platform.Domain hoặc Core.Application — pure metadata, không logic runtime
+[AttributeUsage(AttributeTargets.Class | AttributeTargets.Method)]
+public sealed class RequirePermissionAttribute(string key) : Attribute
+{
+    public string Key { get; } = key;   // vd "criteria.manage", khớp key trong PermissionMatrix
+}
+
+// 1 filter toàn cục, đọc thẳng permission hiện có của user (claim/role → key)
+public class RequirePermissionFilter : IAsyncAuthorizationFilter
+{
+    public async Task OnAuthorizationAsync(AuthorizationFilterContext ctx)
+    {
+        var attr = ctx.ActionDescriptor.EndpointMetadata
+            .OfType<RequirePermissionAttribute>().FirstOrDefault();
+        if (attr is null) return;   // không khai attribute = không chặn thêm (giữ nguyên [Authorize])
+
+        var hasPermission = /* đọc PermissionMatrix theo role của user hiện tại */;
+        if (!hasPermission) ctx.Result = new ForbidResult();
+    }
+}
+```
+
+- Không có `CrudActionResolver` — action luôn khai tường minh trong `key`
+  (vd `"criteria.manage"` dùng chung cho create/update/delete), không suy từ
+  tên method. Chấp nhận thô hơn (không phân biệt View/Create/Delete) để đổi
+  lấy đơn giản — nâng cấp lên action rời (`PermissionAction`) khi thật sự cần
+  phân biệt "xem được nhưng không sửa được".
+- Chỉ 1 cơ chế enforcement (filter), không thêm `[Authorize(Policy=...)]`
+  song song.
+- Áp dụng cho endpoint ghi dữ liệu nghiệp vụ trước (Criteria/CriteriaGroups/
+  Import) — endpoint chỉ đọc (Dashboard) có thể giữ `[Authorize]` trần thêm
+  một thời gian nếu chưa có yêu cầu nghiệp vụ phân biệt ai xem được gì.
+
+## Rate limiting
+
+**Bổ sung khi chuyển sang giai đoạn product (2026-08-17)** — đối chiếu 12-Factor/
+chuẩn ngành, không nằm trong lần rà soát VNR gốc. Chưa có gì chặn brute-force
+`POST /api/auth/login`, hay 1 user spam `POST /api/import` (endpoint nặng —
+xem `cqrs-handler.md` §"Command chạy lâu") làm nghẽn worker cho user khác.
+
+.NET có middleware dựng sẵn từ .NET 7, không cần thư viện ngoài:
+
+```csharp
+// Program.cs
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    // Policy riêng cho login — chặt hơn nhiều so với API thường (chống brute-force)
+    options.AddFixedWindowLimiter("login", opt =>
+    {
+        opt.PermitLimit = 5;
+        opt.Window = TimeSpan.FromMinutes(1);
+    });
+
+    // Policy mặc định cho API còn lại — rộng hơn, chỉ chặn spam rõ ràng
+    options.AddFixedWindowLimiter("default", opt =>
+    {
+        opt.PermitLimit = 100;
+        opt.Window = TimeSpan.FromMinutes(1);
+    });
+});
+
+app.UseRateLimiter();
+```
+
+```csharp
+[HttpPost("login")]
+[EnableRateLimiting("login")]   // gắn riêng action nhạy cảm — không dùng chung policy "default"
+public async Task<IActionResult> Login([FromBody] LoginCommand cmd, CancellationToken ct) => ...
+```
+
+- Policy `login` **theo IP** (mặc định của `FixedWindowLimiter` — partition
+  key là remote IP) — không theo user (chưa đăng nhập thì chưa có user).
+- `ImportController` dùng policy `default` là đủ ở quy mô hiện tại — endpoint
+  đã tự giới hạn 20MB/file + chạy nền qua Hangfire (không block worker),
+  rate limit ở đây chỉ chặn spam request tạo job, không phải chặn xử lý file
+  lớn (đã có Hangfire lo).
+- **Không** rate-limit health check (`/health`) — orchestrator/monitoring
+  cần gọi endpoint này thường xuyên, rate limit vào đây gây báo động giả.

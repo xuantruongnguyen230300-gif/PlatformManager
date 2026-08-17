@@ -83,6 +83,14 @@ npx --yes --package=@google/design.md designmd lint {DESIGN_ROOT}/<Group>/<Proje
 - Cập nhật dashboard status trong `README.md` của project cho stage 3.
 - Báo cáo số lượng token theo từng category (+ bảng màu chart) và tóm tắt lint (lỗi đã sửa về 0, warning đã ghi nhận). Bước tiếp theo: `/design-document-components <project>`.
 
+**Chuỗi pipeline**: nếu skill này đang chạy như một bước trong chuỗi (được
+gọi bởi `design-expert` hoặc `/feature-kickoff` cho cả project/flow, không
+phải người dùng gõ trực tiếp đúng lệnh này) — tự động gọi tiếp bước "Bước
+tiếp theo" nêu ở trên qua công cụ Skill ngay sau khi báo cáo xong, không
+dừng lại chờ người dùng gõ lệnh kế tiếp. Nếu người dùng gọi trực tiếp một
+mình skill này (không qua chuỗi), chỉ nêu gợi ý bước tiếp theo như trên,
+không tự mở rộng phạm vi yêu cầu ban đầu.
+
 ## Guardrails
 
 - Không bao giờ bịa giá trị token — mọi giá trị phải truy được về đúng dòng trong live source.

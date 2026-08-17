@@ -78,6 +78,14 @@ Screenshot còn "pending" trong Screenshot Manifest của UiInventory được l
 - Báo cáo các screen đã cover, token đã resolve, và mọi screenshot pending được mang vào danh sách Assets to Attach.
 - Bước tiếp theo: `/design-audit <project>`.
 
+**Chuỗi pipeline**: nếu skill này đang chạy như một bước trong chuỗi (được
+gọi bởi `design-expert` hoặc `/feature-kickoff` cho cả project/flow, không
+phải người dùng gõ trực tiếp đúng lệnh này) — tự động gọi tiếp bước "Bước
+tiếp theo" nêu ở trên qua công cụ Skill ngay sau khi báo cáo xong, không
+dừng lại chờ người dùng gõ lệnh kế tiếp. Nếu người dùng gọi trực tiếp một
+mình skill này (không qua chuỗi), chỉ nêu gợi ý bước tiếp theo như trên,
+không tự mở rộng phạm vi yêu cầu ban đầu.
+
 ## Guardrails
 
 - Prompt không được tham chiếu đường dẫn file mà tool bên ngoài không mở được — inline mọi thứ hoặc nêu tên trong danh sách Assets to Attach.

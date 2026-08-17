@@ -77,6 +77,14 @@ Với mỗi screen của flow (từ census UiInventory): đọc markup thật (f
 - Báo cáo các screen đã spec theo từng flow, screen nào bị chặn do component chưa tài liệu hóa, và screenshot còn pending.
 - Bước tiếp theo: `/design-generate-prompts <project> <flow>`.
 
+**Chuỗi pipeline**: nếu skill này đang chạy như một bước trong chuỗi (được
+gọi bởi `design-expert` hoặc `/feature-kickoff` cho cả project/flow, không
+phải người dùng gõ trực tiếp đúng lệnh này) — tự động gọi tiếp bước "Bước
+tiếp theo" nêu ở trên qua công cụ Skill ngay sau khi báo cáo xong, không
+dừng lại chờ người dùng gõ lệnh kế tiếp. Nếu người dùng gọi trực tiếp một
+mình skill này (không qua chuỗi), chỉ nêu gợi ý bước tiếp theo như trên,
+không tự mở rộng phạm vi yêu cầu ban đầu.
+
 ## Guardrails
 
 - Không bao giờ mô tả một screen dựa vào trí nhớ hay app khác — mọi fact phải truy được về file view hoặc screenshot.

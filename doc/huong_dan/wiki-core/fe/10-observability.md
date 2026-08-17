@@ -20,12 +20,25 @@ phải đoán theo thời gian/màn hình.
 ra console (tránh lộ traceId/stack ra người dùng cuối tò mò mở DevTools, dù
 đây không phải bí mật nhạy cảm, vẫn nên tối giản bề mặt lộ thông tin).
 
-## Chưa cần (Nhóm B — hoãn tới khi chuẩn bị production thật)
+## Đã tới ngưỡng — Nhóm B trước đây, giờ nên làm
 
-- Gửi lỗi client-side (uncaught exception JS) lên 1 dịch vụ tracking
-  (Sentry hoặc tương đương) — chưa cần khi còn demo/nội bộ.
-- Metrics hiệu năng (Core Web Vitals, thời gian load route) — chưa có nhiều
-  người dùng đồng thời để việc này có ý nghĩa.
+**Cập nhật (2026-08-17):** mục này viết "hoãn tới khi chuẩn bị production
+thật" — PlatformManager giờ đã ở đúng giai đoạn đó (chuyển từ demo sang phát
+triển product, xem
+[be/01-core-components.md](../be/01-core-components.md) §Áp dụng). Áp dụng
+lại đúng ngưỡng đã tự đặt ra:
+
+- **Gửi lỗi client-side lên dịch vụ tracking (Sentry hoặc tương đương) — nên
+  làm sớm, không còn "chưa cần khi demo/nội bộ".** Không có cơ chế này thì
+  lỗi JS runtime ở máy user thật (khác máy dev) không ai biết đã xảy ra, chỉ
+  phát hiện khi user tự báo — chậm hơn nhiều so với alert tự động.
+
+## Vẫn hoãn — bằng chứng chưa đổi, không phải giai đoạn
+
+- **Metrics hiệu năng** (Core Web Vitals, thời gian load route) — vẫn chưa
+  có nhiều người dùng đồng thời để số liệu có ý nghĩa thống kê. Khác Sentry
+  ở trên: đây hoãn vì **thiếu bằng chứng traffic**, không phải vì "còn demo"
+  — khi có đủ user đồng thời mới bật, không phải khi "đã là product".
 
 Ghi ngưỡng ở đây để không quên — không xây trước khi chạm đúng nỗi đau,
 đúng nguyên tắc Nhóm A/B xuyên suốt cả bộ tài liệu.

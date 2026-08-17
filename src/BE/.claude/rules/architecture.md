@@ -70,6 +70,73 @@ không có "module khác" để reference chéo; nếu về sau xuất hiện do
 sự độc lập, xem `doc/kien-truc-core-module.md` § Khi nào tách thành module
 độc lập thật trước khi tự ý tạo project mới.
 
+**DIP seam — ghi trước, áp dụng khi có module nghiệp vụ thứ 2:** nếu
+`Core.Infrastructure` (vd 1 job nền dùng chung) cần đọc/ghi entity của 1
+module cụ thể (vd dọn `CriteriaAssessment` cũ), **không** inject thẳng
+`ICriteriaAssessmentRepository` của module đó — vi phạm `Core.* → Business.*`
+cấm ở trên. Thay vào đó: khai interface hẹp ở `Core.Application` (vd
+`IAssessmentCleanupService`), để `Modules.DtiWeekly.Infrastructure` tự
+implement, `Core.Infrastructure` chỉ biết interface. Đối chiếu VNR.Successor
+(đã áp dụng đúng mẫu này khi có ≥2 module) — xem
+[be/trien-khai/04-p3-platform-persistence.md §10](../../../../doc/huong_dan/wiki-core/be/trien-khai/04-p3-platform-persistence.md)
+cho thiết kế đầy đủ (`IBoundedContext`) nếu sau này cần enumerate nhiều
+module cùng lúc.
+
+**Notification — seam có sẵn, chỉ dùng khi có nhu cầu thật.** Rà toàn bộ
+`spec/*/business-rules.md` (2026-08-17) không có yêu cầu nghiệp vụ nào cần
+gửi thông báo — dựng cả hệ thống đa kênh (email/push/in-app) như VNR ngay
+bây giờ là phình to không cần thiết. Chỉ khai seam tối thiểu:
+
+```csharp
+// Core.Application
+public interface INotificationSender
+{
+    Task SendAsync(string to, string subject, string body, CancellationToken ct);
+}
+// Core.Infrastructure — impl đầu tiên, đọc IOptions<SmtpOptions> (không IConfiguration trực tiếp)
+public sealed class SmtpNotificationSender(IOptions<SmtpOptions> options) : INotificationSender { ... }
+```
+
+**Use case đầu tiên có thật, không phải hạ tầng chết:** 1 Hangfire recurring
+job quét `CriteriaAssessment.Deadline` sắp tới, gửi email nhắc qua
+`INotificationSender` — xem
+[`be/07-observability.md`](../../../../doc/huong_dan/wiki-core/be/07-observability.md)
+cho Hangfire setup. Lưu ý đã biết: user tự tạo qua CSV/Excel import
+(`UserLookupService.ResolveOrCreateByFullNameAsync`) có `Email = null` — job
+phải tự bỏ qua case này, không throw. FE **không cần thay đổi gì** cho use
+case này (email là kênh ngoài, không cần UI riêng).
+
+## Cấu hình — fail-fast validation
+
+**Nâng từ "chưa cần" lên "nên có sớm" khi chuyển sang giai đoạn product
+(2026-08-17).** Hiện `IConfiguration` không leak vào Application/Domain (đã
+xác nhận sạch) — nhưng phần đọc config ở Infrastructure/composition root
+cũng chưa có validate nào: 1 giá trị bắt buộc (connection string, SMTP host
+khi Notification implement) gõ sai/thiếu trong `appsettings.json` chỉ lộ ra
+**lúc runtime chạm tới** (vd request đầu tiên gọi tới `SmtpNotificationSender`),
+không phải lúc khởi động — chậm hơn nhiều so với biết ngay khi `dotnet run`.
+
+```csharp
+public sealed class SmtpOptions
+{
+    [Required] public string Host { get; init; } = default!;
+    [Range(1, 65535)] public int Port { get; init; }
+    [Required] public string FromAddress { get; init; } = default!;
+}
+
+// Program.cs / DependencyInjection.cs
+services.AddOptions<SmtpOptions>()
+    .Bind(configuration.GetSection("Smtp"))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();   // app KHÔNG khởi động được nếu thiếu/sai — biết ngay, không đợi request đầu
+```
+
+- Áp dụng cho mọi `IOptions<T>` mới thêm sau này (SMTP, Hangfire connection
+  string nếu tách riêng khỏi DB chính...) — không chỉ riêng Notification.
+- Không cần bọc thêm `IConfigurationService` facade riêng (kiểu VNR cũ đang
+  deprecate) — `IOptions<T>` + `ValidateOnStart()` là đủ, thêm 1 tầng facade
+  chỉ tạo thêm chỗ để lệch.
+
 ## `PlatformManager.Api` — host mỏng, composition root duy nhất
 
 `Program.cs` đăng ký 2 tầng qua 2 extension method riêng, mỗi extension

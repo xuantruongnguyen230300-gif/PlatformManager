@@ -361,6 +361,12 @@ nhưng không có route "vô tình đúng" nhờ convention mà không ai chủ 
 
 ## 7. Auth/Permission — 2 lớp tách biệt, 1 attribute duy nhất phía dev
 
+> **Trạng thái áp dụng (2026-08-17):** PlatformManager hiện dùng bản rút gọn
+> của mục này — xem `src/BE/.claude/rules/api-controller.md` §"Phân quyền
+> theo hành động" (1 attribute + 1 filter, không `CrudActionResolver`, không
+> 2 cơ chế song song). Nâng cấp lên đầy đủ như dưới đây khi có module nghiệp
+> vụ thứ 2+ hoặc cần suy luận action tự động theo tên method.
+
 ### 7.1 `[RequirePermission]` — 3 cách dùng, khai ở `Platform.Domain.Security` (P1)
 
 ```csharp

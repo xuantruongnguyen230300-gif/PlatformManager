@@ -65,6 +65,34 @@ contract; **không sửa** file nào trong đó — đó là việc của `front
 Những file này **đã có sẵn dù solution chưa tồn tại** — đọc trước khi chạy
 `dotnet new`.
 
+**Khi phân vân "core đã đủ chưa, còn thiếu mảng nào"** — đọc
+`doc/huong_dan/wiki-core/be/01-core-components.md` §Áp dụng vào
+PlatformManager trước khi tự đoán hoặc đề xuất thêm abstraction mới. File đó
+là checklist tổng, đối chiếu cả VNR lẫn tiêu chuẩn ngành (Clean Architecture
+template, 12-Factor, OWASP), đã phân loại rõ mục nào bắt buộc ngay (giai
+đoạn product, từ 2026-08-17) và mục nào cố tình hoãn kèm lý do — đừng lặp
+lại việc rà soát đó từ đầu mỗi khi có task mới.
+
+---
+
+# 📋 Đọc thêm khi làm nghiệp vụ (Business) — thư mục `spec/`
+
+Task chạm `PlatformManager.Business.*` (nghiệp vụ, không phải `Core.*`) →
+**bắt buộc** đọc `spec/<feature>/business-rules.md` trước khi code, nếu file
+đó tồn tại. Đây là nguồn business rule — quy tắc nghiệp vụ (điều kiện, luồng,
+ràng buộc dữ liệu) không suy luận được từ code, khác với
+`doc/huong_dan/wiki-core/` (chuẩn kiến trúc core) hay `.claude/rules/` (quy
+ước thực thi).
+
+- Tên feature không khớp thư mục `spec/` 1-1 (đặt tên khác, gộp nhiều feature
+  trong 1 spec...) → hỏi người dùng thay vì đoán thư mục nào tương ứng.
+- `spec/<feature>/` không tồn tại nhưng task rõ ràng là nghiệp vụ mới (không
+  phải sửa nhỏ 1 feature đã có) → **dừng lại, hỏi người dùng** business rule
+  ở đâu trước khi code — đừng tự suy diễn nghiệp vụ để "có cái mà chạy".
+- Task chỉ chạm `Core.*` (auth, permission, envelope, base entity, metadata,
+  audit...) → **không cần** đọc `spec/` — core không có business rule riêng
+  theo feature.
+
 ---
 
 # 🏗️ Kiến trúc — Modular Monolith: Core dùng chung + Module nghiệp vụ
@@ -236,6 +264,11 @@ public abstract class BaseEntity
   dạng (vd. `Percentage`, `DateRange`) thay vì để `decimal`/`string` trần —
   chỉ thêm khi thực sự có ≥2 field đi cùng nhau hoặc có luật format, đừng
   bọc VO cho một `decimal` đơn lẻ không có luật gì.
+- Entity có **≥2 luồng ghi độc lập** chạm cùng bản ghi (vd import hàng loạt +
+  sửa tay từng field, giống `CriteriaAssessment`) → thêm `RowVersion` +
+  `.IsRowVersion()` — xem `.claude/rules/entity-domain.md` §"RowVersion —
+  optimistic concurrency". Entity chỉ có 1 luồng ghi (CRUD thường) thì không
+  cần.
 
 ---
 
@@ -291,6 +324,17 @@ public class CriteriaController(ISender mediator) : ApiControllerBase
 - Auth/permission: chưa quyết định cơ chế (JWT/session/OIDC) — khi bắt đầu
   cần auth thật, đây là quyết định kiến trúc, **hỏi người dùng trước**, đừng
   tự chọn.
+- Endpoint **ghi dữ liệu nghiệp vụ** (không phải chỉ đọc) → gắn
+  `[RequirePermission(key)]` khớp `PermissionMatrix`, không chỉ `[Authorize]`
+  trần — `[Authorize]` mới xác thực (đã đăng nhập), chưa phân quyền (được
+  làm gì). Xem `.claude/rules/api-controller.md` §"Phân quyền theo hành
+  động".
+- Endpoint **có thể chạy lâu** (xử lý file/dữ liệu không giới hạn trên rõ
+  ràng, hoặc gọi ra ngoài latency không kiểm soát được — import, export lớn,
+  gửi email...) → cân nhắc pattern job nền (Hangfire) + polling thay vì
+  handler đồng bộ chặn cả request. Xem `.claude/rules/cqrs-handler.md`
+  §"Command chạy lâu → job nền" — đừng mặc định đồng bộ cho mọi việc rồi mới
+  phát hiện timeout khi dữ liệu thật lớn hơn lúc code.
 - CORS: origin cho phép = đúng nơi `src/FE` chạy dev (`http://localhost:4200`
   theo mặc định Angular CLI) — không mở `*` cho môi trường có auth thật.
 
@@ -363,7 +407,11 @@ nền tảng dùng chung.
    `.claude/CLAUDE.md` § Git operations are reserved for the user) — báo cáo
    cần gì rồi để người dùng tự chạy.
 4. **Chọn cơ chế auth/permission** lần đầu — đây là quyết định kiến trúc lớn,
-   không tự chọn.
+   không tự chọn. Sau khi người dùng đã chốt cơ chế (JWT/session/OIDC...),
+   **bước tiếp theo bắt buộc** là chạy `/security-review` trước khi triển
+   khai thật (đối chiếu cách lưu token/session, CORS, cookie flag, rate
+   limit, exposure của thông tin nhạy cảm...) — chọn xong cơ chế không có
+   nghĩa là đã đủ an toàn để code thẳng.
 5. Contract Card mâu thuẫn với pattern đã chốt mà không sửa được về đúng
    chuẩn — báo cáo thay vì tự ý phá layer rule.
 

@@ -87,6 +87,14 @@ npx --yes --package=@google/design.md designmd lint <path-to-DESIGN.md>
 
 Kết luận cộng số lượng (finding chặn / info). Nếu **PASS**: bước tiếp theo là `/design-export-figma <project>`. Nếu **BLOCKED**: liệt kê lệnh fix, mỗi finding một dòng.
 
+**Chuỗi pipeline**: nếu đang chạy trong chuỗi và kết luận **PASS**, dừng lại
+ở đây và báo người dùng rằng project đã sẵn sàng export — **không** tự động
+gọi `/design-export-figma`, vì đây là hành động ghi vào hệ thống ngoài
+(Figma) mà người khác có thể thấy, luôn cần xác nhận rõ ràng của người dùng
+trước khi chạy dù các bước trước đó đã tự nối tiếp nhau. Nếu **BLOCKED**,
+dừng lại và liệt kê lệnh fix như trên trong mọi trường hợp (chuỗi hay gọi
+lẻ) — không tự sửa rồi chạy lại.
+
 ## Guardrails
 
 - Không bao giờ làm nhẹ một kiểm tra đã thất bại để nó pass.

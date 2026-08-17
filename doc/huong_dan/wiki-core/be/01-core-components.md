@@ -26,17 +26,66 @@ Trước khi liệt kê, 1 nguyên tắc phải giữ xuyên suốt: **core khô
 | 16 | **Outbound HTTP integration engine** (gọi API bên thứ 3, có resilience + **anti-SSRF guard**) | Retry tay không nhất quán; endpoint cấu hình DB có thể trỏ vào mạng nội bộ | Khi gọi API 3rd-party cấu hình được qua UI |
 | 17 | **Background job/scheduler abstraction** | Task nền viết tay dễ mất khi restart, không có retry | Khi có tác vụ chạy nền/định kỳ |
 | 18 | **i18n/localization framework** | Chỉ cần nếu hệ thống thật sự đa ngôn ngữ | Tuỳ yêu cầu |
+| 19 | **Rate limiting** (`Microsoft.AspNetCore.RateLimiting`, có sẵn từ .NET 7) | Không có gì chặn brute-force login, hoặc 1 user spam endpoint nặng (import file) làm nghẽn hệ thống cho user khác | Bắt buộc trước khi có user thật ngoài đội dev |
+| 20 | **CI pipeline** (build+test+ArchTest tự động trên mọi PR, không dựa vào con người nhớ chạy tay) | `dotnet test` chỉ chạy khi ai đó nhớ chạy — quy tắc kiến trúc/ArchTest có tồn tại cũng vô nghĩa nếu không ai chặn được PR vi phạm | Bắt buộc trước khi có ≥2 người cùng commit vào 1 nhánh |
 
 ## Áp dụng vào PlatformManager
 
-PlatformManager đã có #1, #2, #3, #5, #6, #9 (mức tối giản) qua
+> **Chuyển giai đoạn (2026-08-17):** PlatformManager đã qua giai đoạn demo,
+> bắt đầu giai đoạn phát triển product thật (đối chiếu thêm tiêu chuẩn
+> ngành ngoài VNR — [Clean Architecture template Jason Taylor](https://github.com/jasontaylordev/cleanarchitecture),
+> [12-Factor App](https://12factor.net/), [OWASP Top 10:2025](https://owasp.org/Top10/2025/A01_2025-Broken_Access_Control/)).
+> Nhiều mục dưới đây trước ghi "chưa cần ở quy mô demo" — **calibration đó
+> hết hiệu lực từ giờ**, không phải vì quy mô code đổi, mà vì bản chất rủi
+> ro đổi (có user thật/dữ liệu thật để mất, không còn là sandbox riêng của
+> dev). Mục nào **thật sự vẫn nên hoãn** (caching, i18n, engine generic) —
+> lý do hoãn được ghi lại là lý do dựa trên **bằng chứng cụ thể** (chưa có
+> traffic/chưa có yêu cầu nghiệp vụ), không dựa trên nhãn "demo" nữa — phân
+> biệt 2 loại lý do này quan trọng vì loại đầu hết hạn theo giai đoạn, loại
+> sau không tự hết hạn.
+
+Đã có, giữ nguyên: #1, #2, #3, #5, #6, #9 (mức tối giản) qua
 `AssessmentUpsertService`/`AggregationService`/`IApiResult<T>`/
 `GlobalExceptionHandler` (xem `src/BE/.claude/rules/api-controller.md`,
-đã thay `ApiResponse<T>`/`ExceptionMiddleware` cũ). #7 **đã triển khai**
-qua ASP.NET Core Identity (xem `src/BE/CLAUDE.md` §Stack,
-`doc/ERD/ERD-corebase.md`), sống ở `PlatformManager.Core.Infrastructure`
-theo kiến trúc Modular Monolith (xem `doc/kien-truc-core-module.md`) —
-không phải Module nào; #8/#10/#13/#14/#17/#18 (chưa cần ở quy mô này),
-#11/#12 (cố tình KHÔNG làm — xem
+đã thay `ApiResponse<T>`/`ExceptionMiddleware` cũ).
+
+**#7 Auth/Permission — cần tách rõ 2 nửa, dễ nhầm "đã xong":** nửa
+**authentication** (đăng nhập là ai) đã triển khai qua ASP.NET Core Identity
+(xem `src/BE/CLAUDE.md` §Stack, `doc/ERD/ERD-corebase.md`), sống ở
+`PlatformManager.Core.Infrastructure`. Nửa **authorization theo hành động**
+(đăng nhập rồi được làm gì) **CHƯA** — endpoint nghiệp vụ hiện chỉ
+`[Authorize]` trần. Rule cụ thể đã viết ở
+`src/BE/.claude/rules/api-controller.md` §"Phân quyền theo hành động" nhưng
+chưa implement. **Nâng độ ưu tiên lên "bắt buộc trước khi có user thật ngoài
+đội dev"** — đây là [OWASP #1 Broken Access Control](https://owasp.org/Top10/2025/A01_2025-Broken_Access_Control/),
+không phải tuỳ chọn "nên có sớm".
+
+**#10 Config/Options fail-fast — nâng từ "chưa cần" lên "nên có sớm":** rule
+cụ thể (`ValidateDataAnnotations().ValidateOnStart()`) thêm ở
+`src/BE/.claude/rules/architecture.md` §"Cấu hình — fail-fast validation".
+
+**#13 Notification, #17 Background job/scheduler, #14 File storage
+abstraction** — đã quyết định kiến trúc (Hangfire cho job nền,
+`INotificationSender` seam cho email, `IImportFileStorage` cho file tạm) khi
+thiết kế lại Import CSV/Excel — xem `src/BE/.claude/rules/cqrs-handler.md`
+§"Command chạy lâu → job nền" và `src/BE/.claude/rules/architecture.md`
+§"Notification". Đây là ví dụ cho nguyên tắc ở trên: **quyết định** đã có,
+chỉ **implement** chưa xong — khác hẳn "chưa cần" thật sự.
+
+**#19 Rate limiting, #20 CI pipeline** (mới, không nằm trong 18 mục gốc đối
+chiếu VNR — tìm thấy khi đối chiếu thêm 12-Factor/OWASP/Clean Architecture
+template) — xem `src/BE/.claude/rules/api-controller.md` §"Rate limiting" và
+`be/trien-khai/07-p6-archtests-gate.md` §6 cho thiết kế cụ thể.
+
+**#8 Caching, #18 i18n — vẫn hoãn, nhưng lý do là bằng chứng, không phải giai
+đoạn:** #8 chưa có báo cáo/đo đạc nào cho thấy query nào đang chậm thật (chỉ
+là quan sát lý thuyết ở `AggregationService`); #18 chưa có yêu cầu đa ngôn
+ngữ nào từ nghiệp vụ. Khi 1 trong 2 bằng chứng đó xuất hiện thật, quay lại
+mục tương ứng — không phải "chờ qua giai đoạn nào đó".
+
+**#11/#12 vẫn cố tình KHÔNG làm** — xem
 [03-metadata-driven-design.md](03-metadata-driven-design.md), vì chỉ có 2
-module nghiệp vụ, làm engine generic lúc này là over-engineering).
+module nghiệp vụ, làm engine generic lúc này là over-engineering — lý do
+này **không đổi theo giai đoạn demo/product**, chỉ đổi theo số lượng module
+(đối chiếu VNR: engine generic chỉ hợp lý khi có ≥5-10 màn hình CRUD hoặc
+≥2-3 dashboard giống nhau thật).

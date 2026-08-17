@@ -225,6 +225,52 @@ kia vì `ReferenceData` có nhiều catalog entity với luật riêng, ví dụ
 
 ---
 
+## 6. Tự động hoá — CI pipeline chạy gate này trên mọi PR
+
+**Gap thật (2026-08-17):** checklist §5 dòng thứ 4 nói `dotnet test` là lệnh
+DUY NHẤT cần chạy trước khi coi PR sẵn sàng — nhưng đó là quy trình **dựa vào
+con người nhớ chạy tay**. Repo hiện chưa có `.github/workflows/` nào — mọi
+ArchTest/quy tắc kiến trúc ở file này chỉ có tác dụng nếu ai đó thật sự chạy
+`dotnet test` trước khi merge. Đây đúng nghĩa "gate chưa được chứng minh"
+(nguyên tắc P0 §7 đã lặp lại xuyên suốt) — khác biệt duy nhất là lần này
+không phải 1 ArchTest cụ thể, mà là **cơ chế bắt buộc chạy toàn bộ ArchTest**.
+
+Chỉ cần bắt buộc khi có **≥2 người cùng commit vào 1 nhánh** — trước đó (1
+người tự làm, tự nhớ chạy) chưa cấp bách bằng, nhưng chi phí thêm gần như 0
+nên làm sớm không có hại.
+
+```yaml
+# .github/workflows/ci.yml — sketch, KHÔNG phải file thật (đây vẫn là tài
+# liệu thiết kế, tạo file thật là bước implement riêng)
+name: CI
+on: [pull_request]
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with: { dotnet-version: '10.0.x' }
+      - run: dotnet build PlatformManager.slnx --configuration Release
+      - run: dotnet test PlatformManager.slnx --configuration Release --no-build
+        # bao gồm cả Tests/PlatformManager.ArchTests — không tách job riêng,
+        # ArchTest chạy nhanh (IL-scan thuần, không cần DB) nên gộp chung
+        # 1 job build+test là đủ, không cần ma trận phức tạp ở quy mô này
+```
+
+- Branch protection rule trên `main` (GitHub repo settings, không phải code)
+  — bắt buộc job `build-and-test` pass mới cho merge PR. Không có bước này
+  thì file YAML trên chỉ là "thông tin", không phải "gate" — vẫn merge được
+  dù CI đỏ.
+- **Đi kèm miễn phí:** thêm `.github/dependabot.yml` (NuGet + npm) — quét
+  dependency có lỗ hổng đã biết định kỳ, chi phí ~5 dòng YAML, không cần
+  hạ tầng riêng.
+- Chưa cần: matrix build nhiều OS/version, deploy pipeline tự động, cache
+  phức tạp — thêm khi build chậm thật sự gây khó chịu (đo được), không phải
+  "cho giống chuẩn CI/CD lớn".
+
+---
+
 **Tiếp theo:** [08-tra-cuu-file-class.md](08-tra-cuu-file-class.md) — bảng tra
 cứu tổng hợp mọi file/class/interface đã xuất hiện xuyên suốt 7 file trước:
 tên → thuộc layer nào → phase nào tạo ra nó → nó làm gì trong 1 câu. Dùng khi

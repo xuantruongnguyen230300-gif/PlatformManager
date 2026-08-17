@@ -115,3 +115,56 @@ vào `doc/contracts/<feature>.md` (xem mẫu trong
 `environment.ts` (và mọi file `environment.*.ts`) **không bao giờ** chứa API
 key/secret thật được commit vào git. Dùng biến môi trường lúc build hoặc một
 cơ chế secret riêng — hỏi người dùng nếu chưa có quy ước cho dự án.
+
+## Long-running operation — poll pattern
+
+Khi BE trả **202 + `jobId`** thay vì đợi xử lý xong (xem
+`src/BE/.claude/rules/cqrs-handler.md` §"Command chạy lâu → job nền" — ca đầu
+tiên: Import CSV/Excel), FE gọi 2 bước thay vì 1:
+
+```ts
+@Injectable({ providedIn: 'root' })
+export class DanhMucDtiService {
+  private http = inject(HttpClient);
+
+  startImport(file: File): Observable<{ JobId: string }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http
+      .post<IApiResult<{ jobId: string }>>('/import', formData)
+      .pipe(map(res => ({ JobId: res.data!.jobId })));
+  }
+
+  getImportJobStatus(jobId: string): Observable<IImportJobStatus> {
+    return this.http
+      .get<IApiResult<IImportJobStatusDto>>(`/import/${jobId}`)
+      .pipe(map(res => mapImportJobStatusDtoToModel(res.data!)));
+  }
+}
+```
+
+```ts
+// page.ts — poll cho tới khi job xong, tự huỷ khi rời trang
+this.service.startImport(file).pipe(
+  switchMap(({ JobId }) => interval(1500).pipe(
+    switchMap(() => this.service.getImportJobStatus(JobId)),
+    takeWhile(s => s.Status === 'Pending' || s.Status === 'Running', true),  // true = emit lần cuối (kết quả) trước khi dừng
+  )),
+  takeUntilDestroyed(this.destroyRef),   // BẮT BUỘC — thiếu dòng này, poll tiếp tục chạy sau khi user rời trang
+).subscribe(status => {
+  if (status.Status === 'Succeeded' || status.Status === 'Failed') {
+    // hiện kết quả, dừng banner "đang xử lý"
+  }
+});
+```
+
+- **`takeWhile(..., true)`** — tham số thứ 2 (`inclusive`) bắt buộc `true`,
+  thiếu nó sẽ mất đúng lần emit chứa kết quả cuối cùng (job vừa xong thì bị
+  cắt trước khi tới `subscribe`).
+- **`takeUntilDestroyed()`** bắt buộc trên chuỗi poll — khác gọi API thường
+  (1 lần rồi tự hoàn thành), poll chạy vô hạn cho tới khi job xong; user điều
+  hướng đi chỗ khác giữa chừng mà không huỷ subscription = leak request nền
+  vĩnh viễn.
+- Banner "đang xử lý" trong lúc poll dùng lại đúng UX đã có cho trạng thái
+  loading thông thường — khác biệt duy nhất: submit xong KHÔNG có nghĩa đã
+  xong, phải đợi tín hiệu `Succeeded`/`Failed` từ poll mới coi là hoàn tất.

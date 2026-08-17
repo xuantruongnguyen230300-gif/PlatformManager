@@ -74,6 +74,14 @@ di chuyển hoặc đặt tên khác. Vì vậy **KHÔNG hardcode `doc/Design/`*
 - Cập nhật dashboard status trong `README.md` của project cho stage 4.
 - Báo cáo số lượng component (mới / đã cập nhật / giữ nguyên), độ phủ state, và mọi token reference chưa resolve được. Bước tiếp theo: `/design-create-screens <project>`.
 
+**Chuỗi pipeline**: nếu skill này đang chạy như một bước trong chuỗi (được
+gọi bởi `design-expert` hoặc `/feature-kickoff` cho cả project/flow, không
+phải người dùng gõ trực tiếp đúng lệnh này) — tự động gọi tiếp bước "Bước
+tiếp theo" nêu ở trên qua công cụ Skill ngay sau khi báo cáo xong, không
+dừng lại chờ người dùng gõ lệnh kế tiếp. Nếu người dùng gọi trực tiếp một
+mình skill này (không qua chuỗi), chỉ nêu gợi ý bước tiếp theo như trên,
+không tự mở rộng phạm vi yêu cầu ban đầu.
+
 ## Guardrails
 
 - Ưu tiên mở rộng spec đã có thay vì tạo bản gần-trùng lặp.

@@ -129,24 +129,44 @@
   sửa khi `row.IsEditable=false` (lớp chặn thứ 1).
 - Lỗi mong đợi: `CRITERIA.NOT_FOUND` (404) · `CRITERIA.ASSESSMENT_READONLY_PERIOD` (409)
 
-## CONTRACT DM-7 — Import CSV
+## CONTRACT DM-7 — Import CSV/Excel (chạy nền qua Hangfire)
 
-- Status: **DRAFT**
-- Route: `POST /api/import/csv`, `multipart/form-data`, field tên `file`
-- Response: `IApiResult<ICsvImportResultDto>`
+- Status: **DRAFT** (quay lại DRAFT 2026-08-17 — đổi shape từ đồng bộ sang
+  job nền + polling, kèm mở rộng định dạng file; card cũ mô tả version đồng
+  bộ CSV-only đã lỗi thời, xem lý do ở
+  `src/BE/.claude/rules/cqrs-handler.md` §"Command chạy lâu → job nền")
+- **Bước 1 — bắt đầu import**: `POST /api/import`, `multipart/form-data`,
+  field tên `file` — chấp nhận `.csv`/`.xlsx`/`.xls` (không còn riêng
+  `/api/import/csv`). Trả **202 Accepted** ngay, KHÔNG đợi xử lý xong:
   ```
-  data: {
-    totalRows: int, successCount: int, errorCount: int, criteriaCreatedCount: int,
-    errors: [ { rowNumber: int, code: string|null, message: string } ]
-  }
+  IApiResult<{ jobId: guid }>
+  ```
+- **Bước 2 — poll trạng thái**: `GET /api/import/{jobId}`
+  ```
+  IApiResult<{
+    status: "Pending" | "Running" | "Succeeded" | "Failed",
+    result: {                          // chỉ có khi status = "Succeeded"
+      totalRows: int, successCount: int, errorCount: int, criteriaCreatedCount: int,
+      errors: [ { rowNumber: int, code: string|null, message: string } ]
+    } | null,
+    errorMessage: string | null,       // chỉ có khi status = "Failed"
+  }>
   ```
 - Mapping cột theo CSV gốc (`doc/ERD/example_db_ver1.csv`) — `Code` lạ tự tạo `Criteria` mới; nhóm
   lạ (không khớp `CriteriaGroup.Name`) → lỗi dòng đó, không tự tạo nhóm; `AssessmentDate` = ngày hệ
   thống lúc import; "Phụ trách" match chính xác `AppUsers.FullName`, không khớp → `ownerId: null`.
-- Lỗi mong đợi: `IMPORT.FILE_EMPTY` (400) khi không có file/file rỗng.
-- FE: `csv-import-dialog` (chọn file, xác nhận) → gọi API → `import-result-dialog` (hiện tổng
-  quan + danh sách lỗi từng dòng). 2 dialog TÁCH RIÊNG (khác prototype cũ dùng 1 input file trigger
-  trực tiếp) — quyết định UX theo đúng yêu cầu gốc của task lượt này.
+  **Excel**: cùng 10 cột/tên cột như CSV, đọc từ **sheet đầu tiên**, dòng 1 = header — không hỗ trợ
+  nhiều sheet/merged cell ở version đầu.
+- Lỗi mong đợi: `IMPORT.FILE_EMPTY` (400) khi không có file/file rỗng ở bước 1;
+  bước 2 không có lỗi nghiệp vụ riêng — lỗi xử lý từng dòng nằm trong
+  `result.errors`, lỗi hạ tầng (job crash) phản ánh qua `status: "Failed"` +
+  `errorMessage`.
+- FE: `import-dialog` (đổi tên từ `csv-import-dialog` — chọn file CSV/Excel,
+  xác nhận) → `startImport()` → poll `getImportJobStatus()` → khi
+  `Succeeded`/`Failed` mới mở `import-result-dialog` (hiện tổng quan + danh
+  sách lỗi từng dòng, hoặc thông báo lỗi hạ tầng nếu `Failed`). Chi tiết
+  pattern poll xem `src/FE/.claude/docs/api-client.md` §"Long-running
+  operation — poll pattern".
 
 ## CONTRACT DM-8 — Danh sách Năm/Kỳ có dữ liệu
 

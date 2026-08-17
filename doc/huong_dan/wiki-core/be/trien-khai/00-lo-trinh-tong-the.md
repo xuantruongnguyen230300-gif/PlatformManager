@@ -193,8 +193,20 @@ Sai lầm thường gặp khi làm sai thứ tự:
 
 ## 6. Áp dụng vào PlatformManager
 
-PlatformManager hiện ở quy mô **demo / nhóm nhỏ** → dùng cột đầu của bảng
-[ĐƠN GIẢN HOÁ] §3. Cụ thể:
+> **Chuyển giai đoạn (2026-08-17):** mục này viết lúc PlatformManager còn ở
+> quy mô demo — từ giờ đã sang giai đoạn phát triển product thật. Danh sách
+> "chưa cần ngay" bên dưới **vẫn đúng cho riêng trục kiến trúc multi-module/
+> multi-process** (lý do là SỐ LƯỢNG MODULE, không phải giai đoạn — xem
+> [be/01-core-components.md](../01-core-components.md) §Áp dụng, đoạn về
+> #11/#12). Nhưng danh sách "cần ngay" phải MỞ RỘNG — bảng đầy đủ + lý do
+> từng mục nằm ở
+> [be/01-core-components.md](../01-core-components.md) §Áp dụng (đối chiếu
+> thêm Clean Architecture template/12-Factor/OWASP ngoài VNR) — mục này chỉ
+> giữ lại phần khung kiến trúc P0-P6, không lặp lại bảng đó.
+
+PlatformManager dùng cột đầu của bảng [ĐƠN GIẢN HOÁ] §3 cho **trục kiến trúc**
+(số project/module/process) — trục này **không đổi** theo giai đoạn demo hay
+product, chỉ đổi khi số lượng module nghiệp vụ tăng:
 
 - 4 project (`Domain` / `Application` / `Infrastructure` / `Api`) là **đúng mức**
   cho hiện tại — không tách thêm Platform/Modules/Processes khi chưa có module
@@ -202,9 +214,16 @@ PlatformManager hiện ở quy mô **demo / nhóm nhỏ** → dùng cột đầu
 - Nhưng **thứ tự P1→P2→P3→P4 vẫn áp dụng nguyên vẹn**, và các ranh giới ở §3
   ("KHÔNG được rút gọn") vẫn phải giữ — vì gỡ ra sau này rất đắt, còn giữ từ đầu
   gần như miễn phí.
-- Các thứ **chưa cần ngay**: Process tách riêng, Outbox, Dapper grid engine,
-  metadata-driven, i18n 2 tầng, `IEntitySearchConfig`. Ghi vào backlog, đừng viết
-  trước.
-- Các thứ **cần ngay dù đang là demo**: `BaseEntity` + soft delete, `IApiResult`
-  envelope thống nhất (bao gồm grid), `ErrorDescriptor` thay cho magic string,
-  `ValidationBehavior` + `ExceptionHandlingBehavior`, layer rule có ArchTest.
+- Các thứ **chưa cần ngay** (đúng nghĩa "chưa có module 2" hoặc "chưa có bằng
+  chứng nhu cầu", không phải "đang demo"): Process tách riêng, Outbox, Dapper
+  grid engine, metadata-driven, i18n 2 tầng, `IEntitySearchConfig`, caching. Ghi
+  vào backlog, đừng viết trước.
+
+**Danh sách "cần ngay" — xem bảng đầy đủ + lý do ở
+[be/01-core-components.md](../01-core-components.md) §Áp dụng vào
+PlatformManager**, tóm tắt: `BaseEntity` + soft delete, `IApiResult` envelope,
+`ErrorDescriptor`, `ValidationBehavior`+`ExceptionHandlingBehavior`, layer rule
+có ArchTest, health check, Serilog, **permission theo hành động (OWASP #1)**,
+`RowVersion` cho entity nhiều luồng ghi, **rate limiting**, **CI pipeline tự
+động** — 4 mục in đậm cuối là bổ sung mới khi chuyển sang giai đoạn product,
+chưa có trong lần rà soát P0-P6 gốc.

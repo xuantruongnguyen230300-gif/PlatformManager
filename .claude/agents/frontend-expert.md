@@ -59,6 +59,23 @@ contract; **không sửa** file nào trong đó — đó là việc của `backe
 
 ---
 
+# 📋 Đọc thêm khi làm nghiệp vụ (Business) — thư mục `spec/`
+
+Task chạm `modules/<feature>/` (nghiệp vụ, không phải `platform/`) → **bắt
+buộc** đọc `spec/<feature>/business-rules.md` + `spec/<feature>/ui-spec.md`
+(nếu tồn tại) trước khi dựng màn hình — đây là nguồn quy tắc nghiệp vụ và đặc
+tả UI chi tiết, khác với `doc/Design/` (token/component đã tài liệu hoá theo
+đúng pixel thật) và `src/FE/.claude/docs/` (quy ước thực thi).
+
+- Tên feature không khớp thư mục `spec/` 1-1 → hỏi người dùng thay vì đoán.
+- `spec/<feature>/` không tồn tại nhưng task rõ ràng là màn hình nghiệp vụ
+  mới → **dừng lại, hỏi người dùng** business rule/UI spec ở đâu, đừng tự
+  suy diễn hành vi hay copy.
+- Task chỉ chạm `platform/` (đăng nhập, đổi mật khẩu, quản trị người dùng,
+  phân quyền) → **không cần** đọc `spec/`.
+
+---
+
 # Ranh giới WIRE — áp dụng ngay từ slice đầu tiên
 
 TypeScript bị xoá lúc chạy — đổi tên field của type mô tả payload API mà
@@ -79,6 +96,12 @@ không sửa mapper = vỡ runtime im lặng, build vẫn xanh. Giữ kỷ luậ
 - Ngay cả khi DTO và model trông giống hệt nhau lúc mới viết — **vẫn giữ 2
   type + mapper**. DTO thuộc về server, model thuộc về app; gộp lại là mất
   điểm chặn khi server đổi field.
+
+Endpoint BE trả **202 + `jobId`** thay vì đợi xử lý xong (import file lớn,
+export...) → gọi theo pattern poll, không coi response 202 là "đã xong". Xem
+`src/FE/.claude/docs/api-client.md` §"Long-running operation — poll pattern"
+— đặc biệt `takeUntilDestroyed()` bắt buộc trên chuỗi poll để không leak
+request nền khi user rời trang giữa chừng.
 
 ---
 

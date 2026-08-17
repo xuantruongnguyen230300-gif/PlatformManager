@@ -118,6 +118,49 @@ Ném từ Domain khi vi phạm invariant. Application layer bắt và chuyển t
 422 — xem `cqrs-handler.md` §ErrorDescriptor) — không để `DomainException`
 lọt thẳng ra `Api` layer thành lỗi 500 chung chung.
 
+## RowVersion — optimistic concurrency cho entity nhiều người sửa
+
+**Finding thật (2026-08-17):** `CriteriaAssessment` có 2 luồng ghi độc lập
+đụng cùng 1 bản ghi — import CSV hàng loạt (ghi đè toàn bộ field) và sửa tay
+từng field qua `UpdateCriteriaAssessmentCommand` — không có gì phát hiện khi
+2 luồng ghi đè lên nhau, người sửa sau âm thầm mất thay đổi của người trước.
+Xem quy tắc chung + lý do ở
+[be/06-concurrency-control.md](../../../../doc/huong_dan/wiki-core/be/06-concurrency-control.md).
+
+```csharp
+public class CriteriaAssessment : BaseEntity
+{
+    // ... field nghiệp vụ hiện có
+    public byte[] RowVersion { get; private set; } = default!;
+}
+
+// EF configuration
+builder.Property(x => x.RowVersion).IsRowVersion();
+```
+
+EF Core tự thêm `WHERE "RowVersion" = @originalValue` vào UPDATE — ghi đè bởi
+người khác trong lúc đang sửa → `DbUpdateConcurrencyException` → handler trả
+`Conflict` (409) thay vì âm thầm ghi đè. **Chỉ thêm cho entity nhiều người
+cùng sửa** (đúng `CriteriaAssessment`) — không thêm tràn lan cho entity chỉ 1
+người sở hữu (vd hồ sơ cá nhân tự sửa).
+
+## FK cross-module — 3 tầng (áp dụng khi có module nghiệp vụ thứ 2)
+
+Hiện `Modules.DtiWeekly` là module nghiệp vụ duy nhất nên chưa có tình huống
+FK trỏ sang module khác — ghi quy tắc trước để không phải quyết định vội khi
+module thứ 2 xuất hiện (đối chiếu VNR.Successor — xem
+`src/BE/.claude/rules/architecture.md` §"Cần dùng chung logic?"):
+
+| Phạm vi | Loại FK | `DeleteBehavior` |
+| --- | --- | --- |
+| Cùng aggregate (vd `CriteriaEvidence` → `CriteriaAssessment`) | Hard FK | `Cascade` |
+| Cùng module, khác aggregate (vd `Criteria` → `CriteriaGroup`) | Hard FK | `Restrict` |
+| Khác module nghiệp vụ | Soft FK (`Guid?` thuần, không constraint DB) | Không có — chỉ `HasIndex`, validate tồn tại ở tầng Application (`await repo.ExistsAsync(id, ct)`) |
+
+Lý do: ranh giới module quan trọng hơn ranh giới DB vật lý — dù 2 module
+chung 1 database, FK cứng xuyên module tạo coupling ngầm mà ArchTest không
+bắt được (khác với coupling qua `using` mà ArchTest quét được).
+
 ## Khi thêm entity mới
 
 1. Đối chiếu `doc/ERD/example_db_ver1.csv` nếu liên quan tới domain "theo
@@ -128,7 +171,8 @@ lọt thẳng ra `Api` layer thành lỗi 500 chung chung.
    `doc/kien-truc-core-module.md`).
 3. EF configuration ở
    `{Core|Modules.<Ten>}.Infrastructure/Persistence/Configurations/{Name}Configuration.cs`
-   — cùng project với entity ở bước 2.
+   — cùng project với entity ở bước 2. FK sang module khác (nếu có) áp dụng
+   bảng 3 tầng ở trên.
 4. KHÔNG khai `DbSet<{Name}>` trên `PlatformManagerDbContext` nếu entity
    thuộc 1 Module (Core không được reference Modules.*.Domain) — Module tự
    gọi `Set<{Name}>()` trực tiếp trong repository của mình. Chỉ entity Core
