@@ -1,21 +1,26 @@
 ---
 project: "PlatformManager"
 status: "draft"
-updated: "2026-08-11"
-library: "none — text-only buttons/badges, no icon font or SVG icon system loaded anywhere in dashboard.html"
-legacy_exceptions: []
+updated: "2026-08-22"
+library: "PrimeIcons v7 (icon font, loaded globally via angular.json, authored as <i class=\"pi pi-*\">) + PrimeNG inline SVG (injected at runtime by p-paginator and p-table, not written in src/FE)"
+legacy_exceptions: ["Unicode arrow glyphs (↑/↓) inside DeltaIndicator text", "Unicode box-drawing glyph (└) as the permission-matrix tree branch", "Unicode bullet (●) inside the user-status Badge label"]
 ---
 
 # Icons — PlatformManager Design System
 
-> **Standard icon set: none.** `doc/Prototype/dashboard.html` loads no icon font (`<link>`/`@font-face`), no SVG sprite, no icon component library. Every action is a plain text `Button`/`Input`/`Select`, and every directional/status cue is either color (`Badge`, `DeltaIndicator`) or a literal Unicode glyph (`↑`/`↓`) inline in a JS template string (`dashboard.html:853,886,901`) — not a rendered icon element.
+> **Standard icon set: PrimeIcons v7.** `primeicons@^7.0.0` is a direct dependency (`src/FE/package.json:35`) and `node_modules/primeicons/primeicons.css` is registered in the global `styles` array of **both** the build and test targets (`src/FE/angular.json:38-39,124-125`). No `<link>` in `index.html` and no per-component import — the font is available everywhere. Every icon **authored in `src/FE/`** is the two-class form `<i class="pi pi-name">`; there is no `<svg>` sprite and no icon component wrapper in the app's own code.
+
+> **But that is not the whole icon surface.** PrimeNG renders a **second set at runtime, as inline `<svg>`**, from its own icon components — nothing in `src/FE/` mentions them, so a grep for `pi-` misses them entirely. They ship on every screen that paginates or loads. Enumerated in the Per-Action Map below and marked *PrimeNG SVG* in the Library column; see § Normalize on redesign #7-9 for what is wrong with them.
+
+**This replaces the previous `library: "none"` declaration**, which described `doc/Prototype/dashboard.html` (frozen history since 2026-08-22) and was already stale when the Angular app landed.
 
 ## Library & Sizing
 
-- Icon element: **none** — no `<svg>`, `<i class="icon-...">`, or emoji is used as a UI icon anywhere in the shipped markup.
-- Size: N/A.
-- Gap to text: N/A.
-- Color: N/A — the only "iconography" is the plain-text arrow glyphs `↑`/`↓`, which inherit the surrounding `DeltaIndicator` text color (`colors.success`/`colors.danger`, see `Components/DeltaIndicator.md`).
+- **Icon element:** `<i class="pi pi-…">` — an icon-font glyph, inheriting `color` and `font-size` from its parent unless overridden.
+- **Size:** not tokenised. Icons inherit the ambient font size in most places; three call sites set it explicitly — `.field-input .pi` at `15px` (`styles.scss:525-531`), `.search .pi` at `13px` (`quan-tri-nguoi-dung.page.scss:11-18`), and `.cell-icon-btn` at `12px` inside a 24×24px button (`criteria-grid-table.scss:57-72`).
+- **Gap to text:** whitespace in the template for `.btn` labels; `gap:8px` inside `.btn-block` (`styles.scss:606`) and `.login-error` (`styles.scss:619`); absolute positioning for the two input-adornment cases.
+- **Color:** always inherited. Decorative field/search adornments read `colors.muted`; `.cell-icon-btn.ok` reads `colors.good` and `.cancel` reads `colors.bad`; icons inside `.btn.primary` inherit `colors.on-primary`.
+- **Accessibility:** sidebar icons are wrapped in `<span class="navicon" aria-hidden="true">` (`sidebar.html:31,45,59`); `.field-input .pi` is `pointer-events:none`. Icon-only buttons carry `title` or `aria-label` instead of visible text (`user-grid-table.html:50,58-64`, `toast.html:8`, `topbar.html:6`). **The PrimeNG SVG icons follow none of this** — they are not `aria-hidden`, and their host paginator buttons are labelled in English (§ Normalize #7-8).
 
 ## Per-Action Map
 
@@ -23,26 +28,55 @@ legacy_exceptions: []
 
 | Action/context | Icon | Library | Live class | Source file:line |
 |----------------|------|---------|------------|------------------|
-| Change reporting period | — (native `<input type="date">`) | none | `#weekDate` | `dashboard.html:80` |
-| Load a saved period | — (native `<select>`) | none | `#savedWeeks` | `dashboard.html:81` |
-| Create new period from latest | — (text button) | none | `.btn` | `dashboard.html:82` |
-| Enter progress % per criterion | — (native `<input type="number">`, `%` shown as plain sibling text) | none | `.progressInput` | `dashboard.html:891` |
-| Enter weekly note per criterion | — (native `<input type="text">`) | none | `.noteInput` | `dashboard.html:893` |
-| Save week (primary, topbar) | — (text button "Lưu tuần này") | none | `.btn.primary` | `dashboard.html:67` |
-| Save week (mobile floating) | — (text button "Lưu tuần") | none | `.fab` | `dashboard.html:136` |
-| Export/backup data | — (text button "Sao lưu") | none | `.btn.desktop` | `dashboard.html:65` |
-| Import/restore data | — (text label "Khôi phục" wrapping a hidden `<input type="file">`) | none | `.btn.desktop` | `dashboard.html:66` |
-| View a saved period (history row) | — (text button "Xem") | none | `.btn` | `dashboard.html:901` |
-| Search criteria by code/name | — (native text `<input>`, placeholder text only, no search-glyph icon) | none | `#q` | `dashboard.html:108` |
-| Filter by group | — (native `<select>`) | none | `#groupFilter` | `dashboard.html:109` |
-| Filter by change level | — (native `<select>`) | none | `#changeFilter` | `dashboard.html:110-112` |
-| Sort table | — (native `<select>`) | none | `#sortBy` | `dashboard.html:113-115` |
-| Generate quick report | — (text button "Báo cáo nhanh") | none | `.btn` | `dashboard.html:83` |
-| Close report dialog | — (text button "Đóng") | none | `.btn` | `dashboard.html:139` |
-| Copy report to clipboard | — (text button "Sao chép") | none | `.btn` | `dashboard.html:142` |
-| Print report | — (text button "In") | none | `.btn.primary` | `dashboard.html:143` |
-| Increase indicator | literal glyph `↑` (plain text, not an icon element) | none | `.delta.up` / `.value.good` | `dashboard.html:853,886,901` |
-| Decrease indicator | literal glyph `↓` (plain text, not an icon element) | none | `.delta.down` / `.value.bad` | `dashboard.html:853,886` |
+| Open mobile navigation drawer | hamburger | PrimeIcons | `pi pi-bars` | `shared/components/topbar/topbar.html:11` |
+| Sign out | exit arrow | PrimeIcons | `pi pi-sign-out` | `shared/components/topbar/topbar.html:19` |
+| Collapse / expand sidebar | left chevron | PrimeIcons | `pi pi-angle-left` | `shared/components/sidebar/sidebar.html:12` |
+| Expand / collapse a nav group | down chevron | PrimeIcons | `pi pi-chevron-down` | `shared/components/sidebar/sidebar.html:33` |
+| Nav item — Dashboard | grid | PrimeIcons | `pi pi-th-large` | BE-supplied, `CoreSeeder.cs:121` |
+| Nav item — Danh mục (group) | folder | PrimeIcons | `pi pi-folder` | BE-supplied, `CoreSeeder.cs:122` |
+| Nav item — DTI | list | PrimeIcons | `pi pi-list` | BE-supplied, `CoreSeeder.cs:123` |
+| Nav item — Quản trị hệ thống (group) | cog | PrimeIcons | `pi pi-cog` | BE-supplied, `CoreSeeder.cs:124` |
+| Nav item — Người dùng | user | PrimeIcons | `pi pi-user` | BE-supplied, `CoreSeeder.cs:125` |
+| Nav item — Phân quyền | shield | PrimeIcons | `pi pi-shield` | BE-supplied, `CoreSeeder.cs:126` |
+| Nav item — icon missing from BE | circle (fallback) | PrimeIcons | `pi pi-circle` | `shared/components/sidebar/sidebar.ts:12,37-39` |
+| Dismiss a toast | times | PrimeIcons | `pi pi-times` | `shared/components/toast/toast.html:11` |
+| Search users by name/email | magnifier (decorative adornment) | PrimeIcons | `pi pi-search` | `platform/quan-tri-nguoi-dung/pages/quan-tri-nguoi-dung/quan-tri-nguoi-dung.page.html:9` |
+| Edit a user row | pencil | PrimeIcons | `pi pi-pencil` | `platform/quan-tri-nguoi-dung/components/user-grid-table/user-grid-table.html:51` |
+| Lock a user account | closed padlock | PrimeIcons | `pi pi-lock` (bound `[class.pi-lock]="!row.IsLocked"`) | `…/user-grid-table.html:67` |
+| Unlock a user account | open padlock | PrimeIcons | `pi pi-lock-open` (bound `[class.pi-lock-open]="row.IsLocked"`) | `…/user-grid-table.html:67` |
+| Confirm an inline cell edit | check | PrimeIcons | `pi pi-check` | `modules/danh-muc-dti/components/criteria-grid-table/criteria-grid-table.html:60,95` |
+| Cancel an inline cell edit | times | PrimeIcons | `pi pi-times` | `…/criteria-grid-table.html:63,98` |
+| Submit sign-in | enter arrow | PrimeIcons | `pi pi-sign-in` | `platform/login/pages/login/login.page.html:56` |
+| Username field adornment | envelope (decorative) | PrimeIcons | `pi pi-envelope` | `platform/login/pages/login/login.page.html:13` |
+| Password field adornment | closed padlock (decorative) | PrimeIcons | `pi pi-lock` | `login.page.html:29`, `doi-mat-khau.page.html:13` |
+| New / confirm password adornment | key (decorative) | PrimeIcons | `pi pi-key` | `platform/doi-mat-khau/pages/doi-mat-khau/doi-mat-khau.page.html:29,45` |
+| Reveal password | eye | PrimeIcons | `pi pi-eye` (bound `[class.pi-eye]="!showPassword()"`) | `login.page.html:45` |
+| Hide password | eye with slash | PrimeIcons | `pi pi-eye-slash` (bound `[class.pi-eye-slash]="showPassword()"`) | `login.page.html:45` |
+| Auth error banner | exclamation in circle | PrimeIcons | `pi pi-exclamation-circle` | `login.page.html:4`, `doi-mat-khau.page.html:4` |
+| Paginate — first page | double left chevron | **PrimeNG SVG** | `<svg data-p-icon="angle-double-left">` (`AngleDoubleLeftIcon`) | Rendered by `p-paginator`; no FE source line — see the note below |
+| Paginate — previous page | left chevron | **PrimeNG SVG** | `<svg data-p-icon="angle-left">` (`AngleLeftIcon`) | idem |
+| Paginate — next page | right chevron | **PrimeNG SVG** | `<svg data-p-icon="angle-right">` (`AngleRightIcon`) | idem |
+| Paginate — last page | double right chevron | **PrimeNG SVG** | `<svg data-p-icon="angle-double-right">` (`AngleDoubleRightIcon`) | idem |
+| Table is loading | spinner | **PrimeNG SVG** | `<svg data-p-icon="spinner">` (`SpinnerIcon`) | Rendered by `p-table` under `[loading]` — **2** grids, see below |
+| Increase indicator | literal glyph `↑` (plain text, **not** an icon element) | — | `.delta.up` | `modules/dashboard/components/delta-indicator/delta-indicator.ts:38` |
+| Decrease indicator | literal glyph `↓` (plain text, **not** an icon element) | — | `.delta.down` | `modules/dashboard/components/delta-indicator/delta-indicator.ts:38` |
+| Menu-tree child row marker | literal glyph `└` (plain text) | — | `.tree-branch` | `platform/phan-quyen/components/permission-matrix/permission-matrix.html:16` |
+| User status dot | literal glyph `●` inside the badge label text | — | `.badge.active` / `.badge.locked` | `…/user-grid-table.html:42,44` |
+
+**Sidebar icons are backend-owned.** The FE does not map abstract keys to icon classes; `doc/contracts/meta-menu.md:66-69` fixes the contract that `SysMenu.icon` **is** the literal PrimeIcons class, and `sidebar.ts:9-12,37-39` only supplies `pi-circle` when the BE sends `null`. The six values above are the seeded defaults (`CoreSeeder.cs:121-126`) and can be changed in the database without an FE deploy — so treat them as current data, not hardcoded design.
+
+**The five PrimeNG SVG icons have no source line because nothing in `src/FE/` names them.** They appear because a component was switched on, not because an icon was written:
+
+- **Paginator arrows** — `[paginator]="true"` on three tables: `criteria-grid-table.html:7`, `criteria-table.html:32`, `user-grid-table.html:6`.
+- **Spinner** — only **two** `p-table` instances render it: `criteria-grid-table.html:3` and `user-grid-table.html:4`. Six `[loading]` bindings exist in the app, but they are not six spinners:
+  - `danh-muc-dti.page.html:46` and `quan-tri-nguoi-dung.page.html:16` bind `[loading]` on the **child component**, which forwards it into the `p-table` above — the same spinner, one hop up, not an extra one.
+  - `phan-quyen.page.html:26,49` are **not PrimeNG at all.** Nothing under `platform/phan-quyen/` imports `TableModule` or renders `p-table`; both matrices are hand-written `<table>` elements (`permission-matrix.html:2`, `resource-permission-matrix.html:2`) and `loading` there is the app's own `input<boolean>()` (`permission-matrix.ts:43`, `resource-permission-matrix.ts:37`), whose only rendered effect is `[disabled]` on the checkboxes. That screen has **no spinner, skeleton or progress text at all**, exactly as `Screens/04-phan-quyen.md` § States records.
+
+  Note the asymmetry: the dashboard's `criteria-table` **paginates but never loads** — it has `[paginator]="true"` and no `[loading]` binding, so it shows arrows and never a spinner.
+
+PrimeNG's table also ships sort and filter icons (`SortAltIcon`, `ArrowUpIcon`, `ArrowDownIcon`, `FilterIcon`), but **none of them render here** — no template uses `pSortableColumn`, `[sortField]` or `[filters]`. They are listed only so a future `sortable` flag is understood to add icons nobody chose.
+
+**Actions that deliberately ship without an icon.** Every `.btn` outside the auth submit is text-only: `Đóng`, `Huỷ`, `Sao chép`, `In`, `Lưu`, `Xem`, `Xuất báo cáo`, `Import CSV/Excel`, `+ Thêm chỉ tiêu`, `+ Thêm người dùng`, `Lưu thay đổi`, `Nhập dữ liệu`, the two `Phân quyền` tabs, and `Đổi mật khẩu`. The `+` in the two "add" buttons is a literal plus character in the label string, not an icon. Every `<select>` filter and the criteria search box are likewise unadorned — only the *user* search box has a magnifier.
 
 ## Legacy Exceptions
 
@@ -50,10 +84,20 @@ legacy_exceptions: []
 
 | Set | Where it lingers | On disk |
 |-----|------------------|---------|
-| — | none found | — |
+| Unicode arrows `↑` / `↓` | Prepended to the delta string inside `DeltaIndicator`, so they are part of the text content rather than a sibling element | `modules/dashboard/components/delta-indicator/delta-indicator.ts:38` |
+| Unicode box-drawing `└` | Child-row marker in the menu permission matrix's first column | `platform/phan-quyen/components/permission-matrix/permission-matrix.html:16` |
+| Unicode bullet `●` | Baked into the user-status badge label (`● Đã khoá` / `● Đang hoạt động`), so the dot cannot be styled independently of the text | `platform/quan-tri-nguoi-dung/components/user-grid-table/user-grid-table.html:42,44` |
 
 ## Normalize on redesign
 
 <!-- Numbered replacement plan: each legacy icon → its standard-library equivalent. Applied only during redesigns, never retro-fitted into as-shipped specs. -->
 
-1. Adopt a real icon set (e.g. for save/export/import/search/filter/sort actions and up/down indicators) once the app moves off the static prototype — the shipped app relies entirely on text labels and color, which is functional but not iconographically differentiated.
+1. `↑`/`↓` in `DeltaIndicator` → `pi pi-arrow-up` / `pi pi-arrow-down` as sibling elements, so direction can be sized and coloured independently of the number and read correctly by assistive tech.
+2. `●` in the user-status badge → a styled `<span>` dot or `pi pi-circle-fill`; today it is inside the translated label string, so it cannot be restyled without editing copy.
+3. `└` in the permission matrix → CSS-drawn tree lines (`border-left`/`::before`), which survive font substitution and do not read as text content.
+4. Icon size is not tokenised — `15px`, `13px` and `12px` appear as literals at three call sites while the type scale stops at `--fs-lg` (15px). Add an icon-size scale, or reference `--fs-*` where the values already coincide.
+5. Two different affordances exist for "search": the user grid has a magnifier adornment, the criteria filters have a bare placeholder-only input (`criteria-table.html:8`, `danh-muc-dti.page.html:14`). Converge on one.
+6. `.field-input` icons are decorative and `pointer-events:none` but are **not** `aria-hidden`, unlike the sidebar's `.navicon` wrappers — screen readers may announce the font glyph. Hide them consistently.
+7. **The paginator announces itself in English.** PrimeNG labels its paginator buttons from `aria` defaults — `First Page`, `Previous Page`, `Next Page`, `Last Page` (`primeng-config.mjs`) — and `app.config.ts` passes `providePrimeNG({ theme })` with **no `translation` block**, so those defaults stand. Every visible string in this product is Vietnamese; the screen-reader labels on three paginated tables are not. Fix by adding `translation: { aria: { … } }` to `providePrimeNG`, which also covers any other PrimeNG component adopted later.
+8. **The PrimeNG SVG icons carry no `aria-hidden`.** `BaseIcon` sets `data-p-icon` and nothing else, so the arrow and spinner glyphs are exposed to assistive tech as unnamed graphics sitting inside already-labelled buttons — the label is announced, then the shape again. The app cannot patch this per-instance; it belongs in a global CSS/base-class override or an upstream report.
+9. **Two icon systems ship side by side** — an icon *font* the app authors (`pi pi-*`) and inline *SVG* the component library injects. They scale differently (`font-size` vs `width`/`height`), colour differently (`color` vs `fill`/`currentColor`), and only one of them is greppable from `src/FE/`. Any icon-size scale added under item 4 must cover both or it will silently apply to half the icons.

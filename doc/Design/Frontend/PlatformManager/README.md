@@ -1,48 +1,81 @@
 ---
 project: "PlatformManager"
 status: "draft"
-updated: "2026-08-11"
+updated: "2026-08-22"
 title: "PlatformManager"
 group: "Frontend"
-stack: "Static HTML/CSS/JS prototype (pre-framework) — will migrate to whatever ships in src/FE/"
-source_paths: ["doc/Prototype/dashboard.html"]
-current_stage: "8-Figma Export (blocked — see Pipeline Status note)"
+stack: "Angular 20 (standalone + Signals), PrimeNG + PrimeIcons v7, SCSS"
+source_paths: ["src/FE/src/app", "src/FE/src/styles.scss"]
+current_stage: "6-Prompt Packs complete (all 5 flows); 7-Audit next"
 ---
 
 # Design — PlatformManager Design System
 
-> Documents the DTI Weekly dashboard prototype at `doc/Prototype/dashboard.html`. Specs record the app AS-SHIPPED (real copy, real assets, quirks); deviations belong ONLY in "Normalize on redesign" sections.
+> Documents the **shipped Angular app** in `src/FE/`. Specs record the app AS-SHIPPED (real copy, real assets, quirks); deviations belong ONLY in "Normalize on redesign" sections.
 
 ## Overview
 
-PlatformManager is a weekly progress-tracking dashboard ("DTI Weekly — Theo dõi tiến độ chuyển đổi số"). Today it exists only as a single self-contained HTML prototype (inline CSS + JS, no build step, no framework) — `src/FE/` and `src/BE/` are still empty. This design system extraction covers that prototype until a real frontend app lands.
+PlatformManager is an internal administration platform: a weekly digital-transformation progress dashboard plus the platform screens around it (sign-in, forced password change, user administration, permissions, DTI catalogue).
+
+`src/FE/` is a complete Angular 20 application with **6 lazy-loaded routes** (`src/FE/src/app/app.routes.ts`), backed by the .NET solution in `src/BE/`. This design system is extracted from that app.
+
+> ### 🧊 `doc/Prototype/` is frozen history — not a source
+>
+> The earlier version of this README described a *"static HTML/CSS/JS prototype (pre-framework)"* and said `src/FE/` and `src/BE/` were *"still empty"*. That stopped being true once the Angular app landed, and the whole stage 2–4 artifact set drifted as a result.
+>
+> `doc/Prototype/` was frozen on 2026-08-22 (see the banner in `doc/Prototype/README.md`). It covers only 4 of 6 screens, its token values have changed, and its interaction model differs (single-click vs the shipped double-click grid edit). Cite it **only** to explain *why* a design decision was made — never as evidence of current behaviour.
 
 ## Stack & Live Sources
 
-- **Stack**: static HTML/CSS/JS, no framework, no build step.
-- **Tokens source**: the single `:root { ... }` block inside the `<style>` tag of `doc/Prototype/dashboard.html` (custom properties: `--bg`, `--card`, `--text`, `--muted`, `--line`, `--brand`, `--brand2`, `--good`, `--warn`, `--bad`, `--shadow`).
-- **Views source**: `doc/Prototype/dashboard.html` (single file — sections toggled/rendered client-side, not separate routes).
-- **Ignore**: none yet.
+- **Stack**: Angular 20 standalone + Signals, zoneless; PrimeNG components (`p-table`, `p-chart`) with a custom preset; PrimeIcons v7; SCSS.
+- **Tokens source**: the `:root { ... }` block in **`src/FE/src/styles.scss`** — the `--sp-*`, `--fs-*` and `--radius-*` scales plus semantic colours (`--bg`, `--card`, `--surface-2`, `--text`, `--muted`, `--line`, `--border-strong`, `--brand`, `--good`/`--warn`/`--bad` and their `-bg` pairs, `--tonal-bg`, `--tonal-ink`, `--sidebar-w`, `--container-max-width`).
+  ⚠️ `src/FE/src/app/core/theme/platform-manager-preset.ts` **re-declares 10 of these colours as TS constants** for the PrimeNG ramps. A value or name change must land in **both** files, or CSS and the component library render different colours with nothing failing.
+- **Views source**: the 6 routes in `src/FE/src/app/app.routes.ts`. In-page `<dialog>` overlays and tab switches are **not** separate routes — they are documented inside the owning route's screen spec.
+- **Ignore**: `doc/Prototype/` (frozen), `src/FE/dist/`, `src/FE/node_modules/`.
 
 ## Pipeline Status
 
 | Stage | Skill command | Status |
 |-------|---------------|--------|
 | 1 Scaffold | `/design-new-project` | ✅ |
-| 2 UI Inventory | `/design-inventory-ui` | ✅ |
-| 3 Tokens | `/design-extract-tokens` | ✅ |
-| 4 Components | `/design-document-components` | ✅ |
-| 5 Screens | `/design-create-screens` | ✅ |
-| 6 Prompt Packs | `/design-generate-prompts` | ✅ |
-| 7 Audit | `/design-audit` | ✅ |
+| 2 UI Inventory | `/design-inventory-ui` | ✅ re-run 2026-08-22 against `src/FE` — 6 routes, 6 screenshots captured |
+| 3 Tokens | `/design-extract-tokens` | ✅ re-run 2026-08-22 — lint 0 errors; also fixed 2 real WCAG AA failures |
+| 4 Components | `/design-document-components` | ✅ complete 2026-08-22 — **27 documented + 1 obsolete** (was 12, prototype-era). Pass C added `TrendChart`, `SegmentedControl`, `Footer`; the `STILL UNWRITTEN` list in `COMPONENTS.md` is now empty |
+| 5 Screens | `/design-create-screens` | ✅ all 6 screens, all sourced from `src/FE` |
+| 6 Prompt Packs | `/design-generate-prompts` | ✅ complete 2026-08-22 — **all 5 flows** (`01`–`05`). `01-dashboard` was rewritten from scratch: the prototype-era pack described editable inputs, a FAB and a `Sao lưu`/`Khôi phục` pair that no longer ship. `05-auth` is new. Every value is a literal — verified 0 unresolved `{token.ref}` and 0 `var(--…)` in all five |
+| 7 Audit | `/design-audit` | 🔁 **Ran 2026-08-22 → BLOCKED with 11 findings; all 11 fixed the same day.** Every one was documentation drift — none needed a `src/` change. `AUDIT.md` keeps the original verdict plus a resolution log. **Re-run `/design-audit PlatformManager` to issue a fresh verdict** |
 | 8 Figma Export | `/design-export-figma` | 🚫 superseded — see note |
 
-> **Stage 8 superseded (2026-08-11):** the `figma` MCP tooling gap from earlier that day was fixed (installed the official `figma@claude-plugins-official` plugin), and a Figma file was partially built — but every Figma account tried (`se.dev@vnresource.vn` and `xuantruongnguyen230300@gmail.com`) hit the **Starter-plan MCP tool-call quota** (6 calls/month per Figma's own rate-limit docs) almost immediately. Rather than wait on a plan upgrade, the user chose to **drop the Figma export step** and instead extended `doc/Prototype/dashboard.html` directly with the sidebar menu (see `spec/sidebar-menu/ui-spec.md`) — that file is now the canonical visual reference, verified live via chrome-devtools-mcp (desktop/collapsed/mobile-drawer, no regressions to existing dashboard logic). Stages 1-7's artifacts (`Tokens/tokens.json`, `DESIGN.md`, `COMPONENTS.md`, `Screens/01-dashboard.md`, `Prompts/01-dashboard-prompts.md`) remain valid reference material for the eventual Angular build in `src/FE/` — only the Figma hand-off itself was dropped. If Figma access improves later (plan upgrade), `/design-export-figma PlatformManager` can still be run against this existing artifact set.
+> **Stage 8 superseded (2026-08-11, still true):** every Figma account tried hit the **Starter-plan MCP tool-call quota** (6 calls/month) almost immediately. Rather than wait on a plan upgrade, the Figma hand-off was dropped. The artifact set here remains the hand-off. If Figma access improves, `/design-export-figma PlatformManager` can be run against it — but note `Tokens/tokens.json` changed substantially on 2026-08-22, so any previously-imported variables would need overwriting.
+
+## Screens
+
+| Route | Spec | Screenshot |
+|-------|------|------------|
+| `/dashboard` | `Screens/01-dashboard.md` | `Assets/Screenshots/dashboard/` |
+| `/danh-muc/dti` | `Screens/02-danh-muc-dti.md` | `Assets/Screenshots/danh-muc-dti/` |
+| `/quan-tri/nguoi-dung` | `Screens/03-quan-tri-nguoi-dung.md` | `Assets/Screenshots/quan-tri-nguoi-dung/` |
+| `/quan-tri/phan-quyen` | `Screens/04-phan-quyen.md` | `Assets/Screenshots/phan-quyen/` |
+| `/dang-nhap` + `/doi-mat-khau` | `Screens/05-auth.md` | `Assets/Screenshots/auth/` |
+
+Policy: **one desktop screenshot per screen.** State and viewport variants are captured on demand — a pending backlog nobody works through hides which screens have *no* visual reference at all, which is the thing that matters.
 
 ## Maintenance Rules
 
-1. **Live source first** — when the theme or UI changes, change the shipped code (`doc/Prototype/dashboard.html`, or the future `src/FE/` app) before any spec; never edit spec values in isolation.
-2. **Then mirror** — update `DESIGN.md` frontmatter, `Tokens/*.md`, and `Tokens/tokens.json` to match the live values.
-3. **Then lint** — `npx --yes --package=@google/design.md designmd lint doc/Design/Frontend/PlatformManager/DESIGN.md` must pass with 0 errors (every `{token.reference}` resolves). The bare `npx @google/design.md lint` form fails silently on Windows — always use the `--package=…designmd` form.
-4. **Cite sources** — every token, component, and screen spec cites its live source file (and line where useful) so dev handoff maps 1:1.
-5. **Once `src/FE/` gets a real app**: update `source_paths` above to point there instead of (or in addition to) the static prototype, and re-run stage 2 (`/design-inventory-ui PlatformManager`) to refresh the census.
+1. **Live source first** — when the theme or UI changes, change `src/FE/` before any spec; never edit spec values in isolation.
+2. **Then mirror** — update `DESIGN.md` frontmatter, `Tokens/*.md`, `Tokens/tokens.json`, **and `platform-manager-preset.ts`** to match.
+3. **Then lint** — `npx --yes --package=@google/design.md designmd lint doc/Design/Frontend/PlatformManager/DESIGN.md` must pass with 0 errors. The bare `npx @google/design.md lint` form **fails silently on Windows** — always use the `--package=…designmd` form.
+4. **Cite sources** — every token, component and screen spec cites its live source file (and line where useful) so dev handoff maps 1:1. Line numbers drift whenever `styles.scss` changes; re-verify rather than trusting an old citation.
+5. **The `COMPONENTS.md` index is the gate** — a screen spec may only compose components listed there. Adding a `Components/*.md` without an index row does not make it composable.
+6. **Never record credentials** in any design artifact, including screenshot capture instructions.
+
+## Capturing screenshots
+
+Both servers must be running:
+
+```bash
+dotnet run --project src/BE/PlatformManager.Api --urls http://localhost:5027
+cd src/FE && npx ng serve --port 4202
+```
+
+`4200`–`4203` are in the backend's Development CORS allowlist, so any of them works without a config change. A new database needs `bash scripts/setup-database.sh` first — it applies the schema and checks that the bootstrap passwords are configured.

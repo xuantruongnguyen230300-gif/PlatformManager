@@ -1,14 +1,28 @@
 # ERD — CoreBase (Identity/Đăng nhập + SysMenu)
 
-> **Trạng thái: DỰ KIẾN.** ERD cho lần migration đầu tiên của phần corebase
-> `src/BE`, tách riêng khỏi [`ERD.md`](./ERD.md) (nghiệp vụ DTI) theo đúng
-> hướng đã chốt 2026-08-15: *"hiện tại chỉ xây corebase chứ chưa áp dụng
-> business vào"*. Đối chiếu lại với người dùng trước khi `dotnet ef
-> migrations add` lần đầu.
+> # ⚠️ TÀI LIỆU LỊCH SỬ — ĐÃ BỊ THAY THẾ, KHÔNG DÙNG LÀM NGUỒN SỰ THẬT
 >
-> File DBML: [`PlatformManager-corebase.dbml`](./PlatformManager-corebase.dbml).
-> Migration SQL: [`migrations/0001_corebase_identity_sysmenu.sql`](./migrations/0001_corebase_identity_sysmenu.sql)
-> + [`migrations/0002_seed_corebase.sql`](./migrations/0002_seed_corebase.sql).
+> File này là **ERD DỰ KIẾN** viết trước khi migrate lần đầu (2026-08-15). DB
+> thật đã đi qua nó. **Muốn biết DB hiện tại có gì → đọc
+> [`doc/cau-truc-database.md`](../cau-truc-database.md)** (mô tả DB thật, đối
+> chiếu `PlatformManagerDbContextModelSnapshot.cs`).
+>
+> Giữ file này lại chỉ để tra **lý do thiết kế** (vì sao `AppUser` không kế
+> thừa `BaseEntity`, vì sao cây menu 1 cấp...) — phần *lý do* vẫn đúng, phần
+> *mô tả schema* thì không.
+>
+> **Những chỗ file này đã LỖI THỜI:**
+>
+> | Trong file này | Thực tế hiện nay |
+> |---|---|
+> | Migration `0001_corebase_identity_sysmenu.sql` + `0002_seed_corebase.sql` (§3) | **ĐÃ THAY THẾ bởi `0003_corebase_v2.sql`**, rồi `0004` + `0005`. 2 file cũ chỉ giữ làm lịch sử, **KHÔNG chạy** — xem `doc/ke-hoach-xay-lai-corebase.md` |
+> | Cột `SysMenu.RequiredRole` (§2.3) | **ĐÃ BỎ.** Thay bằng bảng join `core."SysMenuRoles"` (nhiều-nhiều menu ↔ role) từ `0003` |
+> | "chưa có ma trận quyền chi tiết theo resource-action" (§2.3) | **ĐÃ CÓ.** Bảng `core."RolePermissions"` + `[RequirePermission]` + `RequirePermissionFilter` từ `0004` — xem `doc/contracts/permissions.md` |
+> | Thiếu | Cột `AppUser.MustChangePassword`, 4 bảng nghiệp vụ DTI Weekly, bảng `business."ImportJobs"` |
+> | §4 "Câu hỏi còn mở" | Role thật đã chốt: `SuperAdmin` / `Admin` / `User` (xem `doc/cau-truc-database.md` §2) |
+>
+> File DBML kèm theo: [`PlatformManager-corebase.dbml`](./PlatformManager-corebase.dbml)
+> — cùng trạng thái lịch sử như file này.
 
 ## Phạm vi — vì sao tách file riêng khỏi `ERD.md`
 
@@ -114,7 +128,16 @@ hờ), đúng tinh thần Nhóm A/B: xây khi nỗi đau đã hiện diện, kh�
 bên trong — chưa có nhu cầu cấp 3"). Item cha (`ParentId IS NULL` nhưng có
 con) có `Route = NULL` — cha chỉ toggle expand/collapse, không điều hướng.
 
-### 2.3. `RequiredRole` — phạm vi rút gọn có chủ đích
+### 2.3. `RequiredRole` — phạm vi rút gọn có chủ đích ⚠️ ĐÃ THAY THẾ
+
+> **Cột `RequiredRole` KHÔNG còn tồn tại.** Từ migration `0003` nó được thay
+> bằng bảng join **`core."SysMenuRoles"`** (nhiều-nhiều `SysMenus` ↔
+> `AspNetRoles`) — 1 menu hiển thị cho nhiều role thay vì đúng 1 chuỗi role.
+> Và "nâng cấp lên hệ permission-key thật" nói ở đoạn dưới **đã xảy ra rồi**:
+> bảng `core."RolePermissions"` + `[RequirePermission]` từ `0004`.
+>
+> Đoạn dưới giữ nguyên để tra **lý do lựa chọn lúc đó**, không phải mô tả
+> schema hiện hành.
 
 Đặt tên cột `RequiredRole` (không phải `RequiredPermission` dù hợp đồng FE
 dùng tên tổng quát hơn) vì role Identity cụ thể **"chưa được chốt"** (câu
@@ -133,7 +156,29 @@ thêm mục menu nào chưa có trang thật tương ứng (vd chưa seed "Menu 
 thống"/SysMenu-quản-trị dù đã dự phòng chỗ trong cấu trúc `children`, vì
 chưa có trang UI thật cho nó — xem `spec/sidebar-menu/ui-spec.md` mục 1.4).
 
-## 3. Thứ tự migration
+## 3. Thứ tự migration ⚠️ ĐÃ THAY THẾ
+
+> **Kế hoạch dưới đây KHÔNG được thực hiện.** `0001`/`0002` đã bị thay bằng
+> `0003_corebase_v2.sql` (full script sinh lại từ EF sau khi model đổi: bỏ
+> `RequiredRole`, thêm `SysMenuRole`, thêm `MustChangePassword`, thêm 4 bảng
+> DTI Weekly), rồi `0004` và `0005`. **Thứ tự thật hiện nay:**
+>
+> ```
+> 0003_corebase_v2.sql                        ← full: 2 schema + Identity + SysMenu(Role) + 4 bảng DTI
+>                                                + 2 đoạn VÁ TAY (hàm IMMUTABLE + UX_... unique index)
+>          ▼
+> 0004_role_permission_import_job.sql         ← delta: core.RolePermissions + business.ImportJobs
+>                                                ⚠️ có bước SEED BẮT BUỘC đi kèm
+>          ▼
+> 0005_role_permission_resource_key_index.sql ← delta: IX_RolePermissions_ResourceKey_RoleId
+> ```
+>
+> `0001`/`0002` **KHÔNG chạy** — chỉ giữ làm tài liệu lịch sử theo đúng quyết
+> định ở `doc/ke-hoach-xay-lai-corebase.md`. Chi tiết đầy đủ (kể cả cảnh báo
+> mất `UX_CriteriaAssessments_CriteriaId_DateCreate_Day` khi sinh full script)
+> ở [`doc/cau-truc-database.md`](../cau-truc-database.md) §4 và §5.
+
+Kế hoạch gốc (lịch sử):
 
 ```
 0001_corebase_identity_sysmenu.sql   ← Identity 7 bảng + SysMenu (DDL)
@@ -150,7 +195,13 @@ theo tên field cũ (`CreatedAt`/`UpdatedAt`/`IsDeleted`) rồi mới sửa
 dữ liệu, tốn hơn nhiều so với sửa tài liệu trước khi có dòng SQL nào chạy
 thật.
 
-## 4. Câu hỏi còn mở (không tự quyết)
+## 4. Câu hỏi còn mở (không tự quyết) ⚠️ ĐÃ TRẢ LỜI
+
+> Cả 2 câu đã có đáp án, giữ lại để tra bối cảnh:
+> - **Đăng ký tài khoản mới:** chỉ Admin tạo qua màn Quản trị người dùng —
+>   **không** có endpoint `/api/auth/register` công khai.
+> - **Vai trò khởi tạo:** 3 role — `SuperAdmin`, `Admin`, `User` (xem
+>   `doc/cau-truc-database.md` §2 và `CoreSeeder`).
 
 - **Đăng ký tài khoản mới**: qua màn hình riêng, hay chỉ Admin tạo qua màn
   Quản trị người dùng (`quan-tri-nguoi-dung.html` đã có nút "+ Thêm người

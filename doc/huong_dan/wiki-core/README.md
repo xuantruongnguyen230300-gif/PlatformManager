@@ -21,7 +21,7 @@ tầm rộng hơn — bao gồm cả những gì PlatformManager demo hiện t�
 
 **2 lớp nội dung cho BE, đọc theo thứ tự khác nhau tuỳ mục đích:**
 
-- `be/01-…10-…` (dưới đây) trả lời **"core gồm những gì và vì sao cần"** —
+- `be/01-…11-…` (dưới đây) trả lời **"core gồm những gì và vì sao cần"** —
   lý thuyết, khái niệm, nguyên tắc Nhóm A/B.
 - `be/trien-khai/00-…08-…` trả lời **"làm thì làm theo thứ tự nào, đẻ ra
   file/class/interface nào, cấu trúc source code ra sao"** — thực hành, đối
@@ -42,6 +42,8 @@ tầm rộng hơn — bao gồm cả những gì PlatformManager demo hiện t�
 8. [ADR practice](be/08-adr-practice.md) — ghi lại quyết định kiến trúc
 9. [Security beyond auth](be/09-security-beyond-auth.md) — rate limiting, secret management, raw SQL
 10. [Data retention](be/10-data-retention.md) — soft-delete không phải archival
+11. [Performance & Caching](be/11-performance-caching.md) — 3 tầng (query → thuật toán → cache), quy tắc query bắt buộc, chính sách cache
+12. [Thông báo (Notification)](be/12-notifications.md) — **tạm dừng có chủ đích**; chọn kênh (in-app/email/Zalo ZNS), Outbox, idempotency, mảnh đã có sẵn để tái dùng
 
 ### BE — thực hành / lộ trình triển khai (`be/trien-khai/`)
 

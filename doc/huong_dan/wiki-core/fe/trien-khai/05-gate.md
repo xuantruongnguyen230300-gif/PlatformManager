@@ -17,12 +17,46 @@
 | G6 | Không import trực tiếp DTO trong `components/`/`pages/` (chỉ `services/` được import) | Grep `Dto` trong `components/`, `pages/` ngoài `services/` | Ngay từ đầu — đã PASS ở audit trước, giữ làm gate để không trôi |
 | G7 | Bundle không vượt ngân sách | `angular.json` `budgets` — `ng build` fail khi vượt `maximumError` (xem `../13-performance.md` §4) | Sau F4 — chỉnh ngưỡng theo số đo thật, không giữ mặc định của `ng new` |
 | G8 | `modules/<A>/` không import trực tiếp nội bộ `modules/<B>/` (module nghiệp vụ khác) | ESLint `eslint-plugin-import` rule `no-restricted-paths` — chặn import chéo giữa 2 module nghiệp vụ, vẫn cho phép import từ `core/`/`shared/`/`platform/` (xem `doc/kien-truc-core-module.md`) | Ngay khi có module nghiệp vụ thứ 2 (miễn phí trước đó, chưa có gì để vi phạm) |
+| G9 | `core/` KHÔNG import ngược lên `shared/`/`platform/`/`modules/` — `core/` là tầng đáy | ESLint `import/no-restricted-paths`, zone `target: ./src/app/core` (`eslint.config.js` — hằng `coreLayerZones`), chạy qua `ng lint` | **Đã bật 2026-08-21.** Dựng ngay khi có ngoại lệ đầu tiên — đã xảy ra thật: `core/auth` import `MenuService` và `core/interceptors` import `ToastService` từ `shared/services/`, cả hai nay đã chuyển vào `core/menu`+`core/toast` |
 
-## Vị trí chạy
+## Vị trí chạy — 🛑 CHẠY TAY, repo KHÔNG có CI
 
-Thêm 1 script `scripts/fe-gate.sh` (hoặc `.ps1`) gộp G1/G3/G6 (grep thuần,
-rẻ) chạy trong CI trước `ng test`/`ng build` — G2/G4/G5 nếu cần ESLint rule
-riêng thì cấu hình trong `.eslintrc`/`eslint.config.js`, chạy qua `ng lint`.
+**Không còn `.github/`** (người dùng xoá 2026-08-21, có chủ đích). Không có
+máy nào tự chạy gate — **người chạy tay trước khi commit**:
+
+```bash
+cd src/FE
+bash ../../scripts/fe-gate.sh                                   # G1 + G3 + G6
+npx ng lint                                                      # G2 + G8 + G9
+npx ng test --watch=false --browsers=ChromeHeadless               # test
+npx ng build                                                     # G7 (budget)
+```
+
+`CHROME_BIN` phải trỏ tới Chrome nếu shell chưa export sẵn — thiếu nó Karma
+hỏng với *"No binary for ChromeHeadless"*.
+
+> ### ⚠️ Đây là điểm yếu đã biết, không phải thiếu sót chưa ai thấy
+>
+> Toàn bộ file này tồn tại vì một bài học: **G1 từng được dọn tay 2 lần và tự
+> tái sinh cả 2 lần** — hex mới xuất hiện ngay ở đợt màn hình kế tiếp, đúng vì
+> không có máy kiểm. `scripts/fe-gate.sh` sinh ra để chấm dứt việc đó.
+>
+> Nay không còn CI, gate quay lại phụ thuộc **trí nhớ con người** — tức đúng
+> điều kiện đã sinh ra vấn đề ban đầu. Script vẫn giữ và vẫn chạy được; nhưng
+> đừng nhầm "có script" với "có gate". Dựng lại CI thì nối 4 lệnh trên vào,
+> thứ tự gate → lint → test → build để fail nhanh nhất.
+>
+> Hai điểm đã kiểm chứng bằng canary khi viết script, ghi lại để không ai
+> "đơn giản hoá" ngược lại:
+>
+> - Mẫu G6 phải là `Dto\b`, **không phải** `\bDto\b`. Tên DTO thật luôn dạng
+>   `IUserDto` — giữa `r` và `D` không có word boundary nên `\bDto\b` không bao
+>   giờ khớp, gate xanh vì mù chứ không vì sạch.
+> - G6 loại trừ `*.spec.ts`. Đây là **phạm vi đúng** của rule chứ không phải
+>   ngoại lệ: G6 bảo vệ đường code chạy thật, còn spec stub tầng HTTP thì bắt
+>   buộc phải dựng payload đúng hình dạng wire, tức phải nói bằng DTO.
+>
+> G5 vẫn chưa hiện thực.
 
 ## Không làm
 

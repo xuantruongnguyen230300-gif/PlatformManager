@@ -1,9 +1,40 @@
-# doc/Prototype/ — mục lục cho agent
+# doc/Prototype/ — 🧊 ĐÓNG BĂNG, LƯU TRỮ LỊCH SỬ (2026-08-22)
 
-> Đây là **nguồn hình ảnh sống** (live source) của UI PlatformManager — static
-> HTML/CSS/JS, không framework, không build step. `doc/Design/` trích xuất
-> token/spec TỪ đây; không sửa ngược từ `doc/Design/` xuống đây (xem
-> `doc/Design/CLAUDE.md` § Core Principle 4).
+> ## 🛑 KHÔNG còn là nguồn sự thật. KHÔNG sửa. KHÔNG dựng thêm.
+>
+> **Nguồn sống của UI nay là `src/FE/src/app/**`** — app Angular 20 với 6 route
+> thật (`src/FE/src/app/app.routes.ts`). Thư mục này là **bản chụp ý đồ thiết kế
+> ban đầu**, giữ lại làm lịch sử chứ không phải để tra cứu hiện trạng.
+>
+> ### Dùng nó vào việc gì
+>
+> | Được | Không được |
+> | --- | --- |
+> | Trả lời *"vì sao layout này lại như vậy"* — dẫn nguồn quyết định cũ | Trả lời *"màn hình hiện trông ra sao"* |
+> | Đối chiếu khi app cố tình đi lệch khỏi ý đồ gốc | Trích xuất token / component / spec |
+>
+> ### Vì sao đóng băng thay vì xoá
+>
+> Có **137 tham chiếu tới `doc/Prototype/` ở 61 file** — trong `spec/*/ui-spec.md`,
+> `doc/ERD/`, `doc/contracts/`, và cả **comment trong chính code `src/FE`** (ví dụ
+> *"khác prototype gốc dùng single-click"*). Phần lớn là **dẫn nguồn lịch sử**: chúng
+> ghi lại *vì sao* một quyết định được đưa ra. Xoá thư mục biến toàn bộ số đó thành
+> tham chiếu chết — tệ hơn là giữ lại và dán nhãn cho đúng.
+>
+> ### Nó đã lệch tới đâu
+>
+> - Chỉ phủ **4/6** màn. `/doi-mat-khau` và `/quan-tri/phan-quyen` **chưa bao giờ**
+>   có prototype — chúng được dựng thẳng bằng Angular.
+> - Token đã đổi giá trị: `bg` `#f3f6fb`→`#eef2f8`, `text-muted` `#6d788b`→`#57647a`,
+>   `container-max-width` 1450→1600px, cùng nhiều token mới không tồn tại ở đây.
+> - Tương tác đã đổi: grid Angular sửa bằng **double-click**, prototype dùng single-click.
+>
+> Đặc tả màn hình hiện hành nằm ở
+> `doc/Design/Frontend/PlatformManager/Screens/` — tất cả đều bám `src/FE`.
+
+---
+
+## Nội dung lưu trữ
 
 ## Trang đầy đủ (multi-page, điều hướng qua sidebar thật)
 

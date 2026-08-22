@@ -1,61 +1,98 @@
 ---
 project: "PlatformManager"
 status: "draft"
-updated: "2026-08-11"
+updated: "2026-08-22"
 component: "KpiTile"
-sources: ["doc/Prototype/dashboard.html"]
+sources: ["src/FE/src/app/modules/dashboard/components/kpi-tile/kpi-tile.html", "src/FE/src/app/modules/dashboard/components/kpi-tile/kpi-tile.scss", "src/FE/src/app/modules/dashboard/components/kpi-tile/kpi-tile.ts", "src/FE/src/app/modules/dashboard/components/kpi-summary/kpi-summary.html"]
 ---
 
 # KpiTile
-**Description:** Label/value/sub-caption stat tile — a `.card` (see `Card.md`) with the `.kpi` modifier plus a fixed 3-line internal anatomy (`dashboard.html:29,87-91`). Renders 5 times in `.kpis`, one per KPI computed by `renderKPIs()`/`stats()` (`dashboard.html:851-857`).
+**Description:** Label / value / sub-caption stat tile — a `.card` (see `Card.md`) with the `.kpi` modifier and a fixed three-line internal anatomy. Shipped as a real Angular component, `app-kpi-tile` (`kpi-tile.ts:16-21`), a dumb presentational component with four signal inputs and no business logic. It renders exactly five times, inside `KpiSummary` (`kpi-summary.html:1-7`).
 
 ## Anatomy
-`.card.kpi` → `.label` (small caption) → `.value` (large number/text, the hero content) → `.sub` (small caption, static help text or a dynamic period label for the delta tile). No icon, no chart inside the tile itself.
+`.card.kpi` → `.label` (small caption, `typography.kpi-label`, `colors.muted`) → `.value` (the hero number, 21px/850, `margin-top: spacing.sp-1`) → `.sub` (small caption, `typography.kpi-label`, `colors.muted`, `line-height:1.4`, `min-height:30px`). No icon, no chart, no trend sparkline inside the tile.
+
+`.sub` is conditional in the template (`@if (sub())`, `kpi-tile.html:4-6`) but its `min-height:30px` reserves two lines' worth of space so the five tiles keep a common baseline even when captions wrap unevenly. The host is `display:contents` (`kpi-tile.scss:1-3`) so the `.card` participates directly in the parent's five-column grid rather than nesting inside a wrapper element.
 
 ## Variants
 
+Tone is a typed input — `KpiTone = 'default' | 'good' | 'warn' | 'bad'` (`kpi-tile.ts:3`) — bound to `.value` via `[class]="tone()"`. It colours **only the value**, never the label, sub or card.
+
 | Variant | Classes | Key values | When to use |
 | --- | --- | --- | --- |
-| Neutral value | `.value` (no extra class) | text `colors.text` | "Tiến độ chung tuần này" (`#kProgress`), "Hoàn thành 100%" (`#kDone`) |
-| Good value | `.value.good` | text `colors.success` | "Chỉ tiêu tăng" (`#kUp`) always; "So với tuần trước" (`#kDelta`) when delta > 0 |
-| Bad value | `.value.bad` | text `colors.danger` | "So với tuần trước" (`#kDelta`) when delta < 0 |
-| Warn value | `.value.warn` | text `colors.warning` | "Không tăng" (`#kFlat`) label uses `.warn` class in markup (`dashboard.html:90`); the value itself only turns `.good`/`.bad`/neutral via `renderKPIs()`, never `.warn`, in the current JS |
-| Empty/dash state | — | literal `—` character, no color class | "So với tuần trước" and "Không tăng" both render `—` when no previous period exists yet (`dashboard.html:856`) |
+| Default tone | `.value` (class literally `default`, which matches no CSS rule) | inherits `colors.text` | `Tiến độ chung…` and `Hoàn thành 100%` — passed no `tone` (`kpi-summary.html:2,6`) |
+| Good tone | `.value.good` | text `colors.good` (`kpi-tile.scss:16-18`) | `Chỉ tiêu tăng`, always (`kpi-summary.html:4`); and the delta tile when its computed `deltaTone()` is good |
+| Warn tone | `.value.warn` | text `colors.warn` (`kpi-tile.scss:20-22`) | `Không tăng`, always (`kpi-summary.html:5`) |
+| Bad tone | `.value.bad` | text `colors.bad` (`kpi-tile.scss:24-26`) | The delta tile when `deltaTone()` is bad |
+| Without sub-caption | `.sub` not rendered | `@if (sub())` false — the input defaults to `''` (`kpi-tile.ts:19`) | No shipped instance uses it; all five pass a `sub`. Reachable but currently unexercised |
+
+**The five shipped tiles**, in order (`kpi-summary.html:2-6`):
+
+| # | Label | Tone | Sub-caption |
+| --- | --- | --- | --- |
+| 1 | computed `progressLabel()` | default | `Bình quân gia quyền theo điểm` |
+| 2 | computed `deltaLabel()` | computed `deltaTone()` | computed `prevSub()` |
+| 3 | `Chỉ tiêu tăng` | `good` | `Có tiến bộ so với kỳ trước` |
+| 4 | `Không tăng` | `warn` | `Cần chú ý theo dõi` |
+| 5 | `Hoàn thành 100%` | default | `Số chỉ tiêu đạt đủ tiến độ` |
+
+Tiles 3 and 4 carry a **fixed** tone regardless of value — `Chỉ tiêu tăng` is always green and `Không tăng` always amber, even at zero. Only tile 2 changes colour with its data.
 
 ## States
 <!-- Exactly these five rows, in this order — treatments as rendered by the shipped CSS. -->
 
 | State | Treatment |
 | --- | --- |
-| default | `.label` 12px `colors.text-muted`; `.value` 27px/weight 850 `colors.text` (or good/bad/warn per variant); `.sub` 12px `colors.text-muted` |
-| hover | **Not styled** — static content, no `:hover` rule |
-| focus | **N/A** — not a focusable/interactive element |
+| default | `.label` `typography.kpi-label` / `colors.muted`; `.value` 21px / 850 (18px below the 560px breakpoint, `kpi-tile.scss:38-42`) tinted per tone; `.sub` `typography.kpi-label` / `colors.muted` / `min-height:30px`. Card box inherited from `Card.md` |
+| hover | **Not styled** — inherits `.card`, which has no `:hover` rule; the tile is static content, never a link or filter |
+| focus | **N/A** — no `tabindex`, no focusable descendant |
 | active | **N/A** — not interactive |
 | disabled | **N/A** — not a form control |
 
 ## Tokens Used
-- `colors.surface`, `colors.border`, `colors.text`, `colors.text-muted`, `colors.success`, `colors.warning`, `colors.danger`
-- `rounded.card`, `spacing.lg-card`, `shadow.card` (inherited from `Card.md`)
-- `typography.kpi-value` (27px/850), `typography.label` (12px/400, shared with the generic label style)
+- `colors.text`, `colors.muted`, `colors.good`, `colors.warn`, `colors.bad`
+- `colors.card`, `colors.line`, `rounded.lg`, `spacing.card-padding`, `shadow` — all inherited from `Card.md`
+- `spacing.sp-1` (label→value and value→sub gaps)
+- `typography.kpi-value`, `typography.kpi-label`
+
+`font-size:21px` (and the 18px mobile step) and `font-weight:850` are literals at `kpi-tile.scss:12-13,40` — both sit off the type scale, which tops out at `--fs-lg` (15px) and has no weight tokens. `min-height:30px` on `.sub` is likewise a literal.
 
 ## Reference markup
 
 ```html
-<div class="card kpi"><div class="label">Tiến độ chung tuần này</div><div class="value" id="kProgress">0%</div><div class="sub">Bình quân gia quyền theo điểm</div></div>
-<div class="card kpi"><div class="label">So với tuần trước</div><div class="value" id="kDelta">—</div><div class="sub" id="prevLabel">Chưa có kỳ trước</div></div>
-<div class="card kpi"><div class="label">Chỉ tiêu tăng</div><div class="value good" id="kUp">0</div><div class="sub">Có tiến bộ so với kỳ trước</div></div>
-<div class="card kpi"><div class="label">Không tăng</div><div class="value warn" id="kFlat">0</div><div class="sub">Cần chú ý theo dõi</div></div>
-<div class="card kpi"><div class="label">Hoàn thành 100%</div><div class="value" id="kDone">0/62</div><div class="sub">Số chỉ tiêu đạt đủ tiến độ</div></div>
+<!-- component template -->
+<div class="card kpi">
+  <div class="label">{{ label() }}</div>
+  <div class="value" [class]="tone()">{{ value() }}</div>
+  @if (sub()) {
+    <div class="sub">{{ sub() }}</div>
+  }
+</div>
+
+<!-- the five shipped call sites -->
+<section class="kpis">
+  <app-kpi-tile [label]="progressLabel()" [value]="progressValue()" sub="Bình quân gia quyền theo điểm" />
+  <app-kpi-tile [label]="deltaLabel()" [value]="deltaValue()" [tone]="deltaTone()" [sub]="prevSub()" />
+  <app-kpi-tile label="Chỉ tiêu tăng" [value]="kpi().Up + ''" tone="good" sub="Có tiến bộ so với kỳ trước" />
+  <app-kpi-tile label="Không tăng" [value]="kpi().Flat + ''" tone="warn" sub="Cần chú ý theo dõi" />
+  <app-kpi-tile label="Hoàn thành 100%" [value]="doneFraction()" sub="Số chỉ tiêu đạt đủ tiến độ" />
+</section>
 ```
 
-Sources: `doc/Prototype/dashboard.html:29` (CSS), `doc/Prototype/dashboard.html:87-91` (markup, 5 instances), `doc/Prototype/dashboard.html:851-857` (`renderKPIs()` value/class logic)
+Sources: `src/FE/src/app/modules/dashboard/components/kpi-tile/kpi-tile.html:1-7`, `kpi-tile.scss:1-42`, `kpi-tile.ts:3,16-21` (inputs + `KpiTone`), `src/FE/src/app/modules/dashboard/components/kpi-summary/kpi-summary.html:1-7` (five instances), `kpi-summary.scss:1-21` (grid + responsive)
 
 ## Do / Don't
 
-- ✅ Keep the fixed 3-part anatomy (label → value → sub) — the shipped app never varies it per tile.
-- ✅ Show `—` (not `0` or blank) for KPIs that depend on a previous period when none exists yet.
-- ❌ Don't add icons or secondary values inside a KPI tile — not present in the shipped design.
-- ❌ Don't invent a `.warn`-colored `.value` — the JS only ever assigns `.good`/`.bad`/neutral to `#kDelta`'s value (`renderKPIs()`); `.warn` is only used on the static `#kFlat` label wrapper.
+- ✅ Keep the fixed three-part anatomy (label → value → sub); no shipped tile varies it.
+- ✅ Pass `value` as a pre-formatted **string** — the component takes `input.required<string>()` and does no formatting, so callers coerce numbers themselves (`kpi().Up + ''`).
+- ✅ Colour the value only. Tinting the label or card is not supported by any rule.
+- ✅ Keep `.sub`'s reserved height so a five-tile row stays baseline-aligned when one caption wraps.
+- ❌ Don't add icons, sparklines or secondary values inside a tile — none exists.
+- ❌ Don't make a tile clickable; the KPI row is a read-out, not a filter control.
+- ❌ Don't pass `tone="default"` expecting a rule — it emits `class="default"`, which nothing styles; that is how the neutral case works.
 
 ## Normalize on redesign
-1. The mobile last-tile-full-width rule (`.kpis .card:last-child{grid-column:1/-1}` at ≤560px, `dashboard.html:56`) is a layout artifact of a 5-item grid on 2 columns — flag for a future adaptive grid rather than a hard-coded "last child" rule.
+1. `tone="default"` renders a real but meaningless class. Either add a `.default` rule or map the neutral case to no class.
+2. The value's `21px`/`850` and mobile `18px` are off both the type scale and the (non-existent) weight scale — see `Tokens/typography.md`.
+3. The mobile rule `.kpis ::ng-deep .card:last-child { grid-column: 1/-1 }` (`kpi-summary.scss:18-20`) is a layout artefact of five items on two columns, and it reaches through `::ng-deep` into the child component's card. An adaptive grid, or a modifier input on the tile, would avoid piercing encapsulation.
+4. Tiles 3 and 4 hardcode `good`/`warn` regardless of value, so `Chỉ tiêu tăng: 0` still reads green. Either derive the tone from the value or drop the colour on those two.

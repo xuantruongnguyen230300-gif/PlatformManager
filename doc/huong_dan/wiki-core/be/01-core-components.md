@@ -15,7 +15,7 @@ Trước khi liệt kê, 1 nguyên tắc phải giữ xuyên suốt: **core khô
 | 5 | **Error-as-value (`Result<T>`)** cho lỗi nghiệp vụ mong đợi + **exception middleware toàn cục** cho lỗi thật bất ngờ (trả `ErrorCode`+`TraceId`, không lộ stack trace) | Exception-driven control flow rối, hoặc lộ chi tiết nội bộ ra client | Bắt buộc, ngày đầu |
 | 6 | **Envelope response nhất quán** (`{Success, Data, ErrorCode, ErrorMessage, TraceId}`) cho MỌI endpoint kể cả list | FE phải viết 2 nhánh parse khác nhau | Bắt buộc, ngày đầu |
 | 7 | **Auth/Identity + Permission framework** (context "current user", resource-action key) | Xem [02-identity-auth.md](02-identity-auth.md) | Bắt buộc, ngày đầu |
-| 8 | **Caching abstraction** (distributed + local, tự fallback êm khi cache down) | Redis down làm sập app; không tra được "đang cache gì" | Khi có query nặng lặp lại |
+| 8 | **Caching abstraction** (distributed + local, tự fallback êm khi cache down) | Redis down làm sập app; không tra được "đang cache gì" | ⚠️ Đã có bằng chứng (2026-08-18) — xem [11-performance-caching.md](11-performance-caching.md), phạm vi hẹp + đúng thứ tự |
 | 9 | **Logging/Audit abstraction** (structured, tách log kỹ thuật vs audit nghiệp vụ) | Log dạng string không tra cứu được | Bắt buộc, ngày đầu |
 | 10 | **Config/Options abstraction** (`IOptions<T>` typed, fail-fast lúc khởi động) | Cấu hình sai chỉ lộ ra lúc runtime gọi tới, không phải lúc start | Nên có sớm |
 | 11 | **Generic CRUD/Grid/Form engine** | Xem [03-metadata-driven-design.md](03-metadata-driven-design.md) — nguồn cột nên từ code, không phải DB tự do | Khi có ≥5-10 màn CRUD giống nhau |
@@ -38,11 +38,17 @@ Trước khi liệt kê, 1 nguyên tắc phải giữ xuyên suốt: **core khô
 > Nhiều mục dưới đây trước ghi "chưa cần ở quy mô demo" — **calibration đó
 > hết hiệu lực từ giờ**, không phải vì quy mô code đổi, mà vì bản chất rủi
 > ro đổi (có user thật/dữ liệu thật để mất, không còn là sandbox riêng của
-> dev). Mục nào **thật sự vẫn nên hoãn** (caching, i18n, engine generic) —
-> lý do hoãn được ghi lại là lý do dựa trên **bằng chứng cụ thể** (chưa có
-> traffic/chưa có yêu cầu nghiệp vụ), không dựa trên nhãn "demo" nữa — phân
-> biệt 2 loại lý do này quan trọng vì loại đầu hết hạn theo giai đoạn, loại
-> sau không tự hết hạn.
+> dev). Mục nào **thật sự vẫn nên hoãn** (i18n, engine generic) — lý do hoãn
+> được ghi lại là lý do dựa trên **bằng chứng cụ thể** (chưa có traffic/chưa
+> có yêu cầu nghiệp vụ), không dựa trên nhãn "demo" nữa — phân biệt 2 loại
+> lý do này quan trọng vì loại đầu hết hạn theo giai đoạn, loại sau không tự
+> hết hạn.
+>
+> **Cập nhật 2026-08-18:** #8 caching đã rời khỏi danh sách "vẫn nên hoãn" —
+> bằng chứng cụ thể đã xuất hiện khi rà soát code, xem
+> [11-performance-caching.md](11-performance-caching.md). Đây đúng là cách
+> nguyên tắc trên vận hành: lý do hoãn dựa trên bằng chứng thì cũng chấm dứt
+> bằng bằng chứng, không phải bằng việc "tới giai đoạn".
 
 Đã có, giữ nguyên: #1, #2, #3, #5, #6, #9 (mức tối giản) qua
 `AssessmentUpsertService`/`AggregationService`/`IApiResult<T>`/
@@ -77,11 +83,24 @@ chiếu VNR — tìm thấy khi đối chiếu thêm 12-Factor/OWASP/Clean Archi
 template) — xem `src/BE/.claude/rules/api-controller.md` §"Rate limiting" và
 `be/trien-khai/07-p6-archtests-gate.md` §6 cho thiết kế cụ thể.
 
-**#8 Caching, #18 i18n — vẫn hoãn, nhưng lý do là bằng chứng, không phải giai
-đoạn:** #8 chưa có báo cáo/đo đạc nào cho thấy query nào đang chậm thật (chỉ
-là quan sát lý thuyết ở `AggregationService`); #18 chưa có yêu cầu đa ngôn
-ngữ nào từ nghiệp vụ. Khi 1 trong 2 bằng chứng đó xuất hiện thật, quay lại
-mục tương ứng — không phải "chờ qua giai đoạn nào đó".
+**#8 Caching — bằng chứng đã xuất hiện, mục này KHÔNG còn ở trạng thái
+"hoãn" (cập nhật 2026-08-18).** Rà soát code thật đã tìm ra nút thắt cụ thể,
+không còn là quan sát lý thuyết ở `AggregationService`: `RequirePermissionFilter`
+bắn **2 query DB mỗi request** có `[RequirePermission]` trên dữ liệu tí hon
+và gần như bất biến; dashboard 1 lần load ≈ 10 round-trip; `GetPeriodsAsync`
+quét lại cùng một list 64 lần. Chi tiết đầy đủ + quyết định đã CHỐT ở
+[11-performance-caching.md](11-performance-caching.md).
+
+Quyết định **không phải** "bật cache lên là xong": thứ tự bắt buộc là sửa
+query pattern (`AsNoTracking`, index, N+1, đẩy `Distinct` xuống SQL) → sửa
+thuật toán → **đo lại** → mới cache, và chỉ cache đúng phần có số đo biện
+minh. Cache đặt trước các bước kia chỉ **che** lỗi chứ không sửa — xem lý do
+ở [11-performance-caching.md](11-performance-caching.md) §1. Chọn in-memory
+(`HybridCache`), **không** Redis, vì hệ thống hiện chỉ có 1 process.
+
+**#18 i18n — vẫn hoãn, lý do là bằng chứng, không phải giai đoạn:** chưa có
+yêu cầu đa ngôn ngữ nào từ nghiệp vụ. Khi bằng chứng đó xuất hiện thật, quay
+lại mục tương ứng — không phải "chờ qua giai đoạn nào đó".
 
 **#11/#12 vẫn cố tình KHÔNG làm** — xem
 [03-metadata-driven-design.md](03-metadata-driven-design.md), vì chỉ có 2

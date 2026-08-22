@@ -19,3 +19,69 @@ Với hệ thống mới bắt đầu nhỏ, không cần cả bộ ArchTest ph�
 ## Gotcha đáng nhớ nhất
 
 ❌ **Không bao giờ dùng `UseInMemoryDatabase` để test** — InMemory provider của EF Core **bỏ qua hoàn toàn** FK constraint, unique index, transaction thật. Test pass trên InMemory không chứng minh được gì về hành vi thật trên Postgres — chỉ dùng mock (unit test) hoặc Testcontainers (integration test).
+
+## Áp dụng vào PlatformManager (2026-08-19)
+
+### 3 test project, mỗi cái một mục đích
+
+| Project | Tầng | Cần Docker? |
+| --- | --- | --- |
+| `Tests/PlatformManager.ArchTests` | ArchTest — quy tắc kiến trúc, IL-scan thuần | Không |
+| `Tests/PlatformManager.Core.UnitTests` | Unit — luồng quyết định, phụ thuộc thay bằng NSubstitute | Không |
+| `Tests/PlatformManager.Core.IntegrationTests` | Integration — Postgres THẬT qua Testcontainers | **Có** |
+
+### Yêu cầu môi trường
+
+`PlatformManager.Core.IntegrationTests` **cần Docker đang chạy** (Docker Desktop
+trên Windows/macOS, `docker daemon` trên Linux). Không có Docker thì bộ test này
+**fail rõ ràng kèm hướng dẫn**, **cố ý KHÔNG `Skip`** — skip im lặng tạo "xanh
+giả", tức là `dotnet test` báo xanh trong khi phần kiểm tra bảo mật quan trọng
+nhất chưa hề chạy. Thà đỏ và biết vì sao.
+
+Chỉ muốn chạy phần không cần Docker:
+
+```bash
+dotnet test Tests/PlatformManager.ArchTests
+dotnet test Tests/PlatformManager.Core.UnitTests
+```
+
+**Repo KHÔNG có CI** (`.github/` đã xoá 2026-08-21, có chủ đích) ⇒ integration
+test chạy **trên máy dev**, và **Docker Desktop phải đang bật** — Testcontainers
+cần nó để dựng Postgres. Không bật thì 18+ test đỏ hàng loạt với cùng một
+exception từ `PostgresFixture`; đó là lỗi **hạ tầng**, không phải lỗi code.
+
+`PostgresFixture` cố ý **fail chứ không skip** khi thiếu Docker — skip im lặng
+là xanh giả, và bộ test này tồn tại chính để bắt những thứ chỉ lộ ra khi chạy
+thật.
+
+### Schema cho integration test lấy từ file `.sql` của repo, KHÔNG từ `EnsureCreated()`
+
+`PostgresFixture` chạy tuần tự `doc/ERD/migrations/0003_* → 0004_* → 0005_*` vào
+container. Như vậy test kiểm luôn **tính đúng của chính file `.sql` mà người dùng
+chạy tay lên DB thật**. Dựng schema từ model EF (`EnsureCreated()`) sẽ test trên
+một schema **khác** schema production — mà đợt tối ưu 2026-08-18 (thêm index
+`IX_RolePermissions_ResourceKey_RoleId`) cho thấy khác biệt schema đúng là thứ
+đáng quan tâm.
+
+⚠️ Thêm file migration mới (`0006_*.sql`...) → **phải** thêm tên vào
+`PostgresFixture.MigrationScripts`, nếu không schema test sẽ lệch schema thật —
+đúng cái điều thiết kế này muốn tránh.
+
+### Kiểm thử phân quyền — chia đôi có chủ đích
+
+Code phân quyền (`RequirePermissionFilter`, `PermissionChecker`,
+`SysMenuRoleRepository`) tách làm 2 nhóm test **không thay thế được cho nhau**:
+
+- **Nhóm A (unit, không DB)** — luồng quyết định: claim rỗng → `Forbid` *và không
+  chạm DB*; `SuperAdmin` → break-glass; không có quyền → `Forbid`. Chỉ test được
+  sạch nhờ seam `IPermissionChecker` (khẳng định "chưa hề gọi" bằng
+  `DidNotReceive`).
+- **Nhóm B (integration, Postgres thật)** — ngữ nghĩa truy vấn: `INNER JOIN` loại
+  dòng `RolePermission` mồ côi, `NULL IN (...)` khi `AspNetRoles.Name` NULL, thu
+  hồi/cấp lại có hiệu lực **ngay** (chứng minh không có cache/TTL nào ở đường
+  phân quyền — xem [11-performance-caching.md](11-performance-caching.md) §6.2
+  quyết định #5).
+
+**Vì sao không gộp nhóm B vào nhóm A bằng LINQ-to-Objects trên `List<T>`:** cách
+đó chỉ kiểm được phép tập hợp trong C#, **không** kiểm được EF Core còn dịch đúng
+sang SQL sau khi nâng version — cùng bản chất với lý do cấm InMemory ở trên.

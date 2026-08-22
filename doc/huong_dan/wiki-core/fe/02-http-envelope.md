@@ -20,7 +20,7 @@ export type ApiResultStatus = 'SUCCESS' | 'VALIDATION_ERROR' | 'BUSINESS_ERROR' 
 
 export type ApiErrorCode =
   | 'Success' | 'ValidationError' | 'AuthenticationError' | 'AuthorizationError'
-  | 'NotFound' | 'Conflict' | 'BusinessRuleError' | 'SystemError';
+  | 'NotFound' | 'Conflict' | 'BusinessRuleError' | 'TooManyRequests' | 'SystemError';
 
 export interface IApiResult<T> {
   data: T | null;

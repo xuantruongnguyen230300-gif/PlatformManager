@@ -22,8 +22,9 @@ rồi báo cáo mức độ tuân thủ kèm bằng chứng cụ thể.
 "Core" ở đây nghĩa là các thành phần dùng chung, nền tảng — liệt kê đầy đủ ở
 `doc/huong_dan/wiki-core/be/01-core-components.md` (BaseEntity,
 `ErrorDescriptor`/`IApiResult<T>`, envelope response, auth/identity,
-metadata mechanism, cross-module contract...) — **không phải** logic nghiệp
-vụ riêng của 1 feature (`Criteria`/`CriteriaAssessment` cụ thể không phải
+metadata mechanism, cross-module contract, query pattern & caching ở
+[be/11-performance-caching.md](../../doc/huong_dan/wiki-core/be/11-performance-caching.md)...)
+— **không phải** logic nghiệp vụ riêng của 1 feature (`Criteria`/`CriteriaAssessment` cụ thể không phải
 core, trừ khi đang xét cách chúng dùng `BaseEntity`/`ErrorDescriptor`).
 
 ---
@@ -47,20 +48,59 @@ việc thiếu đó như một quan sát.
 
 ---
 
-# Đọc bắt buộc trước khi review
+# Đọc theo ĐỊNH TUYẾN — không đọc cả wiki
 
-1. **`doc/kien-truc-core-module.md`** (root repo) — ranh giới Core ↔ Module
-   bắt buộc cho cả BE và FE (đã CHỐT 2026-08-16). Đây là 1 phần "core" cần
-   review độc lập với các mục wiki-core khác — xem mục riêng bên dưới.
-2. `{WIKI_ROOT}/README.md` — mục lục.
-3. Toàn bộ `{WIKI_ROOT}/be/*.md` khi review BE; toàn bộ `{WIKI_ROOT}/fe/*.md`
-   khi review FE (đối chiếu thêm `src/FE/.claude/docs/*.md` — quy ước thực
-   thi hiện tại `frontend-expert` đang theo, để phân biệt "cố ý đơn giản
-   hoá" với "thiếu sót thật", cùng nguyên tắc mục 4 dưới).
-4. `src/BE/.claude/rules/*.md` / `src/FE/.claude/docs/*.md` — quy ước
-   **thực thi hiện tại** mà `backend-expert`/`frontend-expert` đang theo,
-   để phân biệt "lệch khỏi wiki-core vì cố ý đơn giản hoá đã được thống
-   nhất" (không phải finding) với "lệch vì thiếu sót thật" (là finding).
+**Đối tượng review: `src/` đối chiếu với `doc/` và `.claude/`.** Không có
+nguồn thứ ba, không có lịch sử audit để so.
+
+## 🛑 Luật chống cạn context — đọc trước khi mở file đầu tiên
+
+**MỘT lượt = MỘT phạm vi (BE **hoặc** FE), không bao giờ cả hai.** Lượt
+BE-only từng tiêu **405K token** — cao nhất trong mọi agent của dự án. Gộp
+BE+FE là lý do 3 lượt review liên tiếp chết giữa chừng.
+
+**Chỉ đọc file mà bảng định tuyến dưới đây chỉ ra.** Không "đọc hết cho chắc"
+— corpus đầy đủ là ~540 KB, đủ để giết một lượt review trước khi nó kết luận
+được gì.
+
+## Đọc bắt buộc — mọi lượt (nhỏ, ~40 KB)
+
+1. **`doc/kien-truc-core-module.md`** — ranh giới Core ↔ Module, bắt buộc cho
+   cả BE lẫn FE (đã CHỐT 2026-08-16). Xem mục riêng bên dưới.
+2. `{WIKI_ROOT}/README.md` — mục lục, để biết chủ đề nào nằm ở file nào.
+
+## Bảng định tuyến — review cái gì thì đọc file nào
+
+| Đang soát | Đọc |
+| --- | --- |
+| Envelope / controller / error → HTTP | `be/trien-khai/03-p2-platform-application.md` + `src/BE/.claude/rules/api-controller.md` |
+| Entity / migration / soft-delete | `be/trien-khai/02-p1-platform-domain.md` + `rules/entity-domain.md` |
+| Command / Handler / Validator | `rules/cqrs-handler.md` |
+| Query / index / N+1 / cache | `be/11-performance-caching.md` + `rules/performance.md` |
+| Phiên đăng nhập / khoá tài khoản / phân quyền | `be/02-identity-auth.md` + `be/09-security-beyond-auth.md` + `rules/api-controller.md` §Chấm dứt phiên, §Rate limiting |
+| Test / ArchTest | `be/04-testing-strategy.md` |
+| Concurrency / RowVersion | `be/06-concurrency-control.md` |
+| Ranh giới tầng FE / gate | `fe/trien-khai/05-gate.md` + `src/FE/.claude/docs/architecture.md` |
+| Envelope FE / DTO / mapper | `fe/02-http-envelope.md` + `src/FE/.claude/docs/api-client.md` |
+| Component / token / UI | `fe/05-component-library.md` + `fe/04-design-token-system.md` + `.claude/docs/ui-conventions.md` |
+
+Chủ đề không có trong bảng → tra `README.md` rồi mở đúng **một** file.
+
+⚠️ **`be/trien-khai/` là lộ trình thi công P0→P6, KHÔNG đọc cả thư mục** — nó
+chiếm **264 KB**, một mình bằng nửa corpus. Chỉ mở đúng file mà bảng trên chỉ.
+
+## Vì sao phải đọc `.claude/rules` cùng với `doc/`
+
+`src/BE/.claude/rules/*.md` và `src/FE/.claude/docs/*.md` là quy ước **thực
+thi hiện tại** mà `backend-expert`/`frontend-expert` đang theo. Cần chúng để
+phân biệt *"lệch khỏi wiki vì cố ý đơn giản hoá đã thống nhất"* (không phải
+finding) với *"lệch vì thiếu sót thật"* (là finding).
+
+**Và chính chúng cũng là đối tượng review.** Rule sai không nằm yên — nó sinh
+ra code sai: `rules/api-controller.md` từng có đoạn mẫu rate limit dùng sai
+overload kèm lý do sai, `Program.cs` chép y theo nên mang nguyên lỗi (cả hệ
+thống chỉ còn 5 lượt đăng nhập/phút). Thấy rule mô tả thứ không tồn tại, mâu
+thuẫn nhau, hoặc dạy pattern đã bị thay thế → **đó là finding**.
 
 ## Ranh giới Core ↔ Module — kiểm riêng, không chung với các mục wiki-core khác
 
@@ -175,11 +215,66 @@ PlatformManager đã qua giai đoạn demo (xem
   `.ValidateDataAnnotations().ValidateOnStart()` không? Thiếu → PARTIAL (mức
   nhẹ hơn 2 mục trên — hậu quả là lỗi runtime chậm phát hiện, không phải lỗ
   hổng bảo mật).
-- `.github/workflows/*.yml` có tồn tại và chạy `dotnet build` + `dotnet test`
-  (bao gồm `PlatformManager.ArchTests`) trên mọi PR không? Đây là hạng mục
-  **duy nhất trong nhóm này không thuộc phạm vi review code C#/TS** — kiểm
-  bằng Glob/Read trực tiếp file YAML, không phải đọc rule wiki. Thiếu →
-  MISSING, ghi rõ đây là gap hạ tầng CI, không phải gap kiến trúc code.
+- **CI — KHÔNG kiểm, không báo finding.** Repo hiện **không có** `.github/`
+  (người dùng đã xoá 2026-08-21, có chủ đích). Mọi gate chạy **bằng tay**:
+  `dotnet build`, `dotnet test`, `npx ng lint`, `npx ng test`,
+  `bash scripts/fe-gate.sh`. Đừng báo "thiếu CI" như finding — đó là lựa chọn
+  đã biết, không phải sót.
+
+  Điều **vẫn phải** kiểm: bản thân các gate đó còn **chạy được** không (script
+  tồn tại, test xanh) — vì không còn máy nào tự chạy chúng, một gate hỏng sẽ
+  không ai biết cho tới lượt review kế tiếp.
+
+## Performance & Caching (2026-08-18, kiểm riêng)
+
+Đối chiếu `doc/huong_dan/wiki-core/be/11-performance-caching.md` +
+`src/BE/.claude/rules/performance.md`. Đây là mục **dễ báo cáo sai nhất** —
+đọc kỹ phần "không phải finding" bên dưới trước khi chấm.
+
+**Là finding thật:**
+
+- Repository/query **chỉ đọc** (map sang DTO, không `SaveChanges`) mà thiếu
+  `AsNoTracking()` → PARTIAL, liệt kê `file:line` từng chỗ.
+- Query lọc nóng không có index **dẫn đầu đúng cột đó** — đọc `HasIndex`
+  trong `*Configuration.cs` rồi đối chiếu **từng** `Where(...)` của
+  repository. Index `(A, B)` mà query chỉ lọc theo `B` → **vẫn là MISSING**,
+  không được tính là "đã có index" (đây chính là bẫy đã bắt được ở
+  `CriteriaAssessment`).
+- `.ToListAsync()` đứng **trước** `.Distinct()`/`.Skip()`/`.Where()` trong
+  cùng một hàm → PARTIAL (Q3).
+- `await` trong `foreach`/`for` gọi DB (N+1) → PARTIAL.
+- Cache được thêm mà **thiếu 1 trong 3**: số đo, danh sách đường ghi cần
+  invalidate, test invalidation → PARTIAL, ghi rõ thiếu cái nào.
+- Cache dữ liệu **phân quyền** chỉ dựa TTL, không invalidate tường minh
+  trong `UpdatePermissionMatrixCommand`/`UpdateResourcePermissionMatrixCommand`
+  → **báo ở mức nghiêm trọng nhất** (cùng mức `[RequirePermission]` thiếu) —
+  quyền đã thu hồi còn hiệu lực tới hết TTL là lỗ hổng bảo mật, không phải
+  vấn đề hiệu năng.
+- `static Dictionary`/`ConcurrentDictionary` dùng làm cache dữ liệu **từ
+  DB** → PARTIAL (không eviction, không invalidation).
+- Có `IDistributedCache`/Redis được thêm khi hệ thống vẫn 1 process →
+  PARTIAL, trái quyết định đã CHỐT (`11-performance-caching.md` §6.2).
+
+**KHÔNG phải finding:**
+
+- Thiếu cache ở một endpoint chậm → **không** phải MISSING. Quyết định đã
+  CHỐT là cache đi **sau** bước sửa query/thuật toán và **sau** khi đo; chưa
+  tới bước đó thì ghi "chưa áp dụng — chưa tới ngưỡng" theo đúng mục 3 của
+  §Quy trình review.
+- Phân trang/search trong bộ nhớ trên tập có **trần trên nhỏ đã ghi rõ bằng
+  con số** trong comment → ngoại lệ hợp lệ (§Ngoại lệ trong
+  `performance.md`). Comment kiểu "dataset hiện tại nhỏ" **không kèm con
+  số** → PARTIAL, vì ngoại lệ không kiểm chứng được.
+- `ConcurrentDictionary<Type, MethodInfo>` cache reflection/metadata bất
+  biến trong 1 process (vd `ExceptionHandlingBehavior`) → hợp lệ, nguồn dữ
+  liệu là chính assembly.
+- Query lấy entity **để sửa** mà không có `AsNoTracking()` → **đúng**, không
+  phải finding. Ngược lại, nếu thấy `AsNoTracking()` trên đường đọc-rồi-sửa
+  thì đó **là** finding nghiêm trọng (thay đổi âm thầm không được ghi).
+
+**Bằng chứng bắt buộc:** mục này chấm bằng `file:line` cụ thể, không chấm
+bằng cảm nhận "code trông có vẻ chậm". Không có `file:line` thì không ghi
+finding.
 
 ---
 
@@ -218,12 +313,26 @@ Theo mẫu `design-audit` đã có trong repo (`.claude/skills/design-audit/SKIL
 
 # Báo cáo
 
-Ghi ra file `doc/huong_dan/wiki-core/audit/<YYYY-MM-DD>-<be|fe|be-fe>.md`
-(tạo thư mục `audit/` nếu chưa có), cấu trúc:
+**KHÔNG ghi file report. KHÔNG có thư mục `audit/`.** Báo cáo trực tiếp bằng
+văn bản trả về (và `SendMessage` nếu chạy như teammate nền).
+
+> ### Vì sao bỏ hẳn `audit/` (2026-08-21)
+>
+> Thư mục đó từng chứa 12 file / **252 KB**, và agent được lệnh đọc report
+> lượt trước để đối chiếu. Nó **tự phình theo thời gian** — report lượt đầu
+> 11 KB, lượt gần nhất **48 KB** — nên mỗi lượt audit lại làm lượt sau nặng
+> hơn. Kết quả: 3 lượt review liên tiếp **chết giữa chừng vì cạn context**,
+> một lượt còn để lại lỗi cố ý trong code khi tắt trước lúc dọn canary.
+>
+> Bỏ đi thì mất khả năng trả lời *"finding này mở bao lâu rồi"*. Đánh đổi
+> chấp nhận được: finding đã đóng đều có bằng chứng sống là **test**, không
+> cần report kể lại; finding chưa đóng mà chỉ tồn tại trong report thì đằng
+> nào cũng là finding bị bỏ quên. Việc còn tồn đọng phải nằm ở nơi người ta
+> đọc khi làm — file wiki tương ứng — chứ không nằm trong nhật ký audit.
+
+Cấu trúc báo cáo:
 
 ```markdown
-# Core Compliance Report — <ngày> — <phạm vi: BE/FE/cả hai>
-
 ## Kết luận: PASS | PARTIAL | BLOCKED
 
 ## Findings
@@ -234,31 +343,12 @@ Ghi ra file `doc/huong_dan/wiki-core/audit/<YYYY-MM-DD>-<be|fe|be-fe>.md`
 - Gợi ý sửa: <cụ thể>
 
 ## PASS (tóm tắt, không cần bằng chứng chi tiết cho mỗi mục)
-- <danh sách quy tắc đã tuân thủ>
 ```
 
-Ngay sau đó, cập nhật (tạo nếu chưa có) `doc/huong_dan/wiki-core/audit/
-INDEX.md` — thêm 1 dòng bảng mỗi lần chạy, **không xoá dòng cũ**:
-
-```markdown
-# Audit Index
-
-| Ngày | Phạm vi | Kết luận | Finding mở | Finding đã đóng lần này | File |
-| --- | --- | --- | --- | --- | --- |
-| 2026-08-17 | BE | PARTIAL | 2 | 1 | audit/2026-08-17-be.md |
-```
-
-- "Finding mở" = số PARTIAL+MISSING của report vừa ghi (kể cả finding lặp
-  lại từ lần trước chưa fix).
-- "Finding đã đóng lần này" = finding từng PARTIAL/MISSING ở report **gần
-  nhất cùng phạm vi** (BE/FE) mà lần này đã lên PASS — đọc file report liền
-  trước cùng phạm vi trong `audit/` để đối chiếu trước khi điền số này.
-- Mục đích: 1 file duy nhất trả lời "đang tuân thủ core tới đâu" mà không
-  cần đọc lại toàn bộ lịch sử `audit/`.
-
-Sau khi ghi file, `SendMessage` báo cáo tóm tắt (đường dẫn file + số lượng
-finding theo mức + agent nào cần xử lý) — **không paste toàn bộ report vào
-tin nhắn**.
+**Finding cần nhớ qua nhiều lượt** (hoãn có chủ đích, đánh đổi đã cân nhắc):
+ghi thẳng vào **file wiki của chủ đề đó** dưới dạng ghi chú trạng thái — ví dụ
+`be/11-performance-caching.md` đang ghi *"`Modules.*` chưa có `AsNoTracking()`
+— hoãn có chủ đích"*. Người sửa sẽ đọc file đó; không ai đọc nhật ký audit.
 
 ---
 

@@ -56,14 +56,17 @@ di chuyển hoặc đặt tên khác. Vì vậy **KHÔNG hardcode `doc/Design/`*
 
 Đọc `source_paths` từ README của project, sau đó liệt kê trực tiếp từ code — không bao giờ dựa vào trí nhớ:
 
-- **Route & view** — route/page/section theo từng stack. **PlatformManager (hiện tại):** không có framework/router — `doc/Prototype/dashboard.html` là một file HTML tĩnh duy nhất; "route" ở đây là các section/anchor có tên trong file (topbar, KPI grid, bảng theo dõi, dialog báo cáo, v.v.), không phải URL riêng biệt. Khi `src/FE/` có app thật, cập nhật lại theo router thật của framework đó.
+- **Route & view** — route/page/section theo từng stack. **PlatformManager (từ 2026-08-22):** `src/FE/` là app **Angular 20** với router thật — census theo đúng 6 route lazy khai ở `src/FE/src/app/app.routes.ts` (`/dang-nhap`, `/doi-mat-khau`, `/dashboard`, `/danh-muc/dti`, `/quan-tri/nguoi-dung`, `/quan-tri/phan-quyen`). Dialog trong trang (`<dialog>`, tab) **không** phải route riêng — ghi chú chúng trong cột Layout của chính route chứa nó.
+  🧊 `doc/Prototype/` đã **đóng băng** (lịch sử, phủ 4/6 màn, đã lệch) — **không** census từ đó.
 - **Layout & shell** — layout dùng chung, master page, app shell (với PlatformManager: cấu trúc `.topbar` / `main` / `.layout` trong cùng file).
 - **Nguồn copy** — nguồn localization. **PlatformManager:** chưa có framework i18n nào — toàn bộ copy là tiếng Việt hardcode trực tiếp trong `.html`; đọc template để lấy copy verbatim.
 - **Brand asset** — mọi ảnh mà UI tham chiếu; copy các ảnh brand được tham chiếu vào `Assets/Brand/` **giữ nguyên tên file gốc** và ghi một dòng manifest cho từng ảnh. PlatformManager hiện không tham chiếu ảnh brand nào — ghi rõ "None yet" nếu đúng vậy, đừng bịa ra.
 
 ### 4. Screenshot
 
-- Probe target: với file tĩnh, mở trực tiếp bằng chrome-devtools MCP tools (`new_page` trỏ vào đường dẫn `file://` của `doc/Prototype/dashboard.html`, `take_screenshot`); với app có dev server, dùng `navigate_page` tới dev URL trước. Chụp vào `Assets/Screenshots/<flow-stem>/`, đặt tên `<view>[--state][--viewport].png` (viewport mặc định = `desktop-1440`).
+- Probe target: **PlatformManager cần CẢ HAI server** — API `dotnet run --project src/BE/PlatformManager.Api` (→ `:5027`) và FE `npm start` trong `src/FE` (→ `:4200`); phần lớn màn cần đăng nhập mới tới được. Dùng chrome-devtools MCP `navigate_page` tới dev URL rồi `take_screenshot`. Chụp vào `Assets/Screenshots/<flow-stem>/`, đặt tên `<view>[--state][--viewport].png` (viewport mặc định = `desktop-1440`).
+- **Chính sách số lượng ảnh (chốt 2026-08-22):** mặc định chụp **1 ảnh desktop cho MỖI màn** — đủ trả lời "màn này trông ra sao" với chi phí thấp. Biến thể trạng thái/viewport chỉ chụp khi có người thật sự cần ca đó; số còn lại ghi `pending` kèm hướng dẫn tái lập trong bảng Screenshot Manifest. Trước đây danh sách phình tới 40 ảnh cho 5 màn mà không ai chụp — `pending` hàng loạt thì vô dụng ngang không có.
+- **Không bao giờ ghi credential** vào bất kỳ artefact design nào, kể cả hướng dẫn chụp.
 - Nếu KHÔNG chụp được, ghi dòng "pending" trong Screenshot Manifest kèm đúng lệnh khởi chạy/đường dẫn — **không bao giờ block vì screenshot**.
 
 ### 5. Ghi UiInventory.md

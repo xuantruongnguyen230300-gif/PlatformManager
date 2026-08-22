@@ -38,6 +38,7 @@ Lỗi:
 | --- | --- | --- |
 | `AUTH.INVALID_CREDENTIALS` | 422 | Sai user/password |
 | `AUTH.LOCKED_OUT` | 422 | Tài khoản đang bị khoá |
+| `RATE_LIMIT.TOO_MANY_REQUESTS` | **429** | Quá **5 lượt/phút TỪ CÙNG MỘT IP** (hoặc chạm hạn mức chung 100/phút/IP) — xem mục riêng bên dưới |
 | (validation) | 400 | UserName/Password rỗng — đã verify thật: |
 
 ```
@@ -47,6 +48,73 @@ HTTP/1.1 400 Bad Request
  "traceId":"...","fields":{"UserName":["'User Name' must not be empty."],
  "Password":["'Password' must not be empty."]}}
 ```
+
+### 🚦 429 Too Many Requests — rate limit (cập nhật 2026-08-21, lần 2)
+
+**HAI tầng giới hạn, CỘNG DỒN — không phải một.** Rất dễ đọc nhầm, nên ghi rõ:
+
+| Tầng | Hạn mức | Áp cho |
+| --- | --- | --- |
+| `GlobalLimiter` | **100 request/phút/IP** | **MỌI** endpoint, kể cả endpoint không khai gì |
+| Policy `"login"` | **5 request/phút/IP** | Riêng `POST /api/auth/login` |
+
+`POST /api/auth/login` tiêu **cả hai** limiter cho mỗi lượt. Mốc chặt hơn luôn chạm trước nên
+hành vi thấy được vẫn là "429 ở lượt thứ 6", nhưng 5 lượt login đó **có** ăn vào hạn mức 100
+chung của cùng IP — FE gọi nhiều API sau khi đăng nhập cần biết điều này.
+
+**Điểm MỚI so với bản trước:** trước 2026-08-21 chỉ mỗi login có giới hạn; mọi API khác **không
+có giới hạn nào** (policy `"default"` đã khai nhưng không endpoint nào gắn). Nay `GlobalLimiter`
+phủ toàn bộ ⇒ **bất kỳ endpoint nào** cũng có thể trả 429, không riêng màn đăng nhập.
+
+**Ngoại lệ — KHÔNG bao giờ trả 429:** `/health` và `/hangfire` (monitoring + dashboard quản trị).
+
+#### ✅ 429 nay có ĐÚNG envelope + `Retry-After` (đổi shape — FE cần cập nhật)
+
+Bản trước ghi *"429 KHÔNG có envelope — body RỖNG HOÀN TOÀN"* và để ngỏ câu hỏi có nên bọc
+envelope hay không. **Người dùng đã chốt: bọc.** Đã triển khai qua
+`RateLimiterOptions.OnRejected`, có integration test khẳng định từng field.
+
+```
+HTTP/1.1 429 Too Many Requests
+Content-Type: application/json; charset=utf-8
+Retry-After: 47
+```
+```json
+{
+  "message": "Bạn thao tác quá nhanh. Vui lòng thử lại sau 47 giây.",
+  "status": "BUSINESS_ERROR",
+  "code": "TooManyRequests",
+  "businessCode": "RATE_LIMIT.TOO_MANY_REQUESTS",
+  "traceId": "0HN...",
+  "retryable": true
+}
+```
+
+- `data` và `fields` **vắng mặt** (quy ước `WhenWritingNull` chung của toàn hệ thống) — giống
+  mọi response lỗi khác, FE không cần nhánh xử lý riêng.
+- `Retry-After` (giây) lấy **từ metadata của limiter**, không hardcode — nếu cửa sổ đổi thì giá
+  trị tự đi theo. Dùng chính con số này cho đồng hồ đếm ngược, đừng giả định 60.
+- `retryable: true` — đây là mã lỗi đầu tiên field này mang nghĩa thật: chờ hết rồi gọi lại là
+  xong, người dùng không phải sửa gì.
+
+#### 🔴 Việc FE cần làm (`frontend-expert`)
+
+1. **`ApiErrorCode` trong `src/FE/src/app/core/http/api-result.model.ts` phải thêm
+   `'TooManyRequests'`.** Union hiện liệt kê đúng 8 giá trị và **thiếu** giá trị này ⇒ response
+   429 thật sẽ không khớp kiểu. BE **không** sửa file FE (ngoài phạm vi) — cần FE tự thêm.
+2. **Gỡ nhánh xử lý đặc biệt cho 429** trong `httpErrorInterceptor` nếu có: trước đây interceptor
+   bị dặn *không được* parse body 429 (vì rỗng). Nay 429 parse được như mọi lỗi khác, và
+   `businessCode = "RATE_LIMIT.TOO_MANY_REQUESTS"` là thứ nên bind.
+3. **429 không còn là chuyện riêng của màn đăng nhập** — bất kỳ màn nào cũng có thể gặp. Thông
+   báo chung nên đọc `message` từ envelope (đã có sẵn số giây) thay vì tự soạn.
+4. Đừng nhầm 429 với `AUTH.LOCKED_OUT` (422): 422 là **tài khoản** bị khoá (cần admin mở), 429 là
+   **IP** đang bị siết (tự hết sau ≤ 1 phút).
+
+BE tham chiếu: `src/BE/PlatformManager.Api/Program.cs` (`ResolveRateLimitPartitionKey`,
+`AddRateLimiter` + `GlobalLimiter` + `OnRejected`), quy tắc ở
+`src/BE/.claude/rules/api-controller.md` §"Rate limiting", test chốt
+`src/BE/Tests/PlatformManager.Core.IntegrationTests/RateLimiting/` (`LoginRateLimitPartitionTests`
++ `GlobalRateLimitTests`).
 
 ## `POST /api/auth/logout`
 
@@ -82,6 +150,25 @@ qua code — `IdentityService.ChangePasswordAsync`, chưa chạy tay được v�
 Lỗi: `AUTH.CHANGE_PASSWORD_FAILED` (422) — kèm message chi tiết từ Identity (password không
 đủ mạnh, sai mật khẩu hiện tại...).
 
+### 🔐 Ảnh hưởng tới phiên đăng nhập: giữ phiên hiện tại, chấm dứt các phiên khác
+
+| Phiên | Sau khi đổi mật khẩu thành công |
+| --- | --- |
+| **Phiên đang gọi endpoint này** | **Giữ nguyên** — người dùng dùng tiếp bình thường, KHÔNG bị đăng xuất |
+| **Mọi phiên khác của chính người đó** (trình duyệt/máy khác) | **Bị chấm dứt** trong vòng **≤ 30 phút** — request kế tiếp của các phiên đó trả **401** |
+
+Đây là hành vi **cố ý, đúng chuẩn bảo mật**: đổi mật khẩu phải vô hiệu hoá các phiên cũ, nhưng
+không có lý do gì đá người vừa chủ động đổi mật khẩu ra khỏi hệ thống. BE giữ phiên hiện tại
+bằng `SignInManager.RefreshSignInAsync` ngay sau khi đổi thành công.
+
+Cơ chế và ngưỡng 30 phút: xem `doc/huong_dan/wiki-core/be/02-identity-auth.md` §"Vòng đời
+phiên đăng nhập".
+
+**FE lưu ý:** **không** cần tự gọi `POST /api/auth/logout` rồi bắt đăng nhập lại sau khi đổi
+mật khẩu — cookie hiện tại vẫn hợp lệ. Luồng đúng cho user `mustChangePassword: true`: đổi mật
+khẩu thành công → cập nhật `mustChangePassword` về `false` trong state (hoặc gọi lại
+`GET /api/auth/me`) → đi thẳng vào ứng dụng.
+
 ## Lỗi hạ tầng không mong đợi — đã verify thật (không lộ stack trace)
 
 ```
@@ -98,3 +185,10 @@ HTTP/1.1 500 Internal Server Error
   cho `localhost`, nên vẫn hoạt động ở dev dù chạy `http`). CORS đã verify thật trả đúng
   `Access-Control-Allow-Credentials: true` + origin cụ thể (không `*`).
 - `frontend-expert`: gọi API luôn kèm `credentials: 'include'`/`withCredentials: true`.
+- **Vòng đời phiên:** cookie `ExpireTimeSpan = 14 ngày` + `SlidingExpiration = true` ⇒ với
+  người dùng thao tác đều tay, cookie **thực tế không tự hết hạn**. Cơ chế chấm dứt phiên duy
+  nhất (ngoài `logout`) là `SecurityStampValidator`, chu kỳ **30 phút**. Hệ quả FE cần biết:
+  một phiên có thể **đột ngột nhận 401** ở request bất kỳ khi tài khoản bị khoá / bị đổi role /
+  bị đổi mật khẩu ở nơi khác — interceptor xử lý 401 phải điều hướng về màn đăng nhập một cách
+  êm, không coi đó là lỗi hệ thống. Chi tiết:
+  `doc/huong_dan/wiki-core/be/02-identity-auth.md` §"Vòng đời phiên đăng nhập".

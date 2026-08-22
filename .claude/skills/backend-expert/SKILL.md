@@ -48,3 +48,11 @@ bàn giao API Contract Card với `frontend-expert`) đã được ghi trong
 - Thay đổi schema DB, chạy migration lên môi trường dùng chung, hay chọn cơ
   chế auth lần đầu đều cần dừng lại hỏi người dùng — subagent đã được dặn
   điều này, đừng ép nó bỏ qua.
+- **Task về hiệu năng ("chậm", "tối ưu", "thêm cache")**: thứ tự đã CHỐT là
+  `query pattern → thuật toán → ĐO LẠI → cache`
+  (`doc/huong_dan/wiki-core/be/11-performance-caching.md`). Không yêu cầu
+  subagent thêm cache khi chưa có số đo — cache đặt trước các bước kia chỉ
+  che lỗi, tạo nợ vĩnh viễn, và với dữ liệu phân quyền còn là rủi ro bảo
+  mật. Nếu người dùng yêu cầu thẳng "thêm cache", chuyển nguyên văn yêu cầu
+  cho subagent và để nó trình bày thứ tự + đề xuất đo trước, đừng tự bỏ qua
+  bước đó giúp nó.

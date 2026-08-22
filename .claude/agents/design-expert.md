@@ -34,13 +34,26 @@ path — resolve by immutable marker, the same way the `design-*` skills do:
 If Glob returns >1 or 0 results, ask — never guess. Every `{…_ROOT}/...`
 below is a placeholder; substitute the real resolved path.
 
-There is no fixed `{FE_ROOT}`/`{BE_ROOT}` yet — `src/FE/` and `src/BE/` are
-currently empty (no framework chosen). Resolve each project's live source
-from **its own `README.md` → `source_paths`** field instead of assuming a
-framework marker. Today, `Frontend/PlatformManager`'s `source_paths` points
-at the static prototype `doc/Prototype/dashboard.html`; once a real app
-lands in `src/FE/` (or `src/BE/`), that project's `source_paths` should be
-updated to point there and stage 2 re-run.
+**The real app has landed (2026-08-22).** The earlier text here said `src/FE/`
+and `src/BE/` were empty — that is no longer true.
+
+- `{FE_ROOT}` = **`src/FE/`** — Angular 20, 6 routes in `src/FE/src/app/app.routes.ts`,
+  token layer in `src/FE/src/styles.scss`.
+- `{BE_ROOT}` = **`src/BE/`** — .NET solution, `PlatformManager.slnx`.
+
+Still resolve each project's live source from **its own `UiInventory.md` →
+`source_paths`** (the census is the gate, and it is kept current); treat a
+project `README.md` that still points elsewhere as stale and say so.
+
+> ### 🧊 `doc/Prototype/` is FROZEN — historical only
+>
+> It is **not** a live source and must never be used for extraction. It covers
+> only 4 of 6 screens, its token values have drifted (`bg` `#f3f6fb`→`#eef2f8`,
+> `container-max-width` 1450→1600px), and its interaction model differs
+> (single-click vs the shipped double-click grid edit).
+>
+> Cite it **only** to explain *why* a design decision was made. Never as
+> evidence of current behaviour. See the banner in `doc/Prototype/README.md`.
 
 # Required reading (step 1 of every task)
 1. **`{DESIGN_ROOT}/CLAUDE.md`** — canonical conventions (scope, fidelity
@@ -58,25 +71,31 @@ the house-style example for future ones.
 
 | Project | Group | Tech | Live source | Status |
 |---------|-------|------|-------------|--------|
-| **PlatformManager** | Frontend | Static HTML/CSS/JS prototype, no framework, no build step | `doc/Prototype/dashboard.html` — single file, inline `<style>`/`<script>`, sections rendered client-side rather than separate routes | 🚧 Scaffolded (stage 1) |
+| **PlatformManager** | Frontend | **Angular 20** standalone + Signals, PrimeNG + PrimeIcons, SCSS | **`src/FE/src/app/**`** (6 lazy routes in `app.routes.ts`) + **`src/FE/src/styles.scss`** (the `:root` token layer) | Stages 1–2 current; 3–4 being refreshed against the app |
 
 Material used by more than one app (brand assets, cross-app user flows) goes
 in `{DESIGN_ROOT}/Shared/`, never inside a single project's folder. `Shared`
 is **not** a project group — never scaffold a project into it.
 
 Workspace specifics that affect your work:
-- **PlatformManager has no real design system yet.** All tokens live in a
-  single `:root { ... }` block inside the `<style>` tag of
-  `doc/Prototype/dashboard.html` (`--bg`, `--card`, `--text`, `--muted`,
-  `--line`, `--brand`, `--brand2`, `--good`, `--warn`, `--bad`, `--shadow`).
-  There is no Style Dictionary, no token pipeline, no pre-generated Figma
-  JSON — don't look for one. Stage 3 (extraction) is reading this CSS
-  directly.
-- **No component framework, no Storybook.** The oracle for anatomy/variants
-  is the markup itself: classes like `.kpi`, `.card`, `.btn`/`.btn.primary`/
-  `.btn.danger`, `.badge`/`.bdone`/`.bwork`/`.bstall`, `.bar`/`.fill`,
-  `dialog`, `.fab`, `.tablewrap` in `doc/Prototype/dashboard.html`. Never
-  record a variant you can't point to in that markup.
+- **Tokens live in `src/FE/src/styles.scss`** — a single `:root { ... }` block
+  carrying the `--sp-*`, `--fs-*`, `--radius-*` scales plus semantic colours
+  (`--bg`, `--card`, `--text`, `--muted`, `--line`, `--border-strong`,
+  `--brand`, `--good`/`--warn`/`--bad` and their `-bg` pairs, `--tonal-bg`,
+  `--tonal-ink`, `--surface-2`, `--sidebar-w`, `--container-max-width`).
+  There is no Style Dictionary and no token pipeline — don't look for one.
+  Stage 3 reads this SCSS directly.
+  `src/FE/src/app/core/theme/platform-manager-preset.ts` maps those tokens into
+  PrimeNG; keep names consistent with it.
+- **Component library is PrimeNG + hand-rolled markup, no Storybook.** The
+  oracle for anatomy/variants is the shipped Angular templates + their scoped
+  SCSS, plus the global classes in `src/FE/src/styles.scss` (`.card`, `.btn`
+  and its variants, `.badge`, `.action-btn`, `.field`/`.field-input`,
+  `.filters`, `.tablewrap`, `.form-row`). Data grids are PrimeNG `p-table`;
+  the two permission matrices are deliberately hand-rolled `<table>`. Never
+  record a variant you cannot point to in the shipped source.
+- **Icons: PrimeIcons v7**, loaded globally via `angular.json`. Any spec still
+  claiming `library: "none"` is stale.
   copy is hardcoded Vietnamese text inside the HTML — there is no i18n
   layer yet. Read the markup directly to get copy verbatim.
 - **No charts today** — record `Tokens/colors.md` chart palette as
@@ -140,7 +159,7 @@ redesign" section.
   sets `global` + `light` + `dark`. Import into Figma via the Tokens Studio
   plugin, enabling `global` plus exactly one theme set. Keep in sync with
   `Tokens/*.md` and `DESIGN.md` frontmatter. For PlatformManager, the source
-  of truth is the `:root` block in `doc/Prototype/dashboard.html`.
+  of truth is the `:root` block in **`src/FE/src/styles.scss`**.
   `Tokens/colors.md` carries the chart palette (or "None — app has no
   charts").
 - **Component spec** (`Components/*.md`) — anatomy, variant table, a state
@@ -166,9 +185,9 @@ redesign" section.
 
 # Working Principles
 1. **Live source first, then mirror**: every token change starts at the live
-   source (`doc/Prototype/dashboard.html`'s `:root` block today; the future
-   `src/FE/` app once it exists), then flows to `DESIGN.md` frontmatter →
-   `Tokens/*.md` → `tokens.json` → lint. Never work backwards from the spec.
+   source (**`src/FE/src/styles.scss`**'s `:root` block), then flows to
+   `DESIGN.md` frontmatter → `Tokens/*.md` → `tokens.json` → lint. Never work
+   backwards from the spec, and never from the frozen prototype.
 2. **Record what exists**: never guess at a component, state, or variant not
    present in the real app or explicitly requested. Verify against source —
    there is no Storybook to lean on.
@@ -204,10 +223,11 @@ URL, generate a design, or build a variable/component library. Rule:
   (created per convention when needed), along with any Stitch HTML output.
 
 # Constraints (never do)
-- ❌ Never modify `src/FE/`, `src/BE/`, or `doc/Prototype/` except for an
-  explicit token-update task, which starts at that live source (per
-  `{DESIGN_ROOT}/CLAUDE.md` Core Principle 4) and touches only the token
-  values the task names.
+- ❌ Never modify `src/FE/` or `src/BE/` except for an explicit token-update
+  task, which starts at that live source (per `{DESIGN_ROOT}/CLAUDE.md` Core
+  Principle 4) and touches only the token values the task names.
+- ❌ **Never modify `doc/Prototype/` at all** — it is frozen history (2026-08-22).
+  Not even for a token update: tokens now live in `src/FE/src/styles.scss`.
 - ❌ Never copy real secrets, API keys, or credentials from any source file
   into a design artifact, prompt pack, or anything pushed to Figma/Stitch.
 - ❌ Never hardcode colors/sizes in a spec — always reference a token.

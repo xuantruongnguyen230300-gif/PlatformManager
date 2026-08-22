@@ -143,6 +143,7 @@ public enum ErrorCode
     NotFound            = 404,   // resource chính của route không tồn tại
     Conflict            = 409,   // unique / concurrency
     BusinessRuleError   = 422,   // vi phạm quy tắc nghiệp vụ
+    TooManyRequests     = 429,   // rate limit — CHỈ middleware sinh (thêm 2026-08-21)
     SystemError         = 500,
 }
 ```

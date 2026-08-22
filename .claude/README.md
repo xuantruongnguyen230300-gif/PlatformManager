@@ -1,4 +1,27 @@
-# Hướng dẫn: Tri thức của agent frontend-expert / backend-expert nạp từ đâu
+# `.claude/` — hệ thống agent & skill của PlatformManager
+
+> **Đây là tài liệu VỀ bộ agent, không phải tri thức về sản phẩm.**
+> Ranh giới đã chốt ở [`CLAUDE.md`](CLAUDE.md) §2: `.claude/` phụ trách
+> **skill và agent**; `doc/` là **nguồn tài liệu duy nhất** cho mọi tri thức
+> kiến trúc/kỹ thuật/nghiệp vụ. Tri thức mới → chỉ cập nhật `doc/`.
+> `.claude/` chỉ **trỏ đường**, không chép nội dung.
+>
+> Phép thử khi phân vân: *"xoá hết agent đi thì file này còn giá trị không?"*
+> Còn → thuộc `doc/`. Không → thuộc `.claude/`.
+>
+> File này trước ở `doc/huong_dan/nap-tri-thuc-agent-fe-be.md`, chuyển về đây
+> 2026-08-21 vì nó mô tả chính hệ thống agent.
+
+## Nội dung `.claude/`
+
+| Đường dẫn | Chứa gì |
+| --- | --- |
+| [`CLAUDE.md`](CLAUDE.md) | Luật toàn repo: git, ranh giới `.claude` ↔ `doc`, tài liệu phải mô tả thứ có thật |
+| [`settings.json`](settings.json) | Cấu hình harness — `permissions.allow` / `permissions.deny` (nơi lệnh cấm git được **cưỡng chế bằng máy**) |
+| `agents/` | Định nghĩa 4 agent: `backend-expert`, `frontend-expert`, `core-reviewer`, `design-expert` |
+| `skills/` | Skill gọi bằng `/<tên>` — bao gồm `setup-tai-khoan-figma.md` của `design-export-figma` |
+
+---
 
 Repo này có 2 agent chuyên gia **xây code** — `frontend-expert` (Angular 20,
 `src/FE/`) và `backend-expert` (.NET Clean Architecture + CQRS, `src/BE/`) —
@@ -59,7 +82,7 @@ file cho mọi task.
 ## Vì sao tách 3 lớp thay vì gộp vào 1 file agent (như VNR.Successor làm)
 
 Repo tham chiếu ban đầu (`VNR.Successor` — xem
-[setup-figma-tai-khoan-moi.md](./setup-figma-tai-khoan-moi.md) và
+[skills/design-export-figma/setup-tai-khoan-figma.md](skills/design-export-figma/setup-tai-khoan-figma.md) và
 `doc/Design/SETUP.md` để biết bối cảnh dự án đó) gộp toàn bộ tri thức
 (~1500 dòng) trực tiếp vào 2 file agent, vì agent đó mô tả một codebase
 **đã tồn tại** với vô số sự thật đo được (số dòng, bug đã biết, ArchTests).
@@ -154,9 +177,15 @@ của PlatformManager (`doc/Design/Frontend/PlatformManager/`) + các quyết
   feature nghiệp vụ đơn lẻ).
 - **Thủ công**: `/core-reviewer <phạm vi>`.
 
-Báo cáo ghi ra `doc/huong_dan/wiki-core/audit/<ngày>-<phạm vi>.md`; mỗi
-finding chỉ đích danh agent chịu trách nhiệm sửa, và việc sửa **luôn** thuộc
-về `backend-expert`/`frontend-expert`.
+**Báo cáo trả về trực tiếp — KHÔNG ghi file, KHÔNG có thư mục `audit/`.**
+Mỗi finding chỉ đích danh agent chịu trách nhiệm sửa, và việc sửa **luôn**
+thuộc về `backend-expert`/`frontend-expert`.
+
+> Thư mục `audit/` đã bị bỏ hẳn (2026-08-21). Nó từng chứa 12 file / 252 KB và
+> agent được lệnh đọc report lượt trước để đối chiếu — nên **mỗi lượt audit làm
+> lượt sau nặng hơn** (report đầu 11 KB → report cuối 48 KB). Kết quả: 3 lượt
+> review liên tiếp chết vì cạn context. Việc còn tồn đọng nay ghi thẳng vào
+> **file wiki của chủ đề đó**, nơi người sửa thật sự đọc.
 
 ## Khi nào cần cập nhật `wiki-core/`
 

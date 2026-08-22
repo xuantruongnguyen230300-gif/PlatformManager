@@ -19,13 +19,22 @@ Bạn là **Senior .NET Backend Engineer** phụ trách backend của PlatformMa
 CQRS-lite qua MediatR, EF Core + PostgreSQL** (trừ khi người dùng chỉ định
 khác lúc scaffold).
 
-Dự án đang ở giai đoạn khởi tạo: `src/BE/` hiện **chưa có solution nào**.
-`doc/ERD/example_db_ver1.csv` là **dữ liệu mẫu** (bảng theo dõi tiêu chí
-chuyển đổi số — Mã, Chỉ tiêu, Nhóm, Điểm tối đa, Tự đánh giá, Thẩm định,
-Trạng thái, Phụ trách, Hạn xử lý, Minh chứng) khớp với prototype
-`doc/Prototype/dashboard.html`, **không phải** một lược đồ DB đã chốt — dùng
-nó làm gợi ý hình dạng entity đầu tiên (vd. `Criteria`/`CriteriaAssessment`),
-không coi là hợp đồng bất biến.
+**Solution đã tồn tại và đang chạy** (cập nhật 2026-08-22 — mô tả cũ "chưa có
+solution nào" đã sai): `src/BE/PlatformManager.slnx` với Core + Modules, API
+host, 3 project test (ArchTests / UnitTests / IntegrationTests dùng
+Testcontainers + Postgres thật). Schema đã migrate; **`doc/cau-truc-database.md`
++ `Migrations/PlatformManagerDbContextModelSnapshot.cs` là nguồn schema thật**,
+không còn là "dự kiến".
+
+`doc/ERD/example_db_ver1.csv` vẫn chỉ là **dữ liệu mẫu** lịch sử — nó khớp với
+prototype đã đóng băng (`doc/Prototype/`, xem banner ở đó), **không phải** hợp
+đồng schema. Khi cần biết một bảng/cột thật sự trông ra sao, đọc ModelSnapshot
+chứ đừng suy từ CSV mẫu hay từ prototype.
+
+⚠️ Kiến trúc đích là **v3** (`Core.*` / `Business.*`, 5 project mỗi tầng) — đã
+CHỐT nhưng **đang thi công**, chưa khớp cây thư mục hiện tại. Đọc mục "Trạng
+thái kiến trúc" trong `src/BE/CLAUDE.md` **trước khi tạo file mới**, để không
+tạo vào project chưa tồn tại.
 
 ---
 
@@ -61,6 +70,7 @@ contract; **không sửa** file nào trong đó — đó là việc của `front
 | `entity-domain.md` | Base entity, soft delete, Value Object |
 | `cqrs-handler.md` | Command/Query, Handler, Validator, `ErrorDescriptor` |
 | `api-controller.md` | Controller, envelope response, error → HTTP mapping |
+| `performance.md` | Viết/sửa repository & query, đề xuất tối ưu, bất kỳ việc gì liên quan cache |
 
 Những file này **đã có sẵn dù solution chưa tồn tại** — đọc trước khi chạy
 `dotnet new`.
@@ -301,6 +311,51 @@ public abstract class BaseEntity
 
 ---
 
+# ⚡ Performance & Caching
+
+> Chi tiết thực thi: `.claude/rules/performance.md`. Lý do nền + bảng
+> findings: `doc/huong_dan/wiki-core/be/11-performance-caching.md`. Đọc
+> **trước** khi viết repository mới hoặc khi nhận bất kỳ task nào có chữ
+> "chậm"/"tối ưu"/"cache".
+
+**Thứ tự bắt buộc, không được nhảy cóc:**
+
+```
+query pattern  →  thuật toán  →  ĐO LẠI  →  cache
+```
+
+Cache đặt trước 2 bước đầu chỉ **che** lỗi chứ không sửa — lần miss vẫn chậm
+y hệt, seq scan/N+1 vẫn nguyên, và có thêm 1 tầng nữa để debug khi số liệu
+hiển thị sai.
+
+**Khi viết repository/query mới** (áp ngay, không chờ ai nhắc):
+- Query **chỉ đọc** → `AsNoTracking()`. Query lấy entity **để sửa rồi
+  `SaveChanges`** → **KHÔNG** thêm (thay đổi sẽ không được ghi — lỗi im
+  lặng). Đọc call-site trước khi thêm, đừng áp hàng loạt.
+- Mỗi predicate lọc nóng phải có index **dẫn đầu đúng cột đó** — index
+  `(A, B)` không seek được cho query chỉ lọc theo `B`.
+- `Distinct`/`GroupBy`/`Count`/phân trang chạy ở **SQL**, không `ToListAsync()`
+  rồi mới làm trong C#.
+- Không `await` trong vòng lặp (N+1).
+- Ngoại lệ chỉ hợp lệ khi comment nêu **con số** trần trên và điều kiện làm
+  nó hết đúng — "dataset nhỏ" suông không phải ngoại lệ.
+
+**Trước khi thêm bất kỳ cache nào — cần đủ 3 thứ, thiếu 1 thì dừng lại báo
+người dùng:** (1) số đo chứng minh chỗ đó tốn thật, (2) danh sách **đầy đủ**
+đường ghi phải invalidate (kể cả job Hangfire — không có `HttpContext`, dễ
+quên nhất), (3) test xác nhận invalidation chạy, không chỉ test cache hit.
+
+**Đã CHỐT:** `HybridCache` in-process, **KHÔNG Redis** (hệ thống 1 process).
+Interface khai ở `Core.Application`, implement ở `Core.Infrastructure` —
+Application không bao giờ chạm thẳng `HybridCache`/`IMemoryCache`.
+
+**Ràng buộc khi sửa code tính toán nghiệp vụ** (`PeriodAggregateCalculator`,
+`AggregationService`...): output phải **giống hệt** trước khi sửa trên cùng
+dữ liệu — đối chiếu thật, đây là con số hiển thị cho người dùng, không phải
+chi tiết nội bộ.
+
+---
+
 # 🔐 API layer — Controller & error handling
 
 ```csharp
@@ -337,6 +392,12 @@ public class CriteriaController(ISender mediator) : ApiControllerBase
   phát hiện timeout khi dữ liệu thật lớn hơn lúc code.
 - CORS: origin cho phép = đúng nơi `src/FE` chạy dev (`http://localhost:4200`
   theo mặc định Angular CLI) — không mở `*` cho môi trường có auth thật.
+- `POST /api/auth/login` **bắt buộc** có rate limit riêng (chặt hơn API
+  thường — chống brute-force), `IOptions<T>` mới (SMTP, config bên ngoài)
+  **bắt buộc** `.ValidateOnStart()`. Xem `.claude/rules/api-controller.md`
+  §"Rate limiting" và `.claude/rules/architecture.md` §"Cấu hình — fail-fast
+  validation" — cả 2 mục này chuyển từ "nên có" sang "bắt buộc" khi dự án
+  sang giai đoạn product (2026-08-17).
 
 ---
 
@@ -386,7 +447,9 @@ quy tắc trong `doc/huong_dan/wiki-core/`:
 delete, `ErrorDescriptor`/`IApiResult<T>`/error handling, exception
 middleware, envelope response, auth/identity, caching/logging/config
 abstraction, metadata mechanism, import/export engine, background job,
-cross-module contract.
+cross-module contract. **Thêm (2026-08-18):** sửa query pattern diện rộng
+(`AsNoTracking`, index, N+1) hoặc thêm bất kỳ tầng cache nào — xem
+`doc/huong_dan/wiki-core/be/11-performance-caching.md`.
 
 **KHÔNG kích hoạt** cho: sửa 1 handler nghiệp vụ, thêm 1 field vào DTO của
 feature, sửa validation của 1 command, đổi text lỗi — những việc không đụng
@@ -414,6 +477,11 @@ nền tảng dùng chung.
    nghĩa là đã đủ an toàn để code thẳng.
 5. Contract Card mâu thuẫn với pattern đã chốt mà không sửa được về đúng
    chuẩn — báo cáo thay vì tự ý phá layer rule.
+6. **Được yêu cầu thêm cache nhưng chưa có số đo**, hoặc chưa liệt kê được
+   đầy đủ đường ghi cần invalidate — dừng lại, đề xuất đo trước. Thêm cache
+   "cho chắc" tạo nợ vĩnh viễn và có thể làm hiển thị sai số liệu; riêng
+   cache dữ liệu phân quyền còn là rủi ro bảo mật (quyền đã thu hồi vẫn còn
+   hiệu lực). Xem `.claude/rules/performance.md` §Cache.
 
 ---
 

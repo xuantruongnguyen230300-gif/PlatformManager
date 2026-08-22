@@ -7,7 +7,7 @@ Guidance for Claude Code working in `doc/Design/`, PlatformManager's Product Des
 - **This file governs**: `doc/Design/` and everything beneath it. It is self-contained — design work needs no sibling area's docs beyond the read-only lookups below.
 - **In scope**: all specs, tokens, components, and screens under `doc/Design/<Backend|Frontend>/<Project>/` and `doc/Design/Shared/`.
 - **Out of scope — do not modify**: `src/BE/`, `src/FE/`, `doc/Prototype/`, `doc/ERD/`. Exception: a token-update task starts in the live source (Core Principle 4) — then edits stay confined to the token values the task names.
-- **When to cross (read-only, expected)**: reading live source in `src/FE/`, `src/BE/`, or `doc/Prototype/` to extract real CSS/token values (the code is the source of truth).
+- **When to cross (read-only, expected)**: reading live source in `src/FE/` or `src/BE/` to extract real CSS/token values (the code is the source of truth). 🧊 `doc/Prototype/` is **frozen history** — readable for design *intent* only, never for extraction.
 
 ## 🎯 Core Principles (Read First)
 
@@ -42,12 +42,24 @@ Define success criteria against the live source. Verify before finishing.
 
 Specs describe the app **as-shipped**: real copy, real logo usage, real quirks — so AI-generated screens resemble the existing product. Anything you would prefer different (mixed styles, inconsistent spacing, layout warts) is recorded **only** under a clearly-marked **"Normalize on redesign"** section — never silently idealized into the spec itself. Generators are told to reproduce the shipped UI exactly; redesigns consume the Normalize lists deliberately.
 
-**Greenfield carve-out**: PlatformManager has no shipped frontend/backend app yet (`src/FE/` and `src/BE/` are empty) — the only shipped UI today is the static prototype `doc/Prototype/dashboard.html`. Until a real app lands, that prototype IS the live source for the Fidelity Policy. If a screen is designed net-new (no prototype coverage at all), build it from the brief via the Figma MCP instead of reverse-engineering nonexistent code — the one carve-out from as-shipped fidelity — then write a `Screens/*.md` spec documenting the result.
+**~~Greenfield carve-out~~ — EXPIRED 2026-08-22. The real app has landed.**
+
+The earlier text said *"PlatformManager has no shipped frontend/backend app yet (`src/FE/` and `src/BE/` are empty) — the only shipped UI today is the static prototype"*. That is **no longer true**: `src/FE/` is a complete Angular 20 app with **6 routed screens** (`app.routes.ts`), and `src/BE/` is a running .NET solution.
+
+**Live source, in priority order:**
+
+1. **`src/FE/src/app/**`** — the shipped app. Component templates (`*.html`), scoped styles (`*.scss`), and `src/styles.scss` are the ground truth for layout, copy, and tokens.
+2. **`doc/Prototype/*.html`** — **design INTENT reference only**, not as-shipped. It covers 4 of 6 screens and the app has since diverged from it. Cite it for original intent (why a layout looks the way it does), never as evidence of current behaviour.
+3. **`spec/*/`** — business rules behind the UI.
+
+Two screens (`/doi-mat-khau`, `/quan-tri/phan-quyen`) have **no prototype at all** — they were built directly in Angular. For those the app is the only source; do not invent a prototype lineage for them.
+
+> Why this matters enough to write down: sourcing a spec from the prototype now would produce a document describing a screen that **is not what ships** — the exact "documentation describes something that doesn't exist" failure that `.claude/CLAUDE.md` §3 forbids.
 
 ## Groups
 
 - **`Backend/`** — private UIs embedded directly in a backend service under `src/BE/` once one exists.
-- **`Frontend/`** — the public app under `src/FE/` (or, until that exists, the static prototype in `doc/Prototype/`).
+- **`Frontend/`** — the public app under `src/FE/` (Angular 20, 6 routes).
 - **`Shared/`** — cross-app brand material (`Assets/`, `UserFlows/`) that isn't scoped to a single project.
 
 ## Per-project folder convention
@@ -88,6 +100,8 @@ Design work moves through eight stages, one skill each — run in order; gates r
 - Extend an existing component spec instead of inventing a new one.
 - Never copy real secrets, API keys, or credentials from source files into any design artifact, prompt pack, or content pushed to Figma/Stitch.
 - Single-app material stays in its project folder; only genuinely cross-app material goes in `Shared/`.
-- Screenshots: capture via the chrome-devtools MCP whenever the target (dev server, or a static file opened directly) is reachable; otherwise record `pending` rows with exact capture instructions in the UiInventory Screenshot Manifest — never block on screenshots.
+- Screenshots — **default is ONE desktop shot per screen** (decided 2026-08-22). That is what answers "what does this screen look like"; state and viewport variants are captured only when someone actually needs that case. Record the rest as `pending` rows with exact capture instructions in the UiInventory Screenshot Manifest, and never block on screenshots.
+  > Why the cap: an earlier pass queued **40** pending shots across 5 screens and none were ever taken. A `pending` list nobody works through is worth the same as no list — and it hides which screens genuinely have no visual reference at all.
+  Capture via the chrome-devtools MCP once the target is reachable. For PlatformManager that means **both** servers running: `dotnet run --project src/BE/PlatformManager.Api --urls http://localhost:5027`, and the Angular dev server in `src/FE` on **any port in 4200–4203** — all four are in the backend's Development CORS allowlist, so a busy 4200 needs no config change (`npx ng serve --port 4202`). Most screens need an authenticated session; a fresh database needs `bash scripts/setup-database.sh` first. Never record credentials in any design artifact — including in capture instructions.
 - Prompt packs resolve tokens to **literal values** (hex/px/font) — external tools cannot interpolate `{token.reference}`.
 - Lint DESIGN.md with `npx --yes --package=@google/design.md designmd lint <path>` — the bare `npx @google/design.md lint` form **fails silently on Windows**. Gate = 0 errors; warnings are recorded as as-shipped facts, not blockers.

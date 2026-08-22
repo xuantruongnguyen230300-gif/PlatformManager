@@ -57,7 +57,13 @@ di chuyển hoặc đặt tên khác. Vì vậy **KHÔNG hardcode `doc/Design/`*
 - Suy ra danh sách component từ các view trong census (hoặc lấy đúng theo argument `[component]` nếu chỉ có một).
 - Với mỗi component:
   - Đọc markup thật đứng sau các view trong census có dùng nó.
-  - **PlatformManager (hiện tại):** không có framework/component library, không có Storybook — verify anatomy/variant TRỰC TIẾP từ class CSS trong `doc/Prototype/dashboard.html`, vd. `.card`, `.kpi`, `.btn`/`.btn.primary`/`.btn.danger`, `.badge`/`.bdone`/`.bwork`/`.bstall`, `.bar`/`.fill`, `dialog`, `.fab`, `.tablewrap`. Không bao giờ ghi lại một variant không thấy trong markup/CSS thật.
+  - **PlatformManager (từ 2026-08-22):** stack là **Angular 20 + PrimeNG + PrimeIcons v7**, không có Storybook. Verify anatomy/variant TRỰC TIẾP từ:
+    - class global trong `src/FE/src/styles.scss` (`.card`, `.btn` + variant, `.badge`, `.action-btn`, `.field`/`.field-input`, `.filters`, `.tablewrap`, `.form-row`, `.toast-stack`);
+    - template + SCSS scoped của chính component trong `src/FE/src/app/**`;
+    - `src/FE/src/app/core/theme/platform-manager-preset.ts` cho phần PrimeNG.
+    Data grid là **PrimeNG `p-table`** (có phân trang); hai ma trận phân quyền **cố ý hand-rolled `<table>`**. Shell (`Sidebar`/`Topbar`/`Toast`) và `AuthCard` là component thật cần spec.
+    🧊 **KHÔNG** verify từ `doc/Prototype/` — đã đóng băng, phủ 4/6 màn và đã lệch (vd. `Button.md` cũ ghi hover/focus/disabled là "not styled", trong khi app ship đủ 5 trạng thái và 3 màn đang bind `[disabled]`).
+    Không bao giờ ghi lại một variant không thấy trong markup/CSS thật.
   - Ghi lại anatomy, variant, và state — đủ cả 5: `default` / `hover` / `focus` / `active` / `disabled` — ĐÚNG NHƯ ĐANG CHẠY THẬT (một số state có thể chỉ tồn tại ngầm qua CSS `:hover`/`:active` selector hoặc `transform`/`opacity` — ghi đúng những gì CSS định nghĩa, không suy đoán thêm).
   - Trích dẫn đường dẫn file trong `Sources:` (kèm gợi ý số dòng).
   - Reference token — không bao giờ dùng giá trị raw khi đã có token tương ứng.
