@@ -1,5 +1,10 @@
 # Tra cứu file / class / interface
 
+> 📍 **Tên project trong file này là của VNR.Successor, không phải PlatformManager.**
+> Tra bảng ánh xạ + 4 mục "KHÔNG áp dụng" ở [`00-lo-trinh-tong-the.md`](00-lo-trinh-tong-the.md)
+> §ĐỌC TRƯỚC. Tóm tắt: `Platform.*`→`Core.*` · `Module.{M}.*`→tầng nghiệp vụ (`Business.*`) ·
+> `Processes/`→**1** host · JWT→**cookie session** · per-module DbContext→**1** DbContext chung.
+
 > Mục lục ngược của toàn bộ `be/trien-khai/00→07`: tra theo **tên** để biết nó
 > thuộc layer nào, phase nào tạo ra, làm gì trong 1 câu, và file nào có phân
 > tích đầy đủ. Dùng khi đã đọc qua 1 lần và chỉ cần nhắc lại nhanh — không thay
@@ -132,7 +137,7 @@ Chi tiết đầy đủ: [04-p3-platform-persistence.md](04-p3-platform-persiste
 
 | Tên | Loại | Namespace | Làm gì (1 câu) |
 | --- | --- | --- | --- |
-| `BaseApiController` | abstract class | `Controllers` (Hosting.Api) | `[Authorize(JwtBearer)]` + `HandleRequest<T>()` — dispatcher mỏng, map `ErrorCode → HTTP` |
+| `BaseApiController` *(VNR dùng JwtBearer; PlatformManager dùng cookie — xem 00-lo-trinh §Auth)* | abstract class | `Controllers` (Hosting.Api) | `[Authorize(JwtBearer)]` + `HandleRequest<T>()` — dispatcher mỏng, map `ErrorCode → HTTP` |
 | `BaseApiController.MapToHttpStatusCode` | private static method | — | `code == Success ? 200 : (int)code` — **nguồn duy nhất** map HTTP, không bảng tra riêng |
 | `BaseApiController.EnrichResponse` | private method | — | Cast `IApiResultEnrichable`, set `TraceId` — không reflection (hot path) |
 | `BaseCrudApiController<TResult,TCreateRequest,TUpdateRequest,TKey>` | abstract class | `Controllers` | 8 endpoint CRUD chuẩn — controller con **0 dòng logic** |

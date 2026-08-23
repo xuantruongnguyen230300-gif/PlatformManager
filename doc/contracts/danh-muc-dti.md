@@ -2,10 +2,10 @@
 
 > Owner FE: `src/FE/src/app/modules/danh-muc-dti/services/danh-muc-dti.service.ts`
 > Nguồn nghiệp vụ: `doc/ke-hoach-xay-lai-corebase.md` (hành vi cần port lại chính xác từ
-> `doc/Prototype/danh-muc-dti.html`), bản Contract Card cũ (đã xoá, tham khảo qua git history) —
+> prototype danh-muc-dti, đã xoá 2026-08-23), bản Contract Card cũ (đã xoá, tham khảo qua git history) —
 > route/shape kế thừa gần như nguyên vẹn, chỉ đổi lại envelope + casing.
 >
-> **CASING**: xem cảnh báo ở `doc/contracts/menu.md` — camelCase xuyên suốt (envelope + payload),
+> **CASING**: xem cảnh báo ở `doc/contracts/meta-menu.md` — camelCase xuyên suốt (envelope + payload),
 > CHƯA XÁC NHẬN với `backend-expert`.
 >
 > Trạng thái card: **DRAFT** — FE đã code service/mapper/UI đầy đủ theo shape dưới đây, chưa gọi
@@ -19,7 +19,7 @@
   ```
   data: [ { id: guid, code: string, name: string, displayOrder: int } ]
   ```
-- Dữ liệu tĩnh (6 nhóm seed sẵn từ CSV `doc/ERD/example_db_ver1.csv`) — FE cache trong
+- Dữ liệu tĩnh (6 nhóm seed sẵn từ CSV dữ liệu mẫu CSV (`doc/ERD/` đã xoá 2026-08-23, sẽ bổ sung lại sau)) — FE cache trong
   `DanhMucDtiPage` (load 1 lần lúc khởi tạo).
 
 ## CONTRACT DM-2 — Lưới "Danh mục & Đánh giá theo tuần" (đọc, phân trang server-side)
@@ -35,9 +35,9 @@
   page: int = 1
   pageSize: int = 20       // tối đa gợi ý 500
   ```
-- Response: `IApiResult<IPagedResultDto<ICriteriaRowDto>>`
+- Response: `IApiResult<PagedList<ICriteriaRowDto>>`
   ```
-  IPagedResultDto<T>: { items: T[], page: int, pageSize: int, totalCount: int, totalPages: int }
+  PagedList<T>: { items: T[], page: int, pageSize: int, totalCount: int }
   ```
   `ICriteriaRowDto`:
   ```
@@ -48,7 +48,7 @@
   evidences: [ { id: guid, content: string, orderIndex: int } ],
   isEditable: bool   // true CHỈ KHI year=năm hiện tại VÀ period="all" (trạng thái "Live")
   ```
-- Hành vi theo `period` (kế thừa nguyên bản Contract Card cũ, đã verify thật ở lần build trước khi
+- Hành vi theo `period` (kế thừa nguyên bản Contract Card cũ, đã verify thật (2026-08-16) ở lần build trước khi
   bị xoá — tin cậy cao dù chưa re-verify ở đợt này):
   - `period` = tuần/tháng cụ thể → đúng N dòng (1 dòng/`Criteria` active), giá trị resolve = record
     có `AssessmentDate` lớn nhất trong đúng phạm vi đó (không có record nào trong phạm vi → mọi
@@ -77,7 +77,7 @@
 - Lỗi mong đợi: `CRITERIA.CODE_INVALID` (400) · `CRITERIA.NAME_REQUIRED` (400) ·
   `CRITERIA.MAX_SCORE_INVALID` (400) · `CRITERIA.GROUP_NOT_FOUND` (404) ·
   `CRITERIA.DUPLICATE_CODE` (409) — `businessCode` dạng `"{ENTITY}.{ERROR}"` theo
-  `src/BE/.claude/rules/api-controller.md`.
+  `doc/huong_dan/quy-uoc/be-api-controller.md`.
 - FE validate client trước (code≤20/tên bắt buộc/nhóm bắt buộc/điểm>0,
   `criteria-form-dialog.ts`), lỗi server hiển thị qua `err.apiResult?.message` (1 dòng lỗi chung
   trong dialog, không bind field-by-field ở bản F1 này — đủ dùng vì form chỉ 4 trường).
@@ -134,7 +134,7 @@
 - Status: **DRAFT** (quay lại DRAFT 2026-08-17 — đổi shape từ đồng bộ sang
   job nền + polling, kèm mở rộng định dạng file; card cũ mô tả version đồng
   bộ CSV-only đã lỗi thời, xem lý do ở
-  `src/BE/.claude/rules/cqrs-handler.md` §"Command chạy lâu → job nền")
+  `doc/huong_dan/quy-uoc/be-cqrs-handler.md` §"Command chạy lâu → job nền")
 - **Bước 1 — bắt đầu import**: `POST /api/import`, `multipart/form-data`,
   field tên `file` — chấp nhận `.csv`/`.xlsx`/`.xls` (không còn riêng
   `/api/import/csv`). Trả **202 Accepted** ngay, KHÔNG đợi xử lý xong:
@@ -152,7 +152,7 @@
     errorMessage: string | null,       // chỉ có khi status = "Failed"
   }>
   ```
-- Mapping cột theo CSV gốc (`doc/ERD/example_db_ver1.csv`) — `Code` lạ tự tạo `Criteria` mới; nhóm
+- Mapping cột theo CSV gốc (dữ liệu mẫu CSV (`doc/ERD/` đã xoá 2026-08-23, sẽ bổ sung lại sau)) — `Code` lạ tự tạo `Criteria` mới; nhóm
   lạ (không khớp `CriteriaGroup.Name`) → lỗi dòng đó, không tự tạo nhóm; `AssessmentDate` = ngày hệ
   thống lúc import; "Phụ trách" match chính xác `AppUsers.FullName`, không khớp → `ownerId: null`.
   **Excel**: cùng 10 cột/tên cột như CSV, đọc từ **sheet đầu tiên**, dòng 1 = header — không hỗ trợ
@@ -165,7 +165,7 @@
   xác nhận) → `startImport()` → poll `getImportJobStatus()` → khi
   `Succeeded`/`Failed` mới mở `import-result-dialog` (hiện tổng quan + danh
   sách lỗi từng dòng, hoặc thông báo lỗi hạ tầng nếu `Failed`). Chi tiết
-  pattern poll xem `src/FE/.claude/docs/api-client.md` §"Long-running
+  pattern poll xem `doc/huong_dan/quy-uoc/fe-api-client.md` §"Long-running
   operation — poll pattern".
 
 ## CONTRACT DM-8 — Danh sách Năm/Kỳ có dữ liệu
@@ -174,7 +174,7 @@
   CONTRACT DB-3 (`GET /api/dashboard/periods`, đã sửa đúng shape `{value,date,overallProgress}`).
   Owner FE thật:
   `shared/services/period-options.service.ts` (không đặt trong `modules/danh-muc-dti/` vì 2 feature
-  cùng dùng, xem `src/FE/.claude/docs/architecture.md`).
+  cùng dùng, xem `doc/huong_dan/quy-uoc/fe-architecture.md`).
 
 ---
 

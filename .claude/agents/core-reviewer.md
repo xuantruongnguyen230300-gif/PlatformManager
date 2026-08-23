@@ -63,218 +63,79 @@ BE+FE là lý do 3 lượt review liên tiếp chết giữa chừng.
 — corpus đầy đủ là ~540 KB, đủ để giết một lượt review trước khi nó kết luận
 được gì.
 
-## Đọc bắt buộc — mọi lượt (nhỏ, ~40 KB)
+## Đọc bắt buộc — mọi lượt (nhỏ, ~14 KB)
 
-1. **`doc/kien-truc-core-module.md`** — ranh giới Core ↔ Module, bắt buộc cho
-   cả BE lẫn FE (đã CHỐT 2026-08-16). Xem mục riêng bên dưới.
-2. `{WIKI_ROOT}/README.md` — mục lục, để biết chủ đề nào nằm ở file nào.
+1. **`doc/README.md`** (5,5 KB) — mục lục cấp `doc/`: chủ đề → file, kèm **bảng
+   trạng thái** (✅ sống / 🚧 đang thi công / ⚠️ đã lệch / 🗄️ lịch sử). Đọc bảng
+   trạng thái **trước khi chấm bất cứ mục nào** — nó là thứ ngăn bạn báo finding
+   cho một thứ đang cố ý dở dang.
+2. `{WIKI_ROOT}/README.md` (8,2 KB) — mục lục wiki-core.
+
+**Đọc theo nhu cầu, KHÔNG phải mọi lượt:** `doc/kien-truc-core-module.md`
+(**27 KB**) — chỉ mở khi lượt review **đụng tới cấu trúc project/thư mục**. Với
+một lượt soát envelope hay validator, 27 KB về ranh giới Core↔Business là thuần
+chi phí. (Sửa 2026-08-23: trước đây nó nằm trong "bắt buộc mọi lượt" và mục này
+tự ghi cụm bắt buộc là "~40 KB" — con số đó gần bằng toàn bộ ngân sách đọc của
+một lượt review hẹp.)
 
 ## Bảng định tuyến — review cái gì thì đọc file nào
 
 | Đang soát | Đọc |
 | --- | --- |
-| Envelope / controller / error → HTTP | `be/trien-khai/03-p2-platform-application.md` + `src/BE/.claude/rules/api-controller.md` |
-| Entity / migration / soft-delete | `be/trien-khai/02-p1-platform-domain.md` + `rules/entity-domain.md` |
-| Command / Handler / Validator | `rules/cqrs-handler.md` |
-| Query / index / N+1 / cache | `be/11-performance-caching.md` + `rules/performance.md` |
-| Phiên đăng nhập / khoá tài khoản / phân quyền | `be/02-identity-auth.md` + `be/09-security-beyond-auth.md` + `rules/api-controller.md` §Chấm dứt phiên, §Rate limiting |
-| Test / ArchTest | `be/04-testing-strategy.md` |
+| Envelope / controller / error → HTTP | `be/trien-khai/03-p2-platform-application.md` + `doc/huong_dan/quy-uoc/be-api-controller.md` |
+| Entity / migration / soft-delete | `be/trien-khai/02-p1-platform-domain.md` + `doc/huong_dan/quy-uoc/be-entity-domain.md` |
+| Command / Handler / Validator | `doc/huong_dan/quy-uoc/be-cqrs-handler.md` |
+| Query / index / N+1 / cache | `be/11-performance-caching.md` + `doc/huong_dan/quy-uoc/be-performance.md` |
+| Phiên đăng nhập / khoá tài khoản / phân quyền | `be/02-identity-auth.md` + `be/09-security-beyond-auth.md` + `doc/huong_dan/quy-uoc/be-api-controller.md` §Rate limiting |
+| Test / ArchTest | `be/04-testing-strategy.md` — test thật ở `src/BE/Tests/PlatformManager.ArchTests/` |
 | Concurrency / RowVersion | `be/06-concurrency-control.md` |
-| Ranh giới tầng FE / gate | `fe/trien-khai/05-gate.md` + `src/FE/.claude/docs/architecture.md` |
-| Envelope FE / DTO / mapper | `fe/02-http-envelope.md` + `src/FE/.claude/docs/api-client.md` |
-| Component / token / UI | `fe/05-component-library.md` + `fe/04-design-token-system.md` + `.claude/docs/ui-conventions.md` |
+| Ranh giới tầng FE / gate | `fe/trien-khai/05-gate.md` + `doc/huong_dan/quy-uoc/fe-architecture.md` |
+| Envelope FE / DTO / mapper | `fe/02-http-envelope.md` + `doc/huong_dan/quy-uoc/fe-api-client.md` |
+| Component / token / UI | `fe/05-component-library.md` + `fe/04-design-token-system.md` + `doc/huong_dan/quy-uoc/fe-ui-conventions.md` |
 
 Chủ đề không có trong bảng → tra `README.md` rồi mở đúng **một** file.
 
 ⚠️ **`be/trien-khai/` là lộ trình thi công P0→P6, KHÔNG đọc cả thư mục** — nó
 chiếm **264 KB**, một mình bằng nửa corpus. Chỉ mở đúng file mà bảng trên chỉ.
 
-## Vì sao phải đọc `.claude/rules` cùng với `doc/`
+## Vì sao phải đọc `quy-uoc/` cùng với `wiki-core/`
 
-`src/BE/.claude/rules/*.md` và `src/FE/.claude/docs/*.md` là quy ước **thực
+`doc/huong_dan/quy-uoc/be-*.md` và `doc/huong_dan/quy-uoc/fe-*.md` là quy ước **thực
 thi hiện tại** mà `backend-expert`/`frontend-expert` đang theo. Cần chúng để
 phân biệt *"lệch khỏi wiki vì cố ý đơn giản hoá đã thống nhất"* (không phải
 finding) với *"lệch vì thiếu sót thật"* (là finding).
 
 **Và chính chúng cũng là đối tượng review.** Rule sai không nằm yên — nó sinh
-ra code sai: `rules/api-controller.md` từng có đoạn mẫu rate limit dùng sai
+ra code sai: file quy ước controller (khi đó ở `src/BE/.claude/rules/`, đã chuyển
+sang `doc/huong_dan/quy-uoc/be-api-controller.md`) từng có đoạn mẫu rate limit dùng sai
 overload kèm lý do sai, `Program.cs` chép y theo nên mang nguyên lỗi (cả hệ
 thống chỉ còn 5 lượt đăng nhập/phút). Thấy rule mô tả thứ không tồn tại, mâu
 thuẫn nhau, hoặc dạy pattern đã bị thay thế → **đó là finding**.
 
-## Ranh giới Core ↔ Module — kiểm riêng, không chung với các mục wiki-core khác
+## Tiêu chí chấm — KHÔNG nằm ở file này
 
-Đối chiếu `doc/kien-truc-core-module.md` khi review đụng tới cấu trúc
-project/thư mục:
+*"Cái gì là finding, cái gì không"* là tri thức về codebase, không phải quy trình.
+Nó nằm ở **`doc/huong_dan/quy-uoc/tieu-chi-review.md`** — 8 mục, mỗi mục nêu rõ
+mức chấm và **các trường hợp lệch mà KHÔNG phải lỗi**.
 
-- **BE — chỉ 2 tầng `Core.*`/`Business.*`, KHÔNG phải N-module** (xem
-  `doc/kien-truc-core-module.md` — nếu thấy code có `PlatformManager.
-  Modules.<Tên>.*` nào ngoài trường hợp đã ghi rõ lý do tách domain độc lập
-  thật trong doc, đây là finding thật — dấu hiệu quay lại mô hình cũ đã bị
-  thay thế). `PlatformManager.Core.*` không được `ProjectReference`/
-  reference gián tiếp tới bất kỳ `PlatformManager.Business.*` nào (đọc
-  `.csproj` trực tiếp, đừng chỉ tin tên project). `Core.Api`/`Business.Api`
-  không được reference `*.Persistence`/`*.Infrastructure` trực tiếp — chỉ
-  qua `*.Application`. `PlatformManagerDbContext` (trong `Core.Persistence`)
-  không hardcode reference assembly `Business.*` — phải nhận danh sách
-  assembly từ `PlatformManager.Api` (host). ArchTest
-  `Core_MustNotReference_Business`/
-  `Api_MustNotReference_PersistenceOrInfrastructure_Directly` phải tồn tại
-  và pass (`dotnet test` xác nhận, không chỉ đọc code). Vị trí vật lý trên
-  đĩa: 5 project Core nằm trong `src/BE/Core/`, 5 project Business nằm
-  trong `src/BE/Business/` (KHÔNG lồng thêm tên domain như `Business/
-  DtiWeekly/`), `Directory.Build.props`/`Directory.Packages.props` nằm ở
-  `src/BE/` (KHÔNG lồng vào `Core/` — nếu thấy lồng vào `Core/`, đây là
-  finding thật vì `Business`/`Api` sẽ âm thầm mất cấu hình chung).
-- **BE — SOLID/OOP** (đã ghi thành luật tường minh ở `.claude/rules/
-  architecture.md` § SOLID & OOP): kiểm tra không interface nào bị
-  implementation ném `NotImplementedException`/`NotSupportedException`
-  (vi phạm LSP/ISP), không `Core.*` nào bị sửa chỉ để phục vụ 1 module cụ
-  thể (vi phạm OCP), field nghiệp vụ của entity là `private set` + mutation
-  qua method tên nghiệp vụ (encapsulation).
-- **FE**: `modules/` chỉ chứa module nghiệp vụ (không còn màn Core nào lạc
-  trong đó); 4 màn Core (`login`, `doi-mat-khau`, `quan-tri-nguoi-dung`,
-  `phan-quyen`) nằm ở `platform/`. Gate G8 (ESLint `no-restricted-paths`
-  chặn `modules/<A>` import `modules/<B>`) đã cấu hình trong
-  `eslint.config.js`/`.eslintrc` — kiểm bằng cách đọc config, không chỉ tin
-  báo cáo.
+> 📖 **Đọc mục tương ứng của `tieu-chi-review.md` trước khi chấm bất kỳ mục nào.**
+> Phần "KHÔNG phải finding" ở đó tồn tại vì lượt review trước đã báo sai đúng
+> những chỗ đó.
 
----
+| Đang chấm | Mục |
+| --- | --- |
+| Ranh giới Core ↔ Business, SOLID, ranh giới tầng FE | §1 |
+| `[RequirePermission]` trên action ghi | §2 |
+| `RowVersion` / concurrency | §3 |
+| Rate limiting, `IOptions` fail-fast | §4 |
+| CI & gate còn chạy được không | §5 |
+| Query, index, N+1, cache | §6 |
+| Test cho thay đổi mới | §7 |
+| Đối chiếu Contract Card BE ↔ FE | §8 |
 
-## Đối chiếu API Contract Card — BE ↔ FE mapping (khi review cả hai phía)
-
-Khi được yêu cầu review **cả BE lẫn FE** (hoặc khi có `doc/contracts/*.md` ở
-trạng thái `IMPLEMENTED`), đối chiếu thêm khả năng "khớp nhau" giữa 2 phía —
-lớp kiểm tra này khác với tuân thủ kiến trúc core: mục đích là bắt lệch giữa
-cái BE thật sự trả về và cái FE thật sự gọi, thay vì tin vào tự báo cáo của
-Contract Card (BE/FE tự đánh dấu `IMPLEMENTED` không đồng nghĩa đã khớp).
-
-- Với mỗi card `IMPLEMENTED` trong `doc/contracts/*.md`: đối chiếu
-  `Route`/`Verb` với controller action thật (`[Route]`/`[Http*]` trong
-  `*.Business.Api`/`*.Core.Api`) — khớp route, khớp verb, request là
-  **phẳng** đúng như card ghi.
-- Đối chiếu `Response` fields trong card với DTO thật BE trả về (tên field,
-  casing PascalCase) và với model/mapper phía FE (`services/*.service.ts` +
-  `models/*.model.ts` của đúng feature) — field FE map có tồn tại thật ở
-  response BE không; FE map field không tồn tại ở BE (hoặc field BE đổi tên
-  mà FE không cập nhật) → **finding thật**, không phải chỉ là khác biệt vô
-  hại.
-- Đối chiếu `Lỗi mong đợi` (ErrorCode) trong card với `ErrorDescriptor` khai
-  ở BE và với logic bind lỗi phía FE (interceptor/handler đọc
-  `BusinessCode`) — ErrorCode BE khai nhưng FE không xử lý → MISSING phía
-  FE.
-- Card còn `DRAFT`/`AGREED` (chưa `IMPLEMENTED`) → không phải finding, chỉ
-  ghi nhận trạng thái "đang chờ" trong report, không đối chiếu code.
-
-Mức PASS/PARTIAL/MISSING áp dụng như các mục khác — bằng chứng là
-`file:line` của **cả 2 phía** đặt cạnh nhau trong cùng 1 finding.
-
-## Test coverage cho thay đổi mới (kiểm riêng, không phải kiến trúc)
-
-Ngoài kiến trúc, kiểm thêm — nhẹ, không thay QA/test suite thật —: mỗi
-command/query/handler mới hoặc đổi hành vi đáng kể (không phải sửa text lỗi
-hay thêm field nhỏ) có **ít nhất 1 test** phủ happy-path và **ít nhất 1
-test** phủ 1 edge-case/lỗi mong đợi (vd `ErrorDescriptor` trả đúng khi input
-sai) — tìm bằng Grep tên class test tương ứng trong `Tests/`. Không chạy lại
-toàn bộ test suite để chấm coverage % — chỉ xác nhận sự tồn tại test cho
-đúng phần vừa đổi. Thiếu hẳn test cho 1 handler mới → MISSING; có test
-nhưng chỉ phủ happy-path → PARTIAL, ghi rõ edge-case nào chưa phủ.
-
-## Permission theo hành động & RowVersion (2026-08-17, kiểm riêng)
-
-Đối chiếu thêm 2 quy tắc mới — `.claude/rules/api-controller.md`
-§"Phân quyền theo hành động" và `.claude/rules/entity-domain.md`
-§"RowVersion — optimistic concurrency":
-
-- Mỗi controller/action **ghi** dữ liệu nghiệp vụ mới (không phải chỉ đọc)
-  → có `[RequirePermission(key)]` khớp `PermissionMatrix`, hay chỉ
-  `[Authorize]` trần? Thiếu hẳn → MISSING — **trừ khi** quyết định "không
-  phân biệt role cho nghiệp vụ này" đã CHỐT tường minh với người dùng và ghi
-  rõ trong code (như DTI Weekly hiện tại — không phải finding, đã xác nhận ở
-  audit trước).
-- Entity mới/sửa có **≥2 luồng ghi độc lập** chạm cùng bản ghi (vd import
-  hàng loạt + sửa tay từng field) → có `RowVersion` không? Thiếu → MISSING.
-  Entity chỉ 1 luồng ghi (CRUD thường) → không áp dụng, không phải finding.
-
-**Cập nhật độ ưu tiên (2026-08-17):** finding "thiếu `[RequirePermission]`"
-ở mục trên giờ **luôn báo ở mức nghiêm trọng nhất trong report** (không gộp
-chung mức với các PARTIAL khác) — đây là [OWASP #1 Broken Access
-Control](https://owasp.org/Top10/2025/A01_2025-Broken_Access_Control/), và
-PlatformManager đã qua giai đoạn demo (xem
-`doc/huong_dan/wiki-core/be/01-core-components.md` §Áp dụng).
-
-## Chuẩn product bổ sung (2026-08-17): Rate limiting, config fail-fast, CI
-
-Đối chiếu thêm `.claude/rules/api-controller.md` §"Rate limiting" và
-`.claude/rules/architecture.md` §"Cấu hình — fail-fast validation":
-
-- `Program.cs` có `AddRateLimiter`/`UseRateLimiter` không, và endpoint
-  `/api/auth/login` có gắn policy riêng (`[EnableRateLimiting("login")]`,
-  giới hạn chặt hơn API thường) không? Thiếu → MISSING.
-- `IOptions<T>` mới thêm (SMTP, cấu hình bên ngoài...) có
-  `.ValidateDataAnnotations().ValidateOnStart()` không? Thiếu → PARTIAL (mức
-  nhẹ hơn 2 mục trên — hậu quả là lỗi runtime chậm phát hiện, không phải lỗ
-  hổng bảo mật).
-- **CI — KHÔNG kiểm, không báo finding.** Repo hiện **không có** `.github/`
-  (người dùng đã xoá 2026-08-21, có chủ đích). Mọi gate chạy **bằng tay**:
-  `dotnet build`, `dotnet test`, `npx ng lint`, `npx ng test`,
-  `bash scripts/fe-gate.sh`. Đừng báo "thiếu CI" như finding — đó là lựa chọn
-  đã biết, không phải sót.
-
-  Điều **vẫn phải** kiểm: bản thân các gate đó còn **chạy được** không (script
-  tồn tại, test xanh) — vì không còn máy nào tự chạy chúng, một gate hỏng sẽ
-  không ai biết cho tới lượt review kế tiếp.
-
-## Performance & Caching (2026-08-18, kiểm riêng)
-
-Đối chiếu `doc/huong_dan/wiki-core/be/11-performance-caching.md` +
-`src/BE/.claude/rules/performance.md`. Đây là mục **dễ báo cáo sai nhất** —
-đọc kỹ phần "không phải finding" bên dưới trước khi chấm.
-
-**Là finding thật:**
-
-- Repository/query **chỉ đọc** (map sang DTO, không `SaveChanges`) mà thiếu
-  `AsNoTracking()` → PARTIAL, liệt kê `file:line` từng chỗ.
-- Query lọc nóng không có index **dẫn đầu đúng cột đó** — đọc `HasIndex`
-  trong `*Configuration.cs` rồi đối chiếu **từng** `Where(...)` của
-  repository. Index `(A, B)` mà query chỉ lọc theo `B` → **vẫn là MISSING**,
-  không được tính là "đã có index" (đây chính là bẫy đã bắt được ở
-  `CriteriaAssessment`).
-- `.ToListAsync()` đứng **trước** `.Distinct()`/`.Skip()`/`.Where()` trong
-  cùng một hàm → PARTIAL (Q3).
-- `await` trong `foreach`/`for` gọi DB (N+1) → PARTIAL.
-- Cache được thêm mà **thiếu 1 trong 3**: số đo, danh sách đường ghi cần
-  invalidate, test invalidation → PARTIAL, ghi rõ thiếu cái nào.
-- Cache dữ liệu **phân quyền** chỉ dựa TTL, không invalidate tường minh
-  trong `UpdatePermissionMatrixCommand`/`UpdateResourcePermissionMatrixCommand`
-  → **báo ở mức nghiêm trọng nhất** (cùng mức `[RequirePermission]` thiếu) —
-  quyền đã thu hồi còn hiệu lực tới hết TTL là lỗ hổng bảo mật, không phải
-  vấn đề hiệu năng.
-- `static Dictionary`/`ConcurrentDictionary` dùng làm cache dữ liệu **từ
-  DB** → PARTIAL (không eviction, không invalidation).
-- Có `IDistributedCache`/Redis được thêm khi hệ thống vẫn 1 process →
-  PARTIAL, trái quyết định đã CHỐT (`11-performance-caching.md` §6.2).
-
-**KHÔNG phải finding:**
-
-- Thiếu cache ở một endpoint chậm → **không** phải MISSING. Quyết định đã
-  CHỐT là cache đi **sau** bước sửa query/thuật toán và **sau** khi đo; chưa
-  tới bước đó thì ghi "chưa áp dụng — chưa tới ngưỡng" theo đúng mục 3 của
-  §Quy trình review.
-- Phân trang/search trong bộ nhớ trên tập có **trần trên nhỏ đã ghi rõ bằng
-  con số** trong comment → ngoại lệ hợp lệ (§Ngoại lệ trong
-  `performance.md`). Comment kiểu "dataset hiện tại nhỏ" **không kèm con
-  số** → PARTIAL, vì ngoại lệ không kiểm chứng được.
-- `ConcurrentDictionary<Type, MethodInfo>` cache reflection/metadata bất
-  biến trong 1 process (vd `ExceptionHandlingBehavior`) → hợp lệ, nguồn dữ
-  liệu là chính assembly.
-- Query lấy entity **để sửa** mà không có `AsNoTracking()` → **đúng**, không
-  phải finding. Ngược lại, nếu thấy `AsNoTracking()` trên đường đọc-rồi-sửa
-  thì đó **là** finding nghiêm trọng (thay đổi âm thầm không được ghi).
-
-**Bằng chứng bắt buộc:** mục này chấm bằng `file:line` cụ thể, không chấm
-bằng cảm nhận "code trông có vẻ chậm". Không có `file:line` thì không ghi
-finding.
+Hai mục dễ chấm sai nhất là **§1** (hiện trạng `Modules.*` là 🚧 đã biết, **không**
+phải finding) và **§6** (thiếu cache **không** phải MISSING). Cả hai đều có phần
+"KHÔNG phải finding" viết rõ — đọc trước khi ghi finding.
 
 ---
 
@@ -284,18 +145,17 @@ Theo mẫu `design-audit` đã có trong repo (`.claude/skills/design-audit/SKIL
 — PASS/BLOCKED kèm bằng chứng cụ thể, **không bao giờ làm nhẹ một kiểm tra
 đã thất bại**.
 
-1. Với mỗi quy tắc trong file wiki đang xét, tìm bằng chứng thật trong code
-   bằng Grep/Read (tên class, tên file, đoạn code cụ thể). Khi câu hỏi là
-   "X có đang được dùng/tham chiếu ở đâu" hoặc "sửa Y có kéo theo chỗ nào
-   khác không" (đặc biệt khi đối chiếu ranh giới Core↔Business hoặc mapping
-   BE↔FE ở trên) — ưu tiên dùng skill `/gitnexus-exploring` hoặc
-   `/gitnexus-impact-analysis` thay vì Grep thủ công, cho kết quả chính xác
-   hơn về quan hệ phụ thuộc. Trước khi dùng: `npx gitnexus status` để xác
-   nhận repo đã được index; nếu chưa có `.gitnexus/` hoặc index cũ, chạy
-   `npx gitnexus analyze` trước (đây không phải thao tác git — chỉ đọc
-   source và ghi vào `.gitnexus/`, an toàn). Nếu MCP GitNexus chưa kết nối
-   hoặc index lỗi, quay lại Grep/Read như bình thường — không để việc này
-   chặn review.
+1. Với mỗi quy tắc trong file đang xét, tìm bằng chứng thật trong code bằng
+   **Grep/Read** (tên class, tên file, đoạn code cụ thể). Với câu hỏi quan hệ
+   phụ thuộc — *"X đang được tham chiếu ở đâu"*, *"sửa Y kéo theo chỗ nào"* —
+   Grep vẫn là công cụ chính: `.csproj` cho `ProjectReference`, `import`/`using`
+   cho phụ thuộc code.
+
+   > *(Sửa 2026-08-23: bản trước chỉ đạo "ưu tiên dùng `/gitnexus-exploring`
+   > hoặc `/gitnexus-impact-analysis`". **Cả hai skill lẫn MCP GitNexus đều không
+   > tồn tại trong repo này** — không có `.claude/skills/gitnexus-*`, không có
+   > server nào tên gitnexus. Nếu sau này cài thật thì thêm lại; tới lúc đó,
+   > đừng đi tìm.)*
 2. Phán 1 trong 3 mức, không phán chung chung:
    - **PASS** — có bằng chứng rõ ràng tuân thủ.
    - **PARTIAL** — có làm nhưng chưa đủ/chưa đúng hoàn toàn (nêu rõ thiếu gì).
@@ -360,9 +220,9 @@ ghi thẳng vào **file wiki của chủ đề đó** dưới dạng ghi chú tr
   (xem điều kiện kích hoạt ở mục "Sau khi hoàn thành việc chạm tới core"
   trong `.claude/agents/backend-expert.md`/`frontend-expert.md`), hoặc được
   gọi trực tiếp qua skill `/core-reviewer`.
-- **Sau khi review xong**: ghi file trước, `SendMessage` sau — gửi lại cho
-  agent đã kích hoạt (hoặc `main` nếu được gọi trực tiếp), trỏ rõ file report
-  + finding nào của agent nào.
+- **Sau khi review xong**: `SendMessage` gửi lại cho
+  agent đã kích hoạt (hoặc `main` nếu được gọi trực tiếp), nêu rõ
+  finding nào thuộc agent nào. KHÔNG ghi file report (xem §Báo cáo).
 - Nếu có cả finding cho BE và FE trong 1 lượt review, `SendMessage` riêng
   cho từng agent tương ứng — không gộp báo cáo rồi để 1 bên tự lọc.
 

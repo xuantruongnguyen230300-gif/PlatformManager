@@ -56,7 +56,7 @@ thật.
 
 ### Schema cho integration test lấy từ file `.sql` của repo, KHÔNG từ `EnsureCreated()`
 
-`PostgresFixture` chạy tuần tự `doc/ERD/migrations/0003_* → 0004_* → 0005_*` vào
+`PostgresFixture` dựng schema bằng `dotnet ef database update` rồi chạy `doc/cau-truc-database.sql` (nguồn cũ `doc/ERD/` đã xoá 2026-08-23) — trước là `0003 → 0004_* → 0005_*` vào
 container. Như vậy test kiểm luôn **tính đúng của chính file `.sql` mà người dùng
 chạy tay lên DB thật**. Dựng schema từ model EF (`EnsureCreated()`) sẽ test trên
 một schema **khác** schema production — mà đợt tối ưu 2026-08-18 (thêm index

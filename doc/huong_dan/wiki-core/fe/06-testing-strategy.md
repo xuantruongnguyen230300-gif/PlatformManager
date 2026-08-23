@@ -48,6 +48,6 @@ it('đọc message từ IApiResult, không phải field cũ', () => {
 });
 ```
 
-Test này **chính là bài kiểm chứng cho việc F0 (đồng bộ envelope) đã làm
+Test này **chính là bài kiểm chứng cho việc F0 (nền móng `core/http`) đã làm
 đúng** — viết nó trước khi coi F0 hoàn thành, cùng tinh thần "luật chưa từng
 đỏ là luật chưa được chứng minh" của BE.

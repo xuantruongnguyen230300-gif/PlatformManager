@@ -82,7 +82,7 @@ public interface IApiResult<T> : IHasApiResultStatus
     string? BusinessCode { get; }             // "{ENTITY}.{ERROR}" — nguồn ở ErrorDescriptor (cqrs-handler.md)
     string? TraceId { get; set; }
     bool? Retryable { get; }
-    Dictionary<string, string[]>? Fields { get; }   // lỗi validate theo field — key = PascalCase khớp JSON đã serialize
+    Dictionary<string, string[]>? Fields { get; }   // lỗi validate theo field — key = PascalCase, xem cảnh báo ngay dưới
 }
 
 public class ApiResult<T> : IApiResult<T>
@@ -106,6 +106,23 @@ public class ApiResult<T> : IApiResult<T>
     };
 }
 ```
+
+> ### ⚠️ `fields` CỐ Ý khác casing với phần còn lại của payload
+>
+> Payload serialize **camelCase** (`PropertyNamingPolicy = JsonNamingPolicy.CamelCase`, đặt
+> cho **cả** MVC lẫn `Http.Json` — `src/BE/PlatformManager.Api/Program.cs:24` và `:35`).
+> Nhưng **key** của `fields` giữ **PascalCase**, khớp **tên property C# gốc** (`MaxScore`,
+> `UserName`) — **không** khớp casing của payload.
+>
+> Cơ chế: `DictionaryKeyPolicy` mặc định là `null` và **cố ý không set**. Comment giải
+> thích nằm ngay tại `src/BE/PlatformManager.Api/Common/GlobalExceptionHandler.cs:51-56`.
+>
+> **Đừng "sửa cho nhất quán".** Set `DictionaryKeyPolicy = CamelCase` sẽ làm gãy toàn bộ
+> việc bind lỗi vào field trên form phía FE — và gãy **im lặng**, không test nào bắt.
+> FE đọc `fields['MaxScore']`, xem `doc/huong_dan/quy-uoc/fe-api-client.md`.
+>
+> *(Sửa 2026-08-23: bản trước ghi "key = PascalCase khớp JSON đã serialize" — sai, vì JSON
+> đã serialize là camelCase. Chính lời giải thích sai đó mới là cái bẫy.)*
 
 **[ĐƠN GIẢN HOÁ] áp dụng cho PlatformManager** (theo
 `doc/huong_dan/wiki-core/be/trien-khai/03-p2-platform-application.md §4.7`):
@@ -220,12 +237,23 @@ lỗ hổng bảo mật phổ biến.
   `AspNetUserTokens`, `AspNetRoleClaims`) tự sinh qua migration, **không**
   tự vẽ/tự tạo tay các bảng này.
 - FK nghiệp vụ trỏ tới người dùng (vd `CriteriaAssessment.OwnerId`) tham
-  chiếu `AppUser.Id` — xem `doc/ERD/PlatformManager.dbml` bảng `AppUsers`.
-- Cơ chế cấp token cho SPA (Angular ở `src/FE`): **chưa chốt kiểu cụ thể**
-  (cookie session của Identity vs JWT bearer phát hành riêng) — đây vẫn là
-  quyết định cần hỏi người dùng trước khi implement endpoint đăng nhập đầu
-  tiên, vì ảnh hưởng trực tiếp tới cách `frontend-expert` lưu/gửi
-  credential. Chỉ riêng "dùng Identity làm nguồn user/role" là đã chốt.
+  chiếu `AppUser.Id` — xem `doc/cau-truc-database.md` bảng `AppUsers`.
+- **Cơ chế xác thực cho SPA: cookie session của ASP.NET Core Identity — ĐÃ CHỐT,
+  KHÔNG JWT.** FE gửi kèm cookie mỗi request (`withCredentials`), **không** tự lưu
+  token vào `localStorage`. Hợp đồng: `doc/contracts/auth.md`. Lý do + cơ chế thu
+  hồi phiên: `doc/huong_dan/wiki-core/be/02-identity-auth.md`.
+
+  > Tóm tắt lý do: hệ chạy **1 process** nên JWT không giải bài toán nào; và JWT
+  > trần **không thu hồi được** — nút "khoá tài khoản" sẽ vô tác dụng cho tới khi
+  > token hết hạn, trong khi cookie + `SecurityStampValidator` huỷ được phiên.
+  > Khi nào nên xét lại (tách ≥2 process, có app bên thứ ba): xem `02-identity-auth.md`.
+  >
+  > ⚠️ Kèm ràng buộc bắt buộc khi thi công: **khoá tài khoản phải ĐỔI luôn
+  > `SecurityStamp`**, nếu không người đang online sẽ không bị đá ra.
+  >
+  > *(Sửa 2026-08-23: mục này từng ghi "chưa chốt kiểu cụ thể" trong khi
+  > `doc/contracts/auth.md`, `quy-uoc/README.md` và `fe-api-client.md` đều ghi "đã
+  > CHỐT cookie" — và `README.md` còn trỏ thẳng vào đây làm nguồn.)*
 - Vai trò/permission chi tiết theo từng tính năng (vd ai được sửa `Status`
   của `CriteriaAssessment`) — xem
   `spec/dashboard-dti-weekly/business-rules.md` mục Permission; nếu chưa đủ
@@ -241,7 +269,7 @@ controller nghiệp vụ chỉ có `[Authorize]` trần (đăng nhập là đủ
 thật, không phải rủi ro lý thuyết.
 
 **Bản rút gọn áp dụng ngay** — KHÔNG phải hệ thống đầy đủ ở
-[05-p4-hosting-api.md §7](../../../../doc/huong_dan/wiki-core/be/trien-khai/05-p4-hosting-api.md)
+[05-p4-hosting-api.md §7](../wiki-core/be/trien-khai/05-p4-hosting-api.md)
 (cái đó có `CrudActionResolver` suy luận action tự động + 2 cơ chế enforcement
 song song — quá nặng cho 1 module hiện tại):
 
@@ -294,33 +322,55 @@ builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 
-    // Policy riêng cho login — chặt hơn nhiều so với API thường (chống brute-force)
-    options.AddFixedWindowLimiter("login", opt =>
-    {
-        opt.PermitLimit = 5;
-        opt.Window = TimeSpan.FromMinutes(1);
-    });
+    // Policy riêng cho login — PHÂN VÙNG THEO IP (xem cảnh báo bên dưới)
+    options.AddPolicy("login", ctx => RateLimitPartition.GetFixedWindowLimiter(
+        partitionKey: ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        factory: _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 5,
+            Window      = TimeSpan.FromMinutes(1),
+        }));
 
-    // Policy mặc định cho API còn lại — rộng hơn, chỉ chặn spam rõ ràng
-    options.AddFixedWindowLimiter("default", opt =>
-    {
-        opt.PermitLimit = 100;
-        opt.Window = TimeSpan.FromMinutes(1);
-    });
+    // Giới hạn nền cho mọi request còn lại — cũng theo IP
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(ctx =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 100,
+                Window      = TimeSpan.FromMinutes(1),
+            }));
 });
 
 app.UseRateLimiter();
 ```
 
+> ### ⚠️ KHÔNG dùng `AddFixedWindowLimiter(policyName, …)` cho rate limit theo IP
+>
+> Overload đó tạo **MỘT** limiter dùng chung cho cả policy — **không phân vùng gì
+> cả**. Với `PermitLimit = 5`, đó là **5 lượt đăng nhập mỗi phút cho TOÀN HỆ
+> THỐNG**, không phải mỗi IP.
+>
+> Hệ quả **ngược hẳn mục tiêu**: một kẻ tấn công đốt hết quota là **khoá đăng nhập
+> của mọi người** — biến biện pháp chống brute-force thành lỗ hổng DoS. Còn
+> brute-force phân tán qua nhiều IP thì **không** bị chặn riêng.
+>
+> Muốn phân vùng theo IP phải dùng `AddPolicy` + `RateLimitPartition.GetFixedWindowLimiter`
+> như mẫu trên.
+>
+> *(Sửa 2026-08-23. Bản trước dùng sai overload **kèm câu giải thích sai** — "mặc
+> định của `FixedWindowLimiter` — partition key là remote IP". Đây chính là ca mà
+> `.claude/CLAUDE.md` §3 ghi lại: rule sai không nằm yên, `Program.cs` chép y theo
+> nên mang nguyên lỗi.)*
+
 ```csharp
 [HttpPost("login")]
-[EnableRateLimiting("login")]   // gắn riêng action nhạy cảm — không dùng chung policy "default"
+[EnableRateLimiting("login")]   // gắn riêng action nhạy cảm — không dùng chung giới hạn nền
 public async Task<IActionResult> Login([FromBody] LoginCommand cmd, CancellationToken ct) => ...
 ```
 
-- Policy `login` **theo IP** (mặc định của `FixedWindowLimiter` — partition
-  key là remote IP) — không theo user (chưa đăng nhập thì chưa có user).
-- `ImportController` dùng policy `default` là đủ ở quy mô hiện tại — endpoint
+- Phân vùng **theo IP**, không theo user — chưa đăng nhập thì chưa có user.
+- `ImportController` dùng giới hạn nền (`GlobalLimiter`) là đủ ở quy mô hiện tại — endpoint
   đã tự giới hạn 20MB/file + chạy nền qua Hangfire (không block worker),
   rate limit ở đây chỉ chặn spam request tạo job, không phải chặn xử lý file
   lớn (đã có Hangfire lo).

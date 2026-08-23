@@ -37,47 +37,42 @@ cuối tài liệu.
 ## Tri thức nằm ở đâu — 3 lớp
 
 ```
-.claude/
-├── agents/
-│   ├── frontend-expert.md   # Lớp 1: vai trò, phạm vi, quy tắc bàn giao, khi nào dừng hỏi
-│   └── backend-expert.md
-└── skills/
-    ├── frontend-expert/SKILL.md   # Lớp 3: điểm gọi vào — xem mục dưới
-    └── backend-expert/SKILL.md
+.claude/                                  ← QUY TRÌNH & RÀNG BUỘC (không có tri thức)
+├── CLAUDE.md                     # luật toàn repo: git, ranh giới, chiều cập nhật
+├── check-docs.sh                 # gate tài liệu, chạy tay
+├── agents/*.md                   # vai trò, phạm vi, bàn giao, khi nào dừng hỏi
+└── skills/*/SKILL.md             # điểm gọi vào `/<tên>`
 
-src/FE/
-├── CLAUDE.md                      # Lớp 2: mục lục — trỏ tới các file docs/ theo chủ đề
-└── .claude/docs/
-    ├── architecture.md            # tầng core/modules/shared, cấu trúc 1 feature
-    ├── api-client.md              # ranh giới DTO/model, mapper, gọi API
-    └── ui-conventions.md          # Angular 20 control flow, signal, style/token
-
-src/BE/
-├── CLAUDE.md                      # Lớp 2: mục lục — trỏ tới các file rules/ theo chủ đề
-└── .claude/rules/
-    ├── architecture.md            # layer rule, dependency direction, vertical slice
-    ├── entity-domain.md           # base entity, factory method, Value Object
-    ├── cqrs-handler.md            # Command/Query/Handler, ErrorDescriptor, validator
-    └── api-controller.md          # controller, envelope response, error → HTTP
+doc/                                      ← TOÀN BỘ TRI THỨC
+├── huong_dan/quy-uoc/            # quy ước ĐANG THỰC THI
+│   ├── README.md                 #   mục lục + stack BE/FE + trạng thái kiến trúc
+│   ├── be-{architecture,entity-domain,cqrs-handler,api-controller}.md
+│   └── fe-{architecture,api-client,ui-conventions}.md
+├── huong_dan/wiki-core/          # kiến thức nền về core (chuẩn chung)
+├── Design/                       # giao diện — nguồn DUY NHẤT, cả FE lẫn BE
+├── contracts/                    # hợp đồng API từng endpoint
+├── ERD/ + cau-truc-database.md   # dữ liệu
+└── kien-truc-core-module.md      # ranh giới Core ↔ Business
 ```
 
 **Lớp 1 — `.claude/agents/*.md`**: agent đọc file này đầu tiên trong mọi
 task. Chứa vai trò, cách resolve `{FE_ROOT}`/`{BE_ROOT}`, danh sách "đọc bắt
-buộc" trỏ tới Lớp 2, cơ chế bàn giao Contract Card, và checklist "dừng lại
-hỏi người dùng khi...". **Đây là nơi duy nhất mô tả quy trình/hành vi** —
-không lặp lại chi tiết kỹ thuật đã có ở Lớp 2.
+buộc" **trỏ sang `doc/`**, cơ chế bàn giao Contract Card, và checklist "dừng
+lại hỏi người dùng khi...". **Đây là nơi duy nhất mô tả quy trình/hành vi** —
+không chứa chi tiết kỹ thuật, không chứa code mẫu.
 
-**Lớp 2 — `src/FE/CLAUDE.md` và `src/BE/CLAUDE.md`**: mục lục kiến trúc của
-từng vùng code, **nằm ngay trong chính vùng đó** (không nằm ở workspace
-root) — lý do: khi vùng này lớn lên và có thể tách thành repo riêng, toàn bộ
-tri thức đi theo nó, không phải sửa đường dẫn ở nơi khác. File này ngắn, chỉ
-liệt kê stack + trỏ tới file chi tiết trong `.claude/docs/` (FE) hoặc
-`.claude/rules/` (BE).
+**Lớp 2 — `doc/huong_dan/quy-uoc/`**: quy ước thi hành thật cho `src/BE` và
+`src/FE` — layer rule, hình dạng handler, envelope, cấu trúc feature FE, ranh
+giới DTO/model. Đây là nơi có code mẫu.
 
-**Lớp 3 — chi tiết kỹ thuật theo chủ đề** (`.claude/docs/*.md` hoặc
-`.claude/rules/*.md`): nội dung thật — quy ước cụ thể, ví dụ code, quyết
-định kiến trúc. Đọc **đúng file của chủ đề đang làm**, không cần đọc hết mọi
-file cho mọi task.
+> **Lịch sử — mô hình 3 lớp cũ đã bỏ (2026-08-23).** Lớp 2/3 trước nằm ở
+> `src/BE/CLAUDE.md` + `src/BE/.claude/rules/` và `src/FE/CLAUDE.md` (tất cả đã xoá) +
+> `src/FE/.claude/docs/` — **78 KB tri thức kỹ thuật nằm ngoài `doc/`**. Lý do
+> đặt cạnh code lúc đó là *"tách repo riêng thì tri thức đi theo"*; lý do đó là
+> giả định, còn thiệt hại thì đo được: recipe `RowVersion` sai provider tồn tại
+> song song 2 nơi, và `src/BE/CLAUDE.md` (đã xoá) giữ nguyên câu *"cả 5 project
+> `Business.*` đã tồn tại"* suốt nhiều tháng vì nằm ngoài tầm với của mọi luật.
+> Toàn bộ đã hoà tan vào `doc/huong_dan/quy-uoc/`.
 
 ## Vì sao tách 3 lớp thay vì gộp vào 1 file agent (như VNR.Successor làm)
 
@@ -115,12 +110,12 @@ không cần gõ đúng tên skill.
 ## Khi nào cần cập nhật tri thức này
 
 - **Chốt version .NET cụ thể** khi scaffold backend lần đầu → cập nhật
-  `src/BE/CLAUDE.md` § Stack.
+  `doc/huong_dan/quy-uoc/README.md` § Stack.
 - **Chốt thư viện i18n cho FE** (nếu cần đa ngôn ngữ) → cập nhật
-  `src/FE/.claude/docs/ui-conventions.md` § i18n.
+  `doc/huong_dan/quy-uoc/fe-ui-conventions.md` § i18n.
 - **Chốt cơ chế auth/permission cho BE** → cập nhật
-  `src/BE/.claude/rules/api-controller.md` § Auth/Permission và
-  `src/BE/CLAUDE.md`.
+  `doc/huong_dan/quy-uoc/be-api-controller.md` § Auth/Permission và
+  `doc/huong_dan/quy-uoc/README.md`.
 - Sau khi có code thật, nếu quy ước ở đây không còn khớp thực tế (vd. cấu
   trúc feature thực tế khác đi) → sửa Lớp 2/3 cho khớp code thật, theo đúng
   triết lý "tài liệu bám nguồn thật" đã áp dụng cho `doc/Design/` (xem
@@ -139,7 +134,7 @@ chiếu với bộ quy tắc core, rồi ghi báo cáo PASS/PARTIAL/MISSING kèm
 Đây là **lớp tri thức thứ 4**, nằm ngoài mô hình 3 lớp ở trên, và có mục đích
 khác hẳn:
 
-| | Lớp 2/3 (`src/*/CLAUDE.md` + `.claude/rules|docs/`) | `doc/huong_dan/wiki-core/` |
+| | `doc/huong_dan/quy-uoc/` | `doc/huong_dan/wiki-core/` |
 | --- | --- | --- |
 | Mô tả cái gì | Quy ước **đang thực thi** cho code hiện tại | Kiến thức nền về core cho **hệ thống mới nói chung** |
 | Ai đọc | `backend-expert`/`frontend-expert` khi viết code | `core-reviewer` khi audit |
@@ -161,7 +156,7 @@ Cấu trúc: `wiki-core/README.md` (mục lục) → 2 lớp con:
   phần core, không chỉ "có nên có nó không".
 
 `fe/01-...` đến `fe/10-...` (10 chủ đề lý thuyết) + `fe/trien-khai/00-...`
-đến `05-...` (6 file thực hành, giai đoạn F0–F5) — cùng cấu trúc với `be/`,
+đến `05-...` (6 file thực hành, giai đoạn F0–F3 + Gate) — cùng cấu trúc với `be/`,
 viết xong 2026-08-15. Khác biệt nguồn: không có "VNR.Successor frontend" để
 đối chiếu — nguồn là kiến trúc chính thức Angular + hệ thống thiết kế thật
 của PlatformManager (`doc/Design/Frontend/PlatformManager/`) + các quyết
@@ -195,12 +190,12 @@ thuộc về `backend-expert`/`frontend-expert`.
   file `be/trien-khai/0X-...` tương ứng lệch với source thật lúc đó đã đối
   chiếu (`VNR.Successor` cũng có thể đã đổi) → sửa lại đúng file phase đó,
   giữ nguyên nguyên tắc "mọi tên class/interface/file phải có thật" đã nêu ở
-  đầu [be/trien-khai/00-lo-trinh-tong-the.md](wiki-core/be/trien-khai/00-lo-trinh-tong-the.md).
+  đầu [be/trien-khai/00-lo-trinh-tong-the.md](../doc/huong_dan/wiki-core/be/trien-khai/00-lo-trinh-tong-the.md).
 
 ## Tham khảo thêm
 
-- [.claude/agents/frontend-expert.md](../../.claude/agents/frontend-expert.md)
-- [.claude/agents/backend-expert.md](../../.claude/agents/backend-expert.md)
-- [.claude/agents/core-reviewer.md](../../.claude/agents/core-reviewer.md)
-- [doc/huong_dan/wiki-core/README.md](./wiki-core/README.md) — bộ quy tắc core
-- [doc/Design/SETUP.md](../Design/SETUP.md) — setup pipeline thiết kế → Figma (khác chủ đề, cùng repo)
+- [.claude/agents/frontend-expert.md](agents/frontend-expert.md)
+- [.claude/agents/backend-expert.md](agents/backend-expert.md)
+- [.claude/agents/core-reviewer.md](agents/core-reviewer.md)
+- [doc/huong_dan/wiki-core/README.md](../doc/huong_dan/wiki-core/README.md) — bộ quy tắc core
+- [doc/Design/SETUP.md](../doc/Design/SETUP.md) — setup pipeline thiết kế → Figma (khác chủ đề, cùng repo)

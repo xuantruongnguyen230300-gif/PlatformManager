@@ -1,5 +1,10 @@
 # P3 — `Platform.Persistence`
 
+> 📍 **Tên project trong file này là của VNR.Successor, không phải PlatformManager.**
+> Tra bảng ánh xạ + 4 mục "KHÔNG áp dụng" ở [`00-lo-trinh-tong-the.md`](00-lo-trinh-tong-the.md)
+> §ĐỌC TRƯỚC. Tóm tắt: `Platform.*`→`Core.*` · `Module.{M}.*`→tầng nghiệp vụ (`Business.*`) ·
+> `Processes/`→**1** host · JWT→**cookie session** · per-module DbContext→**1** DbContext chung.
+
 > **Định nghĩa hoàn thành:** một entity implement `IAuditEntity` + `ISoftDelete`
 > được `Add()` qua `IGenericRepository`, `SaveChangesAsync()` qua `IUnitOfWork` —
 > và khi đọc lại bằng `dbContext.Set<T>()` bình thường (không `IgnoreQueryFilters`),
@@ -408,8 +413,9 @@ public class GenericRepository<TEntity, TKey, TDbContext>
         _dbSet = _dbContext.Set<TEntity>();
     }
 
+    // KHÔNG dùng FindAsync — nó BỎ QUA global query filter (xem cảnh báo dưới)
     public virtual async Task<TEntity?> GetByIdAsync(TKey id, CancellationToken ct = default)
-        => await _dbSet.FindAsync([id], ct);
+        => await _dbSet.FirstOrDefaultAsync(e => e.Id!.Equals(id), ct);
 
     public virtual async Task AddAsync(TEntity entity, CancellationToken ct = default)
     {
@@ -438,6 +444,22 @@ public class GenericRepository<TEntity, TKey, TDbContext>
     public Task<int> SaveChangesAsync(CancellationToken ct = default) => _dbContext.SaveChangesAsync(ct);
 }
 ```
+
+> ### ⚠️ `FindAsync` BỎ QUA global query filter — đừng dùng cho `GetByIdAsync`
+>
+> EF Core **cố ý** không áp `HasQueryFilter` cho `Find`/`FindAsync`: hai method này tra
+> change-tracker trước, và khi phải xuống DB thì đi đường tra khoá chính thuần, không
+> qua LINQ pipeline nơi filter được chèn.
+>
+> Hệ quả: `GetByIdAsync` dùng `FindAsync` sẽ **trả về cả bản ghi đã soft-delete** —
+> phá thẳng "Định nghĩa hoàn thành" của chính P3 (*"dòng đã soft-delete không xuất
+> hiện"*). Hỏng im lặng: không lỗi, không cảnh báo, chỉ là dữ liệu đáng lẽ đã xoá lại
+> hiện ra ở đúng đường truy vấn được gọi nhiều nhất.
+>
+> Dùng `FirstOrDefaultAsync(e => e.Id.Equals(id))` — đi qua LINQ nên filter được áp.
+> Kèm 1 integration test: *"GetById một bản ghi đã soft-delete → phải trả `null`"*.
+>
+> *(Sửa 2026-08-23.)*
 
 4 điều phải giữ nguyên khi viết lại cho hệ thống mới:
 

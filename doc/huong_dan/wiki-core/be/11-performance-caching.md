@@ -107,7 +107,7 @@ down" mà [01-core-components.md](01-core-components.md) #8 mô tả — .NET 9 
 
 - Cache trong tầng `*.Application` bằng cách `new`/gọi thẳng
   `IMemoryCache` — Application chỉ biết interface, đúng như mọi phụ thuộc
-  hạ tầng khác (xem `.claude/rules/architecture.md` §Project layout).
+  hạ tầng khác (xem `doc/huong_dan/quy-uoc/be-architecture.md` §Project layout).
 - Dùng `static` `Dictionary`/`ConcurrentDictionary` làm cache dữ liệu **từ
   DB** — không có eviction, không có invalidation, rò rỉ theo thời gian.
   (Khác với cache **reflection/metadata bất biến trong 1 process**, vd
@@ -188,7 +188,7 @@ Nhóm A — sửa trước, rủi ro gần bằng 0, không cần hạ tầng m�
 
 | Mã | Vi phạm | Vị trí | Quy tắc |
 | --- | --- | --- | --- |
-| **A0** | Permission check bắn **2 query DB mỗi request** có `[RequirePermission]` (`Roles` + `AnyAsync` trên `RolePermissions`); dữ liệu tí hon, gần như bất biến | [`RequirePermissionFilter.cs:39-50`](../../../../src/BE/Core/PlatformManager.Core.Infrastructure/Permissions/RequirePermissionFilter.cs) | §4.3 — ứng viên cache |
+| **A0** | Permission check bắn **2 query DB mỗi request** có `[RequirePermission]` (`Roles` + `AnyAsync` trên `RolePermissions`); dữ liệu tí hon, gần như bất biến | `RequirePermissionFilter.cs:39-50` *(file không tồn tại trên working copy 2026-08-23)* | §4.3 — ứng viên cache |
 | **A1** | **Không có một `AsNoTracking()` nào trong toàn bộ `src/BE`** — mọi query đọc đều track | toàn repository | Q1 |
 | **A2** | Index `(CriteriaId, DateCreate)` không phục vụ được query lọc **chỉ theo `DateCreate`** → seq scan. `RolePermission` không có index trên `ResourceKey` | [`CriteriaAssessmentConfiguration.cs:53`](../../../../src/BE/Modules/DtiWeekly/PlatformManager.Modules.DtiWeekly.Infrastructure/Persistence/Configurations/CriteriaAssessmentConfiguration.cs) vs [`CriteriaAssessmentRepository.cs:73`](../../../../src/BE/Modules/DtiWeekly/PlatformManager.Modules.DtiWeekly.Infrastructure/Persistence/Repositories/CriteriaAssessmentRepository.cs) | Q2 |
 | **A3** | `GetAllDistinctAssessmentDatesAsync` kéo **toàn bộ** cột `DateCreate` về app rồi mới `Distinct()` trong C#; được gọi 2 lần/lần load dashboard | [`CriteriaAssessmentRepository.cs:110`](../../../../src/BE/Modules/DtiWeekly/PlatformManager.Modules.DtiWeekly.Infrastructure/Persistence/Repositories/CriteriaAssessmentRepository.cs) | Q3 |
@@ -207,10 +207,34 @@ Nhóm B — chấp nhận được ở quy mô hiện tại, **theo dõi**, chư
 **Trạng thái sau đợt 1 (2026-08-18) — người dùng chốt phạm vi CHỈ Core, cố ý
 không đụng `Modules.DtiWeekly`:**
 
+> ### ⚠️ Đây là NHẬT KÝ AUDIT, không phải mô tả hiện trạng
+>
+> Bảng dưới ghi kết quả đợt sửa **2026-08-18**, đối chiếu với bản code **tại thời
+> điểm đó**. Rà lại ngày **2026-08-23** trên working copy hiện tại **không xác
+> minh được 5 dòng** — các dòng đó mang dấu ⚠️:
+>
+> | Mã | Bảng ghi | Kiểm 2026-08-23 trên working copy |
+> | --- | --- | --- |
+> | A0  | đánh dấu xong | `RequirePermissionFilter.cs` không tìm thấy; `grep -r RolePermission src/BE --include=*.cs` = 0 |
+> | A1  | đánh dấu xong (phần Core) | `grep -c AsNoTracking src/BE/Core` = 0 |
+> | A2 | đánh dấu xong, migration `2026081810…` | `Migrations/` chỉ có `20260816150234_InitialCreate` |
+> | A4  | đánh dấu xong (22→3) | `UserAdminService.cs` vẫn `foreach … await ToDtoAsync` |
+> | B2  | đánh dấu xong (4→1) | `SysMenuRoleRepository.cs` vẫn 4 lượt `ToListAsync` |
+>
+> **Chưa kết luận được bên nào đúng.** Working copy hiện là **bản cũ** (người dùng
+> xác nhận 2026-08-23), nên khả năng cao là code mới chưa về đây chứ không phải
+> bảng này bịa. Nhưng cho tới khi đối chiếu lại được trên bản code đúng, **không
+> đọc các dòng ⚠️ như bằng chứng "đã xong"** — đó chính là cách một việc chưa làm
+> bị bỏ qua. Xác minh lại rồi cập nhật bảng này kèm ngày mới.
+>
+> Hai đường dẫn dùng làm bằng chứng bên dưới hiện **không tồn tại** ở bất kỳ đâu
+> trong repo: `RequirePermissionFilter.cs` (A0) và `menu-cache-scenario.spec.ts`
+> (§7.1) — nên link tới chúng đã gỡ, giữ lại tên file để tra lại sau.
+
 | Mã | Trạng thái | Ghi chú |
 | --- | --- | --- |
-| A0 | ✅ Xong (gộp 2 → 1 query) | KHÔNG cache — xem §6.2 mục 5 |
-| A1 | ✅ Xong **phần Core** | Query đọc thuần trong `Core.*` đã có `AsNoTracking`; 2 chỗ **cố ý giữ tracking** (`RolePermissionRepository.ReplaceAllAsync`, `SysMenuRoleRepository.ReplaceAllAsync` — entity lấy ra để `RemoveRange` rồi `SaveChanges`). Repository của `Modules.*` **chưa** làm |
+| A0 | ⚠️ ✅ Xong (2026-08-18, gộp 2 → 1 query) — chưa xác minh lại 2026-08-23 | KHÔNG cache — xem §6.2 mục 5 |
+| A1 | ⚠️ ✅ Xong **phần Core** (2026-08-18) — chưa xác minh lại 2026-08-23 | Query đọc thuần trong `Core.*` đã có `AsNoTracking`; 2 chỗ **cố ý giữ tracking** (`RolePermissionRepository.ReplaceAllAsync`, `SysMenuRoleRepository.ReplaceAllAsync` — entity lấy ra để `RemoveRange` rồi `SaveChanges`). Repository của `Modules.*` **chưa** làm |
 
 > **`Modules.*` chưa có `AsNoTracking()` — HOÃN CÓ CHỦ ĐÍCH, không phải sót.**
 > Người dùng đang tập trung phát triển **core**, `src/BE/Modules/**` nằm ngoài
@@ -219,13 +243,13 @@ không đụng `Modules.DtiWeekly`:**
 > ra để sửa rồi `SaveChanges` thì KHÔNG được thêm `AsNoTracking`), nên việc này
 > phải đọc kỹ từng call-site chứ không sed toàn bộ. Ghi nhận 2026-08-20, chuyển
 > vào đây 2026-08-21 khi bỏ thư mục `audit/`.
-| A2 | ✅ Xong **phần Core** (`RolePermission`) | Migration `20260818101335_AddRolePermissionResourceKeyIndex`, script `doc/ERD/migrations/0005_*.sql`. Phần `CriteriaAssessment.DateCreate` thuộc Modules — **chưa** làm |
+| A2 | ⚠️ ✅ Xong **phần Core** (2026-08-18) — chưa xác minh lại 2026-08-23 | Migration `20260818101335_AddRolePermissionResourceKeyIndex`, script `doc/cau-truc-database.md` §2.1. Phần `CriteriaAssessment.DateCreate` thuộc Modules — **chưa** làm |
 | A3 | ⛔ Ngoài phạm vi đợt này (Modules) | |
-| A4 | ✅ Xong (22 → 3 query) | |
+| A4 | ⚠️ ✅ Xong (2026-08-18, 22 → 3 query) — chưa xác minh lại 2026-08-23 | |
 | A5 | ⛔ Ngoài phạm vi đợt này (Modules) | Đo lại khi có dữ liệu `CriteriaAssessments` thật — lúc đo bảng này **rỗng**, số đo hiện tại không phản ánh A5/A6 |
 | A6 | ⛔ Ngoài phạm vi đợt này (Modules) | |
 | B1 | ⛔ Ngoài phạm vi đợt này (Modules) | |
-| B2 | ✅ Xong (4 → 1 query) | Nâng lên sửa luôn thay vì "theo dõi": gộp round-trip không cần hạ tầng mới, và điều kiện "gộp chung đợt cache" ở cột bên đã không còn vì cache bị bác bỏ |
+| B2 | ⚠️ ✅ Xong (2026-08-18, 4 → 1 query) — chưa xác minh lại 2026-08-23 | Nâng lên sửa luôn thay vì "theo dõi": gộp round-trip không cần hạ tầng mới, và điều kiện "gộp chung đợt cache" ở cột bên đã không còn vì cache bị bác bỏ |
 | B3 | ✅ Xong (2026-08-19, `frontend-expert`) | Cache theo **khoá phiên** trong `MenuService` (`src/FE/src/app/shared/services/menu.service.ts`); invalidate ở `AuthService.login/logout` + sau khi lưu ma trận phân quyền màn hình. Số đo S1 3→2, S2 5→1 (§7.1) |
 
 ### 6.4 Thứ tự thực hiện đã chốt
@@ -265,7 +289,7 @@ bọc trong `IHostEnvironment.IsDevelopment()`). Đếm số dòng
 `https://localhost:7168`.
 
 **Môi trường.** Database ĐO RIÊNG (`platformmanager_perf`) dựng từ chính 2 file
-`doc/ERD/migrations/0003_*.sql` + `0004_*.sql`, KHÔNG dùng DB làm việc và KHÔNG
+`doc/cau-truc-database.sql` (nguồn cũ `doc/ERD/` đã xoá), KHÔNG dùng DB làm việc và KHÔNG
 ghi gì vào database `postgres`. Postgres local, app 1 process, client tuần tự 1
 luồng. DB đo là **dùng một lần rồi xoá** — dựng lại y hệt bằng đúng 2 file .sql
 trên khi cần đo lại, đừng giữ nó làm môi trường lâu dài (dữ liệu user trong đó
@@ -298,13 +322,13 @@ tin.
 **Số đo FE — B3 (2026-08-19, `frontend-expert`).** Đơn vị là **số request
 `GET /api/meta/menu` trên một kịch bản điều hướng xác định**, không phải
 query/request và không phải milli-giây — thứ cache FE thay đổi là *số lần gọi*,
-nên đó là con số phải đo (đúng `src/BE/.claude/rules/performance.md` §Đo).
+nên đó là con số phải đo (đúng `doc/huong_dan/wiki-core/be/11-performance-caching.md` §Đo).
 Latency **không đo**: cùng lý do đã ghi ở đoạn trên, và ở FE nó còn phụ thuộc
 mạng/BE nên không nói lên gì về cache.
 
 *Cách đo.* Chạy kịch bản trong harness test thật của FE (`ng test`, Karma +
 `HttpTestingController`), spec
-[`menu-cache-scenario.spec.ts`](../../../../src/FE/src/app/shared/services/menu-cache-scenario.spec.ts)
+`menu-cache-scenario.spec.ts` *(file không tồn tại trên working copy 2026-08-23)*
 — dùng chính component `Sidebar` và `AuthService` thật, vì cơ chế sinh request
 nằm ở **vòng đời component**: app-shell trong `app.html` bọc
 `@if (showShell())`, nên mỗi lần vào/ra route `noShell` (`login`,

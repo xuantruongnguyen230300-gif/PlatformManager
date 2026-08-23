@@ -29,14 +29,12 @@ kiến trúc chạy tay qua `scripts/fe-gate.sh`.
 | 1 | **`src/FE/src/app/**` + `src/FE/src/styles.scss`** | **Nguồn sự thật.** Layout, copy, token — lấy từ template/SCSS thật |
 | 2 | `doc/Design/Frontend/PlatformManager/Screens/*.md` | Đặc tả màn hình đã viết, bám `src/FE`, kèm ảnh chụp |
 | 3 | `doc/Design/Frontend/PlatformManager/{Tokens,COMPONENTS.md,Icons.md}` | Tên token + hợp đồng component |
-| 🧊 | `doc/Prototype/` | **ĐÓNG BĂNG — lịch sử.** Chỉ trả lời *"vì sao layout như vậy"*, **không** trả lời *"hiện trông ra sao"*. Xem banner ở `doc/Prototype/README.md` |
-
-⚠️ Prototype đã lệch thật: chỉ phủ 4/6 màn, token đổi giá trị, và grid Angular
-sửa bằng **double-click** trong khi prototype dùng single-click. Trích xuất bất
-cứ thứ gì từ đó là chép lại một thiết kế không còn ship.
 
 Có code cũ rồi, nhưng **vẫn không có lý do hợp lệ để lệch chuẩn** kiến trúc
-dưới đây — chuẩn đó đang được cưỡng chế bằng lint (G8/G9) và gate.
+dưới đây.
+
+> 📖 Ranh giới tầng FE và trạng thái thật của từng gate: đọc
+> `doc/huong_dan/wiki-core/fe/trien-khai/05-gate.md`
 
 ---
 
@@ -61,13 +59,15 @@ contract; **không sửa** file nào trong đó — đó là việc của `backe
 
 # Đọc bắt buộc trước khi viết dòng code đầu tiên
 
-1. **`src/FE/CLAUDE.md`** — chuẩn cấu trúc màn hình + bảng trách nhiệm tầng.
+1. **`doc/huong_dan/quy-uoc/README.md`** — chuẩn cấu trúc màn hình + bảng trách nhiệm tầng.
    File này **đã có sẵn dù app chưa tồn tại** — đọc trước khi chạy `ng new`.
-2. `src/FE/.claude/docs/architecture.md` — tầng `core` / `modules` / `shared`.
-3. `src/FE/.claude/docs/api-client.md` — gọi API, ranh giới DTO/model, mapper.
-4. `src/FE/.claude/docs/ui-conventions.md` — control flow Angular 20, form,
+2. `doc/huong_dan/quy-uoc/fe-architecture.md` — tầng `core` / `modules` / `shared`.
+3. `doc/huong_dan/quy-uoc/fe-api-client.md` — gọi API, ranh giới DTO/model, mapper.
+4. `doc/huong_dan/quy-uoc/fe-ui-conventions.md` — control flow Angular 20, form,
    responsive, style theo token.
-5. `doc/Design/Frontend/PlatformManager/` (nếu pipeline `/design-*` đã chạy
+5. `doc/huong_dan/quy-uoc/fe-routing-guard.md` — route + lazy-load, guard
+   `authGuard`/`mustChangePasswordGuard`/role, ranh giới `platform/` vs `modules/`.
+6. `doc/Design/Frontend/PlatformManager/` (nếu pipeline `/design-*` đã chạy
    qua stage 3+) — token và component spec đã tài liệu hoá; UI mới **phải**
    khớp, không tự phát minh giá trị khi đã có token.
 
@@ -79,7 +79,7 @@ Task chạm `modules/<feature>/` (nghiệp vụ, không phải `platform/`) → 
 buộc** đọc `spec/<feature>/business-rules.md` + `spec/<feature>/ui-spec.md`
 (nếu tồn tại) trước khi dựng màn hình — đây là nguồn quy tắc nghiệp vụ và đặc
 tả UI chi tiết, khác với `doc/Design/` (token/component đã tài liệu hoá theo
-đúng pixel thật) và `src/FE/.claude/docs/` (quy ước thực thi).
+đúng pixel thật) và `doc/huong_dan/quy-uoc/` (quy ước thực thi).
 
 - Tên feature không khớp thư mục `spec/` 1-1 → hỏi người dùng thay vì đoán.
 - `spec/<feature>/` không tồn tại nhưng task rõ ràng là màn hình nghiệp vụ
@@ -113,7 +113,7 @@ không sửa mapper = vỡ runtime im lặng, build vẫn xanh. Giữ kỷ luậ
 
 Endpoint BE trả **202 + `jobId`** thay vì đợi xử lý xong (import file lớn,
 export...) → gọi theo pattern poll, không coi response 202 là "đã xong". Xem
-`src/FE/.claude/docs/api-client.md` §"Long-running operation — poll pattern"
+`doc/huong_dan/quy-uoc/fe-api-client.md` §"Long-running operation — poll pattern"
 — đặc biệt `takeUntilDestroyed()` bắt buộc trên chuỗi poll để không leak
 request nền khi user rời trang giữa chừng.
 
@@ -247,7 +247,7 @@ endpoint một card:
 Khi task vừa hoàn thành **đụng tới thành phần core của FE** (không phải màn
 hình/feature đơn lẻ), kích hoạt agent `core-reviewer` để đối chiếu code với
 bộ quy tắc trong `doc/huong_dan/wiki-core/fe/*.md` (đối chiếu thêm
-`src/FE/.claude/docs/*.md` — quy ước thực thi hiện tại):
+`doc/huong_dan/quy-uoc/fe-*.md` — quy ước thực thi hiện tại):
 
 - `SendMessage(to: "core-reviewer", ...)` nếu nó đã là teammate đang chạy;
   nếu chưa có, `Agent(subagent_type: "core-reviewer", ...)` **một lần**.

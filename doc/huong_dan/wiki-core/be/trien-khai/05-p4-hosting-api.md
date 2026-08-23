@@ -1,5 +1,10 @@
 # P4 — `Hosting.Api` + `Hosting.CompositionRoot`
 
+> 📍 **Tên project trong file này là của VNR.Successor, không phải PlatformManager.**
+> Tra bảng ánh xạ + 4 mục "KHÔNG áp dụng" ở [`00-lo-trinh-tong-the.md`](00-lo-trinh-tong-the.md)
+> §ĐỌC TRƯỚC. Tóm tắt: `Platform.*`→`Core.*` · `Module.{M}.*`→tầng nghiệp vụ (`Business.*`) ·
+> `Processes/`→**1** host · JWT→**cookie session** · per-module DbContext→**1** DbContext chung.
+
 > **Định nghĩa hoàn thành:** `GET /api/v1/health` trả 200. Một controller thật
 > kế thừa `BaseCrudApiController<TResult,TRequest,TKey>` — **0 dòng code** —
 > đã có đủ `list/export-excel/{id}/lookup/POST/PUT/DELETE/batch-delete`. Gọi
@@ -70,7 +75,7 @@ B8. Composition Root thật: gọi đúng thứ tự AddXxxBehavior            (
 
 ```csharp
 [ApiController]
-[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+[Authorize]   // VNR: JwtBearer. PlatformManager: cookie — xem 00-lo-trinh §Auth
 public abstract class BaseApiController : ControllerBase
 {
     protected readonly IMediator _mediator;
@@ -104,7 +109,11 @@ public abstract class BaseApiController : ControllerBase
 }
 ```
 
-### 4.1 Vì sao `[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]` nằm ở class, không phải từng action
+> ⚠️ **Mục này là quyết định của VNR (9 process).** PlatformManager 1 process → **cookie session,**
+> **KHÔNG JWT**. Đọc `[Authorize(AuthenticationSchemes = JwtBearer...)]` thành `[Authorize]` trần.
+> Xem `00-lo-trinh-tong-the.md` §Auth.
+
+### 4.1 [VNR] Vì sao `[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]` nằm ở class, không phải từng action
 
 Xác thực (authentication — "bạn là ai") và phân quyền (authorization — "bạn
 được làm gì") là 2 lớp tách biệt trong hệ thống này:
@@ -362,7 +371,7 @@ nhưng không có route "vô tình đúng" nhờ convention mà không ai chủ 
 ## 7. Auth/Permission — 2 lớp tách biệt, 1 attribute duy nhất phía dev
 
 > **Trạng thái áp dụng (2026-08-17):** PlatformManager hiện dùng bản rút gọn
-> của mục này — xem `src/BE/.claude/rules/api-controller.md` §"Phân quyền
+> của mục này — xem `doc/huong_dan/quy-uoc/be-api-controller.md` §"Phân quyền
 > theo hành động" (1 attribute + 1 filter, không `CrudActionResolver`, không
 > 2 cơ chế song song). Nâng cấp lên đầy đủ như dưới đây khi có module nghiệp
 > vụ thứ 2+ hoặc cần suy luận action tự động theo tên method.

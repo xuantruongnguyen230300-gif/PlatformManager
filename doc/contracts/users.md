@@ -1,10 +1,10 @@
 # API Contract Card — Users (Quản trị người dùng)
 
 **Status: AGREED** (2026-08-16) — Application (P2) + Infrastructure (P3) + Api (P4) đã code
-xong, build xanh, pipeline auth/envelope đã verify thật (xem `auth.md`). Chưa chuyển
+xong, build xanh, pipeline auth/envelope đã verify thật (2026-08-16) (xem `auth.md`). Chưa chuyển
 IMPLEMENTED vì chưa gọi thử được response THÀNH CÔNG có data thật (cần DB đã migrate + có
 user) — `backend-expert` sẽ cập nhật ví dụ response thật + đổi status khi người dùng xác nhận
-đã chạy `doc/ERD/migrations/0003_corebase_v2.sql`.
+đã chạy `doc/cau-truc-database.sql` (DDL viết tay) + `dotnet ef database update`.
 
 Gate: `[Authorize(Roles = "SuperAdmin,Admin")]` toàn bộ controller — khớp menu "Quản trị hệ
 thống > Người dùng".
@@ -99,7 +99,7 @@ CamelCase (`data,message,status,code,businessCode,traceId,retryable,fields`) —
 
 ## `GET /api/users?page=1&pageSize=20&searchText=...`
 
-`Data: PagedList<UserDto>` — `{ items, total, page, pageSize }`. Mỗi `UserDto`:
+`Data: PagedList<UserDto>` — `{ items, page, pageSize, totalCount }` (shape chuẩn duy nhất, xem `doc/huong_dan/quy-uoc/be-cqrs-handler.md` §Shape phân trang). Mỗi `UserDto`:
 
 ```json
 {
@@ -155,7 +155,7 @@ xem `doc/huong_dan/wiki-core/be/02-identity-auth.md` §"Vòng đời phiên đă
 ## `POST /api/users/{id}/lock` / `POST /api/users/{id}/unlock`
 
 Không cần body. Khoá qua `UserManager.SetLockoutEndDateAsync` (không thêm cột `IsActive`
-riêng — xem `doc/ERD/ERD-corebase.md` §1.2). `Data: true`.
+riêng — xem `doc/cau-truc-database.md` §4.1). `Data: true`.
 
 Lỗi của `lock`: `USER.NOT_FOUND` (404), `USER.SUPERADMIN_LOCK_FORBIDDEN` (403),
 `USER.SELF_LOCK_FORBIDDEN` (403) — xem §Bảo vệ tài khoản quản trị. `unlock` chỉ có

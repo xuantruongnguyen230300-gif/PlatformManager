@@ -49,7 +49,7 @@ providePrimeNG({ theme: { preset: PlatformManagerPreset } })
 Token hiện có (`--brand`, `--card`, `--text`, `--line`...) **không đổi tên,
 không mất** — chỉ thêm 1 lớp map để PrimeNG đọc đúng token, không để 2 hệ
 màu song song tồn tại. Việc này làm 1 lần ở
-[trien-khai/02-f1-dong-bo-design.md](trien-khai/02-f1-dong-bo-design.md),
+[trien-khai/02-f1-design-token.md](trien-khai/02-f1-design-token.md),
 không lặp lại cho mỗi component.
 
 ## 2 nguồn phải luôn khớp nhau
@@ -65,14 +65,15 @@ liệu mirror theo, không ngược lại (xem `doc/Design/CLAUDE.md` §Core
 Principle 4 — "Live source first"). Khi đổi theme/token: sửa `styles.scss`
 trước, rồi chạy `/design-extract-tokens` để đồng bộ lại `Tokens/*.md`.
 
-## Trạng thái hiện tại — lệch đã biết
+## Ngoại lệ một lần — giai đoạn F1
 
-`styles.scss` đã có bộ token "mật độ hiển thị compact" (`--fs-xs..--fs-lg`,
-`--sp-1..--sp-5`, `--radius-*`, `--sidebar-w`) mới hơn 2 file
-`Tokens/typography.md`/`spacing.md` — 2 file đó mô tả bản trước khi
-prototype chuyển sang compact. Đây là nợ tài liệu, không phải nợ code —
-xem lộ trình xử lý ở
-[trien-khai/02-f1-dong-bo-design.md](trien-khai/02-f1-dong-bo-design.md).
+Quy tắc trên chỉ áp dụng được **khi đã có code**. Ở F1 của `src/FE` viết mới
+thì chưa có `styles.scss` nào để làm nguồn, nên chiều đi **ngược lại đúng một
+lần**: `DESIGN.md` → `styles.scss`. Từ sau F1 mới quay về chiều thường ngày.
+
+Vì sao không được lấy giá trị từ `src/FE` cũ — nợ tương phản WCAG đã sửa trong
+`DESIGN.md` nhưng chưa bao giờ vào code:
+[trien-khai/02-f1-design-token.md](trien-khai/02-f1-design-token.md).
 
 ## Quy tắc dùng token trong component
 
@@ -84,10 +85,9 @@ xem lộ trình xử lý ở
 .card { background: #fff; }
 ```
 
-- **Không hardcode hex/px** khi token tương ứng đã tồn tại — vi phạm này
-  đang có ở 9 chỗ trong codebase hiện tại (xem
-  [trien-khai/03-f2-don-no-ky-thuat.md](trien-khai/03-f2-don-no-ky-thuat.md)),
-  không nhân rộng thêm.
+- **Không hardcode hex/px** khi token tương ứng đã tồn tại. Kiểm bằng lệnh
+  grep chứ không bằng danh sách đếm tay — xem
+  [trien-khai/02-f1-design-token.md](trien-khai/02-f1-design-token.md) §Kiểm chứng.
 - Cần giá trị **chưa có token** → báo cáo, đề xuất token mới (đặt tên theo
   quy ước `--{nhóm}-{biến-thể}`, vd `--surface-alt`, `--good-bg`) — **không**
   tự thêm ngầm rồi quên báo, đúng yêu cầu đã có sẵn trong `ui-conventions.md`.

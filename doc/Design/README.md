@@ -2,8 +2,6 @@
 
 Single home for PlatformManager's Product Design work, covering every UI surface of the solution — the shipped Angular 20 app in `src/FE/` (6 routed screens) and, once one exists, any UI embedded in `src/BE/`.
 
-> 🧊 `doc/Prototype/` was the source until 2026-08-22 and is now **frozen history**. Cite it to explain *why* a design decision was made, never as evidence of current behaviour.
-
 ## Structure
 
 ```
@@ -29,7 +27,7 @@ The Pipeline column tracks the 8 stages (1 Scaffold · 2 Inventory · 3 Tokens �
 | --- | --- | --- | --- | --- |
 | [PlatformManager](./Frontend/PlatformManager/README.md) | Frontend | Angular 20 (standalone + Signals, zoneless), PrimeNG + PrimeIcons v7, SCSS | `src/FE/src/app`, `src/FE/src/styles.scss` | 1✅ 2✅ 3✅ 4✅ 5✅ 6✅ 7🔁 8⛔ |
 
-> **Stages 2–6 were all re-run on 2026-08-22** against `src/FE/` after the Angular app superseded the prototype. The earlier ✅ row described artifacts extracted from `doc/Prototype/dashboard.html`, which had drifted from what ships.
+> **Stages 2–6 were all re-run on 2026-08-22** against `src/FE/` after the Angular app superseded the prototype. The earlier ✅ row described artifacts extracted from the deleted prototype, which had drifted from what ships.
 >
 > **The 2026-08-22 audit came back BLOCKED with 11 findings, and all 11 were fixed the same day** — which is why stages 2–6 are back to ✅ and stage 7 shows 🔁 (fixed, awaiting a re-run to issue a fresh verdict). Every finding was documentation drift, mostly one repeated failure: a doc was corrected and the documents citing it were not. **None needed a `src/` change.** `Frontend/PlatformManager/AUDIT.md` keeps the original verdict alongside a resolution log. Stage 8 is ⛔ for an unrelated reason: every Figma account tried hit the Starter-plan MCP quota (6 tool calls/month), so the artifact set here is the hand-off instead.
 

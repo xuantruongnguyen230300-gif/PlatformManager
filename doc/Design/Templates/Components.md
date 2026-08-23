@@ -18,7 +18,7 @@ components_total: "<n>"
 
 | Component | File | Summary |
 | --- | --- | --- |
-| Button | [Components/Button.md](./Components/Button.md) | Primary/danger variants, pill radius |
+| Button | [Components/Button.md](../Frontend/PlatformManager/Components/Button.md) | Primary/danger variants, pill radius |
 
 ## Known inconsistencies (current code — normalize in redesigns)
 <!-- Library-wide quirks shipped in the product, recorded AS-IS with the convergence target. Screen-local quirks stay in that screen's "Normalize on redesign". -->
@@ -35,7 +35,7 @@ project: "<project>"
 status: "draft"
 updated: "YYYY-MM-DD"
 component: "<Name>"
-sources: ["<doc/Prototype/dashboard.html>"]
+sources: ["<src/FE/src/app/shared/components/<component>/>"]
 ---
 
 # <Name>

@@ -12,7 +12,7 @@ live_source: "src/FE/src/styles.scss"
 
 ## Live Source & Extraction Method
 
-**Live source changed 2026-08-22.** Until this refresh every value in this file came from `doc/Prototype/dashboard.html`. Per `doc/Design/CLAUDE.md` § Fidelity Policy (greenfield carve-out expired 2026-08-22) the shipped Angular 20 app is now the only source of truth; the prototype is design-intent reference only. Every row below was re-read from `src/FE/` — see § Drift from the prototype-era extraction for the exact old → new deltas.
+**Live source changed 2026-08-22.** Until this refresh every value in this file came from the deleted prototype. Per `doc/Design/CLAUDE.md` § Fidelity Policy (greenfield carve-out expired 2026-08-22) the shipped Angular 20 app is now the only source of truth; the prototype is design-intent reference only. Every row below was re-read from `src/FE/` — see § Drift from the prototype-era extraction for the exact old → new deltas.
 
 **Where the values live.** All **24** named color/elevation tokens are declared in the single `:root { … }` block of `src/FE/src/styles.scss:10-86`. Verified exhaustively: `grep -rE '^\s*--[a-z0-9-]+\s*:' src/FE/src --include=*.scss` returns matches **only** inside that block — there is no second `:root`, no component-scoped custom property, no `element.style.setProperty()` call anywhere in the TypeScript. There is no Style Dictionary, no token build step and no generated token file; the SCSS is compiled as-is by the Angular CLI.
 
@@ -117,7 +117,7 @@ Non-color chart facts, as-shipped: y-axis pinned `min: 0` / `max: 100` with a `$
 
 ## Drift from the prototype-era extraction
 
-Every delta between this file's previous revision (2026-08-11, sourced from `doc/Prototype/dashboard.html`) and the shipped app. Recorded so the change is traceable rather than silent.
+Every delta between this file's previous revision (2026-08-11, sourced from the deleted prototype) and the shipped app. Recorded so the change is traceable rather than silent.
 
 **Values changed (same role, new number):**
 

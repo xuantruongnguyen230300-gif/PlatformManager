@@ -5,7 +5,7 @@ updated: "YYYY-MM-DD"
 title: "<Project Title>"
 group: "Backend|Frontend|Shared"
 stack: "<e.g. Static HTML/CSS/JS prototype, or Angular + ng-zorro once chosen>"
-source_paths: []              # live UI source roots, e.g. ["doc/Prototype/dashboard.html"]
+source_paths: []              # live UI source roots, e.g. ["src/FE/src/app"]
 current_stage: "<1-8>"
 ---
 
@@ -22,7 +22,7 @@ current_stage: "<1-8>"
 <!-- The code is the source of truth. Cite the exact files tokens/components/screens are extracted from. -->
 
 - **Stack**: <framework + theme, e.g. static HTML/CSS/JS prototype>
-- **Tokens source**: `<path/to/theme css, e.g. doc/Prototype/dashboard.html :root block>`
+- **Tokens source**: `<path/to/theme css, e.g. src/FE/src/styles.scss :root block>`
 - **Views source**: `<path/to/views or components>`
 - **Ignore**: <!-- legacy assets that are NOT part of the design system, if any -->
 

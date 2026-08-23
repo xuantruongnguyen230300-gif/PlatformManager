@@ -13,14 +13,7 @@ sources:
 # SegmentedControl
 **Description:** The two-option exclusive view switcher (`.segmented` + `.seg-btn`) in the dashboard period toolbar — a genuine segmented control: one bordered `inline-flex` group with `overflow:hidden`, an internal hairline divider, and the chosen segment filled `colors.brand`. It selects **Tuần** or **Tháng** for the whole dashboard.
 
-> **This is not `TabBar`.** The app ships **two different controls doing the same job**, and the distinction is deliberate to record, not to smooth over:
->
-> | Spec | Class | Screen | Anatomy |
-> | --- | --- | --- | --- |
-> | **SegmentedControl** (this file) | `.segmented` / `.seg-btn` | `/dashboard` — period toolbar, `Tuần` \| `Tháng` | One shared border + `overflow:hidden` + `border-left` divider; selection = `.active` |
-> | [TabBar](./TabBar.md) | `.tabs-bar` + `.btn` | `/quan-tri/phan-quyen` — `Phân quyền màn hình` \| `Quyền theo tài nguyên` | Bare flex row of two standard `Button`s, no container chrome; selection = `.primary` |
->
-> Recorded as a real inconsistency in `UiInventory.md` § Normalize on Redesign #2, `Components/Button.md` § Normalize #2 and `Components/TabBar.md` § Normalize #3. Neither spec supersedes the other — both ship.
+> **The app's only view switcher.** One instance ships, on `/dashboard` (`period-toolbar.html:36-48`). A second switcher spec (`TabBar` — a bare flex row of two `.btn`s, claimed for `/quan-tri/phan-quyen`) was deleted on 2026-08-23: neither its class nor its markup has ever existed in `src/FE/`, so the "two controls, one job" inconsistency this file used to record was never real. Any new exclusive view switcher composes from **this** control.
 
 ## Anatomy
 
@@ -119,12 +112,11 @@ Sources: `src/FE/src/app/modules/dashboard/components/period-toolbar/period-tool
 - ✅ Use this control for a **mutually exclusive view mode** with 2–3 short text labels, where both options must stay readable at once.
 - ❌ Don't use it for an action — a segment sets state; the toolbar's "Xuất báo cáo" is a `Button` for exactly that reason.
 - ❌ Don't add per-segment borders or radii to fake separation — the `.seg-btn + .seg-btn` divider already does it with one hairline.
-- ❌ Don't build a new switcher out of `.btn` + `.primary`; that is `TabBar`, the *other* mechanism, and adding a third instance of it widens an inconsistency the project has already logged.
+- ❌ Don't build a new switcher out of `.btn` + `.primary`. A selected state that is pixel-identical to a primary action button is the reason this dedicated control exists; reintroducing that shortcut splits one job across two mechanisms.
 
 ## Normalize on redesign
-1. **Two controls, one job.** This group and `TabBar`'s `.btn`-based `.tabs-bar` are both two-option exclusive switchers with different anatomy, different selected treatments and different focus rings. Converge on this one — it is the dedicated control and the only one whose selection is not indistinguishable from a primary action button. Tracked in `UiInventory.md` § Normalize #2.
-2. **The ARIA is present but incomplete.** `role="group"` + `aria-label` is the dashboard module's only ARIA pair, yet neither segment carries `aria-pressed` or `aria-checked`, so a screen-reader user hears two ordinary buttons and is never told which mode is in effect. Either `role="radiogroup"` with `role="radio"` + `aria-checked`, or plain buttons with `aria-pressed`.
-3. **Selection is signalled by colour alone** — a solid brand fill against white. No weight change, underline, icon or inset shadow, so the state is invisible in monochrome and marginal under colour-vision deficiency. Same finding as `TabBar.md` § Normalize #2.
-4. **No press feedback.** `.btn` presses `translateY(1px)`; `.seg-btn` has no `:active` rule, so the app's two button families feel different under the pointer.
-5. **The one inset focus ring in the app.** `outline-offset: -2px` here versus `+1px`/`+2px` everywhere else — a consequence of `overflow:hidden`, not a decision. Rounding each end segment individually instead of clipping would let the ring match the rest of the app.
-6. **`flex: none` is silently defeated at `breakpoint.mobile`.** `.weekbar > * { flex: 1 }` wins on source order at equal specificity, so the group stretches on mobile. The result is reasonable, but it is an accidental override rather than a declared responsive intent — state it explicitly in whichever rule should own it.
+1. **The ARIA is present but incomplete.** `role="group"` + `aria-label` is the dashboard module's only ARIA pair, yet neither segment carries `aria-pressed` or `aria-checked`, so a screen-reader user hears two ordinary buttons and is never told which mode is in effect. Either `role="radiogroup"` with `role="radio"` + `aria-checked`, or plain buttons with `aria-pressed`.
+2. **Selection is signalled by colour alone** — a solid brand fill against white. No weight change, underline, icon or inset shadow, so the state is invisible in monochrome and marginal under colour-vision deficiency.
+3. **No press feedback.** `.btn` presses `translateY(1px)`; `.seg-btn` has no `:active` rule, so the app's two button families feel different under the pointer.
+4. **The one inset focus ring in the app.** `outline-offset: -2px` here versus `+1px`/`+2px` everywhere else — a consequence of `overflow:hidden`, not a decision. Rounding each end segment individually instead of clipping would let the ring match the rest of the app.
+5. **`flex: none` is silently defeated at `breakpoint.mobile`.** `.weekbar > * { flex: 1 }` wins on source order at equal specificity, so the group stretches on mobile. The result is reasonable, but it is an accidental override rather than a declared responsive intent — state it explicitly in whichever rule should own it.

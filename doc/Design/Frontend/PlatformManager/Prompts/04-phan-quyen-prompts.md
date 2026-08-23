@@ -1,7 +1,7 @@
 ---
 project: "PlatformManager"
 status: "draft"
-updated: "2026-08-22"
+updated: "2026-08-23"
 screen_ref: "04-phan-quyen"
 tools: ["stitch", "claude-design", "ai-studio", "generic"]
 ---
@@ -17,9 +17,12 @@ tools: ["stitch", "claude-design", "ai-studio", "generic"]
      Everything a tool needs is inside THIS file: every token is resolved to a literal
      hex/px/font value, and no other spec has to be opened.
 
-     THE FAILURE MODE THIS PACK EXISTS TO PREVENT: generating one matrix twice. The two
-     matrices look alike and behave differently, deliberately. Every section below states
-     the difference. -->
+     THE FAILURE MODE THIS PACK EXISTS TO PREVENT: inventing structure. The route is ONE
+     card holding ONE matrix — 19 lines of template. Earlier versions of this pack asked
+     for a tab bar and a second "resource permissions" matrix; neither exists in src/FE/,
+     and every image generated from that text showed a screen that does not ship. The
+     resource matrix is contract PERM-2, still Status: DRAFT — see Screens/04-phan-quyen.md
+     § Normalize on redesign #1. Do not add it back until it ships. -->
 
 ## Master Prompt (tool-agnostic)
 
@@ -31,31 +34,16 @@ Recreate this exact shipped screen — do not idealize, do not translate, do not
 CONTEXT: an internal Vietnamese-language administration platform ("PlatformManager"). This screen is
 Permissions ("Phân quyền"), reachable only by a SuperAdmin. It renders INSIDE the app shell (fixed
 left sidebar + sticky topbar + centred main + fixed toast stack), unlike the sign-in / change-password
-screens which have no shell. The page holds TWO independent role x row checkbox matrices behind two
-tab buttons. Each has its own data, its own save button and its own rules.
+screens which have no shell.
 
-⚠ THE TWO MATRICES ARE DELIBERATELY DIFFERENT. Generating one of them twice is the single mistake to
-avoid. The differences are:
+⚠ THE WHOLE PAGE IS ONE CARD HOLDING ONE ROLE x MENU CHECKBOX MATRIX. There is no tab bar, no view
+switcher, no segmented control, no second panel and no side-by-side pane. Adding any of those is the
+single mistake to avoid: the route's template is 19 lines long and contains exactly one card. Draw
+one frame, not two.
 
-                        | MATRIX 1 — "Phân quyền màn hình"  | MATRIX 2 — "Quyền theo tài nguyên"
-  ----------------------|-----------------------------------|-----------------------------------
-  Rows                  | a MENU TREE: each parent row is    | a FLAT list of resource keys, in
-                        | followed immediately by its child  | the order the API returned them —
-                        | rows, indented one level           | no tree, no indent, no glyph
-  Child-row marker      | 28px left padding plus a muted "└" | none
-  "SuperAdmin" column   | NORMAL and CLICKABLE, ticked only  | ALWAYS ticked AND ALWAYS DISABLED,
-                        | where the data says so             | on every row, at opacity 0.6 with
-                        |                                    | a not-allowed cursor
-  Extra explanation     | none                               | a small caption under the
-                        |                                    | "SuperAdmin" column header AND an
-                        |                                    | explanatory paragraph under the
-                        |                                    | whole table
-  Meaning of a row with | the screen is OPEN to every        | the action is DENIED to everyone
-  no box ticked         | signed-in user                     | (deny by default)
-
-Both matrices are hand-rolled HTML tables ON PURPOSE — not a data-grid component. They have no
-paging, no sorting, no filtering, no column resizing and no row virtualisation. They are a full
-checkbox matrix inside a fixed-height scroll box. Do not substitute a data grid.
+The matrix is a hand-rolled HTML table ON PURPOSE — not a data-grid component. It has no paging, no
+sorting, no filtering, no column resizing and no row virtualisation. It is a full checkbox matrix
+inside a fixed-height scroll box. Do not substitute a data grid.
 
 TOKENS (literal values — use these exact numbers and hex codes):
 Colors: brand/primary #0f5bd7 (also the checkbox accent colour and the focus outline); primary hover
@@ -72,17 +60,14 @@ rgba(15,91,215,0.35).
 Font: Inter, loaded for real from Google Fonts (weights 400, 500, 600, 700), with the fallback stack
 "Segoe UI", Arial, sans-serif. Sizes/weights: body 13px/400; topbar h1 15px/bold; card h2 14px/bold;
 button label 12px/700; table header 11px/700 letter-spacing 0.01em; table cell 12px/400 line-height
-1.4; the helper paragraph under each card heading and the explanatory paragraph under matrix 2 both
-11px/400 in #57647a (the second at line-height 1.5); the "SuperAdmin" column caption 11px/400 in
-#57647a with letter-spacing and text-transform explicitly reset; sidebar nav item 12px/600 (700 when
-active); sidebar brand text 14px/800; brand mark 11px/800; toast text 12px/400 line-height 1.4.
+1.4; the helper paragraph under the card heading 11px/400 in #57647a; sidebar nav item 12px/600 (700
+when active); sidebar brand text 14px/800; brand mark 11px/800; toast text 12px/400 line-height 1.4.
 Radius: 7px buttons; 9px sidebar nav item and toast item; 12px the table wrapper; 16px cards; the
 checkboxes are native, unstyled apart from their accent colour.
 Spacing scale in use: 4px, 6px, 8px, 10px, 14px. Card padding 14px. Main padding 14px (10px below
-560px). Topbar inner padding 10px 14px. Table cell padding 6px 8px. Button padding 6px 8px. Tab bar
-gap 8px with a 10px bottom margin. Title row gap 8px, margin-bottom 10px. Helper paragraph bottom
-margin 10px. Explanatory paragraph top margin 8px. Child-row left padding 28px, with 4px between the
-"└" glyph and the label. The "SuperAdmin" column caption has a 2px top margin.
+560px). Topbar inner padding 10px 14px. Table cell padding 6px 8px. Button padding 6px 8px. Title row
+gap 8px, margin-bottom 10px. Helper paragraph bottom margin 10px. Child-row left padding 28px, with
+4px between the "└" glyph and the label.
 Structure: sidebar 220px wide (60px collapsed); content column max-width 1600px, centred; the table
 wrapper is a scroll box with max-height 560px; breakpoints tablet 980px and mobile 560px; z-index
 topbar 20, sidebar backdrop 34, sidebar 35, collapsed-sidebar flyout 40, toast stack 60, sticky table
@@ -120,65 +105,37 @@ APP SHELL (surrounds the page; identical on all four in-shell routes)
   success · #a02b2b error · #965e08 warning · #0f5bd7 info) and a 22x22px ghost close button with
   `pi-times`. Toasts fade+slide in over 0.15s and auto-dismiss after 5000 ms.
 
-PAGE
-1. TAB BAR — a plain flex row, 8px gap, 10px bottom margin, hidden when printing. Two ordinary
-   buttons, radius 7px, padding 6px 8px, 12px/700. The SELECTED tab is drawn as the primary button
-   (fill #0f5bd7, white text); the unselected one is the secondary button (fill #dbe7fa, text
-   #0f4a9e). That colour swap is the ONLY selected-state cue — this is not an accessible tab widget:
-   there is no tablist/tab role, no aria-selected, no underline indicator, and the active tab is not
-   reflected in the URL. Reproduce it exactly as two buttons.
-2. EXACTLY ONE CARD IS PRESENT AT A TIME. The inactive tab's card is removed from the DOM, not
-   hidden. The card: #ffffff, 1px border #dfe6ef, radius 16px, padding 14px, card shadow.
-3. Inside whichever card is showing:
-   a) Title row (space-between, gap 8px, margin-bottom 10px): an h2 at 14px/bold on the left, and on
-      the right a primary save button (fill #0f5bd7, white 12px/700 text, radius 7px, padding 6px 8px)
-      whose label swaps to a "saving" label while a save is running. It is disabled — opacity 0.5,
-      cursor not-allowed — while that matrix is loading or saving.
-   b) A helper paragraph directly beneath: 11px/400 in #57647a, displayed as a block with a 10px
-      bottom margin. The two tabs' helper texts say deliberately OPPOSITE things — see COPY.
-   c) THE MATRIX, in a scroll box: 1px border #7e91b4, radius 12px, overflow auto, max-height 560px.
-      Inside it a plain HTML table at width 100% with collapsed borders on a #ffffff background and
-      NO minimum width, so the columns compress with the container rather than being pinned.
-      • Header row: the first cell is fixed at width 40% and carries the row-type label; then one cell
-        per role, right-aligned with tabular numerals. Every header cell is sticky to the top of the
-        scroll box at z-index 4, background #f8fafc, text #536076, 11px/700, letter-spacing 0.01em,
-        padding 6px 8px.
-      • Body rows: cells 12px/400 line-height 1.4, padding 6px 8px, 1px bottom border #dfe6ef,
-        top-aligned; even rows tinted #f8fafc; the hovered row tints #eef2f8. Each role cell is
-        right-aligned and holds one native 16x16px checkbox with accent colour #0f5bd7 and, on
-        keyboard focus, a 2px #0f5bd7 outline offset 2px.
-      • When there are no rows, a single cell spanning every column (row label + one per role) holds a
-        muted sentence.
-
-MATRIX 1 — "Phân quyền màn hình" (menu visibility), the tab shown on load
-   • First column header: the menu label. Rows are a TREE, flattened parent-first: every parent row is
-     immediately followed by its own children. A child row is left-padded 28px and prefixed with a
-     muted "└" glyph in #57647a sitting 4px before the label. Indent is a single level regardless of
-     depth.
+PAGE — one card, directly inside main, with nothing above it
+1. THE CARD: #ffffff, 1px border #dfe6ef, radius 16px, padding 14px, card shadow. It is the first and
+   only element of the route; main holds nothing else.
+2. Title row (space-between, gap 8px, margin-bottom 10px): an h2 at 14px/bold on the left, and on the
+   right a primary save button (fill #0f5bd7, white 12px/700 text, radius 7px, padding 6px 8px) whose
+   label swaps to a "saving" label while a save is running. It is disabled — opacity 0.5, cursor
+   not-allowed — while the matrix is loading or saving.
+3. A helper paragraph directly beneath: 11px/400 in #57647a, displayed as a block with a 10px bottom
+   margin. Its exact wording is in COPY; it states the open-by-default rule.
+4. THE MATRIX, in a scroll box: 1px border #7e91b4, radius 12px, overflow auto, max-height 560px.
+   Inside it a plain HTML table at width 100% with collapsed borders on a #ffffff background and
+   NO minimum width, so the columns compress with the container rather than being pinned.
+   • Header row: the first cell is fixed at width 40% and reads "Màn hình"; then one cell per role,
+     right-aligned with tabular numerals. Every header cell is sticky to the top of the scroll box at
+     z-index 4, background #f8fafc, text #536076, 11px/700, letter-spacing 0.01em, padding 6px 8px.
+   • Body rows: cells 12px/400 line-height 1.4, padding 6px 8px, 1px bottom border #dfe6ef,
+     top-aligned; even rows tinted #f8fafc; the hovered row tints #eef2f8. Each role cell is
+     right-aligned and holds one native 16x16px checkbox with accent colour #0f5bd7 and, on
+     keyboard focus, a 2px #0f5bd7 outline offset 2px.
+   • Rows are a MENU TREE, flattened parent-first: every parent row is immediately followed by its own
+     children. A child row is left-padded 28px and prefixed with a muted "└" glyph in #57647a sitting
+     4px before the label. Indent is a single level regardless of depth.
    • The shipped seeded rows, in this exact order: "Dashboard" · "Danh mục" · "└ DTI" ·
      "Quản trị hệ thống" · "└ Người dùng" · "└ Phân quyền".
    • Role columns, in the order the API returns them: "SuperAdmin", "Admin", "User".
-   • The "SuperAdmin" column here is a completely ORDINARY column: clickable, enabled, ticked only
-     where the data says so. No caption, no lock, no note. Do NOT copy matrix 2's treatment onto it.
-   • A row with no box ticked means the screen is open to every signed-in user.
-
-MATRIX 2 — "Quyền theo tài nguyên" (action permissions), the second tab
-   • First column header: the resource label. Rows are a FLAT list in API order — no tree, no indent,
-     no "└" glyph, no grouping.
-   • The three shipped rows: "Quản lý chỉ tiêu" · "Quản lý nhóm chỉ tiêu" · "Import CSV/Excel".
-   • Role columns, same list as matrix 1: "SuperAdmin", "Admin", "User".
-   • THE "SuperAdmin" COLUMN IS LOCKED. Every cell in it renders CHECKED and DISABLED — on every row,
-     regardless of what the data says — drawn at opacity 0.6 with a not-allowed cursor, so it still
-     reads clearly as ticked but does not invite a click.
-   • Its header cell carries a second line beneath the role name: a small caption on its own block,
-     2px top margin, 11px/400 in #57647a, weight explicitly reset to 400, no letter-spacing, no
-     uppercase, and no wrapping.
-   • Directly BELOW the scroll box — outside it, so it never scrolls away — an explanatory paragraph
-     at 11px/400 in #57647a, line-height 1.5, 8px top margin, with the role name in bold twice. It
-     explains that un-ticking the column would revoke nothing and points at the real remedy.
-   • Both the lock and the paragraph are driven by the data: if the API ever returns a role list that
-     does not include "SuperAdmin", nothing is locked and the paragraph is not rendered at all.
-   • A row with no box ticked means the action is denied to everyone — the inverse of matrix 1.
+   • The "SuperAdmin" column is a completely ORDINARY column: clickable, enabled, ticked only where the
+     data says so. No caption under the header, no lock, no explanatory paragraph under the table.
+   • A row with no box ticked means the screen is OPEN to every signed-in user. Nothing on screen marks
+     such a row — the rule is stated in the helper paragraph and nowhere else.
+   • When there are no rows, a single cell spanning every column (row label + one per role) holds the
+     muted sentence from COPY.
 
 COPY (verbatim Vietnamese — reproduce character for character; there is no i18n layer, every string is
 hardcoded in the templates or comes straight from the API):
@@ -187,11 +144,8 @@ hardcoded in the templates or comes straight from the API):
   labels "Dashboard", "Danh mục", "DTI", "Quản trị hệ thống", "Người dùng", "Phân quyền"
 - Topbar: hamburger aria-label "Mở menu điều hướng"; logout button title and label "Đăng xuất"
 - Toast close aria-label: "Đóng thông báo"
-- Tab buttons: "Phân quyền màn hình" and "Quyền theo tài nguyên"
-- Both cards' save button: "Lưu thay đổi", becoming "Đang lưu…" while saving (a real ellipsis, U+2026)
-
-MATRIX 1 copy:
 - Card heading: "Phân quyền màn hình"
+- Save button: "Lưu thay đổi", becoming "Đang lưu…" while saving (a real ellipsis, U+2026)
 - Helper text: "Tick chọn role được thấy màn hình tương ứng. Mục không tick role nào = mở cho mọi user đã đăng nhập."
 - First column header: "Màn hình"
 - Role column headers: "SuperAdmin", "Admin", "User"
@@ -200,53 +154,37 @@ MATRIX 1 copy:
 - Checkbox accessible name: "<tên màn hình> — <role>"
 - Empty row: "Chưa có mục menu nào."
 - Save success toast: "Đã lưu thay đổi phân quyền."
-
-MATRIX 2 copy:
-- Card heading: "Quyền theo tài nguyên"
-- Helper text: "Tick chọn role được phép thực hiện hành động ứng với tài nguyên. Khác với "Phân quyền màn hình" ở trên: tài nguyên chưa gán role nào sẽ bị TỪ CHỐI hoàn toàn (deny mặc định), không phải mở cho mọi người." — note "TỪ CHỐI" is shouted in capitals on purpose; matrix 1's helper text has no such emphasis. Keep the asymmetry.
-- First column header: "Tài nguyên"
-- Role column headers: "SuperAdmin", "Admin", "User"
-- Caption under the "SuperAdmin" header: "luôn có toàn quyền"
-- Row labels (the three shipped resources): "Quản lý chỉ tiêu", "Quản lý nhóm chỉ tiêu", "Import CSV/Excel"
-- Checkbox accessible name: "<tên tài nguyên> — <role>", extended on the SuperAdmin column to "<tên tài nguyên> — <role> — luôn có quyền, không thay đổi được"
-- Empty row: "Chưa có tài nguyên nào."
-- The explanatory paragraph below the table (rendered only when "SuperAdmin" is in the role list; the role name appears twice, both in bold): "Cột SuperAdmin luôn được tick và không sửa được ở đây: role này mặc định có mọi quyền với mọi tài nguyên, nên bỏ tick cũng không thu hồi được gì. Muốn một người không còn toàn quyền, vào "Quản trị hệ thống → Người dùng" và gỡ role SuperAdmin khỏi tài khoản của họ."
-- Save success toast: "Đã lưu thay đổi quyền theo tài nguyên."
-
-Shared error toasts: "Không thể kết nối tới máy chủ. Kiểm tra kết nối mạng.", "Bạn không có quyền thực hiện thao tác này.", "Đã có lỗi xảy ra. Vui lòng thử lại."
+- Error toasts: "Không thể kết nối tới máy chủ. Kiểm tra kết nối mạng.", "Bạn không có quyền thực hiện
+  thao tác này.", "Đã có lỗi xảy ra. Vui lòng thử lại."
 
 STATES:
-- Loading (first paint): BOTH matrices fetch at once, even though only one tab is showing. While
-  loading, the rows list AND the role list are still empty, so the matrix renders its empty branch: a
-  header row with ONLY the first column, and one body row holding the empty sentence at a single-cell
-  span. There is NO spinner, NO skeleton and NO progress text anywhere on this screen — the loading
-  state is visually identical to the empty state, and the only difference is that the save button is
-  disabled. Because both matrices load up front, switching tabs later never produces a loading state.
-- Populated: as described in the LAYOUT section, per matrix.
-- Disabled cell: only matrix 2's "SuperAdmin" column, always, on every row. Opacity 0.6, not-allowed
-  cursor, still clearly ticked. Matrix 1's equivalent column has none of this.
+- Loading (first paint): the rows list AND the role list are still empty, so the matrix renders its
+  empty branch: a header row with ONLY the first column, and one body row holding the empty sentence
+  at a single-cell span. There is NO spinner, NO skeleton and NO progress text anywhere on this
+  screen — the loading state is visually identical to the empty state, and the only difference is that
+  the save button is disabled.
+- Populated: as described in the LAYOUT section.
+- Disabled: no cell has a permanent disabled treatment. Every checkbox disables together, only while a
+  fetch or a save is in flight.
 - Dirty (unsaved edits): ticking a box changes local state only; nothing is sent until the save button
   is pressed. There is NO unsaved-changes badge, NO dirty-gated save button and NO navigation guard —
-  switching tabs or leaving the page silently discards the edits. Do not add an indicator.
-- Saving: the pressed tab's save button switches to its "saving" label and disables, and EVERY
-  checkbox in that matrix disables for the duration (matrix 2 additionally keeps its "SuperAdmin"
-  column locked). The other tab is untouched. The save always sends the complete row set, never a
-  delta.
+  leaving the page silently discards the edits. Do not add an indicator.
+- Saving: the save button switches to its "saving" label and disables, and EVERY checkbox in the
+  matrix disables for the duration. The save always sends the complete row set, never a delta.
 - Save success: the button returns to its idle label, and a success toast appears bottom-right for
-  5 seconds. Saving matrix 1 also refreshes the sidebar menu in place, so nav items can appear or
-  disappear without a page reload; saving matrix 2 does not touch the menu.
-- Error, on any load or any save: the ONLY feedback is an error toast bottom-right. There is no error
+  5 seconds. The sidebar is NOT refreshed — nav visibility only changes after a page reload.
+- Error, on the load or the save: the ONLY feedback is an error toast bottom-right. There is no error
   text inside the card and no retry control. A failed load leaves the matrix in the empty-looking
   state above; a failed save leaves the local edits on screen, still dirty, with pressing save again
-  as the only way forward. A 401 mid-session redirects to the sign-in route.
+  as the only way forward.
 - Access denied: not a visual state — a signed-in user who is not a SuperAdmin is redirected to the
   dashboard before anything renders. There is no 403 page, no message and no toast on that path.
 - Validation: none exists. Every input is a checkbox with two legal values, so there is no inline
-  validation, no error styling and no field-level message anywhere in either matrix.
+  validation, no error styling and no field-level message anywhere in the matrix.
 
 RESPONSIVE:
-- Neither matrix nor the page declares a single media query. Every breakpoint effect below comes from
-  the shell.
+- Neither the matrix nor the page declares a single media query. Every breakpoint effect below comes
+  from the shell.
 - 981px and up (desktop default): sidebar fixed at 220px (or 60px collapsed) with the content column
   offset to match; main capped at 1600px with 14px padding; the topbar hamburger is hidden; a collapsed
   sidebar shows submenus as hover/focus flyouts opening to its right. Collapsing the sidebar simply
@@ -265,12 +203,10 @@ RESPONSIVE:
   labels there is normally no horizontal scroll even at 390px. There is NO column collapsing, NO
   card-per-row fallback and NO per-viewport column hiding.
 - Vertical behaviour, every viewport: the wrapper caps at 560px tall and scrolls internally once the
-  rows exceed it, with the sticky role headers pinned at the top of that scroll box. Matrix 2's
-  explanatory paragraph sits outside the wrapper, so it never scrolls away.
-- Print: the tab bar disappears (it is print-hidden), as do the sidebar, topbar and toast stack; the
-  content column loses its offset and main loses its max-width. The card and the active matrix DO
-  print — but the wrapper keeps its 560px cap and its scrolling, so any row past that height is
-  clipped off the page, and the printout carries no indication of which of the two matrices it is.
+  rows exceed it, with the sticky role headers pinned at the top of that scroll box.
+- Print: the sidebar, topbar and toast stack disappear; the content column loses its offset and main
+  loses its max-width. The card and the matrix DO print — but the wrapper keeps its 560px cap and its
+  scrolling, so any row past that height is clipped off the page.
 
 Match the attached screenshot where it conflicts with this text.
 ```
@@ -291,9 +227,8 @@ Match the attached screenshot where it conflicts with this text.
 2. Paste the **Master Prompt** above verbatim. It is complete on its own: every value in it is a
    literal, so it works whether or not the import succeeded.
 
-3. Generate the screen as **two frames**, one per tab, and check them against the comparison table at
-   the top of the Master Prompt before accepting either. A single frame reused for both tabs is the
-   known failure of this screen.
+3. Generate the screen as **one frame**. If Stitch produces a tab bar, a switcher or a second matrix,
+   it invented them — regenerate rather than accepting the frame.
 
 4. Optional, only after a successful import — Stitch resolves the dictionary's own names, so these
    are interchangeable with the literals above: `colors.primary` / `colors.brand` (#0f5bd7) ·
@@ -308,10 +243,9 @@ Match the attached screenshot where it conflicts with this text.
    `components.table-cell` · `components.table-row-zebra` · `components.table-wrap` ·
    `components.toast`.
 
-5. Attach `Assets/Screenshots/phan-quyen/permission-matrix--desktop-1440.png`. It captures **matrix 1
-   only** — there is no screenshot of matrix 2, so matrix 2 must be generated from the description.
-   The database behind the capture is otherwise empty; the six menu rows it shows are the shipped
-   seed, not sample data.
+5. Attach `Assets/Screenshots/phan-quyen/permission-matrix--desktop-1440.png`. It shows the entire
+   route, so it is a complete reference — there is no second view to imagine. The database behind the
+   capture is otherwise empty; the six menu rows it shows are the shipped seed, not sample data.
 
 This repo has no Stitch MCP configured — do the import manually via stitch.withgoogle.com (see
 `doc/Design/SETUP.md` to add one).
@@ -320,24 +254,21 @@ This repo has no Stitch MCP configured — do the import manually via stitch.wit
 
 Paste the **Master Prompt** above, attach
 `Assets/Screenshots/phan-quyen/permission-matrix--desktop-1440.png`, and add the three notes plus the
-token block below. (`Assets/Brand/` is empty — the shipped app has no logo or brand image file; the
-"PM" mark is a styled text square.)
+token block below. (`Assets/Brand/` does not exist — the shipped app has no logo or brand image file;
+the "PM" mark is a styled text square.)
 
-**Note 1 — the screenshot shows MATRIX 1 ONLY.** It is the default tab on load: the tab bar with
-"Phân quyền màn hình" drawn as the primary button, the card heading, the helper sentence, and the
-6-row menu tree ("Dashboard", "Danh mục", "└ DTI", "Quản trị hệ thống", "└ Người dùng",
+**Note 1 — the screenshot is the whole screen.** It shows the card heading, the helper sentence, and
+the 6-row menu tree ("Dashboard", "Danh mục", "└ DTI", "Quản trị hệ thống", "└ Người dùng",
 "└ Phân quyền") against the "SuperAdmin" / "Admin" / "User" columns — every "SuperAdmin" box ticked
-and **fully enabled**. There is no capture of matrix 2; build that frame from the description alone
-and do not infer its appearance from this image.
+and **fully enabled**. Nothing sits above the card and nothing sits beside it. If your output has a
+tab bar or a second table, it is wrong.
 
 **Note 2 — the capture was taken against an empty database.** The six rows are the shipped seed menu,
 not demo data, and there are no user-created rows anywhere. Do not conclude the screen is normally
 empty, and do not invent extra menu rows either — the seed is what ships.
 
-**Note 3 — the two matrices differ, deliberately.** Produce two frames and verify each against the
-comparison table in the Master Prompt: tree vs flat rows, and clickable vs locked "SuperAdmin"
-column with its caption and explanatory paragraph. Both matrices are hand-rolled tables on purpose —
-do not substitute a data-grid component with paging or sorting.
+**Note 3 — the matrix is a hand-rolled table on purpose.** Do not substitute a data-grid component
+with paging, sorting or filtering; and do not add row selection, bulk actions or a toolbar.
 
 Restate the tokens as this CSS block — these are the shipped custom-property names and values,
 copied 1:1 from `src/FE/src/styles.scss`, so generated CSS drops straight into the app:
@@ -392,11 +323,8 @@ copied 1:1 from `src/FE/src/styles.scss`, so generated CSS drops straight into t
   /* shipped as literals in this screen's component styles, no custom property declared: */
   /* table wrapper max-height 560px, overflow auto */
   /* checkbox 16px x 16px, accent-color #0f5bd7, focus outline 2px offset 2px */
-  /* disabled checkbox (matrix 2 SuperAdmin column) opacity 0.6, cursor not-allowed */
   /* child row padding-left 28px, "└" glyph margin-right 4px */
-  /* "luôn có toàn quyền" caption margin-top 2px, font-weight 400, white-space nowrap */
-  /* explanatory paragraph margin-top 8px, line-height 1.5 */
-  /* first column inline width 40% in both matrices */
+  /* first column inline width 40% */
   /* topbar surface rgba(255,255,255,0.95) + blur(10px) */
   /* active sidebar item rgba(15,91,215,0.08) */
   font-family: Inter, 'Segoe UI', Arial, sans-serif; /* Inter loaded from Google Fonts, 400/500/600/700 */
@@ -413,8 +341,7 @@ never add anything the description does not mention.
 
 Product: PlatformManager, an internal Vietnamese-language administration platform. All UI copy is
 Vietnamese and hardcoded — there is no i18n layer. Reproduce every string character for character,
-including the "…" real ellipsis in "Đang lưu…", the shouted "TỪ CHỐI", the "└" glyph on child rows,
-and the "→" arrow inside the quoted navigation path "Quản trị hệ thống → Người dùng".
+including the "…" real ellipsis in "Đang lưu…" and the "└" glyph on child rows.
 
 TOKENS (literal values): brand/primary #0f5bd7 (also the checkbox accent colour and focus outline),
 primary hover #174ca8, on-primary #ffffff, page background #eef2f8, card surface #ffffff, ghost
@@ -425,31 +352,23 @@ rgba(255,255,255,0.95) + blur(10px), active nav item rgba(15,91,215,0.08). Card 
 rgba(23,39,67,0.1), 0 1px 3px rgba(23,39,67,0.06). Font Inter (loaded from Google Fonts at weights
 400/500/600/700) falling back to "Segoe UI", Arial, sans-serif: body 13px/400, topbar h1 15px/bold,
 card h2 14px/bold, button 12px/700, table header 11px/700 letter-spacing 0.01em, table cell 12px/400
-line-height 1.4, helper and explanatory paragraphs 11px/400 in #57647a, sidebar nav 12px/600 (700
-active), toast 12px/400. Radius 7px buttons, 9px nav item and toast, 12px table wrapper, 16px card.
-Spacing scale 4 / 6 / 8 / 10 / 14px; card and main padding 14px; table cell padding 6px 8px; button
-padding 6px 8px; tab bar gap 8px; child row padding-left 28px. Sidebar 220px (60px collapsed),
-content max-width 1600px, table wrapper max-height 560px, breakpoints 980px and 560px. Checkboxes
-are native, 16x16px.
+line-height 1.4, helper paragraph 11px/400 in #57647a, sidebar nav 12px/600 (700 active), toast
+12px/400. Radius 7px buttons, 9px nav item and toast, 12px table wrapper, 16px card. Spacing scale
+4 / 6 / 8 / 10 / 14px; card and main padding 14px; table cell padding 6px 8px; button padding
+6px 8px; child row padding-left 28px. Sidebar 220px (60px collapsed), content max-width 1600px,
+table wrapper max-height 560px, breakpoints 980px and 560px. Checkboxes are native, 16x16px.
 
 Fidelity rules for this screen specifically:
 - It renders inside the app shell: fixed left sidebar, sticky topbar, centred main, fixed
   bottom-right toast stack. It is not a bare page.
-- There are TWO matrices behind two tab buttons, and they behave DIFFERENTLY. Never produce one and
-  reuse it for the other:
-    * "Phân quyền màn hình" — rows are a menu TREE, parent row then its children indented 28px with
-      a "└" glyph. Its "SuperAdmin" column is NORMAL and CLICKABLE, with no caption and no note.
-    * "Quyền theo tài nguyên" — rows are a FLAT list, no tree, no indent, no glyph. Its "SuperAdmin"
-      column is ALWAYS CHECKED AND DISABLED on every row at opacity 0.6 with a not-allowed cursor,
-      its header carries the caption "luôn có toàn quyền", and an explanatory paragraph sits below
-      the table.
-  Both are correct and deliberate. Do not "fix" either one to match the other.
-- Both matrices are hand-rolled HTML tables ON PURPOSE. No paging, no sorting, no filtering, no
+- There is exactly ONE card and ONE matrix. No tab bar, no view switcher, no segmented control, no
+  second table, no side pane. The route's template is 19 lines. Do not invent structure.
+- Rows are a menu TREE: a parent row then its children indented 28px with a "└" glyph. The
+  "SuperAdmin" column is NORMAL and CLICKABLE, with no caption, no lock and no note beneath the
+  table.
+- The matrix is a hand-rolled HTML table ON PURPOSE. No paging, no sorting, no filtering, no
   virtualisation, no data-grid component. A full checkbox matrix in a 560px-tall scroll box with
   sticky headers.
-- Only one card is in the DOM at a time — the inactive tab's card is removed, not hidden.
-- The tab bar is two ordinary buttons; the selected one is simply drawn as the primary button. There
-  is no tablist role, no aria-selected, no underline indicator and no URL state. Do not upgrade it.
 - This screen's own template contains NO icons at all. Every control is a text button or a native
   checkbox; the only glyph is the literal "└" text character.
 - There is no spinner, no skeleton, no unsaved-changes indicator, no confirmation before saving, no
@@ -457,33 +376,30 @@ Fidelity rules for this screen specifically:
 ```
 
 **User prompt** = the `LAYOUT:`, `COPY:`, `STATES:` and `RESPONSIVE:` sections of the Master Prompt
-above, pasted verbatim — including the two-matrix comparison table at the top, which is the part
-most worth keeping.
+above, pasted verbatim — including the one-card warning at the top, which is the part most worth
+keeping.
 
 **Image part** = `Assets/Screenshots/phan-quyen/permission-matrix--desktop-1440.png`, introduced
-with: "Captured against an empty database, showing MATRIX 1 ONLY (the default tab). Its six rows are
-the shipped seed menu. There is no capture of matrix 2 — generate that frame from the description
-and do not infer its appearance from this image."
+with: "Captured against an empty database. This is the entire route — one card, one matrix. Its six
+rows are the shipped seed menu."
 
 ## Generic
 
 Paste the Master Prompt block verbatim into any other AI UI-generation tool (v0, Bolt, Lovable,
 Figma AI, …) and attach the screenshot below. The block is self-contained — no token resolution,
-no other file and no follow-up prompt are required. Ask the tool for **two** frames, one per tab,
-and check both against the comparison table at the top of the block.
+no other file and no follow-up prompt are required. Ask the tool for **one** frame, and reject any
+output that adds a tab bar, a switcher or a second table.
 
 ## Assets to Attach
 
 <!-- Explicit file list — everything a tool needs beyond the prompt text. -->
 
 - `Assets/Screenshots/phan-quyen/permission-matrix--desktop-1440.png` — the only screenshot for this
-  screen. **Matrix 1 only** (the default tab) at 1440px wide, sidebar expanded, **empty database**:
-  the tab bar, the card heading, the helper sentence and the 6-row seeded menu tree against the
-  "SuperAdmin" / "Admin" / "User" columns with an enabled, clickable "SuperAdmin" column.
-  **No screenshot of matrix 2 exists** — its locked "SuperAdmin" column, the "luôn có toàn quyền"
-  caption and the explanatory paragraph must all come from the prompt text.
+  screen, and a complete one: the whole route at 1440px wide, sidebar expanded, **empty database** —
+  the card heading, the helper sentence and the 6-row seeded menu tree against the "SuperAdmin" /
+  "Admin" / "User" columns with an enabled, clickable "SuperAdmin" column.
 - `Tokens/tokens.json` — W3C DTCG token file (`global` + `light`; `dark` is intentionally empty, the
   app ships one theme).
 - `DESIGN.md` — lint-clean token dictionary, for the Stitch import.
-- `Assets/Brand/` — **none exist**. The app ships no logo or brand image file; the "PM" mark is a
+- `Assets/Brand/` — **does not exist**. The app ships no logo or brand image file; the "PM" mark is a
   26x26px square filled #0f5bd7 with white 11px/800 text.

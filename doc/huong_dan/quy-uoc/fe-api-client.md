@@ -12,20 +12,28 @@ bộ UI) và bắt buộc có mapper ở giữa là cách duy nhất chặn lỗ
 
 | Nguồn dữ liệu | Casing | Ghi chú |
 | --- | --- | --- |
-| API `src/BE` | `PascalCase` | xác nhận trong API Contract Card (`doc/contracts/<feature>.md`) trước khi code, đừng giả định |
+| API `src/BE` | **`camelCase`** | Đã CHỐT 2026-08-15 (`Program.cs:24` và `:35` đặt `PropertyNamingPolicy = CamelCase` cho cả MVC lẫn `Http.Json`). **Ngoại lệ duy nhất: key của `fields`** — xem cảnh báo ở §Envelope |
 | JSON tĩnh (`public/assets/*.json`) | như file gốc | |
-| Model app (bạn tự định nghĩa) | `PascalCase` + prefix `I` | `IPositionRow.Status` |
+| Model app (bạn tự định nghĩa) | `PascalCase` + prefix `I` | `ICurrentUser.UserName` — mapper là nơi đổi casing |
+
+> *(Sửa 2026-08-23: bản trước ghi API trả `PascalCase` — tàn dư từ trước quyết
+> định 2026-08-15, và mâu thuẫn với chính ví dụ envelope ở §dưới. DTO thật trong
+> `src/FE` đều camelCase: `ILoginRequestDto.userName`, `PagedList.totalCount`.
+> Viết DTO theo PascalCase sẽ nhận `undefined` lúc chạy mà build vẫn xanh — đúng
+> loại lỗi mà chính file này mở đầu bằng cách cảnh báo.)*
 
 ## Quy tắc cứng
 
-1. Wire type (DTO) giữ **nguyên xi** casing server trả về. Hậu tố `Dto`
-   (vd. `PositionDto`).
-2. Model app: `interface` prefix `I`, field `PascalCase`, **không** hậu tố
+1. Wire type (DTO) giữ **nguyên xi** casing server trả về — tức **`camelCase`**.
+   Prefix `I`, hậu tố `Dto` (vd. `IPositionDto`), khớp `ILoginRequestDto` /
+   `PagedList` (shape chốt ở `be-cqrs-handler.md` §Shape phân trang).
+2. Model app: `interface` prefix `I`, field **`PascalCase`**, **không** hậu tố
    (vd. `IPositionRow`).
-3. Mapper đặt trong `services/` của feature, cạnh service gọi API:
+3. Mapper đặt trong `services/` của feature, cạnh service gọi API. **Đây là nơi
+   duy nhất casing đổi** — camelCase (dây) → PascalCase (app):
    ```ts
-   function mapPositionDtoToRow(dto: PositionDto): IPositionRow {
-     return { Id: dto.Id, Name: dto.Name, Status: dto.Status };
+   function mapPositionDtoToRow(dto: IPositionDto): IPositionRow {
+     return { Id: dto.id, Name: dto.name, Status: dto.status };
    }
    ```
 4. Component **không bao giờ** import hay chạm trực tiếp vào DTO — chỉ thấy
@@ -37,7 +45,7 @@ bộ UI) và bắt buộc có mapper ở giữa là cách duy nhất chặn lỗ
 ## Envelope response từ BE — `IApiResult<T>`
 
 **Đã CHỐT (2026-08-15):** BE trả về đúng shape sau cho MỌI endpoint (xem
-`src/BE/.claude/rules/api-controller.md` §Envelope response) — FE phải có
+`doc/huong_dan/quy-uoc/be-api-controller.md` §Envelope response) — FE phải có
 interface khớp 1:1, không tự đặt tên field khác:
 
 ```ts
@@ -51,9 +59,19 @@ export interface IApiResult<T> {
   businessCode: string | null;   // "{ENTITY}.{ERROR}" — so lỗi cụ thể, KHÔNG so message
   traceId: string | null;
   retryable: boolean | null;
-  fields: Record<string, string[]> | null;   // lỗi validate theo field — key PascalCase khớp property C#
+  fields: Record<string, string[]> | null;   // key PascalCase — CỐ Ý khác payload (camelCase), xem cảnh báo dưới
 }
 ```
+
+> ### ⚠️ `fields` dùng PascalCase, phần còn lại của payload là camelCase
+>
+> Không phải bug, không phải sót. BE cố ý giữ `DictionaryKeyPolicy = null` để key khớp
+> **tên property C# gốc** (`MaxScore`, `UserName`) — thứ mà form phía FE cần để bind lỗi
+> đúng ô. Đọc `fields['MaxScore']`, **đừng** tự camelCase lại.
+>
+> Nếu thấy phía BE có ai định set `DictionaryKeyPolicy = CamelCase` "cho nhất quán" —
+> đó là thay đổi phá vỡ hợp đồng này và **không test nào bắt được**. Lý do đầy đủ ở
+> `doc/huong_dan/quy-uoc/be-api-controller.md` §Envelope response.
 
 - Đọc `message` để hiển thị cho user — **không phải** `Message`/`ErrorMessage`
   (tên field của envelope cũ, đã bỏ cùng lúc BE đổi sang `IApiResult<T>`).
@@ -78,7 +96,7 @@ export interface IApiResult<T> {
   quản lý.
 - Phía BE phải bật CORS kèm `AllowCredentials()` cho đúng origin FE —
   **không** dùng chung với `AllowAnyOrigin()` (2 cấu hình loại trừ nhau ở
-  ASP.NET Core, xem `src/BE/.claude/rules/api-controller.md` §CORS).
+  ASP.NET Core, xem `doc/huong_dan/quy-uoc/be-api-controller.md` §CORS).
 
 ## Service pattern
 
@@ -89,7 +107,7 @@ export class PositionService {
 
   list(params: IListPositionsParams): Observable<IPositionRow[]> {
     return this.http
-      .post<PositionDto[]>('/api/positions/list', params)
+      .post<IPositionDto[]>('/api/positions/list', params)
       .pipe(map(dtos => dtos.map(mapPositionDtoToRow)));
   }
 }
@@ -119,7 +137,7 @@ cơ chế secret riêng — hỏi người dùng nếu chưa có quy ước cho 
 ## Long-running operation — poll pattern
 
 Khi BE trả **202 + `jobId`** thay vì đợi xử lý xong (xem
-`src/BE/.claude/rules/cqrs-handler.md` §"Command chạy lâu → job nền" — ca đầu
+`doc/huong_dan/quy-uoc/be-cqrs-handler.md` §"Command chạy lâu → job nền" — ca đầu
 tiên: Import CSV/Excel), FE gọi 2 bước thay vì 1:
 
 ```ts

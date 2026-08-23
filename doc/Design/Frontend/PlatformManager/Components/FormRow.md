@@ -9,7 +9,7 @@ sources:
   - "src/FE/src/app/platform/quan-tri-nguoi-dung/components/user-form-dialog/user-form-dialog.scss"
   - "src/FE/src/app/modules/danh-muc-dti/components/criteria-form-dialog/criteria-form-dialog.html"
   - "src/FE/src/app/modules/danh-muc-dti/components/criteria-form-dialog/criteria-form-dialog.scss"
-  - "src/FE/src/app/modules/danh-muc-dti/components/import-dialog/import-dialog.html"
+  - "src/FE/src/app/modules/danh-muc-dti/components/csv-import-dialog/csv-import-dialog.html"
 ---
 
 # FormRow
@@ -109,7 +109,7 @@ Primary interactive element: the `input` / `select` / `textarea` inside `.form-r
 
 The checkbox group renders exactly two boxes — `ASSIGNABLE_ROLES = ['Admin', 'User']`. `SuperAdmin` is deliberately absent from the picker and is instead preserved verbatim through save, which is what `.role-preserved` explains to the user.
 
-Sources: `src/FE/src/styles.scss:422-451` (`.form-row`), `:453-457` (`.form-error`), `:459-463` (`.form-grid`), `src/FE/src/app/platform/quan-tri-nguoi-dung/components/user-form-dialog/user-form-dialog.html:7-65`, `src/FE/src/app/platform/quan-tri-nguoi-dung/components/user-form-dialog/user-form-dialog.scss:1-24`, `src/FE/src/app/platform/quan-tri-nguoi-dung/models/quan-tri-nguoi-dung.model.ts:82`, `src/FE/src/app/platform/quan-tri-nguoi-dung/components/user-form-dialog/user-form-dialog.ts:68`, `:77-79`, `src/FE/src/app/modules/danh-muc-dti/components/criteria-form-dialog/criteria-form-dialog.html:7-34`, `src/FE/src/app/modules/danh-muc-dti/components/criteria-form-dialog/criteria-form-dialog.scss:1-3`, `src/FE/src/app/modules/danh-muc-dti/components/import-dialog/import-dialog.html:7-10`
+Sources: `src/FE/src/styles.scss:422-451` (`.form-row`), `:453-457` (`.form-error`), `:459-463` (`.form-grid`), `src/FE/src/app/platform/quan-tri-nguoi-dung/components/user-form-dialog/user-form-dialog.html:7-65`, `src/FE/src/app/platform/quan-tri-nguoi-dung/components/user-form-dialog/user-form-dialog.scss:1-24`, `src/FE/src/app/platform/quan-tri-nguoi-dung/models/quan-tri-nguoi-dung.model.ts:82`, `src/FE/src/app/platform/quan-tri-nguoi-dung/components/user-form-dialog/user-form-dialog.ts:68`, `:77-79`, `src/FE/src/app/modules/danh-muc-dti/components/criteria-form-dialog/criteria-form-dialog.html:7-34`, `src/FE/src/app/modules/danh-muc-dti/components/criteria-form-dialog/criteria-form-dialog.scss:1-3`, `src/FE/src/app/modules/danh-muc-dti/components/csv-import-dialog/csv-import-dialog.html:7-10`
 
 ## Do / Don't
 

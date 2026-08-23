@@ -1,5 +1,10 @@
 # P0 — Nền móng solution
 
+> 📍 **Tên project trong file này là của VNR.Successor, không phải PlatformManager.**
+> Tra bảng ánh xạ + 4 mục "KHÔNG áp dụng" ở [`00-lo-trinh-tong-the.md`](00-lo-trinh-tong-the.md)
+> §ĐỌC TRƯỚC. Tóm tắt: `Platform.*`→`Core.*` · `Module.{M}.*`→tầng nghiệp vụ (`Business.*`) ·
+> `Processes/`→**1** host · JWT→**cookie session** · per-module DbContext→**1** DbContext chung.
+
 > **Định nghĩa hoàn thành:** `dotnet build` xanh trên một solution có đủ project
 > rỗng, `Directory.Build.props` áp dụng được cho mọi project, và một ArchTest
 > đầu tiên (kiểm tra hướng phụ thuộc) chạy đỏ đúng lúc cố tình vi phạm.
@@ -235,8 +240,8 @@ Src/Modules/Organization/ — chứa cả 2 pattern CRUD, đọc nó trước kh
 
 ## Bảng rule file
 | Chủ đề | File |
-| architecture | .claude/rules/architecture.md |
-| entity/domain | .claude/rules/entity-domain.md |
+| architecture | doc/huong_dan/quy-uoc/be-architecture.md |
+| entity/domain | doc/huong_dan/quy-uoc/be-entity-domain.md |
 | … (13 dòng)
 
 ## Cảnh báo đang có
@@ -247,7 +252,7 @@ Verify bằng code, KHÔNG tin index/doc.
 ```
 
 **Không** nhét rule chi tiết vào đây. `CLAUDE.md` là **bảng chỉ đường**; rule
-sống trong `.claude/rules/{chủ-đề}.md` với frontmatter `paths:` để tự gắn theo
+sống trong `doc/huong_dan/quy-uoc/{chủ-đề}.md` với frontmatter `paths:` để tự gắn theo
 file đang sửa:
 
 ```markdown
@@ -321,5 +326,5 @@ ArchTest chưa được chứng minh.
 - [ ] `Directory.Packages.props` bật, không `.csproj` nào còn khai version
 - [ ] `GlobalUsings.cs` của `Application` **không** có EF Core
 - [ ] 2 ArchTest ở §7 chạy được, và đã **kiểm chứng bằng cách làm nó đỏ**
-- [ ] `CLAUDE.md` gốc backend đã có, ≤ 60 dòng, trỏ tới `.claude/rules/`
-- [ ] Bảng đặt tên §5 đã chốt và ghi vào `.claude/rules/architecture.md`
+- [ ] `CLAUDE.md` gốc backend đã có, ≤ 60 dòng, trỏ tới `doc/huong_dan/quy-uoc/`
+- [ ] Bảng đặt tên §5 đã chốt và ghi vào `doc/huong_dan/quy-uoc/be-architecture.md`

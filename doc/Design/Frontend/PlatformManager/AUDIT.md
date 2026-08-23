@@ -34,7 +34,7 @@ audited: "2026-08-22"
 
 ## Verdict
 
-**BLOCKED** by findings **1–7**. This audit replaces the 2026-08-11 **PASS**, which was voided: that verdict examined the prototype-era artifact set extracted from `doc/Prototype/dashboard.html`, and stages 2–6 have since been re-run against the shipped Angular app in `src/FE/`.
+**BLOCKED** by findings **1–7**. This audit replaces the 2026-08-11 **PASS**, which was voided: that verdict examined the prototype-era artifact set extracted from the deleted prototype, and stages 2–6 have since been re-run against the shipped Angular app in `src/FE/`.
 
 The lint gate is **clean** — `DESIGN.md` returns **0 errors, 6 warnings**, and none of the six is a real defect (2 are linter false positives that compare an alpha-composited brand tint against brand itself; 4 are border-colour tokens the design.md `components` schema has no slot for). Ten of the fourteen checks pass outright, and check (f) is legitimately N/A.
 

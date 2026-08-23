@@ -13,7 +13,7 @@ Trước khi liệt kê, 1 nguyên tắc phải giữ xuyên suốt: **core khô
 | 3 | **Factory method + private setter** cho entity nghiệp vụ | Invariant bị vỡ do gán property tuỳ tiện | Bắt buộc, ngày đầu |
 | 4 | **Value Object** cho field có luật (tiền tệ, %, email, SĐT...) | Dữ liệu sai lọt qua vì dùng `decimal`/`string` trơ | Nên có sớm |
 | 5 | **Error-as-value (`Result<T>`)** cho lỗi nghiệp vụ mong đợi + **exception middleware toàn cục** cho lỗi thật bất ngờ (trả `ErrorCode`+`TraceId`, không lộ stack trace) | Exception-driven control flow rối, hoặc lộ chi tiết nội bộ ra client | Bắt buộc, ngày đầu |
-| 6 | **Envelope response nhất quán** (`{Success, Data, ErrorCode, ErrorMessage, TraceId}`) cho MỌI endpoint kể cả list | FE phải viết 2 nhánh parse khác nhau | Bắt buộc, ngày đầu |
+| 6 | **Envelope response nhất quán** (`{data, message, status, code, businessCode, traceId, retryable, fields}` — xem `doc/huong_dan/quy-uoc/be-api-controller.md` §Envelope) cho MỌI endpoint kể cả list | FE phải viết 2 nhánh parse khác nhau | Bắt buộc, ngày đầu |
 | 7 | **Auth/Identity + Permission framework** (context "current user", resource-action key) | Xem [02-identity-auth.md](02-identity-auth.md) | Bắt buộc, ngày đầu |
 | 8 | **Caching abstraction** (distributed + local, tự fallback êm khi cache down) | Redis down làm sập app; không tra được "đang cache gì" | ⚠️ Đã có bằng chứng (2026-08-18) — xem [11-performance-caching.md](11-performance-caching.md), phạm vi hẹp + đúng thứ tự |
 | 9 | **Logging/Audit abstraction** (structured, tách log kỹ thuật vs audit nghiệp vụ) | Log dạng string không tra cứu được | Bắt buộc, ngày đầu |
@@ -52,35 +52,35 @@ Trước khi liệt kê, 1 nguyên tắc phải giữ xuyên suốt: **core khô
 
 Đã có, giữ nguyên: #1, #2, #3, #5, #6, #9 (mức tối giản) qua
 `AssessmentUpsertService`/`AggregationService`/`IApiResult<T>`/
-`GlobalExceptionHandler` (xem `src/BE/.claude/rules/api-controller.md`,
+`GlobalExceptionHandler` (xem `doc/huong_dan/quy-uoc/be-api-controller.md`,
 đã thay `ApiResponse<T>`/`ExceptionMiddleware` cũ).
 
 **#7 Auth/Permission — cần tách rõ 2 nửa, dễ nhầm "đã xong":** nửa
-**authentication** (đăng nhập là ai) đã triển khai qua ASP.NET Core Identity
-(xem `src/BE/CLAUDE.md` §Stack, `doc/ERD/ERD-corebase.md`), sống ở
+**authentication** (đăng nhập là ai) đã triển khai qua ASP.NET Core Identity (2026-08-16)
+(xem `doc/huong_dan/quy-uoc/README.md` §Stack, `doc/cau-truc-database.md` §4.1), sống ở
 `PlatformManager.Core.Infrastructure`. Nửa **authorization theo hành động**
 (đăng nhập rồi được làm gì) **CHƯA** — endpoint nghiệp vụ hiện chỉ
 `[Authorize]` trần. Rule cụ thể đã viết ở
-`src/BE/.claude/rules/api-controller.md` §"Phân quyền theo hành động" nhưng
+`doc/huong_dan/quy-uoc/be-api-controller.md` §"Phân quyền theo hành động" nhưng
 chưa implement. **Nâng độ ưu tiên lên "bắt buộc trước khi có user thật ngoài
 đội dev"** — đây là [OWASP #1 Broken Access Control](https://owasp.org/Top10/2025/A01_2025-Broken_Access_Control/),
 không phải tuỳ chọn "nên có sớm".
 
 **#10 Config/Options fail-fast — nâng từ "chưa cần" lên "nên có sớm":** rule
 cụ thể (`ValidateDataAnnotations().ValidateOnStart()`) thêm ở
-`src/BE/.claude/rules/architecture.md` §"Cấu hình — fail-fast validation".
+`doc/huong_dan/quy-uoc/be-architecture.md` §"Cấu hình — fail-fast validation".
 
 **#13 Notification, #17 Background job/scheduler, #14 File storage
 abstraction** — đã quyết định kiến trúc (Hangfire cho job nền,
 `INotificationSender` seam cho email, `IImportFileStorage` cho file tạm) khi
-thiết kế lại Import CSV/Excel — xem `src/BE/.claude/rules/cqrs-handler.md`
-§"Command chạy lâu → job nền" và `src/BE/.claude/rules/architecture.md`
+thiết kế lại Import CSV/Excel — xem `doc/huong_dan/quy-uoc/be-cqrs-handler.md`
+§"Command chạy lâu → job nền" và `doc/huong_dan/quy-uoc/be-architecture.md`
 §"Notification". Đây là ví dụ cho nguyên tắc ở trên: **quyết định** đã có,
 chỉ **implement** chưa xong — khác hẳn "chưa cần" thật sự.
 
 **#19 Rate limiting, #20 CI pipeline** (mới, không nằm trong 18 mục gốc đối
 chiếu VNR — tìm thấy khi đối chiếu thêm 12-Factor/OWASP/Clean Architecture
-template) — xem `src/BE/.claude/rules/api-controller.md` §"Rate limiting" và
+template) — xem `doc/huong_dan/quy-uoc/be-api-controller.md` §"Rate limiting" và
 `be/trien-khai/07-p6-archtests-gate.md` §6 cho thiết kế cụ thể.
 
 **#8 Caching — bằng chứng đã xuất hiện, mục này KHÔNG còn ở trạng thái

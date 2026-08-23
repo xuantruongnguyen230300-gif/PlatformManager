@@ -8,11 +8,11 @@ legacy_exceptions: ["Unicode arrow glyphs (↑/↓) inside DeltaIndicator text",
 
 # Icons — PlatformManager Design System
 
-> **Standard icon set: PrimeIcons v7.** `primeicons@^7.0.0` is a direct dependency (`src/FE/package.json:35`) and `node_modules/primeicons/primeicons.css` is registered in the global `styles` array of **both** the build and test targets (`src/FE/angular.json:38-39,124-125`). No `<link>` in `index.html` and no per-component import — the font is available everywhere. Every icon **authored in `src/FE/`** is the two-class form `<i class="pi pi-name">`; there is no `<svg>` sprite and no icon component wrapper in the app's own code.
+> **Standard icon set: PrimeIcons v7.** `primeicons@^7.0.0` is a direct dependency (`src/FE/package.json:35`) and `node_modules/primeicons/primeicons.css` is registered in the global `styles` array of **both** the build and test targets (`src/FE/angular.json:38-39,100-101`). No `<link>` in `index.html` and no per-component import — the font is available everywhere. Every icon **authored in `src/FE/`** is the two-class form `<i class="pi pi-name">`; there is no `<svg>` sprite and no icon component wrapper in the app's own code.
 
 > **But that is not the whole icon surface.** PrimeNG renders a **second set at runtime, as inline `<svg>`**, from its own icon components — nothing in `src/FE/` mentions them, so a grep for `pi-` misses them entirely. They ship on every screen that paginates or loads. Enumerated in the Per-Action Map below and marked *PrimeNG SVG* in the Library column; see § Normalize on redesign #7-9 for what is wrong with them.
 
-**This replaces the previous `library: "none"` declaration**, which described `doc/Prototype/dashboard.html` (frozen history since 2026-08-22) and was already stale when the Angular app landed.
+**This replaces the previous `library: "none"` declaration**, which described the deleted prototype (frozen history since 2026-08-22) and was already stale when the Angular app landed.
 
 ## Library & Sizing
 
@@ -32,12 +32,12 @@ legacy_exceptions: ["Unicode arrow glyphs (↑/↓) inside DeltaIndicator text",
 | Sign out | exit arrow | PrimeIcons | `pi pi-sign-out` | `shared/components/topbar/topbar.html:19` |
 | Collapse / expand sidebar | left chevron | PrimeIcons | `pi pi-angle-left` | `shared/components/sidebar/sidebar.html:12` |
 | Expand / collapse a nav group | down chevron | PrimeIcons | `pi pi-chevron-down` | `shared/components/sidebar/sidebar.html:33` |
-| Nav item — Dashboard | grid | PrimeIcons | `pi pi-th-large` | BE-supplied, `CoreSeeder.cs:121` |
-| Nav item — Danh mục (group) | folder | PrimeIcons | `pi pi-folder` | BE-supplied, `CoreSeeder.cs:122` |
-| Nav item — DTI | list | PrimeIcons | `pi pi-list` | BE-supplied, `CoreSeeder.cs:123` |
-| Nav item — Quản trị hệ thống (group) | cog | PrimeIcons | `pi pi-cog` | BE-supplied, `CoreSeeder.cs:124` |
-| Nav item — Người dùng | user | PrimeIcons | `pi pi-user` | BE-supplied, `CoreSeeder.cs:125` |
-| Nav item — Phân quyền | shield | PrimeIcons | `pi pi-shield` | BE-supplied, `CoreSeeder.cs:126` |
+| Nav item — Dashboard | grid | PrimeIcons | `pi pi-th-large` | BE-supplied, `CoreSeeder.cs:79` |
+| Nav item — Danh mục (group) | folder | PrimeIcons | `pi pi-folder` | BE-supplied, `CoreSeeder.cs:80` |
+| Nav item — DTI | list | PrimeIcons | `pi pi-list` | BE-supplied, `CoreSeeder.cs:81` |
+| Nav item — Quản trị hệ thống (group) | cog | PrimeIcons | `pi pi-cog` | BE-supplied, `CoreSeeder.cs:82` |
+| Nav item — Người dùng | user | PrimeIcons | `pi pi-user` | BE-supplied, `CoreSeeder.cs:83` |
+| Nav item — Phân quyền | shield | PrimeIcons | `pi pi-shield` | BE-supplied, `CoreSeeder.cs:84` |
 | Nav item — icon missing from BE | circle (fallback) | PrimeIcons | `pi pi-circle` | `shared/components/sidebar/sidebar.ts:12,37-39` |
 | Dismiss a toast | times | PrimeIcons | `pi pi-times` | `shared/components/toast/toast.html:11` |
 | Search users by name/email | magnifier (decorative adornment) | PrimeIcons | `pi pi-search` | `platform/quan-tri-nguoi-dung/pages/quan-tri-nguoi-dung/quan-tri-nguoi-dung.page.html:9` |
@@ -63,14 +63,14 @@ legacy_exceptions: ["Unicode arrow glyphs (↑/↓) inside DeltaIndicator text",
 | Menu-tree child row marker | literal glyph `└` (plain text) | — | `.tree-branch` | `platform/phan-quyen/components/permission-matrix/permission-matrix.html:16` |
 | User status dot | literal glyph `●` inside the badge label text | — | `.badge.active` / `.badge.locked` | `…/user-grid-table.html:42,44` |
 
-**Sidebar icons are backend-owned.** The FE does not map abstract keys to icon classes; `doc/contracts/meta-menu.md:66-69` fixes the contract that `SysMenu.icon` **is** the literal PrimeIcons class, and `sidebar.ts:9-12,37-39` only supplies `pi-circle` when the BE sends `null`. The six values above are the seeded defaults (`CoreSeeder.cs:121-126`) and can be changed in the database without an FE deploy — so treat them as current data, not hardcoded design.
+**Sidebar icons are backend-owned.** The FE does not map abstract keys to icon classes; `doc/contracts/meta-menu.md:66-69` fixes the contract that `SysMenu.icon` **is** the literal PrimeIcons class, and `sidebar.ts:9-12,37-39` only supplies `pi-circle` when the BE sends `null`. The six values above are the seeded defaults (`CoreSeeder.cs:79-84`) and can be changed in the database without an FE deploy — so treat them as current data, not hardcoded design.
 
 **The five PrimeNG SVG icons have no source line because nothing in `src/FE/` names them.** They appear because a component was switched on, not because an icon was written:
 
 - **Paginator arrows** — `[paginator]="true"` on three tables: `criteria-grid-table.html:7`, `criteria-table.html:32`, `user-grid-table.html:6`.
-- **Spinner** — only **two** `p-table` instances render it: `criteria-grid-table.html:3` and `user-grid-table.html:4`. Six `[loading]` bindings exist in the app, but they are not six spinners:
+- **Spinner** — only **two** `p-table` instances render it: `criteria-grid-table.html:3` and `user-grid-table.html:4`. Five `[loading]` bindings exist in the app, but they are not five spinners:
   - `danh-muc-dti.page.html:46` and `quan-tri-nguoi-dung.page.html:16` bind `[loading]` on the **child component**, which forwards it into the `p-table` above — the same spinner, one hop up, not an extra one.
-  - `phan-quyen.page.html:26,49` are **not PrimeNG at all.** Nothing under `platform/phan-quyen/` imports `TableModule` or renders `p-table`; both matrices are hand-written `<table>` elements (`permission-matrix.html:2`, `resource-permission-matrix.html:2`) and `loading` there is the app's own `input<boolean>()` (`permission-matrix.ts:43`, `resource-permission-matrix.ts:37`), whose only rendered effect is `[disabled]` on the checkboxes. That screen has **no spinner, skeleton or progress text at all**, exactly as `Screens/04-phan-quyen.md` § States records.
+  - `phan-quyen.page.html:16` is **not PrimeNG at all.** Nothing under `platform/phan-quyen/` imports `TableModule` or renders `p-table`; the permission matrix is a hand-written `<table>` element (`permission-matrix.html:2`) and `loading` there is the app's own `input<boolean>()` (`permission-matrix.ts:43`), whose only rendered effect is `[disabled]` on the checkboxes (`permission-matrix.html:25`). That screen has **no spinner, skeleton or progress text at all**, exactly as `Screens/04-phan-quyen.md` § States records.
 
   Note the asymmetry: the dashboard's `criteria-table` **paginates but never loads** — it has `[paginator]="true"` and no `[loading]` binding, so it shows arrows and never a spinner.
 

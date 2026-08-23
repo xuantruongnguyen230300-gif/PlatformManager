@@ -16,7 +16,7 @@ Rectangle: bg `colors.card`, 1px `colors.line` border, `shadow` (two layers), `r
 
 | Variant | Classes | Key values | When to use |
 | --- | --- | --- | --- |
-| Generic section card | `card` | bg `colors.card`, border `colors.line`, `shadow`, `rounded.lg`, `spacing.card-padding` | Every top-level section: the two dashboard panels (`dashboard.page.html:21,28`), the user list (`quan-tri-nguoi-dung.page.html:1`), both permission panels (`phan-quyen.page.html:11,33`) |
+| Generic section card | `card` | bg `colors.card`, border `colors.line`, `shadow`, `rounded.lg`, `spacing.card-padding` | Every top-level section: the two dashboard panels (`dashboard.page.html:21,28`), the user list (`quan-tri-nguoi-dung.page.html:1`), the permission matrix panel (`phan-quyen.page.html:1`) |
 | KPI tile | `card kpi` | same box + a fixed label/value/sub anatomy | See `KpiTile.md` — documented separately because its internal structure repeats identically five times |
 | Toolbar card | `weekbar card no-print` | same box; screen-local `.weekbar` adds the horizontal flex layout and is hidden when printing | The dashboard period toolbar (`period-toolbar.html:1`) |
 | Criteria-table card | `card criteria-table-card` | same box + `margin-top:16px` (`criteria-table.scss:1-3`) | The dashboard criteria grid section (`criteria-table.html:1`) |
@@ -71,7 +71,7 @@ Every modifier above changes only layout or margin — **no variant alters the c
 </div>
 ```
 
-Sources: `src/FE/src/styles.scss:134-140` (`.card`), `:270-281` (`.title` row), `:21-27` (fill-first rationale), `src/FE/src/app/modules/dashboard/pages/dashboard/dashboard.page.html:21,28,43`, `src/FE/src/app/modules/dashboard/components/kpi-tile/kpi-tile.html:1`, `src/FE/src/app/modules/dashboard/components/criteria-table/criteria-table.html:1` + `criteria-table.scss:1-3`, `src/FE/src/app/modules/danh-muc-dti/pages/danh-muc-dti/danh-muc-dti.page.html:1` + `danh-muc-dti.page.scss:1-5`, `src/FE/src/app/platform/quan-tri-nguoi-dung/pages/quan-tri-nguoi-dung/quan-tri-nguoi-dung.page.html:1`, `src/FE/src/app/platform/phan-quyen/pages/phan-quyen/phan-quyen.page.html:11,33`, `src/FE/src/app/modules/dashboard/components/period-toolbar/period-toolbar.html:1`
+Sources: `src/FE/src/styles.scss:134-140` (`.card`), `:270-281` (`.title` row), `:21-27` (fill-first rationale), `src/FE/src/app/modules/dashboard/pages/dashboard/dashboard.page.html:21,28,43`, `src/FE/src/app/modules/dashboard/components/kpi-tile/kpi-tile.html:1`, `src/FE/src/app/modules/dashboard/components/criteria-table/criteria-table.html:1` + `criteria-table.scss:1-3`, `src/FE/src/app/modules/danh-muc-dti/pages/danh-muc-dti/danh-muc-dti.page.html:1` + `danh-muc-dti.page.scss:1-5`, `src/FE/src/app/platform/quan-tri-nguoi-dung/pages/quan-tri-nguoi-dung/quan-tri-nguoi-dung.page.html:1`, `src/FE/src/app/platform/phan-quyen/pages/phan-quyen/phan-quyen.page.html:1`, `src/FE/src/app/modules/dashboard/components/period-toolbar/period-toolbar.html:1`
 
 ## Do / Don't
 

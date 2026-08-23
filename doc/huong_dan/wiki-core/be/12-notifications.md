@@ -13,7 +13,7 @@ Trước 2026-08-21 repo có sẵn 3 file: `INotificationSender`,
 - `grep RecurringJob` toàn `src/BE` → **0 kết quả**.
 - `INotificationSender` có **0 consumer** — không handler/job nào gọi `SendAsync`.
 
-Tức đúng là "hạ tầng chết" mà chính `.claude/rules/architecture.md` cấm dựng.
+Tức đúng là "hạ tầng chết" mà chính `doc/huong_dan/quy-uoc/be-architecture.md` cấm dựng.
 Nhưng lý do gỡ **không phải** vì nó thừa vài chục dòng code. Lý do thật:
 
 ```csharp
@@ -119,7 +119,24 @@ Tách template ra, tham số hoá bằng biến. Với ZNS thì đây là **bắ
   vừa để tra cứu khi người dùng nói "tôi không nhận được", vừa là nơi tự
   nhiên để đặt khoá idempotency ở §3.2.
 
-## 4. Những mảnh dự án ĐÃ CÓ — tái dùng, đừng dựng lại
+## 4. Những mảnh dự kiến tái dùng — kiểm tồn tại TRƯỚC khi dựa vào
+
+> ### ⚠️ Bảng này chưa xác minh lại được (2026-08-23)
+>
+> Tiêu đề trước 2026-08-23 là *"Những mảnh dự án **ĐÃ CÓ** — tái dùng, **đừng dựng lại**"*, tức
+> nó ra lệnh cho agent **không** xây những thứ dưới đây. Rà ngày 2026-08-23 trên
+> working copy hiện tại:
+>
+> | Mảnh | Kiểm 2026-08-23 |
+> | --- | --- |
+> | Hangfire | `grep -r Hangfire src/BE` = **0**, kể cả trong `.csproj` |
+> | `StartImportCommand`, `ImportJobRunner`, `GetImportJobStatusQuery`, bảng `ImportJobs` | cả 4 = **0**; `ImportController` hiện import **đồng bộ**, không trả 202 |
+> | `AppUser` | **có thật** — `Core.Infrastructure/Identity/AppUser.cs` |
+>
+> Working copy là **bản cũ** (xác nhận 2026-08-23) nên chưa kết luận được bảng
+> này sai hay code chưa về. Nhưng cho tới khi xác minh lại: **kiểm sự tồn tại
+> trước khi dựa vào**, và đừng đọc *"đừng dựng lại"* như một mệnh lệnh — một
+> tiêu đề như vậy đặt lên hạ tầng không tồn tại sẽ khiến việc cần làm bị bỏ qua.
 
 | Mảnh có sẵn | Ở đâu | Dùng làm gì |
 | --- | --- | --- |

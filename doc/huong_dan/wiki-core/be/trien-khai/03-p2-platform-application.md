@@ -1,5 +1,10 @@
 # P2 — `Platform.Application`
 
+> 📍 **Tên project trong file này là của VNR.Successor, không phải PlatformManager.**
+> Tra bảng ánh xạ + 4 mục "KHÔNG áp dụng" ở [`00-lo-trinh-tong-the.md`](00-lo-trinh-tong-the.md)
+> §ĐỌC TRƯỚC. Tóm tắt: `Platform.*`→`Core.*` · `Module.{M}.*`→tầng nghiệp vụ (`Business.*`) ·
+> `Processes/`→**1** host · JWT→**cookie session** · per-module DbContext→**1** DbContext chung.
+
 > **Định nghĩa hoàn thành:** viết được **một handler giả lập** (`PingCommand` →
 > `PingHandler`) chạy qua MediatR và trả về `IApiResult<string>` đúng envelope;
 > ném `ValidationException` trong handler đó thì response tự động thành
@@ -473,6 +478,13 @@ public interface IQueryListGridLegacy<TResult>
 > một response như mọi response, không có lý do gì để nó đặc biệt. Nếu chọn trả
 > `PagedResult<T>` trần thì phải chấp nhận `BaseApiController` có nhánh riêng để
 > chèn `TraceId` cho nó (Successor làm đúng như vậy, và đó là chi phí phải trả mãi).
+>
+> ✅ **PlatformManager đã chốt (2026-08-23):** `IApiResult<PagedList<T>>`, với
+> `PagedList<T>` = `{ items, page, pageSize, totalCount }`. Khác VNR hai điểm:
+> tên là **`PagedList`** (không phải `PagedResult`), và **không có `TotalPages`**
+> — nó suy ra được từ `totalCount`/`pageSize`, nên gửi kèm chỉ tạo hai nguồn có
+> thể lệch. Sentinel `TotalPages = -1` ở §5.4 vì vậy **không áp dụng**.
+> Định nghĩa chuẩn: `doc/huong_dan/quy-uoc/be-cqrs-handler.md` §Shape phân trang.
 
 ### 5.3 Base handler
 
@@ -584,7 +596,7 @@ request
 > **Bài học vận hành:** thứ tự pipeline là **thuộc tính của Composition Root**,
 > không phải của class. Comment trong class không thể đúng lâu vì tác giả class
 > không kiểm soát nơi nó được đăng ký. Nơi duy nhất đáng ghi và đáng tin là chỗ
-> đăng ký. Đây cũng là lý do `.claude/rules/` của Successor có luật
+> đăng ký. Đây cũng là lý do `doc/huong_dan/quy-uoc/` của Successor có luật
 > *"Verify bằng code, KHÔNG tin index/doc"*.
 
 Vì sao đúng thứ tự này:
@@ -765,7 +777,7 @@ Không có test nào đỏ. Không có log nào đỏ. Chỉ có dữ liệu sai
 > assembly đều là bom hẹn giờ. Đây là nội dung ADR-014 của Successor.
 
 **Vì sao per-module chứ không một transaction dùng chung:** một process có thể
-host nhiều module, mỗi module một `DbContext`. Một `ITransactionManager` dùng
+host nhiều module, mỗi module một `DbContext` **(VNR — PlatformManager dùng 1 DbContext chung, xem 00-lo-trinh mục KHÔNG áp dụng)**. Một `ITransactionManager` dùng
 chung đăng ký trong DI sẽ bị **last-wins** — module đăng ký sau ghi đè module
 trước, và transaction của module A chạy trên `DbContext` của module B. Vì thế mỗi
 module kế thừa `ModuleTransactionBehaviorBase` và truyền `ITransactionManager`

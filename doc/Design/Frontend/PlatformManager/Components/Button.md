@@ -20,7 +20,6 @@ Single-line text label, optionally preceded by a PrimeIcons `<i class="pi pi-…
 | Primary | `btn primary` | bg + border-color `colors.brand`, text `colors.on-primary` (`styles.scss:156-159`) | The one primary action per context: `+ Thêm chỉ tiêu`, `+ Thêm người dùng`, `Xuất báo cáo`, `Lưu thay đổi`, `Lưu`, `In`, `Nhập dữ liệu`, `Đăng nhập`, `Đổi mật khẩu` |
 | Danger | `btn danger` | bg `colors.bad-bg`, text `colors.bad` (`styles.scss:168-170`) | Destructive confirmation only — the confirm-dialog's confirm action (`confirm-dialog.html:8`, label bound to `confirmLabel()`, passed `"Xoá"` from `danh-muc-dti.page.html:71`) |
 | Block modifier | `btn primary btn-block` | `width:100%`, `padding:11px`, `typography.button-block-label` (`fs-md`), centred flex, `gap:8px` (`styles.scss:599-607`) | Full-width form submit on the two auth screens only (`login.page.html:55`, `doi-mat-khau.page.html:58`) |
-| Tab-selection modifier | `btn` + `[class.primary]` | no new CSS — toggles the Primary variant on/off to mark the selected tab | The `Phân quyền` screen's two-tab switcher (`phan-quyen.page.html:2,5`): the active tab renders as Primary, the inactive one as Default |
 | Icon-only modifier | `btn sidebar-hamburger` | `.btn` base + screen-local geometry in `topbar.scss` | The mobile drawer trigger holding only `pi pi-bars` (`topbar.html:3-12`) |
 
 **Not variants of `.btn`** — two separate ghost button families exist and must not be folded in here: `.action-btn` (`styles.scss:213-253`, in-row grid actions) and `.cell-icon-btn` (`criteria-grid-table.scss:57-99`, inline cell-edit confirm/cancel). Both are deliberately transparent-by-default so dense grids are not flooded with tonal fill (`styles.scss:197-212`). They are indexed separately in `COMPONENTS.md`.
@@ -34,7 +33,7 @@ Single-line text label, optionally preceded by a PrimeIcons `<i class="pi pi-…
 | hover | Default → bg `colors.tonal-bg-hover` + `box-shadow: 0 3px 10px rgba(23,39,67,.1)` (`styles.scss:177-180`). Primary → bg + border-color `colors.brand2` + `box-shadow: 0 8px 20px rgba(15,91,215,.35)` (`styles.scss:161-165`). Danger → bg `colors.bad-bg-hover` (`styles.scss:172-174`) |
 | focus | `outline: 2px solid colors.brand`, `outline-offset: 2px` — `:focus-visible` only, so keyboard focus shows the ring and mouse clicks do not (`styles.scss:182-185`) |
 | active | `transform: translateY(1px)` (`styles.scss:187-189`) |
-| disabled | `opacity: .5`, `cursor: not-allowed` (`styles.scss:191-194`). **Reachable and used** — `[disabled]` is bound in five places: `login.page.html:55` and `doi-mat-khau.page.html:58` (`submitting()`), `phan-quyen.page.html:14,36` (`saving() \|\| loading()`), `import-dialog.html:18` (`!selectedFile() \|\| importing()`) |
+| disabled | `opacity: .5`, `cursor: not-allowed` (`styles.scss:191-194`). **Reachable and used** — `[disabled]` is bound on four `.btn`s: `login.page.html:55` and `doi-mat-khau.page.html:58` (`submitting()`), `phan-quyen.page.html:4` (`saving() \|\| loading()`), `csv-import-dialog.html:18` (`!selectedFile() \|\| importing()`). A fifth `[disabled]` binding exists on the permission matrix's checkboxes (`permission-matrix.html:25`), which is not a `.btn` |
 
 ## Tokens Used
 - `colors.tonal-bg`, `colors.tonal-bg-hover`, `colors.tonal-ink`, `colors.brand`, `colors.brand2`, `colors.on-primary`, `colors.bad`, `colors.bad-bg`, `colors.bad-bg-hover`
@@ -62,12 +61,9 @@ Both hover shadows and the `translateY(1px)` press offset are **literal values i
 <button type="submit" class="btn primary btn-block" [disabled]="submitting()">
   <i class="pi pi-sign-in"></i> {{ submitting() ? 'Đang đăng nhập…' : 'Đăng nhập' }}
 </button>
-
-<!-- tab-selection modifier -->
-<button type="button" class="btn" [class.primary]="activeTab() === 'menu'" (click)="setTab('menu')">…</button>
 ```
 
-Sources: `src/FE/src/styles.scss:142-195` (base + variants + all five states), `src/FE/src/styles.scss:599-607` (`.btn-block`), `src/FE/src/app/shared/components/topbar/topbar.html:3-12,18-20`, `src/FE/src/app/platform/login/pages/login/login.page.html:55-57`, `src/FE/src/app/platform/doi-mat-khau/pages/doi-mat-khau/doi-mat-khau.page.html:58-60`, `src/FE/src/app/platform/phan-quyen/pages/phan-quyen/phan-quyen.page.html:2-6,14-16,36-38`, `src/FE/src/app/modules/danh-muc-dti/components/confirm-dialog/confirm-dialog.html:7-8`, `src/FE/src/app/modules/danh-muc-dti/components/import-dialog/import-dialog.html:17-20`, `src/FE/src/app/modules/dashboard/components/history-list/history-list.html:14`
+Sources: `src/FE/src/styles.scss:142-195` (base + variants + all five states), `src/FE/src/styles.scss:599-607` (`.btn-block`), `src/FE/src/app/shared/components/topbar/topbar.html:3-12,18-20`, `src/FE/src/app/platform/login/pages/login/login.page.html:55-57`, `src/FE/src/app/platform/doi-mat-khau/pages/doi-mat-khau/doi-mat-khau.page.html:58-60`, `src/FE/src/app/platform/phan-quyen/pages/phan-quyen/phan-quyen.page.html:4-6`, `src/FE/src/app/modules/danh-muc-dti/components/confirm-dialog/confirm-dialog.html:7-8`, `src/FE/src/app/modules/danh-muc-dti/components/csv-import-dialog/csv-import-dialog.html:17-20`, `src/FE/src/app/modules/dashboard/components/history-list/history-list.html:14`
 
 ## Do / Don't
 
@@ -81,5 +77,4 @@ Sources: `src/FE/src/styles.scss:142-195` (base + variants + all five states), `
 
 ## Normalize on redesign
 1. `.btn.primary:hover` and `.btn:hover` shadows, and the `translateY(1px)` press offset, are literal values with no token behind them — there is no elevation or motion scale to reference (`Tokens/spacing.md`).
-2. The `Phân quyền` tab switcher reuses `.btn` + `[class.primary]` as a segmented control (documented as `TabBar.md`), while `period-toolbar` ships a genuine `.segmented`/`.seg-btn` control for the same interaction pattern (`period-toolbar.html:36-48`). Two mechanisms for one job — converge on the dedicated segmented control.
-3. `.btn-block` is only ever combined with `primary`; a tonal or danger block button has no defined treatment should one be needed.
+2. `.btn-block` is only ever combined with `primary`; a tonal or danger block button has no defined treatment should one be needed.

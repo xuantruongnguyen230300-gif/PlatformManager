@@ -3,7 +3,7 @@
 ## Đã CHỐT (2026-08-15)
 
 Dùng cookie session của ASP.NET Core Identity (đồng bộ với
-`src/BE/.claude/rules/api-controller.md` §Auth/Permission) — **không** tự
+`doc/huong_dan/quy-uoc/be-api-controller.md` §Auth/Permission) — **không** tự
 lưu JWT bearer trong `localStorage`/biến JS.
 
 ## Cấu hình `HttpClient` bắt buộc gửi cookie
@@ -54,23 +54,26 @@ export class CurrentUserService {
 
 ## Guard
 
-```ts
-export const authGuard: CanActivateFn = () => {
-  const currentUser = inject(CurrentUserService);
-  return currentUser.isAuthenticated() || inject(Router).createUrlTree(['/login']);
-};
-```
+Guard đặt **trong route của feature cần bảo vệ**, không cấu hình rời rạc ở
+`app.routes.ts`. Toàn bộ quy ước — `authGuard` kèm `returnUrl`,
+`mustChangePasswordGuard`, guard theo role, và **thứ tự** của ba guard đó —
+ở [`../../quy-uoc/fe-routing-guard.md`](../../quy-uoc/fe-routing-guard.md).
 
-Guard đặt **trong route của feature cần bảo vệ** (đúng quy ước
-`architecture.md` §Routing), không cấu hình rời rạc ở `app.routes.ts`.
+> ⚠️ **Bản trước ở đây chép sẵn một `authGuard` redirect về `/login`.** Route
+> thật là **`/dang-nhap`** (`doc/Design/Frontend/PlatformManager/UiInventory.md`),
+> và bản chép đó thiếu cả `returnUrl` lẫn `mustChangePasswordGuard` — thiếu cái
+> sau là **lỗ hổng**: người bị buộc đổi mật khẩu vẫn vào được toàn bộ app. Đã xoá
+> 2026-08-23 để không tồn tại hai bản guard nói khác nhau.
 
-## Điều chưa chốt — hỏi trước khi implement
+## Login/logout — đã chốt, không còn phải hỏi
 
-- Route `/login` render form thật hay redirect sang trang Identity mặc định
-  (`/Account/Login` kiểu Razor Pages) — phụ thuộc cách `backend-expert`
-  scaffold Identity, xác nhận trước khi dựng UI login.
-- Logout: gọi API rồi điều hướng, hay điều hướng thẳng tới endpoint
-  Identity logout — cùng phụ thuộc cách BE scaffold.
+Cả hai là **API JSON thật**, không phải trang Razor Pages của Identity:
+`POST /api/auth/login` và `POST /api/auth/logout` (`doc/contracts/auth.md`).
+FE tự dựng form đăng nhập tại `platform/login`.
+
+Bằng chứng Identity **không** chiếm quyền điều hướng: `GET /api/auth/me` khi
+chưa đăng nhập trả **401 JSON sạch**, không phải 302 redirect sang
+`/Account/Login` — đã verify thật 2026-08-16, xem `doc/contracts/auth.md`.
 
 ## CORS phía BE — điều kiện bắt buộc để cookie hoạt động
 

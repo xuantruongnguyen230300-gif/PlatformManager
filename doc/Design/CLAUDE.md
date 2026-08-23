@@ -6,9 +6,8 @@ Guidance for Claude Code working in `doc/Design/`, PlatformManager's Product Des
 
 - **This file governs**: `doc/Design/` and everything beneath it. It is self-contained — design work needs no sibling area's docs beyond the read-only lookups below.
 - **In scope**: all specs, tokens, components, and screens under `doc/Design/<Backend|Frontend>/<Project>/` and `doc/Design/Shared/`.
-- **Out of scope — do not modify**: `src/BE/`, `src/FE/`, `doc/Prototype/`, `doc/ERD/`. Exception: a token-update task starts in the live source (Core Principle 4) — then edits stay confined to the token values the task names.
-- **When to cross (read-only, expected)**: reading live source in `src/FE/` or `src/BE/` to extract real CSS/token values (the code is the source of truth). 🧊 `doc/Prototype/` is **frozen history** — readable for design *intent* only, never for extraction.
-
+- **Out of scope — do not modify**: `src/BE/`, `src/FE/`. Exception: a token-update task starts in the live source (Core Principle 4) — then edits stay confined to the token values the task names.
+- **When to cross (read-only, expected)**: reading live source in `src/FE/` or `src/BE/` to extract real CSS/token values (the code is the source of truth).
 ## 🎯 Core Principles (Read First)
 
 ### 1. Think Before Documenting
@@ -48,11 +47,12 @@ The earlier text said *"PlatformManager has no shipped frontend/backend app yet 
 
 **Live source, in priority order:**
 
-1. **`src/FE/src/app/**`** — the shipped app. Component templates (`*.html`), scoped styles (`*.scss`), and `src/styles.scss` are the ground truth for layout, copy, and tokens.
-2. **`doc/Prototype/*.html`** — **design INTENT reference only**, not as-shipped. It covers 4 of 6 screens and the app has since diverged from it. Cite it for original intent (why a layout looks the way it does), never as evidence of current behaviour.
-3. **`spec/*/`** — business rules behind the UI.
+1. **`src/FE/src/app/**`** — the shipped app. Component templates (`*.html`), scoped styles (`*.scss`), and `src/FE/src/styles.scss` are the ground truth for layout, copy, and tokens.
+2. **`spec/*/`** — business rules behind the UI.
 
-Two screens (`/doi-mat-khau`, `/quan-tri/phan-quyen`) have **no prototype at all** — they were built directly in Angular. For those the app is the only source; do not invent a prototype lineage for them.
+> 🗑️ The static HTML prototype was **deleted 2026-08-23**. It is no longer a
+> source of any kind, and no design lineage may be traced back to it.
+> See `.claude/CLAUDE.md` §7.
 
 > Why this matters enough to write down: sourcing a spec from the prototype now would produce a document describing a screen that **is not what ships** — the exact "documentation describes something that doesn't exist" failure that `.claude/CLAUDE.md` §3 forbids.
 

@@ -12,7 +12,7 @@ source_routes: ["<#anchor or /route>"]
 <!-- Flow overview: 1-3 sentences on what the flow does, who reaches it, and how its screens chain together. Sections 1-6 of every screen record the app AS-SHIPPED (real copy, real assets, quirks); deviations go ONLY in "Normalize on redesign". -->
 
 > **Shell:** <dashboard | auth — see DESIGN.md → Layout>
-> **Sources:** `<doc/Prototype/dashboard.html>`
+> **Sources:** `<src/FE/src/app/modules/<feature>/>`
 
 ---
 

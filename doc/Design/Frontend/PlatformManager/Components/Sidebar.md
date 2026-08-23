@@ -109,7 +109,7 @@ Primary interactive element: `.sidebar-navitem`.
 
 Shipped menu tree (seeded server-side, verbatim labels + icons): `Dashboard` (`pi-th-large`, `/dashboard`) · `Danh mục` (`pi-folder`, group) → `DTI` (`pi-list`, `/danh-muc/dti`) · `Quản trị hệ thống` (`pi-cog`, group) → `Người dùng` (`pi-user`, `/quan-tri/nguoi-dung`), `Phân quyền` (`pi-shield`, `/quan-tri/phan-quyen`).
 
-Sources: `src/FE/src/app/shared/components/sidebar/sidebar.html:1-77`, `src/FE/src/app/shared/components/sidebar/sidebar.scss:3-343`, `src/FE/src/app/shared/components/sidebar/sidebar.ts:12`, `:32-95`, `src/FE/src/app/shared/services/sidebar-state.service.ts:4`, `:14-57`, `src/FE/src/app/app.html:3`, `src/FE/src/app/app.scss:11-22` (the matching `.shell-content` offset), `src/BE/Core/PlatformManager.Core.Infrastructure/Persistence/CoreSeeder.cs:121-126` (seeded labels/icons/routes)
+Sources: `src/FE/src/app/shared/components/sidebar/sidebar.html:1-77`, `src/FE/src/app/shared/components/sidebar/sidebar.scss:3-343`, `src/FE/src/app/shared/components/sidebar/sidebar.ts:12`, `:32-95`, `src/FE/src/app/shared/services/sidebar-state.service.ts:4`, `:14-57`, `src/FE/src/app/app.html:3`, `src/FE/src/app/app.scss:11-22` (the matching `.shell-content` offset), `src/BE/Core/PlatformManager.Core.Infrastructure/Persistence/CoreSeeder.cs:79-84` (seeded labels/icons/routes)
 
 ## Do / Don't
 

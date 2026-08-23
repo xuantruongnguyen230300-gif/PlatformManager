@@ -8,7 +8,7 @@ khi có DB đã migrate để gọi thử response thật (cây menu phụ thu�
 > Lịch sử: bản đầu BE trả CÂY lồng sẵn (field `name`, không có `parentId`) — sai, không khớp
 > `IMenuItemDto` phía FE. `core-reviewer` audit chéo BE↔FE phát hiện, coordinator quyết định BE
 > đổi theo FE (không phải ngược lại, vì FE đã code + có sẵn `buildMenuTree()`). File
-> `doc/contracts/menu.md` (FE tự tạo, DRAFT, đúng shape phẳng từ đầu) đã gộp vào file này, xoá
+> `doc/contracts/meta-menu.md` (FE tự tạo, DRAFT, đúng shape phẳng từ đầu) đã gộp vào file này, xoá
 > file gốc — chỉ còn 1 nguồn cho endpoint này.
 
 ## `GET /api/meta/menu` — `[Authorize]`

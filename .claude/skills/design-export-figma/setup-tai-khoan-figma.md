@@ -2,7 +2,7 @@
 
 Hướng dẫn này dành cho việc kết nối MCP server `figma` (khai trong `.mcp.json`
 ở root repo) với một **tài khoản Figma mới**, dùng cho pipeline thiết kế ở
-[doc/Design/](../Design/README.md) (xem [doc/Design/SETUP.md](../Design/SETUP.md)
+[doc/Design/](../../../doc/Design/README.md) (xem [doc/Design/SETUP.md](../../../doc/Design/SETUP.md)
 để setup môi trường tổng quát).
 
 ## Bối cảnh
@@ -69,8 +69,8 @@ Sau khi đã auth đúng tài khoản, có hai cách:
 
 ## Tham khảo thêm
 
-- [doc/Design/SETUP.md](../Design/SETUP.md) — setup môi trường tổng quát cho
+- [doc/Design/SETUP.md](../../../doc/Design/SETUP.md) — setup môi trường tổng quát cho
   toàn bộ pipeline Design → Figma (Node/npx, `chrome-devtools-mcp`, cách
   thêm Stitch MCP tùy chọn).
-- [doc/Design/CLAUDE.md](../Design/CLAUDE.md) — convention mà AI phải tuân
+- [doc/Design/CLAUDE.md](../../../doc/Design/CLAUDE.md) — convention mà AI phải tuân
   theo khi ghi artifact thiết kế.

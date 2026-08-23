@@ -15,7 +15,7 @@
 Đây là **chuẩn đối chiếu** mà agent `core-reviewer` dùng để kiểm tra xem
 phần core của `src/BE` và `src/FE` có tuân thủ hay không — cũng là tài liệu
 mà `backend-expert`/`frontend-expert` tham khảo khi implement phần core.
-Khác với `src/BE/.claude/rules/` hay `src/FE/.claude/docs/` (quy ước **thực
+Khác với `doc/huong_dan/quy-uoc/` hay `doc/huong_dan/quy-uoc/` (quy ước **thực
 thi** hiện tại, gắn liền code đang có), thư mục này là **kiến thức nền** ở
 tầm rộng hơn — bao gồm cả những gì PlatformManager demo hiện tại chưa cần.
 
@@ -75,12 +75,12 @@ tầm rộng hơn — bao gồm cả những gì PlatformManager demo hiện t�
 
 ### FE — thực hành / lộ trình triển khai (`fe/trien-khai/`)
 
-0. [Lộ trình tổng thể](fe/trien-khai/00-lo-trinh-tong-the.md) — 6 giai đoạn F0–F5, khác cách đọc P0–P6 của BE vì Angular CLI đã scaffold sẵn
-1. [F0 — Đồng bộ envelope](fe/trien-khai/01-f0-dong-bo-envelope.md) — việc cấp bách nhất, chặn mọi việc khác
-2. [F1 — Đồng bộ Design](fe/trien-khai/02-f1-dong-bo-design.md) — re-run pipeline thiết kế, bổ sung 5 trạng thái
-3. [F2 — Dọn nợ kỹ thuật](fe/trien-khai/03-f2-don-no-ky-thuat.md) — hardcode hex, test còn thiếu
-4. [F3 — Auth](fe/trien-khai/04-f3-auth.md) — phụ thuộc BE scaffold Identity thật
-5. [Gate](fe/trien-khai/05-gate.md) — lint rule + CI check tương đương ArchTest
+0. [Lộ trình tổng thể](fe/trien-khai/00-lo-trinh-tong-the.md) — 5 giai đoạn F0–F3 + Gate, hình dạng giống P0–P6 của BE vì `src/FE` viết mới từ số 0
+1. [F0 — Nền móng](fe/trien-khai/01-f0-nen-mong.md) — `ng new` zoneless, cây thư mục, `core/http` + interceptor
+2. [F1 — Design token → code](fe/trien-khai/02-f1-design-token.md) — đổ token từ `DESIGN.md` vào `styles.scss`, preset PrimeNG
+3. [F2 — Auth + routing/guard](fe/trien-khai/03-f2-auth-routing.md) — `CurrentUserService`, 3 guard, màn đăng nhập/đổi mật khẩu
+4. [F3 — Hai màn quản trị Core](fe/trien-khai/04-f3-man-quan-tri.md) — quản trị người dùng, phân quyền
+5. [Gate](fe/trien-khai/05-gate.md) — lint rule + check tương đương ArchTest
 
 > **Nguồn tham chiếu khác BE:** `fe/` không có "VNR.Successor frontend" để
 > đối chiếu — nguồn là kiến trúc chính thức của Angular, hệ thống thiết kế
@@ -99,7 +99,7 @@ tầm rộng hơn — bao gồm cả những gì PlatformManager demo hiện t�
   để tra nhanh 1 class/interface cụ thể mà không đọc lại cả file phase.
 - **`core-reviewer`**: đọc toàn bộ `be/*.md` + `fe/*.md` trước khi audit,
   đối chiếu code thật, báo cáo PASS/PARTIAL/MISSING kèm bằng chứng. Với
-  review đụng tới các phase P0–P6 (BE) hoặc F0–F5 (FE), đối chiếu thêm với
+  review đụng tới các phase P0–P6 (BE) hoặc F0–F3 + Gate (FE), đối chiếu thêm với
   `be/trien-khai/`/`fe/trien-khai/` tương ứng — file lý thuyết (`be/01-…`/
   `fe/01-…`) nói *nên* có gì, file thực hành nói *đúng hình dạng* của nó
   (chữ ký thật, thứ tự đăng ký, test tương ứng).

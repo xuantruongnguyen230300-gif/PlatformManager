@@ -1,5 +1,25 @@
 # Kế hoạch: Xoá & xây lại toàn bộ src/BE + src/FE (CoreBase + DTI Weekly)
 
+> # 🗄️ TÀI LIỆU LỊCH SỬ — ĐÃ THỰC THI XONG
+>
+> Kế hoạch này **đã chạy xong** (commit `99d28ba [Core]: Core Version 1.0`).
+> Giữ lại để tra cứu *vì sao* một quyết định được đưa ra — **không** dùng làm mô
+> tả hiện trạng, và **không** dùng làm nguồn cho code mới.
+>
+> Câu *"đây vẫn là báo cáo/kế hoạch để duyệt, CHƯA thực thi bất kỳ thao tác xoá
+> hay viết code nào"* ở §Bối cảnh bên dưới **không còn đúng** kể từ 2026-08-16.
+>
+> | Trong file này → | Thực tế hiện nay |
+> | --- | --- |
+> | Sơ đồ 4 project phẳng `PlatformManager.{Domain,Application,Infrastructure,Api}` | `Core.*` ×3 + `Modules.DtiWeekly.*` ×3 + `PlatformManager.Api` + ArchTests — xem [`kien-truc-core-module.md`](kien-truc-core-module.md) |
+> | Đánh số phase FE F0 → F1 → F3 (bỏ F2) | F0…F3 + gate — xem [`huong_dan/wiki-core/fe/trien-khai/`](huong_dan/wiki-core/fe/trien-khai/) |
+> | §"File quan trọng nhất" trỏ `PlatformManager.Infrastructure/…`, `PlatformManager.Application/…` | các đường dẫn đó **không còn tồn tại** |
+> | `SysMenu.RequiredRole` | đã thay bằng bảng nối `SysMenuRole` |
+>
+> **Nguồn sống thay thế:** kiến trúc → [`kien-truc-core-module.md`](kien-truc-core-module.md);
+> quy ước thi hành → [`huong_dan/quy-uoc/`](huong_dan/quy-uoc/); hợp đồng API →
+> [`contracts/`](contracts/); giao diện → [`Design/`](Design/).
+
 ## Bối cảnh
 
 Toàn bộ tài liệu quyết định (envelope `IApiResult<T>`, `BaseEntity` mới, Clean
@@ -261,11 +281,11 @@ edit double-click của `CriteriaGridTable` cần `pEditableColumn` custom).
 `CurrentUserService` (plain signal — chưa cần `signalStore`), `AuthService`,
 `authGuard`, `adminGuard` (kiểm `hasRole('Admin')`), **`superAdminGuard`**
 (riêng cho màn Phân quyền), màn login Angular thật khớp
-`doc/Prototype/login.html`. **Route `/doi-mat-khau` mới** — sau khi
+prototype login (đã xoá 2026-08-23). **Route `/doi-mat-khau` mới** — sau khi
 `GET /api/auth/me` trả `mustChangePassword:true`, mọi điều hướng khác bị
 chặn, tự đưa về màn này trước (guard-level, không cho vào Dashboard/màn nào
 khác cho tới khi đổi xong). Màn `quan-tri-nguoi-dung` (grid `p-table` +
-dialog thêm/sửa user, khớp `doc/Prototype/quan-tri-nguoi-dung.html`) —
+dialog thêm/sửa user, khớp prototype cũ đã xoá) —
 gate `Admin`+`SuperAdmin`. Màn **`phan-quyen` mới** (ma trận checkbox
 Role×SysMenu) — gate `SuperAdmin` only.
 
@@ -299,7 +319,7 @@ sau BE P2, sau BE P3+P4, sau FE F0+F1.
 - FE F0: unit test interceptor cố tình assert theo field PascalCase cũ
   trước (phải fail), sửa lại rồi mới pass.
 - FE F1: `ng build` xanh trong budget; so màn hình thật với
-  `doc/Prototype/*.html` để đối chiếu màu/bố cục; sidebar chỉ hiện đúng mục
+  prototype cũ (đã xoá 2026-08-23) để đối chiếu màu/bố cục; sidebar chỉ hiện đúng mục
   được `SysMenuRole` cho phép theo role đang đăng nhập.
 - FE F3: đăng nhập `SuperAdmin` lần đầu → bị chặn, đưa về `/doi-mat-khau`,
   không vào được Dashboard cho tới khi đổi xong; user role `User` vào
@@ -321,5 +341,5 @@ sau BE P2, sau BE P3+P4, sau FE F0+F1.
   bug đọc field PascalCase cũ.
 - `src/FE/src/app/core/auth/current-user.service.ts` +
   guard liên quan — nơi enforce luồng bắt đổi mật khẩu lần đầu.
-- `doc/ERD/migrations/0003_corebase_v2.sql` (mới, thay thế `0001`/`0002`)
+- `doc/cau-truc-database.sql` (DDL viết tay) + `dotnet ef database update` (mới, thay thế `0001`/`0002`)
   — file script bạn sẽ tự chạy tay trên Postgres thật.

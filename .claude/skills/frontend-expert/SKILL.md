@@ -25,7 +25,7 @@ tạo component/service, chuẩn hoá model, style theo token...) cho subagent
 này mang theo toàn bộ context kiến trúc (Angular 20, cấu trúc feature, ranh
 giới DTO/model, cơ chế bàn giao API Contract Card với `backend-expert`) đã
 được ghi trong `.claude/agents/frontend-expert.md` và
-`src/FE/CLAUDE.md` + `src/FE/.claude/docs/`.
+`doc/huong_dan/quy-uoc/README.md` + `doc/huong_dan/quy-uoc/`.
 
 ## Các bước thực hiện
 

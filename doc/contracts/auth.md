@@ -6,8 +6,8 @@ thật bên dưới). Cơ chế: **cookie session** (ASP.NET Core Identity, KHÔ
 > Ví dụ response thành công (login/me trả `Data` thật) **chưa capture được** vì môi trường
 > build hiện tại không được phép tự áp schema DB thật lên Postgres (xem
 > `doc/ke-hoach-xay-lai-corebase.md` gotcha #6) — người dùng cần tự chạy tay
-> `doc/ERD/migrations/0003_corebase_v2.sql` trước, sau đó `frontend-expert`/người dùng có thể
-> gọi thử luồng thành công đầy đủ. Các ví dụ lỗi (401/400/500) bên dưới đã verify **thật** với
+> `doc/cau-truc-database.sql` (DDL viết tay) + `dotnet ef database update` trước, sau đó `frontend-expert`/người dùng có thể
+> gọi thử luồng thành công đầy đủ. Các ví dụ lỗi (401/400/500) bên dưới đã verify **thật** (2026-08-16) với
 > app chạy thật (không phải suy đoán).
 
 ## Envelope chung
@@ -39,7 +39,7 @@ Lỗi:
 | `AUTH.INVALID_CREDENTIALS` | 422 | Sai user/password |
 | `AUTH.LOCKED_OUT` | 422 | Tài khoản đang bị khoá |
 | `RATE_LIMIT.TOO_MANY_REQUESTS` | **429** | Quá **5 lượt/phút TỪ CÙNG MỘT IP** (hoặc chạm hạn mức chung 100/phút/IP) — xem mục riêng bên dưới |
-| (validation) | 400 | UserName/Password rỗng — đã verify thật: |
+| (validation) | 400 | UserName/Password rỗng — đã verify thật 2026-08-16: |
 
 ```
 $ curl -X POST /api/auth/login -d '{"UserName":"","Password":""}'
@@ -112,7 +112,7 @@ Retry-After: 47
 
 BE tham chiếu: `src/BE/PlatformManager.Api/Program.cs` (`ResolveRateLimitPartitionKey`,
 `AddRateLimiter` + `GlobalLimiter` + `OnRejected`), quy tắc ở
-`src/BE/.claude/rules/api-controller.md` §"Rate limiting", test chốt
+`doc/huong_dan/quy-uoc/be-api-controller.md` §"Rate limiting", test chốt
 `src/BE/Tests/PlatformManager.Core.IntegrationTests/RateLimiting/` (`LoginRateLimitPartitionTests`
 + `GlobalRateLimitTests`).
 
@@ -122,7 +122,7 @@ Không cần body. Trả `Data: true`.
 
 ## `GET /api/auth/me` — `[Authorize]`
 
-Trả `Data: CurrentUserInfo` giống login — **PHẢI có `mustChangePassword`** (đã verify field
+Trả `Data: CurrentUserInfo` giống login — **PHẢI có `mustChangePassword`** (đã verify field 2026-08-16
 này có mặt trong DTO, xem `PlatformManager.Core.Application.Auth.CurrentUserInfo`).
 
 Đã verify thật — gọi khi CHƯA đăng nhập trả đúng 401 JSON sạch (không 302 redirect —
@@ -169,7 +169,7 @@ mật khẩu — cookie hiện tại vẫn hợp lệ. Luồng đúng cho user `
 khẩu thành công → cập nhật `mustChangePassword` về `false` trong state (hoặc gọi lại
 `GET /api/auth/me`) → đi thẳng vào ứng dụng.
 
-## Lỗi hạ tầng không mong đợi — đã verify thật (không lộ stack trace)
+## Lỗi hạ tầng không mong đợi — đã verify thật 2026-08-16 (không lộ stack trace)
 
 ```
 $ curl -X POST /api/auth/login -d '{"UserName":"test","Password":"test123"}'
@@ -182,7 +182,7 @@ HTTP/1.1 500 Internal Server Error
 
 - Cookie tên `PlatformManager.Auth`, `SameSite=None; Secure=Always` (bắt buộc đi kèm nhau khi
   FE ở origin khác — `http://localhost:4200` là "secure context" theo ngoại lệ trình duyệt
-  cho `localhost`, nên vẫn hoạt động ở dev dù chạy `http`). CORS đã verify thật trả đúng
+  cho `localhost`, nên vẫn hoạt động ở dev dù chạy `http`). CORS đã verify thật 2026-08-16 trả đúng
   `Access-Control-Allow-Credentials: true` + origin cụ thể (không `*`).
 - `frontend-expert`: gọi API luôn kèm `credentials: 'include'`/`withCredentials: true`.
 - **Vòng đời phiên:** cookie `ExpireTimeSpan = 14 ngày` + `SlidingExpiration = true` ⇒ với

@@ -59,7 +59,7 @@ thì các mục thiếu sẽ bị XOÁ hết quyền. FE **phải** gửi đủ 
 # CONTRACT PERM-2 — Phân quyền theo hành động (resource permission, mới 2026-08-18)
 
 **Status: DRAFT** — vá gap OWASP #1 Broken Access Control (endpoint nghiệp vụ trước đây chỉ
-`[Authorize]` trần). Xem thiết kế đầy đủ ở `src/BE/.claude/rules/api-controller.md`
+`[Authorize]` trần). Xem thiết kế đầy đủ ở `doc/huong_dan/quy-uoc/be-api-controller.md`
 §"Phân quyền theo hành động — permission-key đầy đủ". Đây là **ma trận riêng biệt** với
 `SysMenuRole` ở trên (menu visibility) — không gộp chung 1 API, không gộp chung 1 màn hình con.
 
@@ -130,7 +130,7 @@ tường minh cho `Roles.SuperAdmin`, code và tài liệu thống nhất. Hệ 
   trên UI sẽ không làm nó mất quyền. Muốn chặn thì gỡ chính role `SuperAdmin` khỏi user.
 - Lý do giữ bypass: tránh tự khoá hệ thống khi thu hồi nhầm, và `CoreSeeder` chỉ chạy ở
   Development nên không thể trông vào seed cho môi trường thật. Xem
-  `src/BE/.claude/rules/api-controller.md` §"Phân quyền theo hành động".
+  `doc/huong_dan/quy-uoc/be-api-controller.md` §"Phân quyền theo hành động".
 
 ## FE
 

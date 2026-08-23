@@ -150,7 +150,7 @@ builder.Services.Configure<SecurityStampValidatorOptions>(
 | `UserAdminService.LockAsync` | **CÓ** | Ngay trước `SetLockoutEndDateAsync` |
 | `UserAdminService.UpdateAsync` — khi tập role **thực sự đổi** | **CÓ** | Tính `toAdd`/`toRemove` trước, rồi mới quyết định |
 | `UserAdminService.UpdateAsync` — chỉ sửa email/fullName | **KHÔNG** | `toAdd`/`toRemove` đều rỗng ⇒ không có quyền nào thay đổi. Đổi con dấu ở đây là **đá người ta ra vì bị sửa tên** — thiệt hại không mua được gì |
-| `UserAdminService.UnlockAsync` | **KHÔNG** | Mở khoá đi theo chiều *khôi phục* quyền truy cập, không thu hồi gì. Cùng tinh thần với "`unlock` cố ý không chặn" ở `.claude/rules/api-controller.md` |
+| `UserAdminService.UnlockAsync` | **KHÔNG** | Mở khoá đi theo chiều *khôi phục* quyền truy cập, không thu hồi gì. Cùng tinh thần với "`unlock` cố ý không chặn" ở `doc/huong_dan/quy-uoc/be-api-controller.md` |
 | `UserAdminService.CreateAsync` | **KHÔNG cần** | User mới chưa có phiên nào; `CreateAsync` đã sinh con dấu mới |
 | `UpdatePermissionMatrixCommand` / `UpdateResourcePermissionMatrixCommand` | **KHÔNG** | Ma trận đọc thẳng DB mỗi request ⇒ **đã có hiệu lực NGAY**. Đổi con dấu ở đây còn **sai**: phải quét mọi user thuộc role đó rồi ghi từng dòng, tốn kém, mà không mua thêm gì |
 | `IdentityService.ChangePasswordAsync` | *(Identity tự đổi)* | Bắt buộc `RefreshSignInAsync` sau đó — xem §Cạm bẫy |
@@ -205,7 +205,7 @@ người dùng mới làm. Tức cạm bẫy này bắn trúng gần như 100% n
   `SignOutAsync`) — **không cần thêm phụ thuộc mới**.
 - Ràng buộc: `RefreshSignInAsync` **ghi cookie vào response** ⇒ chỉ dùng được trong luồng HTTP
   request và trước khi response bắt đầu gửi. **Không** gọi được từ job nền Hangfire (không có
-  `HttpContext` — xem `.claude/rules/cqrs-handler.md` §"Command chạy lâu → job nền").
+  `HttpContext` — xem `doc/huong_dan/quy-uoc/be-cqrs-handler.md` §"Command chạy lâu → job nền").
 
 ### Các API khác của `UserManager` cũng tự đổi con dấu
 

@@ -27,7 +27,7 @@ probe cần endpoint này tồn tại từ trước, không phải thứ thêm v
 
 **Hangfire Dashboard (`/hangfire`) — giải quyết phần "xem lịch sử job chạy"
 mà mục này từng để hoãn.** Kể từ khi chọn Hangfire cho pattern "job nền" (xem
-[`src/BE/.claude/rules/cqrs-handler.md`](../../../../src/BE/.claude/rules/cqrs-handler.md)
+[`doc/huong_dan/quy-uoc/be-cqrs-handler.md`](../../quy-uoc/be-cqrs-handler.md)
 §"Command chạy lâu → job nền"), Dashboard có sẵn miễn phí — không cần build
 thêm UI theo dõi riêng. **Bắt buộc khoá quyền trước khi bật** — Dashboard mặc
 định KHÔNG có auth, để mở nguyên là lộ toàn bộ job/data (kể cả nội dung
@@ -55,6 +55,6 @@ builder.Host.UseSerilog((ctx, cfg) => cfg
 (`ApiControllerBase.HandleResult`) — qua `LogContext.PushProperty("TraceId",
 ...)` trong 1 middleware đặt trước mọi middleware khác. Đây chính là giá trị
 FE hiện cho user khi lỗi hệ thống (xem
-[`fe/10-observability.md`](../../fe/10-observability.md) §"traceId — cầu nối
+[`fe/10-observability.md`](../fe/10-observability.md) §"traceId — cầu nối
 log FE ↔ log BE") — enrich sai/thiếu thì `traceId` user đưa cho support
 **không tra được gì**, coi như tính năng chưa hoàn thành dù Serilog đã chạy.

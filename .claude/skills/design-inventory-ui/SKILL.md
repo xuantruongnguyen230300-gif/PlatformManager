@@ -57,7 +57,6 @@ di chuyển hoặc đặt tên khác. Vì vậy **KHÔNG hardcode `doc/Design/`*
 Đọc `source_paths` từ README của project, sau đó liệt kê trực tiếp từ code — không bao giờ dựa vào trí nhớ:
 
 - **Route & view** — route/page/section theo từng stack. **PlatformManager (từ 2026-08-22):** `src/FE/` là app **Angular 20** với router thật — census theo đúng 6 route lazy khai ở `src/FE/src/app/app.routes.ts` (`/dang-nhap`, `/doi-mat-khau`, `/dashboard`, `/danh-muc/dti`, `/quan-tri/nguoi-dung`, `/quan-tri/phan-quyen`). Dialog trong trang (`<dialog>`, tab) **không** phải route riêng — ghi chú chúng trong cột Layout của chính route chứa nó.
-  🧊 `doc/Prototype/` đã **đóng băng** (lịch sử, phủ 4/6 màn, đã lệch) — **không** census từ đó.
 - **Layout & shell** — layout dùng chung, master page, app shell (với PlatformManager: cấu trúc `.topbar` / `main` / `.layout` trong cùng file).
 - **Nguồn copy** — nguồn localization. **PlatformManager:** chưa có framework i18n nào — toàn bộ copy là tiếng Việt hardcode trực tiếp trong `.html`; đọc template để lấy copy verbatim.
 - **Brand asset** — mọi ảnh mà UI tham chiếu; copy các ảnh brand được tham chiếu vào `Assets/Brand/` **giữ nguyên tên file gốc** và ghi một dòng manifest cho từng ảnh. PlatformManager hiện không tham chiếu ảnh brand nào — ghi rõ "None yet" nếu đúng vậy, đừng bịa ra.

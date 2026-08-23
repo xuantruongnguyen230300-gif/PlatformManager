@@ -145,11 +145,32 @@ ghi nhận đã từng xảy ra thật ở hệ tham chiếu.
 public class PagedList<T>
 {
     public IReadOnlyList<T> Items { get; init; } = [];
-    public int Total { get; init; }
     public int Page { get; init; }
     public int PageSize { get; init; }
+    public int TotalCount { get; init; }        // trên dây: "totalCount"
+    // KHÔNG có TotalPages — xem quyết định bên dưới
 }
 ```
+
+> ### 📐 Shape phân trang — CHỐT một bản duy nhất (2026-08-23)
+>
+> **`PagedList<T>` = `{ items, page, pageSize, totalCount }`** cho **mọi** endpoint
+> list, không có ngoại lệ.
+>
+> Trước đó tồn tại **ba** tên cho cùng một khái niệm — `PagedList` (`total`) ở quy
+> ước và `contracts/users.md`; `IPagedResultDto` (`totalCount` + `totalPages`) ở
+> `contracts/danh-muc-dti.md` và code FE; `PagedResult` (`TotalPages` với sentinel
+> `-1`) ở `wiki-core/be/trien-khai/03-p2`. BE gửi `total`, FE đọc `totalCount` →
+> `undefined`. Đúng loại *"vỡ runtime im lặng, build vẫn xanh"*.
+>
+> **Vì sao `totalCount` chứ không phải `total`:** `total` không nói rõ tổng của
+> cái gì (dòng? trang? byte?), và `totalCount` là tên FE **đã dùng thật**.
+>
+> **Vì sao BỎ `totalPages`:** nó suy ra được từ `totalCount`/`pageSize`. Gửi kèm
+> dữ liệu suy ra được nghĩa là tạo **hai nguồn có thể lệch nhau**. PrimeNG
+> paginator chỉ cần `totalRecords` (= `totalCount`) và tự tính số trang. Sentinel
+> `-1` của `TotalPages` bên VNR tồn tại chính vì nó là giá trị suy ra mà đôi khi
+> không biết — đó là dấu hiệu nên bỏ, không phải nên chép.
 
 ## Audit log tối thiểu cho hành động nhạy cảm
 
@@ -184,7 +205,7 @@ Ghi **đồng bộ, trong cùng transaction** với hành động chính (gọi
 của `AuditLogBehavior` + 4 interface
 (`IAuditLogService`/`IAuditBackgroundChannel`/`IAuditLogger`/`IAuditLogReaderService`)
 ở
-[05-p4-hosting-api.md §12](../../../../doc/huong_dan/wiki-core/be/trien-khai/05-p4-hosting-api.md) —
+[05-p4-hosting-api.md §12](../wiki-core/be/trien-khai/05-p4-hosting-api.md) —
 nâng cấp lên Channel non-blocking khi đo được ghi đồng bộ thật sự ảnh hưởng
 latency, không phải trước.
 
@@ -231,4 +252,4 @@ public async Task<IActionResult> GetStatus(Guid jobId, CancellationToken ct)
   WebSocket chưa cần ở quy mô hiện tại — polling vài giây/lần là đủ).
 - Pattern này dùng lại được cho bất kỳ command dài hơi nào khác sau này
   (không riêng Import) — xem phía FE tương ứng ở
-  `src/FE/.claude/docs/api-client.md` §"Long-running operation — poll pattern".
+  `doc/huong_dan/quy-uoc/fe-api-client.md` §"Long-running operation — poll pattern".

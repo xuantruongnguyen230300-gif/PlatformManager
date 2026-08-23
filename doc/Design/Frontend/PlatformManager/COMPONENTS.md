@@ -2,7 +2,7 @@
 project: "PlatformManager"
 status: "draft"
 updated: "2026-08-22"
-components_total: "27 documented + 1 obsolete"
+components_total: "26 documented + 1 obsolete"
 ---
 
 # COMPONENTS.md — PlatformManager Component Library
@@ -10,14 +10,14 @@ components_total: "27 documented + 1 obsolete"
 > **Purpose:** index of the reusable UI components extracted from the live views, so designers and AI tools generate UI that matches the shipped product.
 > **Principle:** every screen MUST be composed from these components — extend a spec in `Components/` instead of inventing new ones. All values come from `DESIGN.md` frontmatter and `Tokens/`; never hard-code colors/sizes outside them.
 
-**Live source: `src/FE/` (Angular 20).** Every spec below was re-verified against the shipped app on 2026-08-22. Until this pass the index described `doc/Prototype/dashboard.html`, which is **frozen history** as of the same date (`doc/Design/CLAUDE.md` § Fidelity Policy) — it covers 4 of 6 screens, its token values have drifted, and its interaction model differs. Nothing here may be sourced from it.
+**Live source: `src/FE/` (Angular 20).** Every spec below was re-verified against the shipped app on 2026-08-22. Until this pass the index described the deleted prototype, which is **frozen history** as of the same date (`doc/Design/CLAUDE.md` § Fidelity Policy) — it covers 4 of 6 screens, its token values have drifted, and its interaction model differs. Nothing here may be sourced from it.
 
 ## General conventions
 
 - **Five required states** — every component documents `default` / `hover` / `focus` / `active` / `disabled` as actually implemented. **This is no longer a formality:** the shipped app has real interactive states throughout. `.btn` ships all four interactive pseudo-classes — `:hover`, `:focus-visible`, `:active`, `:disabled` (`styles.scss:177-194`); `.action-btn` ships three (`:hover`, `:focus-visible`, `:disabled`, no `:active`); `.cell-icon-btn` ships two (`:hover`, `:focus-visible`); table rows highlight on hover; and `[disabled]` is bound at five real call sites. The prototype-era claim that "the entire stylesheet has exactly one interactive pseudo-class rule" is dead and has been removed.
 - **Angular 20 + PrimeNG, no Storybook.** Anatomy and variants are read from standalone component templates (`*.html`), their scoped SCSS, and the global primitives in `src/FE/src/styles.scss` (`.card`, `.btn`, `.action-btn`, `.badge`, `.notice`, `.filters`, `.form-row`, `.field`/`.field-input`, `.delta`, `table`/`th`/`td`, `dialog`). PrimeNG supplies `p-table` and `p-chart`; its colours are mapped to the same tokens in `core/theme/platform-manager-preset.ts`.
 - **Single light theme** — no dark mode, no `data-theme`, no toggle exists (`DESIGN.md` § Colors; `tokens.json`'s `dark` set is deliberately empty).
-- **Icon set: PrimeIcons v7**, loaded globally via `angular.json:38-39,124-125`, rendered as `<i class="pi pi-…">`. See `Icons.md` for the per-action map. Three Unicode glyphs (`↑`/`↓`, `└`, `●`) remain as text rather than icons — recorded there as legacy exceptions.
+- **Icon set: PrimeIcons v7**, loaded globally via `angular.json:38-39,100-101`, rendered as `<i class="pi pi-…">`. See `Icons.md` for the per-action map. Three Unicode glyphs (`↑`/`↓`, `└`, `●`) remain as text rather than icons — recorded there as legacy exceptions.
 - **Two shells** — the main shell (`Sidebar` + `Topbar` + `main`) and the bare auth shell used by routes carrying `data: { noShell: true }`. `Toast` overlays both.
 
 ## Component index
@@ -29,7 +29,7 @@ components_total: "27 documented + 1 obsolete"
 | AuthField | [Components/AuthField.md](./Components/AuthField.md) | Auth input tier (`.field`, `.field-input`, `.toggle-visibility`, `.field-row`, `.login-error`) |
 | Avatar | [Components/Avatar.md](./Components/Avatar.md) | Initials disc (`.avatar`) — 30px brand circle; the app has no image-avatar path at all |
 | Badge | [Components/Badge.md](./Components/Badge.md) | Pill status label (`.badge`) — 5 colour variants across 3 contexts: the BE-computed criteria triad `.bdone`/`.bwork`/`.bstall`, the user-grid pair `.active`/`.locked`, and a period-mode chip |
-| Button | [Components/Button.md](./Components/Button.md) | Tonal `.btn` + `.primary`, `.danger`, `.btn-block`, tab-selection and icon-only modifiers; all five states real, `[disabled]` bound at 5 call sites |
+| Button | [Components/Button.md](./Components/Button.md) | Tonal `.btn` + `.primary`, `.danger`, `.btn-block` and icon-only modifiers; all five states real, `[disabled]` bound at 5 call sites |
 | Card | [Components/Card.md](./Components/Card.md) | The white surface container (`.card`) shelling every section on the four in-shell routes; separates by shadow, not border |
 | CellIconButton | [Components/CellIconButton.md](./Components/CellIconButton.md) | Inline-edit ✓/✗ pair (`.cell-icon-btn.ok`/`.cancel`) + the `.cell-editable` double-click affordance |
 | DataTable | [Components/DataTable.md](./Components/DataTable.md) | The PrimeNG `p-table` grid **mechanism** — `[lazy]` 10/20/50 paginator, frozen columns, loading mask, empty message. Cell painting lives in `Table.md` |
@@ -44,10 +44,9 @@ components_total: "27 documented + 1 obsolete"
 | NoticeBanner | [Components/NoticeBanner.md](./Components/NoticeBanner.md) | `.notice` — **conditional** read-only-mode explanation on the DTI catalogue (no longer the prototype's permanent workflow banner) |
 | ProgressBar | [Components/ProgressBar.md](./Components/ProgressBar.md) | `.bar`/`.fill` group-progress track, component-scoped to `GroupProgressList`; the app's only progress indicator |
 | RoleTag | [Components/RoleTag.md](./Components/RoleTag.md) | Neutral outlined role chip (`.role-tag`) in the user grid — one variant, deliberately no semantic colour |
-| SegmentedControl | [Components/SegmentedControl.md](./Components/SegmentedControl.md) | `.segmented`/`.seg-btn` — the dashboard's Tuần\|Tháng view switcher: one bordered group, `overflow:hidden`, `.active` filled `brand`. **Not** `TabBar`, which is the separate `.btn`-based switcher on Phân quyền |
+| SegmentedControl | [Components/SegmentedControl.md](./Components/SegmentedControl.md) | `.segmented`/`.seg-btn` — the dashboard's Tuần\|Tháng view switcher: one bordered group, `overflow:hidden`, `.active` filled `brand`. The app's **only** view switcher |
 | Sidebar | [Components/Sidebar.md](./Components/Sidebar.md) | App-shell nav rail (`.sidebar`) — **API-driven** menu tree, collapse rail, off-canvas drawer |
-| TabBar | [Components/TabBar.md](./Components/TabBar.md) | Two-button view switcher (`.tabs-bar`) on Phân quyền — `.btn` + `.primary` as the selected state |
-| Table | [Components/Table.md](./Components/Table.md) | The global table primitive (`.tablewrap` + the global `th`/`td`/zebra rules) that paints **every** table including PrimeNG's, plus the 2 hand-rolled permission matrices. The grid mechanism lives in `DataTable.md` |
+| Table | [Components/Table.md](./Components/Table.md) | The global table primitive (`.tablewrap` + the global `th`/`td`/zebra rules) that paints **every** table including PrimeNG's, plus the hand-rolled permission matrix. The grid mechanism lives in `DataTable.md` |
 | Toast | [Components/Toast.md](./Components/Toast.md) | Fixed bottom-right notification stack (`.toast-stack`/`.toast-item`), 4 severities, 5 s auto-dismiss |
 | Topbar | [Components/Topbar.md](./Components/Topbar.md) | App-shell sticky header (`.topbar`) — hamburger, route title `<h1>`, user + logout |
 | TrendChart | [Components/TrendChart.md](./Components/TrendChart.md) | `app-trend-chart` — the app's **only** chart: PrimeNG `p-chart type="line"` behind `@defer (on viewport)`, one dataset, legend hidden, palette resolved from 3 tokens at runtime |
@@ -57,15 +56,24 @@ components_total: "27 documented + 1 obsolete"
 > without an index row does not make it composable.
 >
 > Merged 2026-08-22: 11 refreshed (pass A) + 13 newly written (pass B) = **24
-> documented**, plus `Fab` retained as obsolete. Verified index ↔ files: 25/25,
-> no duplicates, no dangling links.
+> documented**, plus `Fab` retained as obsolete — 25 files at that point, no
+> duplicates, no dangling links.
 >
 > Pass C, 2026-08-22: the three specs listed as STILL UNWRITTEN — `TrendChart`,
 > `SegmentedControl`, `Footer` — were written against `src/FE/`, taking the
-> library to **27 documented + 1 obsolete**. The unwritten list is now empty.
+> library to 27 documented + 1 obsolete. The unwritten list is now empty.
 > `.chart-skeleton` is folded into `TrendChart.md` as the `@defer` placeholder
 > state rather than given its own spec; `.period-display` remains undocumented
 > (see the note below).
+>
+> Correction 2026-08-23: **`TabBar` deleted.** It documented a two-button view
+> switcher on `/quan-tri/phan-quyen` that has never existed in `src/FE/` — the
+> grep for its class and signal returns 0 matches, and `phan-quyen.page.html` is
+> 19 lines holding one `.card` with one `<app-permission-matrix>` and no tabs.
+> The second matrix it switched to belongs to `doc/contracts/permissions.md`
+> PERM-2, which is still `Status: DRAFT` — a plan, not a shipped screen. Library
+> is now **26 documented + 1 obsolete**. Verified index ↔ files on 2026-08-23:
+> 27/27, no duplicates, no dangling links.
 
 <!-- =========================================================================
      STILL UNWRITTEN — present in src/FE/, no spec either way:
@@ -86,8 +94,8 @@ components_total: "27 documented + 1 obsolete"
 
      Note: DataTable.md and Table.md deliberately split one subject —
      Table.md owns the global cell/zebra/.tablewrap primitive that paints
-     EVERY table (PrimeNG emits real <table> elements) plus the two
-     hand-rolled permission matrices; DataTable.md owns the p-table grid
+     EVERY table (PrimeNG emits real <table> elements) plus the one
+     hand-rolled permission matrix; DataTable.md owns the p-table grid
      mechanism (lazy paginator, frozen columns, loading mask). See the scope
      boundary blockquote at the top of Table.md.
      ========================================================================= -->
@@ -97,10 +105,10 @@ components_total: "27 documented + 1 obsolete"
 Re-verified against `src/FE/` on 2026-08-22. The four prototype-era items are recorded with their outcome so the history is not lost.
 
 1. ~~`.btn.danger` is dead CSS, never applied to any element.~~ **RESOLVED.** `.btn.danger` is live on the delete-confirmation action (`confirm-dialog.html:8`) and has its own hover shade `--bad-bg-hover` (`styles.scss:168-174`).
-2. ~~No custom interactive states exist anywhere.~~ **RESOLVED.** All five states ship across the button families, and `[disabled]` is genuinely reachable — bound at `login.page.html:55`, `doi-mat-khau.page.html:58`, `phan-quyen.page.html:14,36` and `import-dialog.html:18`.
+2. ~~No custom interactive states exist anywhere.~~ **RESOLVED.** All five states ship across the button families, and `[disabled]` is genuinely reachable — bound at `login.page.html:55`, `doi-mat-khau.page.html:58`, `phan-quyen.page.html:4`, `permission-matrix.html:25` and `csv-import-dialog.html:18`.
 3. ~~Two "text field" treatments coexist for one role.~~ **STILL OPEN, AND WIDER — now four.** Filter (`border-strong`), table-cell edit (`border-strong`, `padding:5px`), dialog form-row (**`line`**), and auth (`border-strong`, `10px 12px 10px 36px`). Focus is also inconsistent: two different treatments ship and the table-cell and form-row tiers have **none**. See `Components/Input.md`.
 4. ~~`--brand2` is declared but never consumed.~~ **RESOLVED.** `.btn.primary:hover` consumes it (`styles.scss:161-162`).
-5. **`.tablewrap` has two conflicting contracts under one name.** `overflow:hidden` in the two PrimeNG grids, `overflow:auto; max-height:560px` in the two matrices — declared separately in four component stylesheets. See `Components/Table.md`.
+5. **`.tablewrap` has two conflicting contracts under one name.** `overflow:hidden` in the two PrimeNG grids, `overflow:auto; max-height:560px` in the permission matrix — declared separately in three component stylesheets. See `Components/Table.md`.
 6. **`.dialog-actions` is duplicated in all six dialog stylesheets** and has already drifted into three `margin-top` values (8/12/16px), with one copy missing `gap`. See `Components/Dialog.md`.
 7. **Two class vocabularies for one badge pair.** `.bdone`/`.active` are the same green pill and `.bstall`/`.locked` the same red pill, under four names in two files. See `Components/Badge.md`.
 8. **Two implementations of the delta rule.** `DeltaIndicator` owns it, but `KpiSummary` computes its own delta text and tone for the KPI tile instead of using the component. See `Components/DeltaIndicator.md`.

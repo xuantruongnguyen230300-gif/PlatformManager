@@ -1,5 +1,10 @@
 # P1 — `Platform.Domain`
 
+> 📍 **Tên project trong file này là của VNR.Successor, không phải PlatformManager.**
+> Tra bảng ánh xạ + 4 mục "KHÔNG áp dụng" ở [`00-lo-trinh-tong-the.md`](00-lo-trinh-tong-the.md)
+> §ĐỌC TRƯỚC. Tóm tắt: `Platform.*`→`Core.*` · `Module.{M}.*`→tầng nghiệp vụ (`Business.*`) ·
+> `Processes/`→**1** host · JWT→**cookie session** · per-module DbContext→**1** DbContext chung.
+
 > **Định nghĩa hoàn thành:** project `Platform.Domain` build xanh với **zero
 > `PackageReference`**, có đủ base entity / value object / exception /
 > abstraction repository, và ArchTest `Domain_MustNotDependOn_AnyOtherLayer`
@@ -747,7 +752,7 @@ public interface IUnitOfWork
 }
 ```
 
-Luật đi kèm, phải viết vào `.claude/rules/`:
+Luật đi kèm, phải viết vào `doc/huong_dan/quy-uoc/`:
 
 > **Repository KHÔNG BAO GIỜ gọi `SaveChanges`. Handler gọi, đúng một lần, ở
 > cuối.** Repository gọi `SaveChanges` = mỗi thao tác một transaction riêng →
@@ -875,11 +880,11 @@ phá pattern catalog của chính mình.
 - [ ] `EntityId.New()` tồn tại và **không nơi nào gọi `Guid.NewGuid()` trực tiếp** (grep để chắc)
 - [ ] 4 exception + `DomainErrorCodes`, **không** literal string mã lỗi nào nằm rải rác
 - [ ] `ValueObject` + `ValueObject<T>` + ít nhất 1 VO thật để kiểm chứng pattern
-- [ ] `Enumeration<TEnum>` + `IEnumeration`, và rule `TryFrom*` cho input ngoài đã ghi vào `.claude/rules/entity-domain.md`
+- [ ] `Enumeration<TEnum>` + `IEnumeration`, và rule `TryFrom*` cho input ngoài đã ghi vào `doc/huong_dan/quy-uoc/be-entity-domain.md`
 - [ ] `IGenericRepository` + `IUnitOfWork` — **không method nào trả `IQueryable`**
 - [ ] 3 file domain event (interface thôi, chưa dispatch)
 - [ ] 3 ArchTest §11 xanh, và **đã kiểm chứng bằng cách làm chúng đỏ**
-- [ ] Bảng "không đưa vào Domain" §10 đã chép vào `.claude/rules/entity-domain.md`
+- [ ] Bảng "không đưa vào Domain" §10 đã chép vào `doc/huong_dan/quy-uoc/be-entity-domain.md`
 
 ---
 

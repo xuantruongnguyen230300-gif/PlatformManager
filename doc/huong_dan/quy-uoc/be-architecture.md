@@ -6,20 +6,30 @@
 
 ## Project layout & dependency direction
 
-> **Chỉ 2 tầng ngang hàng: `Core.*` và `Business.*`** — KHÔNG phải mô hình N-module
-> (`Modules.<Tên>.*`). Nghiệp vụ tương lai là 1 khối thống nhất (DTI Weekly chỉ là tính năng đầu
-> tiên trong `Business.*`), không phải nhiều domain độc lập — xem lý do đầy đủ ở
-> `doc/kien-truc-core-module.md`. Chỉ tách `Business.*` thành nhiều module thật khi có domain
-> nghiệp vụ ĐỘC LẬP thật xuất hiện (xem mục "Khi nào tách thành module độc lập thật" ở đó).
+> 🚧 **Layout dưới đây là ĐÍCH ĐẾN, chưa phải hiện trạng.** Hôm nay repo có 8 project theo mô
+> hình `Modules.DtiWeekly.*`. Đọc bảng *"có thật hôm nay → sẽ thành"* ở đầu
+> `doc/kien-truc-core-module.md` **trước khi tạo file mới**.
+
+> **Chỉ 2 tầng ngang hàng: `Core.*` và `Business.*`** — với PlatformManager, nghiệp vụ là 1 khối
+> thống nhất (DTI Weekly chỉ là tính năng đầu tiên trong `Business.*`), không phải nhiều domain
+> độc lập. Chỉ tách thành nhiều module thật khi có domain nghiệp vụ ĐỘC LẬP thật xuất hiện.
+>
+> **Nhưng `Core.*` KHÔNG được biết tên đó.** Corebase sẽ tái sử dụng ở nhiều dự án khác (chốt
+> 2026-08-23), và dự án khác có thể đặt tên tầng nghiệp vụ là `Modules.<Tên>.*`. Vì vậy Core chỉ
+> thấy **`IModuleRegistrar`**, không hardcode chuỗi `"Business"` ở bất kỳ đâu — có ArchTest
+> `Core_MustNotKnowBusinessName` canh. Lý do đầy đủ: `doc/kien-truc-core-module.md`.
 
 ```
 src/BE/
 ├── Core/
 │   ├── PlatformManager.Core.Domain/            ← BaseEntity, DomainException, EntityId,
 │   │                                              ConflictException, SysMenu, SysMenuRole
+│   ├── PlatformManager.Core.Common/            ← utility THUẦN, zero-dependency (không reference
+│   │                                              project nào trong solution, chỉ BCL)
 │   ├── PlatformManager.Core.Application/       ← CQRS/envelope dùng chung (ICommand, IQuery,
 │   │                                              ApiResult, ErrorDescriptor, behaviors...),
-│   │                                              Auth/, Users/, Menu/, Permissions/
+│   │                                              Auth/, Users/, Menu/, Permissions/,
+│   │                                              IModuleRegistrar ← seam để tầng nghiệp vụ cắm vào
 │   ├── PlatformManager.Core.Persistence/       ← PlatformManagerDbContext, EF Configuration cho
 │   │                                              entity Core, Interceptors, CoreSeeder
 │   ├── PlatformManager.Core.Infrastructure/    ← IdentityService/UserAdminService/
@@ -78,7 +88,7 @@ cấm ở trên. Thay vào đó: khai interface hẹp ở `Core.Application` (vd
 `IAssessmentCleanupService`), để `Modules.DtiWeekly.Infrastructure` tự
 implement, `Core.Infrastructure` chỉ biết interface. Đối chiếu VNR.Successor
 (đã áp dụng đúng mẫu này khi có ≥2 module) — xem
-[be/trien-khai/04-p3-platform-persistence.md §10](../../../../doc/huong_dan/wiki-core/be/trien-khai/04-p3-platform-persistence.md)
+[be/trien-khai/04-p3-platform-persistence.md §10](../wiki-core/be/trien-khai/04-p3-platform-persistence.md)
 cho thiết kế đầy đủ (`IBoundedContext`) nếu sau này cần enumerate nhiều
 module cùng lúc.
 
@@ -100,7 +110,7 @@ public sealed class SmtpNotificationSender(IOptions<SmtpOptions> options) : INot
 **Use case đầu tiên có thật, không phải hạ tầng chết:** 1 Hangfire recurring
 job quét `CriteriaAssessment.Deadline` sắp tới, gửi email nhắc qua
 `INotificationSender` — xem
-[`be/07-observability.md`](../../../../doc/huong_dan/wiki-core/be/07-observability.md)
+[`be/07-observability.md`](../wiki-core/be/07-observability.md)
 cho Hangfire setup. Lưu ý đã biết: user tự tạo qua CSV/Excel import
 (`UserLookupService.ResolveOrCreateByFullNameAsync`) có `Email = null` — job
 phải tự bỏ qua case này, không throw. FE **không cần thay đổi gì** cho use

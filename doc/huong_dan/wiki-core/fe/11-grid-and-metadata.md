@@ -123,13 +123,13 @@ nhiều/ghi gần như không có), invalidate bằng cách gọi lại khi user
 
 **Việc KHÔNG làm bây giờ:** viết `MetadataService`/2 model trên thành code
 thật trước khi BE có endpoint — đây là hợp đồng **thiết kế trước**, không
-phải thứ cần implement ngay ở F0–F5.
+phải thứ cần implement ngay ở F0–F3.
 
 **Cập nhật (2026-08-15):** bảng `SysMenu` (Loại C) đã có ERD + migration thật
-— xem `doc/ERD/ERD-corebase.md` §2 và
-`doc/ERD/migrations/0001_corebase_identity_sysmenu.sql`. Schema khớp đúng
+— xem `doc/cau-truc-database.md` §4.1 §2 và
+`doc/cau-truc-database.md` (nguồn cũ `doc/ERD/` đã xoá). Schema khớp đúng
 `IMenuItem` ở trên, chỉ khác 1 điểm: cột DB tên `RequiredRole` (không phải
 `RequiredPermission`) — phạm vi rút gọn có chủ đích vì role Identity cụ thể
-mới chốt gần đây, xem lý do đầy đủ ở `ERD-corebase.md` §2.3. Khi implement
+mới chốt gần đây, xem lý do đầy đủ ở `doc/cau-truc-database.md` §4.1 §2.3. Khi implement
 `GET /api/meta/menu` thật, map `RequiredRole` (DB) → `requiredPermission`
 (FE model) giữ nguyên tên phía FE, không đổi hợp đồng đã thiết kế.

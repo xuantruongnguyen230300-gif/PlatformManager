@@ -25,8 +25,8 @@ controller...) cho subagent `backend-expert` — thay vì tự xử lý trực t
 trong phiên chính. Subagent này mang theo toàn bộ context kiến trúc (Clean
 Architecture, CQRS-lite qua MediatR, `ErrorDescriptor`, envelope response, cơ chế
 bàn giao API Contract Card với `frontend-expert`) đã được ghi trong
-`.claude/agents/backend-expert.md` và `src/BE/CLAUDE.md` +
-`src/BE/.claude/rules/`.
+`.claude/agents/backend-expert.md` và `doc/huong_dan/quy-uoc/README.md` +
+`doc/huong_dan/quy-uoc/`.
 
 ## Các bước thực hiện
 

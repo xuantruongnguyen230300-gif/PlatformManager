@@ -12,7 +12,7 @@ live_source: "src/FE/src/styles.scss"
 
 ## Live Source & Extraction Method
 
-**Live source changed 2026-08-22** — re-extracted from the shipped Angular 20 app (`src/FE/`) instead of `doc/Prototype/dashboard.html`, per `doc/Design/CLAUDE.md` § Fidelity Policy. The previous revision opened with *"No spacing scale/mixins exist"*; that is no longer true. The app ships a five-step `--sp-*` scale and a six-step `--radius-*` scale in `:root` (`src/FE/src/styles.scss:69-80`), plus three structural measurements (`:82-85`).
+**Live source changed 2026-08-22** — re-extracted from the shipped Angular 20 app (`src/FE/`) instead of the deleted prototype, per `doc/Design/CLAUDE.md` § Fidelity Policy. The previous revision opened with *"No spacing scale/mixins exist"*; that is no longer true. The app ships a five-step `--sp-*` scale and a six-step `--radius-*` scale in `:root` (`src/FE/src/styles.scss:69-80`), plus three structural measurements (`:82-85`).
 
 Same caveat as typography: `styles.scss:1-9` warns in the source that these compact-density values post-date the prototype-era extraction and that `/design-extract-tokens` had not been re-run. This refresh is that re-run.
 
@@ -26,7 +26,7 @@ Spacing does not vary by theme (no dark mode exists — see `Tokens/colors.md`),
 | --- | --- | --- | --- |
 | sp-1 | `4px` | `--sp-1` — `.kpi .value` margin-top, `.action-btn` margin-right, `.role-checkboxes` margin-top, collapsed sidebar brand padding | `styles.scss` |
 | sp-2 | `6px` | `--sp-2` — `.btn` vertical padding, `th`/`td` vertical padding, all input vertical padding, `.form-row` gap, `.sidebar-nav` padding, `.history` gap, `.histrow` padding | `styles.scss` |
-| sp-3 | `8px` | `--sp-3` — `.btn` horizontal padding, `th`/`td` horizontal padding, `.filters` gap, `.title` gap, `.notice` vertical padding, `.toast-stack` gap, `.tabs-bar` gap, sidebar nav gap | `styles.scss` |
+| sp-3 | `8px` | `--sp-3` — `.btn` horizontal padding, `th`/`td` horizontal padding, `.filters` gap, `.title` gap, `.notice` vertical padding, `.toast-stack` gap, sidebar nav gap | `styles.scss` |
 | sp-4 | `10px` | `--sp-4` — `.title` margin-bottom, `.form-row` margin-bottom, `.field` margin-bottom, `.filters` vertical margin, `.topin` vertical padding, `.kpis` gap, `.sidebar-brand` padding, `.seg-btn` horizontal padding | `styles.scss` |
 | sp-5 | `14px` | `--sp-5` — `.card` padding, `dialog` padding, `main` padding, `.topin` horizontal padding, `.notice` horizontal padding + margin-bottom, `.layout` gap + margin-top, `.toast-stack` offsets, `.login-shell` padding | `styles.scss` |
 
@@ -39,7 +39,7 @@ Spacing does not vary by theme (no dark mode exists — see `Tokens/colors.md`),
 | `4px var(--sp-2)` | `.action-btn` (vertical literal, horizontal tokenised) | `styles.scss:215` |
 | `5px` | `.progressInput`, `.noteInput` | `criteria-grid-table.scss:35`, `:53` |
 | `6px` | collapsed-sidebar flyout submenu padding | `sidebar.scss:311` |
-| `8px` | `.dialog-actions` gap (×5 dialogs), `.kpis` mobile gap, `.btn-block` gap, `.login-error` gap | `confirm-dialog.scss:9`, `criteria-form-dialog.scss:7`, `import-dialog.scss:5`, `report-dialog.scss:5`, `user-form-dialog.scss:29`, `kpi-summary.scss:15`, `styles.scss:604`, `:619` |
+| `8px` | `.dialog-actions` gap (×5 dialogs), `.kpis` mobile gap, `.btn-block` gap, `.login-error` gap | `confirm-dialog.scss:9`, `criteria-form-dialog.scss:7`, `csv-import-dialog.scss:5`, `report-dialog.scss:5`, `user-form-dialog.scss:29`, `kpi-summary.scss:15`, `styles.scss:604`, `:619` |
 | `6px` | `.field-row label` gap, `.role-checkbox` gap, `.row-actions` gap | `styles.scss:581`, `user-form-dialog.scss:14`, `user-grid-table.scss:61` |
 | `9px` | `.sidebar-hamburger` | `topbar.scss:54` |
 | `10px` | `main` padding ≤560px, `.sidebar-navitem` padding ≤560px | `app.scss:40`, `sidebar.scss:284` |
@@ -53,7 +53,7 @@ Spacing does not vary by theme (no dark mode exists — see `Tokens/colors.md`),
 | `28px` | `td.indent` padding-left (permission tree) | `permission-matrix.scss:9` |
 | `32px 28px` | `.login-card` padding | `auth-card.scss:17` |
 | `38px` | `.sidebar-subitem` padding-left | `sidebar.scss:185` |
-| `12px` / `16px` | `.dialog-actions` and card margin-top (mixed, ×6) | `import-dialog.scss:6`, `import-result-dialog.scss:22`, `report-dialog.scss:6`, `dashboard.page.scss:18`, `criteria-table.scss:2`, `confirm-dialog.scss:10` |
+| `12px` / `16px` | `.dialog-actions` and card margin-top (mixed, ×6) | `csv-import-dialog.scss:6`, `import-result-dialog.scss:22`, `report-dialog.scss:6`, `dashboard.page.scss:18`, `criteria-table.scss:2`, `confirm-dialog.scss:10` |
 
 ## Token Table — Radius Scale
 
@@ -116,7 +116,7 @@ Three, used consistently across all 30 SCSS files (verified by tallying every `@
 | login-card-max-width | `380px` | `.login-card` | `auth-card.scss:12` |
 | toast-stack-max-width | `min(360px, 90vw)` | `.toast-stack` | `toast.scss:9` |
 | filter-input-min-width | `220px` | `.filters input`, `.search` | `styles.scss:334`, `quan-tri-nguoi-dung.page.scss:3` |
-| matrix-max-height | `560px` | `.tablewrap` on both permission matrices | `permission-matrix.scss:5`, `resource-permission-matrix.scss:5` |
+| matrix-max-height | `560px` | `.tablewrap` on the permission matrix | `permission-matrix.scss:5` |
 | history-max-height | `240px` | `.history` | `history-list.scss:5` |
 | chart-height | `220px` | `p-chart [style]="{height:'220px'}"` + `.chart-wrap{min-height:220px}` + `.chart-skeleton{min-height:220px}` | `trend-chart.html:8`, `trend-chart.scss:6`, `dashboard.page.scss:25` |
 | progress-bar-height | `9px` | `.bar` | `group-progress-list.scss:19` |
@@ -152,7 +152,7 @@ Three, used consistently across all 30 SCSS files (verified by tallying every `@
 | nav-icon | `18px × 18px` | `.navicon` | `sidebar.scss:117-118` |
 | cell-icon-btn | `24px × 24px` | `.cell-icon-btn` | `criteria-grid-table.scss:61-62` |
 | toast-close | `22px × 22px` | `.toast-close` | `toast.scss:55-56` |
-| checkbox | `16px × 16px`, `accent-color: var(--brand)` | permission matrices | `permission-matrix.scss:18-19`, `resource-permission-matrix.scss:9-10` |
+| checkbox | `16px × 16px`, `accent-color: var(--brand)` | the permission matrix | `permission-matrix.scss:18-19` |
 | active-nav-rail | `3px` wide, inset `5px` top/bottom, offset `-8px` left | `.sidebar-navitem.active::before` | `sidebar.scss:140-148` |
 
 ### Z-index layers (no token declared)

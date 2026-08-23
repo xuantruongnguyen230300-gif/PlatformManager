@@ -19,19 +19,13 @@ PlatformManager is an internal administration platform: a weekly digital-transfo
 
 `src/FE/` is a complete Angular 20 application with **6 lazy-loaded routes** (`src/FE/src/app/app.routes.ts`), backed by the .NET solution in `src/BE/`. This design system is extracted from that app.
 
-> ### 🧊 `doc/Prototype/` is frozen history — not a source
->
-> The earlier version of this README described a *"static HTML/CSS/JS prototype (pre-framework)"* and said `src/FE/` and `src/BE/` were *"still empty"*. That stopped being true once the Angular app landed, and the whole stage 2–4 artifact set drifted as a result.
->
-> `doc/Prototype/` was frozen on 2026-08-22 (see the banner in `doc/Prototype/README.md`). It covers only 4 of 6 screens, its token values have changed, and its interaction model differs (single-click vs the shipped double-click grid edit). Cite it **only** to explain *why* a design decision was made — never as evidence of current behaviour.
-
 ## Stack & Live Sources
 
 - **Stack**: Angular 20 standalone + Signals, zoneless; PrimeNG components (`p-table`, `p-chart`) with a custom preset; PrimeIcons v7; SCSS.
 - **Tokens source**: the `:root { ... }` block in **`src/FE/src/styles.scss`** — the `--sp-*`, `--fs-*` and `--radius-*` scales plus semantic colours (`--bg`, `--card`, `--surface-2`, `--text`, `--muted`, `--line`, `--border-strong`, `--brand`, `--good`/`--warn`/`--bad` and their `-bg` pairs, `--tonal-bg`, `--tonal-ink`, `--sidebar-w`, `--container-max-width`).
   ⚠️ `src/FE/src/app/core/theme/platform-manager-preset.ts` **re-declares 10 of these colours as TS constants** for the PrimeNG ramps. A value or name change must land in **both** files, or CSS and the component library render different colours with nothing failing.
 - **Views source**: the 6 routes in `src/FE/src/app/app.routes.ts`. In-page `<dialog>` overlays and tab switches are **not** separate routes — they are documented inside the owning route's screen spec.
-- **Ignore**: `doc/Prototype/` (frozen), `src/FE/dist/`, `src/FE/node_modules/`.
+- **Ignore**: `src/FE/dist/`, `src/FE/node_modules/`.
 
 ## Pipeline Status
 

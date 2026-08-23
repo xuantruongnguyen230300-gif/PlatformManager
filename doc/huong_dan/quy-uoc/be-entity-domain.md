@@ -125,31 +125,48 @@ lọt thẳng ra `Api` layer thành lỗi 500 chung chung.
 từng field qua `UpdateCriteriaAssessmentCommand` — không có gì phát hiện khi
 2 luồng ghi đè lên nhau, người sửa sau âm thầm mất thay đổi của người trước.
 Xem quy tắc chung + lý do ở
-[be/06-concurrency-control.md](../../../../doc/huong_dan/wiki-core/be/06-concurrency-control.md).
+[be/06-concurrency-control.md](../wiki-core/be/06-concurrency-control.md).
 
 ```csharp
 public class CriteriaAssessment : BaseEntity
 {
     // ... field nghiệp vụ hiện có
-    public byte[] RowVersion { get; private set; } = default!;
+    // KHÔNG khai cột RowVersion — PostgreSQL dùng cột hệ thống `xmin` sẵn có
 }
 
-// EF configuration
-builder.Property(x => x.RowVersion).IsRowVersion();
+// EF configuration — Npgsql
+builder.UseXminAsConcurrencyToken();
 ```
 
-EF Core tự thêm `WHERE "RowVersion" = @originalValue` vào UPDATE — ghi đè bởi
-người khác trong lúc đang sửa → `DbUpdateConcurrencyException` → handler trả
-`Conflict` (409) thay vì âm thầm ghi đè. **Chỉ thêm cho entity nhiều người
-cùng sửa** (đúng `CriteriaAssessment`) — không thêm tràn lan cho entity chỉ 1
-người sở hữu (vd hồ sơ cá nhân tự sửa).
+> ### ⚠️ KHÔNG dùng `IsRowVersion()` — đó là ngữ nghĩa SQL Server
+>
+> `.IsRowVersion()` trên `byte[]` ánh xạ sang kiểu `rowversion` của **SQL Server**,
+> nơi **DB tự tăng giá trị mỗi lần UPDATE**. PostgreSQL **không có kiểu đó**: Npgsql
+> tạo một cột `bytea` bình thường mà **không ai cập nhật**, nên
+> `WHERE "RowVersion" = @original` **luôn khớp** — check concurrency **vô hiệu hoàn
+> toàn, im lặng**. Không lỗi biên dịch, không lỗi lúc chạy; ghi đè vẫn xảy ra đúng
+> như khi chưa làm gì.
+>
+> Cách đúng trên Npgsql: `UseXminAsConcurrencyToken()` — dùng cột hệ thống **`xmin`**
+> mà PostgreSQL vốn đã tăng ở mọi UPDATE. Không tốn thêm cột, không tốn thêm index.
+>
+> Đổi sang SQL Server sau này thì đây là **một trong số ít chỗ phải sửa theo
+> provider** — lúc đó mới dùng `byte[] RowVersion` + `.IsRowVersion()`.
+>
+> *(Sửa 2026-08-23. Recipe sai từng tồn tại **song song ở 3 file** — chính nó là ca
+> được `.claude/CLAUDE.md` §3 lấy làm bằng chứng cho luật "một chủ đề, một file chủ".)*
+
+EF Core tự thêm `WHERE xmin = @original` vào UPDATE — bị người khác ghi đè trong lúc
+đang sửa → `DbUpdateConcurrencyException` → handler trả `Conflict` (409) thay vì âm
+thầm ghi đè. **Chỉ thêm cho entity có ≥2 luồng ghi độc lập** chạm cùng bản ghi —
+không thêm tràn lan cho entity chỉ 1 người sở hữu (vd hồ sơ cá nhân tự sửa).
 
 ## FK cross-module — 3 tầng (áp dụng khi có module nghiệp vụ thứ 2)
 
 Hiện `Modules.DtiWeekly` là module nghiệp vụ duy nhất nên chưa có tình huống
 FK trỏ sang module khác — ghi quy tắc trước để không phải quyết định vội khi
 module thứ 2 xuất hiện (đối chiếu VNR.Successor — xem
-`src/BE/.claude/rules/architecture.md` §"Cần dùng chung logic?"):
+`doc/huong_dan/quy-uoc/be-architecture.md` §"Cần dùng chung logic?"):
 
 | Phạm vi | Loại FK | `DeleteBehavior` |
 | --- | --- | --- |
@@ -163,9 +180,9 @@ bắt được (khác với coupling qua `using` mà ArchTest quét được).
 
 ## Khi thêm entity mới
 
-1. Đối chiếu `doc/ERD/example_db_ver1.csv` nếu liên quan tới domain "theo
+1. Đối chiếu dữ liệu mẫu CSV (`doc/ERD/` đã xoá 2026-08-23, sẽ bổ sung lại sau) nếu liên quan tới domain "theo
    dõi tiêu chí" — nhưng nhớ đây là **dữ liệu mẫu**, không phải schema đã
-   chốt (xem `src/BE/CLAUDE.md`).
+   chốt (xem `doc/huong_dan/quy-uoc/README.md`).
 2. Entity ở `{Core|Modules.<Ten>}.Domain/Entities/{Name}.cs` — Core nếu dùng
    lại được cho mọi module, Modules.<Ten> nếu đặc thù 1 domain nghiệp vụ (xem
    `doc/kien-truc-core-module.md`).

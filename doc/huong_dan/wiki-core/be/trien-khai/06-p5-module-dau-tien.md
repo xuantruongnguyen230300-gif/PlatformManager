@@ -1,5 +1,10 @@
 # P5 — Module đầu tiên: 2 pattern CRUD
 
+> 📍 **Tên project trong file này là của VNR.Successor, không phải PlatformManager.**
+> Tra bảng ánh xạ + 4 mục "KHÔNG áp dụng" ở [`00-lo-trinh-tong-the.md`](00-lo-trinh-tong-the.md)
+> §ĐỌC TRƯỚC. Tóm tắt: `Platform.*`→`Core.*` · `Module.{M}.*`→tầng nghiệp vụ (`Business.*`) ·
+> `Processes/`→**1** host · JWT→**cookie session** · per-module DbContext→**1** DbContext chung.
+
 > **Định nghĩa hoàn thành:** 1 entity catalog thuần (giống `Cat_Province`) chạy
 > đủ CRUD qua HTTP với **zero dòng handler**. 1 entity nghiệp vụ (có validate
 > DB-dependent, có domain factory, có lỗi nghiệp vụ riêng) chạy đủ CRUD qua

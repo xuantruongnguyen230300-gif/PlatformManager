@@ -3,11 +3,11 @@
 > Owner FE: `src/FE/src/app/modules/dashboard/services/dashboard.service.ts` +
 > `src/FE/src/app/shared/services/period-options.service.ts`
 > Nguồn nghiệp vụ: `doc/ke-hoach-xay-lai-corebase.md` (mô tả hành vi cần port lại chính xác từ
-> `doc/Prototype/dashboard.html`), bản Contract Card cũ (đã xoá cùng đợt dọn `src/BE`, nội dung gốc
+> prototype dashboard, đã xoá 2026-08-23), bản Contract Card cũ (đã xoá cùng đợt dọn `src/BE`, nội dung gốc
 > vẫn còn trong lịch sử git — dùng làm nền tham khảo route/shape, ĐÃ cập nhật lại theo envelope
 > mới). Dashboard **100% read-only**.
 >
-> **CASING**: xem cảnh báo ở `doc/contracts/menu.md` — toàn bộ DTO dưới đây giả định camelCase
+> **CASING**: xem cảnh báo ở `doc/contracts/meta-menu.md` — toàn bộ DTO dưới đây giả định camelCase
 > xuyên suốt (envelope + payload), CHƯA XÁC NHẬN với `backend-expert`. Đây là điểm **QUAN TRỌNG
 > NHẤT cần chốt trước khi implement thật** — nếu sai, toàn bộ mapper của cả `dashboard` lẫn
 > `danh-muc-dti` phải sửa lại.
@@ -55,7 +55,7 @@
   }
   ```
 - **Khác bản Contract Card cũ (đã xoá)**: cũ ghi "Table row KHÔNG có field `note`" — bản DRAFT này
-  THÊM lại `note` vì `doc/Prototype/dashboard.html` (nguồn sống hiện tại, cột "Ghi chú tuần" trong
+  THÊM lại `note` vì prototype cũ (đã xoá 2026-08-23; cột "Ghi chú tuần" trong
   bảng 62 chỉ tiêu) vẫn hiển thị ghi chú ngay trong bảng đọc-only — port lại đúng 1:1 theo yêu cầu
   gốc của task lượt này. `backend-expert` xác nhận lại field này có sẵn trong dữ liệu tổng hợp hay
   cần JOIN thêm.
@@ -77,7 +77,7 @@
   ```
 - FE (`report-dialog`) bind `contentHtml` qua `DomSanitizer.bypassSecurityTrustHtml` rồi
   `[innerHTML]` — BE tự tính sẵn HTML (tương đương `generateReport()`/`generateMonthlyReport()`/
-  `generateYearAggregateReport()` trong `doc/Prototype/dashboard.html`), FE không tự dựng lại text.
+  `generateYearAggregateReport()` trong prototype cũ đã xoá), FE không tự dựng lại text.
 
 ## CONTRACT DB-3 — Danh sách Năm/Kỳ có dữ liệu (dùng CHUNG với Danh mục DTI)
 
@@ -98,7 +98,7 @@
 - Owner FE thật sự: `shared/services/period-options.service.ts` — dùng chung bởi
   `modules/dashboard` (`period-toolbar`, `history-list`) VÀ `modules/danh-muc-dti`
   (dropdown năm/kỳ lọc grid) — đặt ở `shared/` theo đúng quy tắc "≥2 feature dùng thì không còn ở
-  `modules/<feature>/`" (`src/FE/.claude/docs/architecture.md`).
+  `modules/<feature>/`" (`doc/huong_dan/quy-uoc/fe-architecture.md`).
 - `history-list` (Dashboard) KHÔNG có endpoint riêng — tái dùng `weeksInYear` của route này, tự
   tính delta giữa các kỳ liền kề ở FE (không cần BE trả sẵn).
 

@@ -45,7 +45,7 @@ if (isPlatformBrowser(inject(PLATFORM_ID))) {
 - SCSS scoped theo component (`styleUrl`, không inline trừ khi component
   cực nhỏ).
 - Màu/spacing/radius lấy từ CSS custom property đã định nghĩa trong file
-  style toàn cục (`src/styles.scss` sau khi scaffold) — **không hardcode
+  style toàn cục (`src/FE/src/styles.scss` sau khi scaffold) — **không hardcode
   hex/px** khi token tương ứng đã tồn tại.
 - Nếu chưa có token cho giá trị cần dùng → báo cáo, đừng tự phát minh token
   mới một cách ngầm định. Một khi `doc/Design/` đã chạy pipeline tới stage 3

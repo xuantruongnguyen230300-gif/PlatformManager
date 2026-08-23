@@ -10,7 +10,7 @@ tools: ["stitch", "claude-design", "ai-studio", "generic"]
 
 <!-- One pack for Screens/01-dashboard.md. Master Prompt filled from that spec + Tokens/tokens.json (light set — the app's only shipped theme) + src/FE/src/styles.scss. Fidelity rule: prompts reproduce the app AS-SHIPPED — quirks included, nothing idealized. -->
 
-> **Rewritten 2026-08-22 — the previous revision is void.** It described `doc/Prototype/dashboard.html`: editable progress and note inputs, a "Lưu tuần này" save button, "Sao lưu"/"Khôi phục" backup actions, a mobile floating action button, a notice banner, the older palette and a 1450px container. **None of that ships.** The Angular dashboard at `/dashboard` is **100 % read-only** — its own page component says so (`dashboard.page.ts:37-38`) — and all editing moved to `/danh-muc/dti`. A generator that produces an editable cell on this screen has produced the wrong screen.
+> **Rewritten 2026-08-22 — the previous revision is void.** It described the deleted prototype: editable progress and note inputs, a "Lưu tuần này" save button, "Sao lưu"/"Khôi phục" backup actions, a mobile floating action button, a notice banner, the older palette and a 1450px container. **None of that ships.** The Angular dashboard at `/dashboard` is **100 % read-only** — its own page component says so (`dashboard.page.ts:37-38`) — and all editing moved to `/danh-muc/dti`. A generator that produces an editable cell on this screen has produced the wrong screen.
 >
 > Every literal below is resolved from `src/FE/src/styles.scss` (the `:root` block) via `Tokens/colors.md`, `Tokens/spacing.md`, `Tokens/typography.md` and `DESIGN.md`, all refreshed 2026-08-22. Nothing in this pack needs a lookup in another file.
 
@@ -480,7 +480,7 @@ Two guardrails worth repeating in the tool's own chat after the first generation
 - `Tokens/tokens.json` (W3C DTCG — enable `global` + `light`; `dark` is intentionally empty, no dark mode ships).
 - `DESIGN.md` (lint-clean token dictionary + design guidance, for the Stitch import).
 - `Assets/Brand/` — **none**. The app ships no logo or brand image file; the "PM" mark is a text square (`UiInventory.md` § Brand Assets).
-- ⚠️ **Do not attach anything from `Assets/Screenshots/dashboard/_superseded-prototype/`.** Those four PNGs are 2026-08-11 captures of `doc/Prototype/dashboard.html` and show the editable, FAB-bearing screen this pack exists to stop generators from drawing.
+- ⚠️ **Do not attach anything from `Assets/Screenshots/dashboard/_superseded-prototype/`.** Those four PNGs are 2026-08-11 captures of the deleted prototype and show the editable, FAB-bearing screen this pack exists to stop generators from drawing.
 
 ## Known gaps in this pack
 

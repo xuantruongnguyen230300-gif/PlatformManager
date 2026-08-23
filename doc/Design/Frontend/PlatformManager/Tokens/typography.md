@@ -12,11 +12,11 @@ live_source: "src/FE/src/styles.scss"
 
 ## Live Source & Extraction Method
 
-**Live source changed 2026-08-22** — re-extracted from the shipped Angular 20 app (`src/FE/`) instead of `doc/Prototype/dashboard.html`, per `doc/Design/CLAUDE.md` § Fidelity Policy. The previous revision described a per-selector free-for-all with no scale; the app **does** have a scale now.
+**Live source changed 2026-08-22** — re-extracted from the shipped Angular 20 app (`src/FE/`) instead of the deleted prototype, per `doc/Design/CLAUDE.md` § Fidelity Policy. The previous revision described a per-selector free-for-all with no scale; the app **does** have a scale now.
 
 **The scale.** Five `--fs-*` custom properties in `:root` (`src/FE/src/styles.scss:63-67`) — the density-compact set. `styles.scss:1-9` records why they exist and warns, in the source itself, that this design system had not yet caught up: *"Giá trị font-size/spacing dùng đúng bộ token 'mật độ hiển thị (compact)' … muộn hơn Tokens/typography.md + Tokens/spacing.md … pipeline /design-extract-tokens chưa chạy lại."* This refresh is that re-run.
 
-**Font family.** One stack, declared once on `body` (`styles.scss:91`) and inherited everywhere. No per-heading font, no `@font-face`. **Inter is loaded from Google Fonts** — `src/FE/src/index.html:21-23`, added 2026-08-22: `preconnect` to `fonts.googleapis.com` **and** `fonts.gstatic.com` (the `.woff2` files come from `gstatic`, so preconnecting to only the stylesheet host leaves the actual font fetch paying a fresh handshake), then a stylesheet at weights **400;500;600;700** with `display=swap`.
+**Font family.** One stack, declared once on `body` (`styles.scss:91`) and inherited everywhere. No per-heading font, no `@font-face`. ⚠️ **Inter is NOT loaded on the current working copy** (checked 2026-08-23: `src/FE/src/index.html` is 14 lines, no font link). An earlier revision claimed, at `index.html:21-23`: `preconnect` to `fonts.googleapis.com` **and** `fonts.gstatic.com` (the `.woff2` files come from `gstatic`, so preconnecting to only the stylesheet host leaves the actual font fetch paying a fresh handshake), then a stylesheet at weights **400;500;600;700** with `display=swap`.
 
 Until that landed the stack was a promise the app could not keep: nothing loaded the face, so rendering fell through to whatever the OS provided — Segoe UI on a stock Windows box, while every spec said Inter. **The gap is now narrower but not closed**: the app also ships weights **750, 800 and 850** (see § Font weights below), none of which are among the four loaded, so the browser synthesises or rounds them. Recorded as-shipped.
 
@@ -76,7 +76,7 @@ Reconstructed by pairing each selector's `font-size` with its `font-weight`; the
 
 | Value | Where | Source line |
 | --- | --- | --- |
-| `400` | body default; explicit reset on `.always-tag` | `platform/phan-quyen/components/resource-permission-matrix/resource-permission-matrix.scss:30` |
+| `400` | body default only — **no explicit `font-weight: 400` declaration ships anywhere in `src/FE/`**; every 400 is inherited | — (nothing to cite) |
 | `600` | sidebar nav item, `.role-checkbox` | `sidebar.scss:107`, `user-form-dialog.scss:16` |
 | `700` | **12** declarations — `.btn`, `.action-btn`, `th`, form labels, `.seg-btn`, links, `.user-name`, `.topbar-user-name`, active nav item | `styles.scss:152,219,265,388,432,493,514,590`; `topbar.scss:34`; `sidebar.scss:134`; `period-toolbar.scss:50`; `user-grid-table.scss:28` |
 | `750` | `.badge` only | `styles.scss:307` |
@@ -105,7 +105,6 @@ Note `12px` and `15px` are numerically identical to `--fs-sm` and `--fs-lg` — 
 | --- | --- | --- |
 | `1` | `.cell-icon-btn` | `criteria-grid-table.scss:66` |
 | `1.4` | `th,td`; `.kpi .sub`; `.toast-text` | `styles.scss:374`; `kpi-tile.scss:33`; `toast.scss:45` |
-| `1.5` | `.always-note` | `resource-permission-matrix.scss:39` |
 | `1.55` | `.confirm-message` | `confirm-dialog.scss:3` |
 | `1.6` | `.import-summary` | `modules/danh-muc-dti/components/import-result-dialog/import-result-dialog.scss:3` |
 

@@ -1,5 +1,10 @@
 # P6 — ArchTests: 36 gate thật, cái nào cần từ ngày đầu, cái nào để sau
 
+> 📍 **Tên project trong file này là của VNR.Successor, không phải PlatformManager.**
+> Tra bảng ánh xạ + 4 mục "KHÔNG áp dụng" ở [`00-lo-trinh-tong-the.md`](00-lo-trinh-tong-the.md)
+> §ĐỌC TRƯỚC. Tóm tắt: `Platform.*`→`Core.*` · `Module.{M}.*`→tầng nghiệp vụ (`Business.*`) ·
+> `Processes/`→**1** host · JWT→**cookie session** · per-module DbContext→**1** DbContext chung.
+
 > **Định nghĩa hoàn thành của P6 không phải "viết đủ 36 test"** — P6 chạy song
 > song với P5 trở đi ([00-lộ-trình §2](00-lo-trinh-tong-the.md)), và phần lớn
 > gate ở đây chỉ **có ý nghĩa** khi hệ thống đã chạm đúng tình huống mà nó canh

@@ -12,6 +12,64 @@
 
 ---
 
+## ⚠️ ĐỌC TRƯỚC — bộ này mô tả VNR, không phải PlatformManager
+
+**Vai của `trien-khai/`: tài liệu THAM CHIẾU hình dạng chi tiết** (chữ ký class, thứ tự đăng ký
+DI, cách một thành phần trông ra sao trong một hệ production thật). **Không phải đặc tả thi công
+của PlatformManager.**
+
+Bộ này dựng theo VNR.Successor — **~73 project, 8 module, 9 process**. PlatformManager là hệ
+**tầm trung, ~13 project, 1 process**. Chép nguyên xi là mua toàn bộ chi phí mà không mua được
+lợi ích.
+
+### Bảng ánh xạ — đọc tên VNR, hiểu sang PlatformManager
+
+| `trien-khai/` viết | PlatformManager là | Ghi chú |
+| --- | --- | --- |
+| `VNR.Platform.Domain` | `PlatformManager.Core.Domain` | |
+| `VNR.Platform.Application` | `PlatformManager.Core.Application` | |
+| `VNR.Platform.Common` | `PlatformManager.Core.Common` | |
+| `VNR.Platform.Persistence` | `PlatformManager.Core.Persistence` | |
+| `VNR.Infrastructure.*` (13 project) | **gộp** vào `Core.Infrastructure` | xem "không áp dụng" #1 |
+| `VNR.Module.{M}.*` | tầng nghiệp vụ của dự án — `Business.*` với PlatformManager | tên do **dự án** đặt, Core không biết |
+| `VNR.Hosting.Api` | `Core.Api` (base controller, middleware) | |
+| `VNR.Hosting.CompositionRoot` | `PlatformManager.Api` (host mỏng) | |
+| `VNR.Process.*` (9 process) | **1** `PlatformManager.Api` | xem "không áp dụng" #2 |
+
+### KHÔNG áp dụng cho PlatformManager — 4 mục
+
+1. **13 project `Infrastructure/` tách riêng từng mối bận tâm.** Đây là *assembly-per-namespace*:
+   13 `.csproj`, 13 bộ package reference, build chậm — mà không cô lập được gì vì chúng luôn ship
+   cùng nhau. PlatformManager gộp hết vào `Core.Infrastructure`.
+2. **9 `Process` triển khai riêng.** Đơn vị triển khai chỉ có giá khi **thật sự** deploy riêng.
+   PlatformManager chạy **1 process** — mọi thứ trong bộ này giả định nhiều process (JWT, phát
+   hiện service, transaction xuyên process) đều không áp dụng.
+3. **Mỗi module một `DbContext`** (`IBoundedContext`, `SchemaName`, `AddModuleDbContext<T>`).
+   PlatformManager dùng **1 `PlatformManagerDbContext`** và tách ranh giới bằng **schema Postgres**
+   (`core` / `business`) — được phần lớn giá trị mà không phải trả giá nhiều migration history.
+   *Ý tưởng đảo phụ thuộc thì GIỮ*, dưới dạng `IModuleRegistrar` — xem `doc/kien-truc-core-module.md`.
+4. **`Module.{M}.SharedKernel`** — chính VNR cũng đánh dấu "tuỳ chọn".
+
+### Áp dụng NGƯỢC lại — thứ VNR có mà PlatformManager nên lấy
+
+- **`Platform.Common`** → đã chốt thành `Core.Common` (2026-08-23).
+- **`Module.{M}.Contracts` + `IBoundedContext`** → đã rút gọn thành **`IModuleRegistrar`** ở
+  `Core.Application`. Đây là seam để tầng nghiệp vụ tự đăng ký mà Core không reference nó — điều
+  kiện để Corebase cắm được vào dự án thứ hai.
+
+### Auth: bộ này chốt JWT — PlatformManager dùng **cookie session**
+
+`05-p4` §4.1 đặt `[Authorize(AuthenticationSchemes = JwtBearerDefaults...)]` lên `BaseApiController`.
+Đó là quyết định **của VNR** (9 process, cần verify token xuyên process).
+
+PlatformManager **1 process** → đã CHỐT **cookie session của ASP.NET Core Identity, KHÔNG JWT**
+(`doc/contracts/auth.md`, `be/02-identity-auth.md`). Lý do: JWT trần **không thu hồi được** — nút
+"khoá tài khoản" sẽ không có tác dụng cho tới khi token hết hạn; còn cookie có
+`SecurityStampValidator`. Đọc `[Authorize(...)]` trong bộ này thành `[Authorize]` trần
+(scheme mặc định `IdentityConstants.ApplicationScheme`).
+
+---
+
 ## 1. Nguyên tắc chi phối toàn bộ lộ trình
 
 | # | Nguyên tắc | Hệ quả thực tế |
@@ -54,7 +112,7 @@ src/backend/
 ├── Directory.Build.props              ← cấu hình build tập trung (xem P0)
 ├── Directory.Packages.props           ← [KHUYẾN NGHỊ] central package management
 ├── CLAUDE.md                          ← file định hướng, KHÔNG chứa rule chi tiết
-├── .claude/rules/*.md                 ← rule chi tiết theo chủ đề (13 file)
+├── doc/huong_dan/quy-uoc/be-*.md                 ← rule chi tiết theo chủ đề (13 file)
 │
 ├── Src/
 │   ├── Platform/                      (4) ← CORE. Không biết gì về nghiệp vụ

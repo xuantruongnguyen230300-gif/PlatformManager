@@ -21,7 +21,7 @@ bám vào **source thật** (không bịa) — xem "Fidelity Policy" trong
 Pipeline này được đưa vào từ một dự án tham chiếu (`VNR.Successor`) và điều
 chỉnh lại cho quy mô của `PlatformManager` — hiện chỉ có một project
 (`Frontend/PlatformManager`) trỏ vào prototype tĩnh
-`doc/Prototype/dashboard.html`, vì `src/FE/` và `src/BE/` còn đang rỗng.
+the deleted prototype, vì `src/FE/` và `src/BE/` còn đang rỗng.
 
 ## 1. Yêu cầu môi trường
 
@@ -93,7 +93,7 @@ doc/Design/
 ├── Templates/                # 10 template gốc cho mọi artifact
 └── Frontend/
     └── PlatformManager/       # đã chạy xong stage 1 (scaffold)
-        ├── README.md           # source_paths: doc/Prototype/dashboard.html
+        ├── README.md           # source_paths: src/FE/src/app
         └── UiInventory.md       # stub — sẽ điền ở stage 2
 ```
 
@@ -127,7 +127,7 @@ khác (vd. `Backend/Api` khi `src/BE/` có app thật).
 ## 5. Ghi chú "greenfield"
 
 `src/FE/` và `src/BE/` hiện đang rỗng — chưa chọn framework. Pipeline vẫn
-chạy được bằng cách coi `doc/Prototype/dashboard.html` là "live source" tạm
+chạy được bằng cách coi the deleted prototype là "live source" tạm
 thời (xem carve-out trong `CLAUDE.md` § Fidelity Policy). Khi một app thật
 xuất hiện trong `src/FE/`:
 

@@ -46,7 +46,7 @@ vd 1 tính năng theo dõi/tiêu chí mới thuộc khối `Business.*`/`modules
 
 ### 3. Gate spec — chỉ áp dụng cho feature Business
 
-- Kiểm tra `spec/<feature>/business-rules.md` (và `ui-spec.md` nếu có màn
+- Kiểm tra `spec/<feature>/business-rules.md` (và `spec/<feature>/ui-spec.md` nếu có màn
   hình mới). Nếu **không tồn tại**: dừng lại, báo người dùng cần có business
   rule trước — không tự suy diễn nghiệp vụ, không tự bịa spec để "có cái mà
   chạy tiếp". Hỏi người dùng muốn tự viết `spec/<feature>/business-rules.md`

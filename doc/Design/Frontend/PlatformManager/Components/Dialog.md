@@ -17,7 +17,7 @@ sources: ["src/FE/src/styles.scss", "src/FE/src/app/modules/dashboard/components
 | Declared in | `gap` | `margin-top` |
 | --- | --- | --- |
 | `report-dialog.scss:1-6` | 8px | 12px |
-| `import-dialog.scss:1-6` | 8px | 12px |
+| `csv-import-dialog.scss:1-6` | 8px | 12px |
 | `import-result-dialog.scss:19-23` | **absent** | 12px |
 | `criteria-form-dialog.scss:5-10` | 8px | **8px** |
 | `user-form-dialog.scss:26-31` | 8px | **8px** |
@@ -55,7 +55,7 @@ Note the asymmetry: `confirm-dialog` is the only one **without** a title-row `Đ
 | hover | **Not styled** — no `dialog:hover` rule; hover belongs to the `Button`s inside (see `Button.md`) |
 | focus | **Browser default focus trap.** `showModal()` makes the dialog the top layer and confines Tab to it; Escape fires `(close)`, which every component re-emits as a `closed` output. No custom `:focus` CSS is authored on the dialog. `appAutofocus` moves initial focus to the first field in the two form dialogs (`criteria-form-dialog.html:9`, `user-form-dialog.html:12`) |
 | active | **N/A for the dialog element** — it is not a control and has no `:active` rule. Its footer `Button`s carry the shared `.btn:active` press offset (`styles.scss:187-189`) |
-| disabled | **N/A for the dialog element.** The state lives on its buttons — notably `import-dialog.html:18`, whose primary action is `[disabled]` until a file is chosen, and `confirm-dialog`'s actions, which are never disabled |
+| disabled | **N/A for the dialog element.** The state lives on its buttons — notably `csv-import-dialog.html:18`, whose primary action is `[disabled]` until a file is chosen, and `confirm-dialog`'s actions, which are never disabled |
 
 ## Tokens Used
 - `colors.card` (the `<dialog>` background comes from the UA default white, matching `colors.card`), `colors.overlay-backdrop`, `colors.text`
@@ -96,7 +96,7 @@ The `0 24px 70px rgba(0,0,0,.25)` elevation, the three `min(…, 92vw)` widths, 
 </dialog>
 ```
 
-Sources: `src/FE/src/styles.scss:466-484` (element + three width variants + backdrop), `:270-281` (`.title`), `:449-453` (`.form-error`), `src/FE/src/app/modules/dashboard/components/report-dialog/report-dialog.html:1-11` + `report-dialog.scss:1-6`, `src/FE/src/app/modules/danh-muc-dti/components/confirm-dialog/confirm-dialog.html:1-10` + `confirm-dialog.scss:1-11`, `src/FE/src/app/modules/danh-muc-dti/components/criteria-form-dialog/criteria-form-dialog.html:1-42`, `src/FE/src/app/modules/danh-muc-dti/components/import-dialog/import-dialog.html:1-22`, `src/FE/src/app/modules/danh-muc-dti/components/import-result-dialog/import-result-dialog.html:1-35`, `src/FE/src/app/platform/quan-tri-nguoi-dung/components/user-form-dialog/user-form-dialog.html:1-71`, `src/FE/src/app/modules/danh-muc-dti/pages/danh-muc-dti/danh-muc-dti.page.html:76-87` (`@defer` gating)
+Sources: `src/FE/src/styles.scss:466-484` (element + three width variants + backdrop), `:270-281` (`.title`), `:449-453` (`.form-error`), `src/FE/src/app/modules/dashboard/components/report-dialog/report-dialog.html:1-11` + `report-dialog.scss:1-6`, `src/FE/src/app/modules/danh-muc-dti/components/confirm-dialog/confirm-dialog.html:1-10` + `confirm-dialog.scss:1-11`, `src/FE/src/app/modules/danh-muc-dti/components/criteria-form-dialog/criteria-form-dialog.html:1-42`, `src/FE/src/app/modules/danh-muc-dti/components/csv-import-dialog/csv-import-dialog.html:1-22`, `src/FE/src/app/modules/danh-muc-dti/components/import-result-dialog/import-result-dialog.html:1-35`, `src/FE/src/app/platform/quan-tri-nguoi-dung/components/user-form-dialog/user-form-dialog.html:1-71`, `src/FE/src/app/modules/danh-muc-dti/pages/danh-muc-dti/danh-muc-dti.page.html:76-87` (`@defer` gating)
 
 ## Do / Don't
 

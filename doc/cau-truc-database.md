@@ -69,7 +69,7 @@ Hệ quả cần biết:
 | `AspNetRoleClaims` | Claim cấp role (Identity sinh sẵn, chưa dùng) |
 | `AspNetUserLogins` | Đăng nhập ngoài (Google/Microsoft...), chưa dùng |
 | `AspNetUserTokens` | Token nội bộ Identity (reset password, 2FA) |
-| `RolePermissions` | **Phân quyền theo hành động** — role nào được phép chạm `ResourceKey` nào. PK ghép (`RoleId`, `ResourceKey`), `ResourceKey` `varchar(100)`; FK `RoleId → AspNetRoles.Id` `ON DELETE CASCADE`. Index phụ `IX_RolePermissions_ResourceKey_RoleId` (`ResourceKey`, `RoleId`) — xem §4 |
+| `RolePermissions` | 🚧 **Phân quyền theo hành động** (chưa thi công — xem §2.1) — role nào được phép chạm `ResourceKey` nào. PK ghép (`RoleId`, `ResourceKey`), `ResourceKey` `varchar(100)`; FK `RoleId → AspNetRoles.Id` `ON DELETE CASCADE`. Index phụ `IX_RolePermissions_ResourceKey_RoleId` (`ResourceKey`, `RoleId`) — xem §4 |
 | `SysMenus` | Menu điều hướng động (sidebar), tự tham chiếu `ParentId` cho cây 1 cấp |
 | `SysMenuRoles` | Role nào được thấy menu nào (nhiều-nhiều) |
 | `__EFMigrationsHistory` | Bảng nội bộ EF Core theo dõi migration đã áp dụng |
@@ -88,12 +88,53 @@ Hệ quả cần biết:
 | `Criteria` | Chỉ tiêu đánh giá cụ thể, thuộc 1 `CriteriaGroups` |
 | `CriteriaAssessments` | Kết quả đánh giá 1 `Criteria` theo từng kỳ (phần ngày của `DateCreate` = kỳ) |
 | `CriteriaEvidences` | Minh chứng đính kèm 1 `CriteriaAssessments` (nhiều dòng/bản ghi) |
-| `ImportJobs` | **Trạng thái job import CSV/Excel chạy nền qua Hangfire.** Cột: `Id` (uuid, PK), `FileName` `varchar(260)` NOT NULL, `Format` `varchar(20)` NOT NULL, `StoragePath` `varchar(1000)` NOT NULL, `Status` `varchar(20)` NOT NULL, `ResultJson` `text`, `ErrorMessage` `text` + 6 field `BaseEntity`. Index `IX_ImportJobs_Status` phục vụ endpoint poll `GET /api/import/{jobId}`. **Không có FK nào** — job độc lập với dữ liệu nó ghi ra |
+| `ImportJobs` | 🚧 **Trạng thái job import CSV/Excel chạy nền qua Hangfire** (chưa thi công — xem §2.1). Cột: `Id` (uuid, PK), `FileName` `varchar(260)` NOT NULL, `Format` `varchar(20)` NOT NULL, `StoragePath` `varchar(1000)` NOT NULL, `Status` `varchar(20)` NOT NULL, `ResultJson` `text`, `ErrorMessage` `text` + 6 field `BaseEntity`. Index `IX_ImportJobs_Status` phục vụ endpoint poll `GET /api/import/{jobId}`. **Không có FK nào** — job độc lập với dữ liệu nó ghi ra |
 
 > `ImportJobs` là bảng *trạng thái tiến trình*, khác 4 bảng còn lại (dữ liệu
 > nghiệp vụ). Nó lưu **đường dẫn** file tạm (`StoragePath`), không lưu nội
 > dung file — file upload không sống sót qua ranh giới request→job nền, xem
-> `src/BE/.claude/rules/cqrs-handler.md` § "Command chạy lâu → job nền".
+> `doc/huong_dan/quy-uoc/be-cqrs-handler.md` § "Command chạy lâu → job nền".
+
+## 2.1. 🚧 Hai bảng ĐÃ CHỐT nhưng CHƯA thi công — `RolePermissions`, `ImportJobs`
+
+**Trạng thái (đối chiếu 2026-08-23):** hai bảng liệt kê ở §2 là **thiết kế đã
+chốt**, **chưa tồn tại** trong code. Đừng đọc chúng như bảng đang chạy.
+
+| Có thật hôm nay | Sẽ thành |
+| --- | --- |
+| Không có entity/configuration `RolePermission`, `ImportJob` | 2 entity + EF configuration |
+| `ModelSnapshot` không có 2 bảng này | có trong snapshot |
+| `CoreSeeder` chỉ có `SeedRolesAsync`/`SeedBootstrapUserAsync`/`SeedMenuAsync` | thêm `SeedRolePermissionsAsync()` |
+| Không có `RequirePermissionFilter`, không có `ResourceKeys` | có, deny-by-default |
+
+**Định nghĩa đầy đủ để thi công** — đây là bản duy nhất còn lại sau khi gộp
+`doc/ERD/` (đã xoá), nên ghi đủ cả tên constraint:
+
+`core."RolePermissions"` — `RoleId` `uuid` NOT NULL · `ResourceKey`
+`varchar(100)` NOT NULL · PK ghép `PK_RolePermissions` (`RoleId`, `ResourceKey`)
+· FK `FK_RolePermissions_AspNetRoles_RoleId` → `core."AspNetRoles"("Id")`
+**ON DELETE CASCADE** (cùng quy ước `SysMenuRoles`: xoá role thì gỡ luôn quyền)
+· **không** có cột `BaseEntity` · index phụ `IX_RolePermissions_ResourceKey_RoleId`.
+
+`business."ImportJobs"` — xem §2 cho danh sách cột · PK `PK_ImportJobs` (`Id`) ·
+**không FK nào** · index `IX_ImportJobs_Status` · **có** 6 cột `BaseEntity`.
+
+### Vì sao `IX_RolePermissions_ResourceKey_RoleId` là bắt buộc, không phải tối ưu sớm
+
+PK ghép dẫn đầu bằng `RoleId`. Nhưng truy vấn nóng nhất hệ thống —
+`RequirePermissionFilter`, chạy trên **mọi** request có `[RequirePermission]` —
+lọc **trước hết theo `ResourceKey`** rồi mới ghép `RoleId`. PK **không seek
+được** cho nó (quy tắc Q2 ở `doc/huong_dan/quy-uoc/be-performance.md`). Index này
+dẫn đầu đúng cột được lọc và phủ luôn cột join → **index-only scan**.
+
+> **Đọc `EXPLAIN` cho đúng ở bảng nhỏ.** Với ~6 dòng `RolePermissions`, Postgres
+> vẫn chọn **Seq Scan** vì cả bảng nằm gọn trong một page — đó là **lựa chọn
+> ĐÚNG của planner, không phải dấu hiệu index vô dụng**. Index có giá trị khi số
+> tổ hợp (role × resource key) tăng; chi phí duy trì gần bằng 0 vì bảng ghi rất
+> hiếm. Đừng gỡ index chỉ vì `EXPLAIN` trên dữ liệu seed không dùng tới nó.
+
+*(Tri thức trong mục này trước nằm ở header `doc/ERD/migrations/0005_*.sql`, file
+đã xoá khi gộp nguồn schema — xem §5.)*
 
 ## 3. Quan hệ xuyên schema
 
@@ -109,9 +150,21 @@ Không có FK nào đi chiều ngược lại (`core` → `business`) — khớp
 
 ## 4. Ràng buộc đáng chú ý
 
-- **Soft-delete 2 lớp** (mọi bảng nghiệp vụ + `SysMenus`): cột `IsDelete` +
-  filtered unique index (vd `IX_Criteria_Code_Active` chỉ tính trên dòng
-  `IsDelete = false`) — xoá mềm 1 mã rồi tạo lại đúng mã đó vẫn thành công.
+- **Soft-delete 2 lớp** — cột `IsDelete` + filtered unique index chỉ tính trên
+  dòng `IsDelete = false`, nhờ đó xoá mềm một mã rồi tạo lại đúng mã đó vẫn
+  thành công. Áp dụng cho `IX_Criteria_Code_Active` và
+  `IX_CriteriaGroups_Code_Active`.
+
+  > ⚠️ **`SysMenus` là NGOẠI LỆ — và đây là lỗi, không phải thiết kế.**
+  > `IX_SysMenus_Code` là unique **không** filter (`ModelSnapshot` không có
+  > `HasFilter`), nên hôm nay **xoá mềm một menu rồi tạo lại cùng `Code` sẽ
+  > thất bại** vì trùng khoá — trong khi `Criteria`/`CriteriaGroups` thì được.
+  >
+  > Bản `0001` từng có `ux_sysmenu_code ... WHERE "IsDelete" = false`; mệnh đề
+  > partial **mất trong lần dựng lại `0003`**, không ai ghi nhận. Phát hiện
+  > 2026-08-23. Khi viết lại `src`, thêm `.HasFilter("\"IsDelete\" = false")`
+  > vào cấu hình `SysMenu` — `CriteriaAssessmentConfiguration` đã có sẵn mẫu,
+  > EF sinh được, không cần vá tay.
 - **`UX_CriteriaAssessments_CriteriaId_DateCreate_Day`**: index duy nhất
   theo biểu thức (không phải theo cột thẳng) — ép buộc "1 `Criteria` chỉ có
   tối đa 1 `CriteriaAssessments` chưa xoá mềm mỗi ngày". Dùng hàm SQL
@@ -123,10 +176,34 @@ Không có FK nào đi chiều ngược lại (`core` → `business`) — khớp
 >
 > Unique index này **chỉ tồn tại trong SQL vá tay**, EF Core **không biết nó**:
 >
-> | | Có gì |
-> |---|---|
-> | `doc/ERD/migrations/0003_corebase_v2.sql` (~dòng 347-361) | `CREATE OR REPLACE FUNCTION business.criteria_assessment_date_utc(...)` + `CREATE UNIQUE INDEX IF NOT EXISTS "UX_CriteriaAssessments_CriteriaId_DateCreate_Day" ... WHERE "IsDelete" = false` — **viết tay, ngoài block `DO $EF$`** |
-> | `PlatformManagerDbContextModelSnapshot.cs` | **CHỈ CÓ** `IX_CriteriaAssessments_CriteriaId_DateCreate` — index **non-unique**, không filter, không hàm. Không có dấu vết nào của `UX_*` hay của hàm SQL |
+> `PlatformManagerDbContextModelSnapshot.cs` **chỉ có** `IX_CriteriaAssessments_CriteriaId_DateCreate`
+> — index **non-unique**, không filter, không hàm. Không có dấu vết nào của
+> `UX_*` hay của hàm SQL.
+>
+> **Nguyên văn 2 đoạn phải dựng lại bằng tay** (trước nằm trong
+> `doc/ERD/migrations/0003_corebase_v2.sql`, file đã xoá khi gộp nguồn schema —
+> đây là bản duy nhất còn lại, **đừng xoá khối này**):
+>
+> ```sql
+> CREATE OR REPLACE FUNCTION business.criteria_assessment_date_utc(ts timestamptz)
+> RETURNS date
+> LANGUAGE sql
+> IMMUTABLE
+> AS $$
+>     SELECT (ts AT TIME ZONE 'UTC')::date;
+> $$;
+>
+> CREATE UNIQUE INDEX IF NOT EXISTS "UX_CriteriaAssessments_CriteriaId_DateCreate_Day"
+>     ON business."CriteriaAssessments" ("CriteriaId", business.criteria_assessment_date_utc("DateCreate"))
+>     WHERE "IsDelete" = false;
+> ```
+>
+> Cả hai nằm **ngoài** block `DO $EF$` — tức EF không sinh và không xoá chúng.
+> Hàm **bắt buộc** đánh dấu `IMMUTABLE`: viết thẳng `CAST("DateCreate" AS date)`
+> trong biểu thức index sẽ bị Postgres từ chối với lỗi **`42P17`**
+> *"functions in index expression must be marked IMMUTABLE"* — vì phép đổi
+> `timestamptz`→`date` phụ thuộc `TimeZone` của session. **Lỗi này đã xảy ra
+> thật, không phải giả định.**
 >
 > **Hệ quả:** chạy `dotnet ef migrations script` sinh lại **full script từ
 > đầu** sẽ dựng DB **THIẾU** unique index này và **THIẾU** hàm
@@ -139,7 +216,7 @@ Không có FK nào đi chiều ngược lại (`core` → `business`) — khớp
 > dotnet ef migrations script <MigrationTrước> <MigrationMới> --idempotent
 > ```
 > Nếu **buộc phải** sinh full script (dựng DB mới từ số 0), phải **chèn tay
-> lại** 2 đoạn trên từ `0003_corebase_v2.sql` sau khi sinh xong, rồi kiểm
+> lại** 2 đoạn SQL nguyên văn ở trên sau khi sinh xong, rồi kiểm
 > `\di business.*` thấy `UX_CriteriaAssessments_CriteriaId_DateCreate_Day`
 > mới coi là xong.
 >
@@ -160,35 +237,96 @@ Không có FK nào đi chiều ngược lại (`core` → `business`) — khớp
   Identity, **cố ý không sửa**. 2 bảng này hiện chưa dùng (xem §2), nhưng
   đừng khẳng định "không có `Id` nào DB tự sinh" khi đối soát schema.
 
-## 5. File migration tương ứng
+### 4.1. Quyết định thiết kế phần Core — đọc trước khi sửa bảng Identity/Menu
 
-- **Migration C#** (nguồn sự thật, EF Core sinh ra):
-  `src/BE/Core/PlatformManager.Core.Infrastructure/Persistence/Migrations/`
-  — **3 migration**: `20260816150234_InitialCreate`,
-  `20260818090451_AddRolePermissionAndImportJob`,
-  `20260818101335_AddRolePermissionResourceKeyIndex`.
-- **File `.sql`** (để chạy tay lên Postgres — người dùng tự chạy, **không
-  agent nào tự động chạy DDL lên DB thật**): **3 file, không phải 1**, mỗi
-  file có **2 bản** phải giữ đồng bộ cùng lúc khi migration đổi:
+Phần Core được tái dùng cho mọi sản phẩm dựng trên nền tảng này, nên những
+quyết định dưới đây có tuổi thọ dài hơn nghiệp vụ DTI Weekly.
 
-| # | File | Nội dung | Loại |
-|---|---|---|---|
-| `0003` | `0003_corebase_v2.sql` | Full script: 2 schema + Identity + SysMenu/SysMenuRole + 4 bảng DTI Weekly, **+ 2 đoạn vá tay** (hàm `criteria_assessment_date_utc` + `UX_CriteriaAssessments_CriteriaId_DateCreate_Day`) | full |
-| `0004` | `0004_role_permission_import_job.sql` | `core."RolePermissions"` + `business."ImportJobs"` + `IX_ImportJobs_Status`. **Có bước SEED BẮT BUỘC đi kèm — xem §5.1** | delta |
-| `0005` | `0005_role_permission_resource_key_index.sql` | `IX_RolePermissions_ResourceKey_RoleId` — chỉ 1 index, an toàn chạy trên DB đã có dữ liệu | delta |
+**`AppUser` KHÔNG kế thừa `BaseEntity` — và đó là chủ đích.** Identity tự quản
+lý vòng đời user bằng field riêng (`LockoutEnd`, `SecurityStamp`…), không áp
+`IsDelete`. Hai cột `DateCreate`/`DateUpdate` **cố ý đặt trùng quy ước
+`BaseEntity` dù không kế thừa** — để đọc hiểu nhất quán, không phải để chia sẻ
+code. Đừng "sửa cho đồng bộ" bằng cách bắt nó kế thừa.
 
-2 vị trí (nội dung SQL khớp 100%, chỉ khác 2 dòng comment đầu file trỏ ngược
-về bản kia):
-- `doc/ERD/migrations/<file>.sql`
-- `src/BE/Core/PlatformManager.Core.Infrastructure/Persistence/Migrations/sql/<file>.sql`
+**"SysUser" = `AppUser`/`AspNetUsers`, không phải bảng thứ hai.** Cần thêm
+thông tin người dùng thì **mở rộng `AppUser`** (thêm cột), tuyệt đối không tạo
+một bảng user song song.
 
-> **Đọc header trước khi chạy.** Cả 2 bản đều mang đầy đủ phần header comment
-> (lý do sinh delta, cảnh báo seed, cảnh báo mất index vá tay). Sửa 1 bản mà
-> quên bản kia → lần sau đọc nhầm bản thiếu thông tin.
+**Khoá/mở tài khoản đi qua `LockoutEnd`, KHÔNG thêm cột `IsActive`.**
+
+```
+LockoutEnd IS NULL  hoặc  LockoutEnd < now()   →  "Đang hoạt động"
+LockoutEnd >= now()                            →  "Đã khoá"
+```
+
+Khoá = `UserManager.SetLockoutEndDateAsync` với một mốc xa trong tương lai —
+**không tự ghi cột này bằng tay**, và không thêm cột `IsActive` riêng (trùng
+lặp khái niệm với cơ chế Identity sẵn có).
+
+**KHÔNG hash mật khẩu trong SQL.** Identity dùng `PasswordHasher<TUser>`
+(PBKDF2, salt ngẫu nhiên mỗi lần) — **không có cách nào tạo hash hợp lệ bằng
+SQL thuần**. Tài khoản đầu tiên phải tạo qua code thật
+(`UserManager.CreateAsync(user, password)`), không phải qua migration hay
+script seed.
+
+**Cây menu đúng MỘT cấp.** Item cha (`ParentId IS NULL` nhưng có con) có
+`Route = NULL` — cha chỉ toggle mở/đóng, không điều hướng. Con không có con
+riêng.
+
+**`SysMenus.Code` là khoá ổn định, KHÔNG đổi sau khi đã dùng.** Route và quyền
+có thể đổi; `Code` thì không — nó là key cho `@for track` phía FE và là điểm
+neo của mọi tham chiếu menu.
+
+**Seed đúng những gì có trang thật.** Không thêm mục menu cho trang chưa tồn
+tại, kể cả khi đã dự phòng chỗ trong cấu trúc cây.
+
+> *(Bảy quyết định trên trước nằm ở `doc/ERD/ERD-corebase.md`, file đã xoá khi
+> gộp nguồn schema. Đây là bản duy nhất còn lại.)*
+
+## 5. Dựng lại database từ đầu — hai bước, không phải một
+
+**Nguồn schema từ 2026-08-23 chỉ còn hai file, cùng tên khác đuôi:**
+
+| File | Vai |
+| --- | --- |
+| [`cau-truc-database.md`](cau-truc-database.md) *(chính file này)* | Mô tả để **đọc hiểu** — bảng, cột, ràng buộc, quyết định thiết kế |
+| [`cau-truc-database.sql`](cau-truc-database.sql) | **DDL viết tay** — phần EF Core không sinh được |
+
+```bash
+# Bước 1 — EF dựng toàn bộ bảng/cột/khoá/index thông thường
+dotnet ef database update --project src/BE/Core/PlatformManager.Core.Infrastructure \
+                          --startup-project src/BE/PlatformManager.Api
+
+# Bước 2 — BẮT BUỘC, không được bỏ
+psql -d <database> -f doc/cau-truc-database.sql
+```
+
+> ### ⚠️ Bỏ bước 2 = DB thiếu ràng buộc, im lặng
 >
-> `0001_corebase_identity_sysmenu.sql` và `0002_seed_corebase.sql` trong
-> `doc/ERD/migrations/` **ĐÃ BỊ THAY THẾ** bởi `0003` — chỉ giữ làm tài liệu
-> lịch sử, **KHÔNG chạy** (xem `doc/ke-hoach-xay-lai-corebase.md`).
+> `doc/cau-truc-database.sql` chứa hàm `criteria_assessment_date_utc` và unique
+> index theo **biểu thức hàm + partial filter** — EF Core không có cách nào sinh
+> chúng từ entity/configuration. Thiếu chúng, ràng buộc *"1 đánh giá / 1 chỉ
+> tiêu / 1 ngày"* biến mất và **dữ liệu trùng lọt vào mà không lỗi, không test
+> nào báo**. Kiểm sau khi chạy: `\di business.*` phải thấy
+> `UX_CriteriaAssessments_CriteriaId_DateCreate_Day`.
+
+**Sinh migration mới:** luôn dùng script **DELTA**, không bao giờ sinh full.
+
+```bash
+dotnet ef migrations script <MigrationTrước> <MigrationMới> --idempotent
+```
+
+Full script sẽ dựng lại DB **thiếu** 2 đoạn ở `cau-truc-database.sql` — nếu buộc
+phải sinh full, chạy lại bước 2 sau đó.
+
+> **Lịch sử:** trước 2026-08-23, schema được mô tả rải ở **6 nguồn** —
+> `ERD.md`, `ERD-corebase.md`, 2 file `.dbml`, 5 file `migrations/*.sql`, và
+> chính file này — với **6 con số bảng khác nhau** và 2 bộ tên cột `BaseEntity`
+> mâu thuẫn. Toàn bộ `doc/ERD/` đã xoá; tri thức còn giá trị đã chuyển vào §2.1,
+> §4 và §4.1. Luật nghiệp vụ DTI thì **không** chuyển — chúng đã có bản đầy đủ
+> hơn ở `spec/danh-muc-dti/` và `spec/dashboard-dti-weekly/`.
+
+# Cấu trúc Database — PlatformManager (PostgreSQL)
 
 ### 5.1. ⚠️ SEED BẮT BUỘC sau khi chạy `0004` trên DB thật
 

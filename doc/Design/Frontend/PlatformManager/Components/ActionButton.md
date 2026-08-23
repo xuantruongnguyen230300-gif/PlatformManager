@@ -85,7 +85,7 @@ All five are genuinely implemented — this is the one control in the app that s
 }
 ```
 
-Sources: `src/FE/src/styles.scss:197-212` (the ghost decision + merge note), `:213-253` (the rule), `src/FE/src/app/platform/quan-tri-nguoi-dung/components/user-grid-table/user-grid-table.html:49-69`, `src/FE/src/app/platform/quan-tri-nguoi-dung/components/user-grid-table/user-grid-table.scss:59-68`, `src/FE/src/app/platform/quan-tri-nguoi-dung/components/user-grid-table/user-grid-table.ts:63-66` (`isSelfLockBlocked`), `src/FE/src/app/modules/danh-muc-dti/components/criteria-grid-table/criteria-grid-table.html:128-133`
+Sources: `src/FE/src/styles.scss:197-212` (the ghost decision + merge note), `:213-253` (the rule), `src/FE/src/app/platform/quan-tri-nguoi-dung/components/user-grid-table/user-grid-table.html:49-69`, `src/FE/src/app/platform/quan-tri-nguoi-dung/components/user-grid-table/user-grid-table.scss:59-68`, `src/FE/src/app/platform/quan-tri-nguoi-dung/components/user-grid-table/user-grid-table.ts` (`isSelfLockBlocked`) ⚠️ *(the earlier citation `:63-66` overran the file, which is 51 lines on the 2026-08-23 working copy — line anchor dropped pending re-verification, not the reference)*, `src/FE/src/app/modules/danh-muc-dti/components/criteria-grid-table/criteria-grid-table.html:128-133`
 
 ## Do / Don't
 

@@ -2,7 +2,7 @@
 project: "<project-slug>"
 status: "draft"
 updated: "YYYY-MM-DD"
-source_paths: []              # live UI source roots inventoried, e.g. ["doc/Prototype/dashboard.html"]
+source_paths: []              # live UI source roots inventoried, e.g. ["src/FE/src/app"]
 screens_total: "<n>"
 screens_captured: "<n>"
 ---
@@ -17,7 +17,7 @@ screens_captured: "<n>"
 
 | Route | Live source file(s) | Layout | Copy source | Screenshot | Spec status |
 |-------|---------------------|--------|-------------|------------|-------------|
-| `#dashboard` | `doc/Prototype/dashboard.html` | dashboard shell (topbar + KPI grid) | hardcoded Vietnamese literals in HTML | `Assets/Screenshots/dashboard.png` | ⬜ |
+| `#dashboard` | `src/FE/src/app/modules/dashboard/` | dashboard shell (topbar + KPI grid) | hardcoded Vietnamese literals in HTML | `Assets/Screenshots/dashboard.png` | ⬜ |
 
 ## Brand Assets
 
@@ -33,7 +33,7 @@ screens_captured: "<n>"
 
 | Screenshot path | Status | Capture instructions |
 |-----------------|--------|----------------------|
-| `Assets/Screenshots/dashboard.png` | pending | open `doc/Prototype/dashboard.html` directly in a browser (no dev server needed) @ 1440x900 |
+| `Assets/Screenshots/dashboard.png` | pending | run the dev server, open `/dashboard` @ 1440x900 |
 
 ## Normalize on Redesign (project-wide)
 

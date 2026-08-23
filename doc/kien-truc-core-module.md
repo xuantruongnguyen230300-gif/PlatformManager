@@ -6,6 +6,33 @@
 > thống nhất, hiện có DTI Weekly là tính năng đầu tiên) — áp dụng khi sửa code hiện có VÀ khi
 > thêm tính năng nghiệp vụ mới sau này.
 
+## 🚧 ĐÃ CHỐT — ĐANG THI CÔNG (đối chiếu `PlatformManager.slnx` ngày 2026-08-23)
+
+**Toàn bộ layout mô tả bên dưới là ĐÍCH ĐẾN, chưa phải hiện trạng.** Đọc bảng
+này trước khi tạo bất kỳ file nào, để không tạo vào project chưa tồn tại.
+
+| Có thật hôm nay (8 project) | Sẽ thành |
+| --- | --- |
+| `Core.Domain`, `Core.Application`, `Core.Infrastructure` | tách thêm `Core.Common` + `Core.Persistence` + `Core.Api` → **6 project** |
+| `Modules.DtiWeekly.{Domain,Application,Infrastructure}` | gộp thành `Business.{Domain,Application,Persistence,Infrastructure,Api}` |
+| `PlatformManager.Api` (host mỏng) | giữ nguyên |
+| `Tests/PlatformManager.ArchTests` | giữ nguyên |
+
+**Chưa tồn tại:** `Core.Common`, `Core.Persistence`, `Core.Api`, mọi `Business.*`, và `IModuleRegistrar`.
+`PlatformManagerDbContext` và `CoreSeeder` hiện ở `Core.Infrastructure/Persistence/`;
+mọi controller hiện ở `PlatformManager.Api/Controllers/`.
+
+Vì repo đang chạy mô hình `Modules.<Tên>.*`, ArchTest hiện có
+**`Core_MustNotReference_AnyModulesAssembly`** và
+**`Modules_MustNotReference_OtherModules`** là **đúng và phải giữ** — mục
+ArchTest bên dưới yêu cầu bỏ rule thứ hai, điều đó chỉ áp dụng **sau** khi đã
+gộp xong sang `Business.*`.
+
+> Vì sao phải ghi việc này ra: bản trước của file không có dấu trạng thái nào và
+> viết ở thì hiện tại mô tả, nên `.claude/agents/backend-expert.md` đã chép
+> nguyên cây thư mục sang và agent được chỉ đạo tạo file vào 7 project không tồn
+> tại. Luật `.claude/CLAUDE.md` §4 sinh ra từ chính ca này.
+
 ## Vấn đề
 
 Sau đợt xây lại CoreBase (Identity/SysMenu/phân quyền) + nghiệp vụ DTI Weekly, cả BE và FE đều
@@ -69,6 +96,10 @@ src/BE/
 ├── Core/
 │   ├── PlatformManager.Core.Domain/            ← BaseEntity, DomainException, EntityId,
 │   │                                              ConflictException, SysMenu, SysMenuRole
+│   ├── PlatformManager.Core.Common/            ← [CHỐT 2026-08-23] utility THUẦN, zero-dependency:
+│   │                                              không reference Domain/Application/EF/ASP.NET.
+│   │                                              Chặn utility bò dần vào Domain — thứ luôn xảy ra
+│   │                                              khi không có chỗ đặt hợp lệ
 │   ├── PlatformManager.Core.Application/       ← Auth/, Users/, Menu/, Permissions/, Common/
 │   │                                              (ICommand, IQuery, ApiResult, ErrorDescriptor,
 │   │                                              behaviors, interface I*Repository...)
@@ -167,12 +198,50 @@ feature mới trong CÙNG `PlatformManager.Business.Application/<TênFeature>/` 
 Controllers/`. Không tạo bộ 5 project mới cho mỗi tính năng — `Business.*` là 1 khối duy nhất chứa
 mọi tính năng nghiệp vụ.
 
-**Vẫn CHƯA xây `IModule`/module-loader động** — chỉ 2 đơn vị (Core, Business), chưa có gì để khái
-quát hoá. 2 extension method viết tay vẫn đủ:
+### `IModuleRegistrar` — seam để tầng nghiệp vụ tự cắm vào Core (CHỐT 2026-08-23)
+
+> **Đây là thay đổi so với bản trước**, và lý do là bối cảnh đổi chứ không phải đổi ý.
+> Bản trước viết *"CHƯA xây `IModule`/module-loader động — chỉ 2 đơn vị, chưa có gì để khái quát
+> hoá"*. Lập luận đó đúng **khi PlatformManager là người tiêu thụ Core duy nhất**. Người dùng đã
+> chốt 2026-08-23: **Corebase sẽ tái sử dụng ở nhiều dự án khác**. Khi đó seam này được dùng
+> **một lần cho mỗi dự án**, không phải một lần duy nhất — nó thôi là trừu tượng hoá sớm.
+
+Core khai **một** interface; mỗi tầng nghiệp vụ tự implement để đăng ký phần của mình:
+
 ```csharp
-services.AddCoreModule(configuration);      // đăng ký DI + AddApplicationPart cho Core.Api
-services.AddBusinessModule(configuration);  // đăng ký DI + AddApplicationPart cho Business.Api
+// Core.Application — Core KHÔNG reference tầng nghiệp vụ nào
+public interface IModuleRegistrar
+{
+    string ModuleName { get; }                          // "Core", "Business", "Modules.Hrm"...
+    void RegisterServices(IServiceCollection services, IConfiguration configuration);
+    Assembly PersistenceAssembly { get; }               // để OnModelCreating quét EF Configuration
+    Assembly? ApiAssembly { get; }                      // để AddApplicationPart; null nếu không có controller
+}
 ```
+
+Host (`PlatformManager.Api`) là nơi **duy nhất** biết cả hai tầng — nó gom mọi registrar rồi gọi
+một lượt. Dự án mới chỉ cần implement `IModuleRegistrar` cho tầng nghiệp vụ của mình, **không
+sửa một dòng nào trong `Core.*`**.
+
+**Đây là bản rút gọn của `IBoundedContext` trong `wiki-core/be/trien-khai/04-p3`** — giữ nguyên
+tính đảo phụ thuộc (Core duyệt được mọi module mà không reference module nào), **bỏ** phần
+mỗi-module-một-`DbContext` vì hệ này chỉ có 1 Postgres. Nếu sau này thật sự cần tách DbContext,
+`IModuleRegistrar` mở rộng thêm được mà không phá chỗ đang dùng.
+
+**KHÔNG xây** module-loader động kiểu `Manifest.cs`/bật-tắt-runtime của Orchard Core — đó là
+nhu cầu khác (feature toggle lúc chạy), chưa có ca dùng.
+
+### Đặt tên tầng nghiệp vụ — Core quy định SEAM, không quy định TÊN
+
+Vì Corebase phục vụ nhiều dự án, và mỗi dự án có hình dạng nghiệp vụ khác nhau:
+
+| Dự án có | Đặt tên | PlatformManager |
+| --- | --- | --- |
+| **Một** khối nghiệp vụ | `<Prefix>.Business.*` | ✅ đúng ca này |
+| **Nhiều** domain độc lập thật | `<Prefix>.Modules.<Tên>.*` | — |
+
+Core **không quan tâm** tên — nó chỉ thấy `IModuleRegistrar`. Vì vậy quyết định "một khối
+`Business.*`" của PlatformManager vẫn đúng, mà dự án thứ hai không bị ép theo.
 
 ### DbContext — vẫn dùng chung 1 DbContext, sống ở `Core.Persistence`
 
@@ -192,6 +261,11 @@ cần quét.
   reference `*.Persistence`/`*.Infrastructure` trực tiếp (chỉ qua `*.Application`).
 - `OnlyHostApi_MustReference_BothUnits` — `PlatformManager.Api` (host) là project DUY NHẤT được
   phép reference cả `Core.*` lẫn `Business.*` cùng lúc; mọi project khác chỉ thuộc về đúng 1 tầng.
+- `Core_MustNotKnowBusinessName` — **[CHỐT 2026-08-23]** không assembly `Core.*` nào được chứa
+  string literal tên tầng nghiệp vụ (`"Business"`, `"DtiWeekly"`...). Mọi thứ đi qua
+  `IModuleRegistrar`. Đây là rule giữ cho Corebase cắm được vào dự án thứ 2 mà không phải mổ lại.
+- `Core_Common_MustHaveZeroProjectReference` — `Core.Common` không được reference project nào
+  trong solution (chỉ BCL). Mất tính này thì nó thành `Core.Application` thứ hai.
 - Bỏ rule `Modules_MustNotReference_OtherModules` (không còn ý nghĩa — chỉ có 1 khối `Business.*`,
   không có "module khác" để so sánh).
 
@@ -290,9 +364,20 @@ PlatformManager không cần feature-toggle runtime.
 2. Core cần **release cadence độc lập** với `Business.*`.
 3. 2 team riêng sở hữu Core vs Business, cần ranh giới qua versioned artifact thay vì cùng review PR.
 
-PlatformManager hiện **chưa chạm điều kiện nào** — publish package lúc này là trừu tượng hoá
-trước khi có ca dùng thứ 2 (nguyên tắc "Rule of Three"). Giữ project reference trong-solution là
-đúng thời điểm.
+> **Cập nhật 2026-08-23 — tín hiệu #1 đã được tuyên bố.** Người dùng chốt Corebase **sẽ tái sử
+> dụng ở nhiều dự án khác**. Nhưng "sẽ có" khác "đã có": chừng nào **chưa tồn tại repo/solution
+> thứ 2 thật sự đang tiêu thụ Core**, vẫn giữ project reference trong-solution. Điều thay đổi
+> **ngay bây giờ** là hai thứ rẻ và không thể lùi được nếu bỏ qua:
+>
+> 1. **`IModuleRegistrar`** (xem §Quyết định BE) — cắm được dự án thứ 2 mà không sửa `Core.*`.
+> 2. **`Core.*` không được biết tên tầng nghiệp vụ** — không hardcode `"Business"` ở bất kỳ đâu
+>    trong Core; mọi thứ đi qua registrar.
+>
+> Hai điều đó làm ngay thì ngày publish package chỉ còn là việc đóng gói. Bỏ qua thì phải mổ lại
+> Core — đắt hơn nhiều lần.
+
+PlatformManager hiện **chưa chạm điều kiện đủ để publish package** — chưa có repo thứ 2 đang
+tiêu thụ thật. Giữ project reference trong-solution là đúng thời điểm.
 
 **Cải tiến nhẹ, có thể làm ngay mà KHÔNG phải trừu tượng hoá sớm**: áp dụng MSBuild Central
 Package Management (`Directory.Packages.props` ở root `src/BE/`) để version package tập trung 1
@@ -313,8 +398,8 @@ gì. Chỉ làm khi người dùng yêu cầu, không tự ý.
 
 ## Tài liệu liên quan
 
-- `src/BE/CLAUDE.md`, `src/BE/.claude/rules/architecture.md` — quy tắc chi tiết layer BE, cần cập
+- `doc/huong_dan/quy-uoc/README.md`, `doc/huong_dan/quy-uoc/be-architecture.md` — quy tắc chi tiết layer BE, cần cập
   nhật khớp file này.
-- `src/FE/.claude/docs/architecture.md` — quy tắc chi tiết cấu trúc FE, đã khớp file này.
+- `doc/huong_dan/quy-uoc/fe-architecture.md` — quy tắc chi tiết cấu trúc FE, đã khớp file này.
 - `doc/huong_dan/wiki-core/be/trien-khai/00-lo-trinh-tong-the.md` §Ngưỡng đơn giản hoá — cùng
   tinh thần "chỉ làm tới mức cần, không xây trước".

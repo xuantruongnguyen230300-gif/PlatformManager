@@ -5,7 +5,7 @@
 Angular Signals đã là cơ chế reactivity mặc định từ Angular 17+ — không cần
 NgRx/Akita chỉ để "có state management chuẩn". Chỉ thêm `@ngrx/signals`
 (`signalStore()`) khi state thật sự cần chia sẻ/derive phức tạp (xem
-`src/FE/.claude/docs/architecture.md` §Khi nào cần `state/*.store.ts` —
+`doc/huong_dan/quy-uoc/fe-architecture.md` §Khi nào cần `state/*.store.ts` —
 đã CHỐT 2026-08-15).
 
 ## 2 cấp độ
@@ -39,12 +39,18 @@ export const CriteriaStore = signalStore(
         const items = await firstValueFrom(service.list());
         patchState(store, { items, loading: false });
       } catch (err) {
-        patchState(store, { loading: false, error: (err as HttpErrorResponse).message });
+        patchState(store, { loading: false, error: (err as ApiHttpError).apiResult?.message ?? 'Đã có lỗi xảy ra.' });
       }
     },
   })),
 );
 ```
+
+> ⚠️ **Đọc `apiResult.message`, KHÔNG đọc `HttpErrorResponse.message`.** Cái sau là
+> chuỗi Angular tự sinh (`"Http failure response for /api/…: 409 Conflict"`) — không
+> phải `message` nghiệp vụ trong envelope. Lấy nhầm là rơi đúng lỗi *"message bị thay
+> bằng câu chung chung"* mà [02-http-envelope.md](02-http-envelope.md) lấy làm lý do tồn
+> tại. `ApiHttpError` khai ở `core/http/` — xem file đó. *(Sửa 2026-08-23.)*
 
 ## Quy tắc cứng
 

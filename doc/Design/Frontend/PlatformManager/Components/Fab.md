@@ -4,7 +4,7 @@ status: "obsolete"
 updated: "2026-08-22"
 component: "Fab"
 obsolete_reason: "Never ported to the Angular app — no .fab class, element or handler exists in src/FE/. Proof: `grep -rni \"fab\" src/FE/src` returns zero matches (verified 2026-08-22, stage 3 and again at stage 4)."
-sources: ["doc/Prototype/dashboard.html (FROZEN — historical only)"]
+sources: ["deleted prototype (2026-08-23) — no live source; component is obsolete"]
 ---
 
 # Fab — OBSOLETE
@@ -24,9 +24,9 @@ Independently confirmed twice: once during the stage-3 token refresh and again d
 
 ## What it was
 
-A mobile-only floating action button (`.fab`) fixed to the bottom-right corner of `doc/Prototype/dashboard.html`, shown only below the 980px tablet breakpoint. It was a **positional duplicate** of the topbar's primary "Lưu tuần này" button — same `saveWeek()` handler, shorter label ("Lưu tuần") — added so the save action stayed reachable on mobile, where the topbar actions were hidden.
+A mobile-only floating action button (`.fab`) fixed to the bottom-right corner of the deleted prototype, shown only below the 980px tablet breakpoint. It was a **positional duplicate** of the topbar's primary "Lưu tuần này" button — same `saveWeek()` handler, shorter label ("Lưu tuần") — added so the save action stayed reachable on mobile, where the topbar actions were hidden.
 
-Historical source (frozen, do not extract from): `doc/Prototype/dashboard.html:51` (CSS), `:55` (media-query visibility), `:136` (markup).
+Historical source: the deleted prototype (CSS, media-query visibility, markup) — no longer available, do not attempt to extract from it.
 
 ## Why it went
 

@@ -380,7 +380,7 @@ components:
 
 PlatformManager is an internal platform console whose flagship surface is **DTI Weekly** — weekly progress tracking against digital-transformation criteria. As of 2026-08-22 it ships as an **Angular 20** application (standalone components, signals, `@if`/`@for` control flow, no `NgModule`) in `src/FE/`, backed by a .NET solution in `src/BE/`. Six lazy-loaded routes are live: `/dashboard`, `/danh-muc/dti`, `/quan-tri/nguoi-dung`, `/quan-tri/phan-quyen`, `/dang-nhap`, `/doi-mat-khau`.
 
-**Every token above was re-extracted on 2026-08-22 from `src/FE/src/styles.scss`** — the `:root` block at lines 19-78 holds all 24 named custom properties, and no custom property is declared anywhere else in the codebase (verified by exhaustive grep). Until this refresh the dictionary described `doc/Prototype/dashboard.html`; per `doc/Design/CLAUDE.md` § Fidelity Policy the prototype is now **design-intent reference only** and had diverged materially — see the § Drift sections in `Tokens/colors.md` and `Tokens/spacing.md` for old → new deltas with source lines.
+**Every token above was re-extracted on 2026-08-22 from `src/FE/src/styles.scss`** — the `:root` block at lines 19-78 holds all 24 named custom properties, and no custom property is declared anywhere else in the codebase (verified by exhaustive grep). Until this refresh the dictionary described the deleted prototype; per `doc/Design/CLAUDE.md` § Fidelity Policy the prototype is now **design-intent reference only** and had diverged materially — see the § Drift sections in `Tokens/colors.md` and `Tokens/spacing.md` for old → new deltas with source lines.
 
 Token names mirror the live CSS custom property minus the `--` prefix. The prototype-era parallel vocabulary (`surface-badge-danger` for `--bad-bg`, `border-input` for `--border-strong`) is gone: it is what let the two sides drift unnoticed, and `styles.scss:45-48` shows the FE relying on the two vocabularies agreeing.
 
@@ -407,7 +407,7 @@ The palette moved measurably on 2026-08-15 to fix contrast: `muted` `#6d788b`→
 
 ## Typography
 
-One stack — `Inter, 'Segoe UI', Arial, sans-serif`, quoted exactly as the CSS writes it — declared once on `body` (`styles.scss:91`) and inherited everywhere. **Inter is now genuinely loaded** (`src/FE/src/index.html:21-23`, added 2026-08-22): a Google Fonts stylesheet at weights 400;500;600;700 with `display=swap`, preceded by `preconnect` to **both** `fonts.googleapis.com` and `fonts.gstatic.com` — the second one matters because the `.woff2` files come from `gstatic`, and preconnecting only to `googleapis` leaves the font fetch paying a fresh handshake.
+One stack — `Inter, 'Segoe UI', Arial, sans-serif`, quoted exactly as the CSS writes it — declared once on `body` (`styles.scss:91`) and inherited everywhere. ⚠️ **Inter is NOT loaded on the current working copy** (checked 2026-08-23: `src/FE/src/index.html` is 14 lines and contains no `@font-face`, `preconnect` or Google Fonts `<link>`). An earlier revision claimed it was added 2026-08-22 at `index.html:21-23` — that could not be verified. Until it is, the stack falls back to `Segoe UI`: a Google Fonts stylesheet at weights 400;500;600;700 with `display=swap`, preceded by `preconnect` to **both** `fonts.googleapis.com` and `fonts.gstatic.com` — the second one matters because the `.woff2` files come from `gstatic`, and preconnecting only to `googleapis` leaves the font fetch paying a fresh handshake.
 
 Until that landed the stack was a promise the app could not keep: no `<link>`, no `@font-face`, so the first installed family won and a stock Windows box rendered Segoe UI while every spec said Inter. Note the app also uses weights **750, 800 and 850**, which are not among the four loaded — the browser synthesises or rounds them. Kept as-shipped rather than rounded to the loaded steps; see `Tokens/typography.md` § Normalize on redesign.
 
@@ -456,7 +456,6 @@ As-shipped behaviour: y-axis pinned `[0,100]` with a `%` tick suffix, `pointRadi
 - ✅ Name new colors after their CSS custom property so `styles.scss` and this file cannot drift.
 - ✅ Keep the runtime-computed badge triad (`bdone`/`bwork`/`bstall`) visually distinct from the DB `Status` field — different concepts (`spec/dashboard-dti-weekly/business-rules.md` §5).
 - ❌ Don't invent colors, fonts, radii or spacing outside this frontmatter.
-- ❌ Don't source anything from `doc/Prototype/*.html` — it is design-intent only, covers 4 of 6 screens, and its token values are stale by up to 11 days.
 - ❌ Don't invent a dark theme — none ships; `tokens.json`'s `dark` set stays empty.
 - ❌ Don't add a second chart series color — the one chart has one dataset and no categorical scale.
 - ❌ Don't "fix" the contrast warnings, the un-tokenised weights, or the off-scale font sizes here — they are as-shipped facts. Fixes belong in the § Normalize on redesign lists, then in the live source first.

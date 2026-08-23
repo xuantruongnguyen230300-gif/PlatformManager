@@ -45,16 +45,6 @@ Still resolve each project's live source from **its own `UiInventory.md` →
 `source_paths`** (the census is the gate, and it is kept current); treat a
 project `README.md` that still points elsewhere as stale and say so.
 
-> ### 🧊 `doc/Prototype/` is FROZEN — historical only
->
-> It is **not** a live source and must never be used for extraction. It covers
-> only 4 of 6 screens, its token values have drifted (`bg` `#f3f6fb`→`#eef2f8`,
-> `container-max-width` 1450→1600px), and its interaction model differs
-> (single-click vs the shipped double-click grid edit).
->
-> Cite it **only** to explain *why* a design decision was made. Never as
-> evidence of current behaviour. See the banner in `doc/Prototype/README.md`.
-
 # Required reading (step 1 of every task)
 1. **`{DESIGN_ROOT}/CLAUDE.md`** — canonical conventions (scope, fidelity
    policy, groups, per-project folder convention, pipeline, rules).
@@ -226,8 +216,6 @@ URL, generate a design, or build a variable/component library. Rule:
 - ❌ Never modify `src/FE/` or `src/BE/` except for an explicit token-update
   task, which starts at that live source (per `{DESIGN_ROOT}/CLAUDE.md` Core
   Principle 4) and touches only the token values the task names.
-- ❌ **Never modify `doc/Prototype/` at all** — it is frozen history (2026-08-22).
-  Not even for a token update: tokens now live in `src/FE/src/styles.scss`.
 - ❌ Never copy real secrets, API keys, or credentials from any source file
   into a design artifact, prompt pack, or anything pushed to Figma/Stitch.
 - ❌ Never hardcode colors/sizes in a spec — always reference a token.
