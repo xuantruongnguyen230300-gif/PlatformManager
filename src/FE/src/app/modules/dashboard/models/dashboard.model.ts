@@ -60,7 +60,7 @@ export interface IReportDto {
 // `modules/danh-muc-dti` — đã chuyển sang shared/models/period-options.model.ts, xem
 // shared/services/period-options.service.ts.
 
-// ===== Model app — PascalCase + prefix I, không hậu tố (src/FE/.claude/docs/api-client.md) =====
+// ===== Model app — PascalCase + prefix I, không hậu tố (doc/huong_dan/quy-uoc/fe-api-client.md) =====
 
 export type DashboardViewMode = 'week' | 'month';
 

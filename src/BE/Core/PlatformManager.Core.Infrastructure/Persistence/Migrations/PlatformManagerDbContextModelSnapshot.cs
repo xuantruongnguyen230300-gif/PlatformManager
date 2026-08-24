@@ -126,6 +126,23 @@ namespace PlatformManager.Core.Infrastructure.Persistence.Migrations
                     b.ToTable("AspNetUserTokens", "core");
                 });
 
+            modelBuilder.Entity("PlatformManager.Core.Domain.Entities.RolePermission", b =>
+                {
+                    b.Property<Guid>("RoleId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ResourceKey")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("RoleId", "ResourceKey");
+
+                    b.HasIndex("ResourceKey", "RoleId")
+                        .HasDatabaseName("IX_RolePermissions_ResourceKey_RoleId");
+
+                    b.ToTable("RolePermissions", "core");
+                });
+
             modelBuilder.Entity("PlatformManager.Core.Domain.Entities.SysMenu", b =>
                 {
                     b.Property<Guid>("Id")
@@ -400,6 +417,12 @@ namespace PlatformManager.Core.Infrastructure.Persistence.Migrations
                     b.Property<decimal?>("VerifiedScore")
                         .HasColumnType("decimal(6,2)");
 
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id");
 
                     b.HasIndex("OwnerId");
@@ -494,6 +517,61 @@ namespace PlatformManager.Core.Infrastructure.Persistence.Migrations
                     b.ToTable("CriteriaGroups", "business");
                 });
 
+            modelBuilder.Entity("PlatformManager.Modules.DtiWeekly.Domain.Entities.ImportJob", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("DateCreate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DateUpdate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasColumnType("text");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(260)
+                        .HasColumnType("character varying(260)");
+
+                    b.Property<string>("Format")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<bool>("IsDelete")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("ResultJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("StoragePath")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("UserCreate")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("UserUpdate")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Status");
+
+                    b.ToTable("ImportJobs", "business");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
                 {
                     b.HasOne("PlatformManager.Core.Infrastructure.Identity.AppRole", null)
@@ -541,6 +619,15 @@ namespace PlatformManager.Core.Infrastructure.Persistence.Migrations
                     b.HasOne("PlatformManager.Core.Infrastructure.Identity.AppUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("PlatformManager.Core.Domain.Entities.RolePermission", b =>
+                {
+                    b.HasOne("PlatformManager.Core.Infrastructure.Identity.AppRole", null)
+                        .WithMany()
+                        .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

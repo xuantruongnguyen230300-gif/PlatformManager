@@ -34,7 +34,7 @@ PlatformManager is an internal administration platform: a weekly digital-transfo
 | 1 Scaffold | `/design-new-project` | ✅ |
 | 2 UI Inventory | `/design-inventory-ui` | ✅ re-run 2026-08-22 against `src/FE` — 6 routes, 6 screenshots captured |
 | 3 Tokens | `/design-extract-tokens` | ✅ re-run 2026-08-22 — lint 0 errors; also fixed 2 real WCAG AA failures |
-| 4 Components | `/design-document-components` | ✅ complete 2026-08-22 — **27 documented + 1 obsolete** (was 12, prototype-era). Pass C added `TrendChart`, `SegmentedControl`, `Footer`; the `STILL UNWRITTEN` list in `COMPONENTS.md` is now empty |
+| 4 Components | `/design-document-components` | ✅ complete 2026-08-22, corrected 2026-08-23 — **26 documented + 1 obsolete** (`TabBar` deleted 2026-08-23, documented a switcher that never shipped — see `COMPONENTS.md`). Pass C added `TrendChart`, `SegmentedControl`, `Footer`; the `STILL UNWRITTEN` list in `COMPONENTS.md` is empty |
 | 5 Screens | `/design-create-screens` | ✅ all 6 screens, all sourced from `src/FE` |
 | 6 Prompt Packs | `/design-generate-prompts` | ✅ complete 2026-08-22 — **all 5 flows** (`01`–`05`). `01-dashboard` was rewritten from scratch: the prototype-era pack described editable inputs, a FAB and a `Sao lưu`/`Khôi phục` pair that no longer ship. `05-auth` is new. Every value is a literal — verified 0 unresolved `{token.ref}` and 0 `var(--…)` in all five |
 | 7 Audit | `/design-audit` | 🔁 **Ran 2026-08-22 → BLOCKED with 11 findings; all 11 fixed the same day.** Every one was documentation drift — none needed a `src/` change. `AUDIT.md` keeps the original verdict plus a resolution log. **Re-run `/design-audit PlatformManager` to issue a fresh verdict** |

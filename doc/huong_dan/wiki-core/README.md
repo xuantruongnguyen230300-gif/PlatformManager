@@ -44,6 +44,7 @@ tầm rộng hơn — bao gồm cả những gì PlatformManager demo hiện t�
 10. [Data retention](be/10-data-retention.md) — soft-delete không phải archival
 11. [Performance & Caching](be/11-performance-caching.md) — 3 tầng (query → thuật toán → cache), quy tắc query bắt buộc, chính sách cache
 12. [Thông báo (Notification)](be/12-notifications.md) — **tạm dừng có chủ đích**; chọn kênh (in-app/email/Zalo ZNS), Outbox, idempotency, mảnh đã có sẵn để tái dùng
+13. [Core data — di trú & seed](be/13-core-data-migration.md) — chỉ `AspNetUsers/Roles`, `SysMenus`, `RolePermissions`; expand/contract, seed production, break-glass
 
 ### BE — thực hành / lộ trình triển khai (`be/trien-khai/`)
 
@@ -63,7 +64,7 @@ tầm rộng hơn — bao gồm cả những gì PlatformManager demo hiện t�
 2. [HTTP Client & Envelope](fe/02-http-envelope.md) — tiêu thụ `IApiResult<T>` từ BE
 3. [State management](fe/03-state-management.md) — `signal()` → `signalStore()` có điều kiện
 4. [Design-token system](fe/04-design-token-system.md) — bridge với `doc/Design/`
-5. [Component library](fe/05-component-library.md) — 12 component thật, 5 trạng thái bắt buộc
+5. [Component library](fe/05-component-library.md) — xem `COMPONENTS.md` để biết số thật, 5 trạng thái bắt buộc
 6. [Testing strategy](fe/06-testing-strategy.md) — mapper/interceptor trước, không coverage dàn trải
 7. [Auth/Identity](fe/07-auth-identity.md) — cookie session của ASP.NET Core Identity
 8. [i18n](fe/08-i18n.md) — `@angular/localize`

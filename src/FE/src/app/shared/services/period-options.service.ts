@@ -1,7 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
-import { IApiResult } from '../../core/http/api-result.model';
+import { IApiResult, unwrapData } from '../../core/http/api-result.model';
 import { IPeriodOption, IPeriodOptionDto, IPeriodOptions, IPeriodOptionsDto } from '../models/period-options.model';
 
 function mapOptionDtoToModel(dto: IPeriodOptionDto): IPeriodOption {
@@ -22,7 +22,7 @@ export class PeriodOptionsService {
     if (year != null) httpParams = httpParams.set('year', year);
     return this.http.get<IApiResult<IPeriodOptionsDto>>('/dashboard/periods', { params: httpParams }).pipe(
       map((res) => {
-        const dto = res.data as IPeriodOptionsDto;
+        const dto = unwrapData(res);
         return {
           Years: dto.years,
           WeeksInYear: dto.weeksInYear.map(mapOptionDtoToModel),

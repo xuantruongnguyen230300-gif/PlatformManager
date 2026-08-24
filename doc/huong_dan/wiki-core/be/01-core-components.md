@@ -78,6 +78,12 @@ thiết kế lại Import CSV/Excel — xem `doc/huong_dan/quy-uoc/be-cqrs-handl
 §"Notification". Đây là ví dụ cho nguyên tắc ở trên: **quyết định** đã có,
 chỉ **implement** chưa xong — khác hẳn "chưa cần" thật sự.
 
+> Đây cũng chính là 3 mục dễ rơi vào bẫy "viết đúng nhưng quên nối vào chỗ
+> chạy thật" nhất (đăng ký DI, gắn middleware/pipeline) — mỗi khi implement
+> xong 1 trong 3 mục này, viết kèm seam activation test theo luật ở
+> [`04-testing-strategy.md`](04-testing-strategy.md) §"Seam activation test",
+> đừng chỉ dựa vào unit test của riêng class đó.
+
 **#19 Rate limiting, #20 CI pipeline** (mới, không nằm trong 18 mục gốc đối
 chiếu VNR — tìm thấy khi đối chiếu thêm 12-Factor/OWASP/Clean Architecture
 template) — xem `doc/huong_dan/quy-uoc/be-api-controller.md` §"Rate limiting" và

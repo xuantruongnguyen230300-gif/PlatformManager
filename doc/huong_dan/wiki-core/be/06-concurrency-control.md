@@ -10,7 +10,7 @@ Nguyên lý: mỗi bản ghi mang một **token phiên bản** đổi giá trị
 
 | Provider | Token | Khai thế nào |
 | --- | --- | --- |
-| **PostgreSQL (đang dùng)** | cột hệ thống **`xmin`**, DB tự tăng sẵn | `builder.UseXminAsConcurrencyToken()` |
+| **PostgreSQL (đang dùng)** | cột hệ thống **`xmin`**, DB tự tăng sẵn | property CLR `uint` + `.IsRowVersion()` — Npgsql tự bind vào `xmin` |
 | SQL Server | kiểu `rowversion`, DB tự tăng | `byte[] RowVersion` + `.IsRowVersion()` |
 
 > ⚠️ Dùng nhầm công thức SQL Server trên PostgreSQL thì Npgsql tạo một cột `bytea` **không ai cập nhật** — điều kiện `WHERE` luôn khớp và **check concurrency vô hiệu hoàn toàn, im lặng**. Không lỗi biên dịch, không lỗi lúc chạy.

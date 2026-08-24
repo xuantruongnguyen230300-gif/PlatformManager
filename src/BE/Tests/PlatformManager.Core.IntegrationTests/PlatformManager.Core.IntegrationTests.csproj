@@ -1,0 +1,44 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <RootNamespace>PlatformManager.Core.IntegrationTests</RootNamespace>
+  </PropertyGroup>
+
+  <!-- PlatformManagerDbContext kế thừa IdentityDbContext → cần shared framework ASP.NET Core. -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <!-- Postgres THẬT trong container — TUYỆT ĐỐI không UseInMemoryDatabase (bỏ qua FK/unique
+         index/transaction thật), xem doc/huong_dan/wiki-core/be/04-testing-strategy.md. -->
+    <PackageReference Include="Testcontainers.PostgreSql" Version="4.1.0" />
+    <!-- Phải khớp version Npgsql mà Npgsql.EntityFrameworkCore.PostgreSQL 10.0.3 kéo theo —
+         khai thấp hơn sẽ thành package downgrade (NU1605, đang bật WarningsAsError). -->
+    <PackageReference Include="Npgsql" Version="10.0.3" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.11" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
+    <!-- WebApplicationFactory<Program> — chạy ĐÚNG host PlatformManager.Api thật (cookie
+         middleware + SecurityStampValidator do AddIdentity nối vào), không phải host mô phỏng.
+         Version khớp shared framework Microsoft.AspNetCore.App 10.0.11 đang cài. -->
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.11" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Core\PlatformManager.Core.Domain\PlatformManager.Core.Domain.csproj" />
+    <ProjectReference Include="..\..\Core\PlatformManager.Core.Application\PlatformManager.Core.Application.csproj" />
+    <ProjectReference Include="..\..\Core\PlatformManager.Core.Infrastructure\PlatformManager.Core.Infrastructure.csproj" />
+    <!-- Host thật — cần cho WebApplicationFactory<Program>. Chỉ test project mới được tham chiếu
+         Api; ranh giới Core/Modules vẫn do ArchTests canh (xem CoreModuleBoundaryTests). -->
+    <ProjectReference Include="..\..\PlatformManager.Api\PlatformManager.Api.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,6 +1,12 @@
 <div class="chart-wrap">
   @if (hasData()) {
-    <p-chart type="line" [data]="chartData()" [options]="chartOptions()" [style]="{ height: '220px', width: '100%' }" />
+    <p-chart
+      type="line"
+      [data]="chartData()"
+      [options]="chartOptions()"
+      [ariaLabel]="chartAriaLabel()"
+      [style]="{ height: '220px', width: '100%' }"
+    />
   } @else {
     <p class="muted">Chưa có đủ dữ liệu để vẽ biểu đồ.</p>
   }

@@ -273,16 +273,29 @@ thật, không phải rủi ro lý thuyết.
 (cái đó có `CrudActionResolver` suy luận action tự động + 2 cơ chế enforcement
 song song — quá nặng cho 1 module hiện tại):
 
+> Đã hiện thực hoá thật (2026-08-24, chưa commit) — code chủ ở
+> `Core.Application/Permissions/{RequirePermissionAttribute,IPermissionChecker}.cs`
+> và `Core.Infrastructure/Permissions/RequirePermissionFilter.cs`; mẫu dưới
+> đây chỉ minh hoạ ý tưởng, đọc code thật thay vì chép mẫu này 1:1 — code thật
+> có thêm nhánh break-glass cho `SuperAdmin` (đã duyệt 2026-08-19, xem comment
+> trong `RequirePermissionFilter.cs`) mà mẫu dưới lược bỏ cho gọn.
+
 ```csharp
-// Platform.Domain hoặc Core.Application — pure metadata, không logic runtime
+// Core.Application — pure metadata, không logic runtime
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method)]
 public sealed class RequirePermissionAttribute(string key) : Attribute
 {
-    public string Key { get; } = key;   // vd "criteria.manage", khớp key trong PermissionMatrix
+    public string Key { get; } = key;   // vd "criteria.manage", khớp hằng số trong ResourceKeys
 }
 
-// 1 filter toàn cục, đọc thẳng permission hiện có của user (claim/role → key)
-public class RequirePermissionFilter : IAsyncAuthorizationFilter
+// Core.Application — seam tra quyền, tách khỏi filter để test không cần Postgres
+public interface IPermissionChecker
+{
+    Task<bool> HasPermissionAsync(IReadOnlyCollection<string> roleNames, string resourceKey, CancellationToken ct);
+}
+
+// Core.Infrastructure — 1 filter toàn cục, đọc role từ claim rồi hỏi IPermissionChecker
+public sealed class RequirePermissionFilter(IPermissionChecker permissionChecker) : IAsyncAuthorizationFilter
 {
     public async Task OnAuthorizationAsync(AuthorizationFilterContext ctx)
     {
@@ -290,8 +303,15 @@ public class RequirePermissionFilter : IAsyncAuthorizationFilter
             .OfType<RequirePermissionAttribute>().FirstOrDefault();
         if (attr is null) return;   // không khai attribute = không chặn thêm (giữ nguyên [Authorize])
 
-        var hasPermission = /* đọc PermissionMatrix theo role của user hiện tại */;
-        if (!hasPermission) ctx.Result = new ForbidResult();
+        var roleNames = ctx.HttpContext.User.FindAll(ClaimTypes.Role).Select(c => c.Value).Distinct().ToList();
+        if (roleNames.Count == 0) { ctx.Result = new ForbidResult(); return; }
+
+        // Break-glass: SuperAdmin qua mọi [RequirePermission] mà không cần RolePermission —
+        // chi tiết + lý do xem RequirePermissionFilter.cs thật.
+
+        var ct = ctx.HttpContext.RequestAborted;
+        if (!await permissionChecker.HasPermissionAsync(roleNames, attr.Key, ct))
+            ctx.Result = new ForbidResult();
     }
 }
 ```

@@ -1,0 +1,22 @@
+<dialog #dialogEl class="form-dialog" (close)="onNativeClose()">
+  <div class="title">
+    <h2>Import CSV/Excel</h2>
+    <button type="button" class="btn" (click)="dialogEl.close()">Đóng</button>
+  </div>
+
+  <div class="form-row">
+    <label for="importFileInput">Chọn file CSV/Excel</label>
+    <input id="importFileInput" type="file" accept=".csv,.xlsx,.xls" (change)="onFileChange($event)" />
+  </div>
+
+  @if (selectedFile()) {
+    <p class="muted">Đã chọn: {{ selectedFile()?.name }}</p>
+  }
+
+  <div class="dialog-actions">
+    <button type="button" class="btn" (click)="dialogEl.close()">Huỷ</button>
+    <button type="button" class="btn primary" [disabled]="!selectedFile() || importing()" (click)="onSubmit()">
+      {{ importing() ? 'Đang nhập…' : 'Nhập dữ liệu' }}
+    </button>
+  </div>
+</dialog>

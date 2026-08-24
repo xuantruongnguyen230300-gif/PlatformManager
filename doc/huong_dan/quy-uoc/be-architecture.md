@@ -6,9 +6,11 @@
 
 ## Project layout & dependency direction
 
-> 🚧 **Layout dưới đây là ĐÍCH ĐẾN, chưa phải hiện trạng.** Hôm nay repo có 8 project theo mô
-> hình `Modules.DtiWeekly.*`. Đọc bảng *"có thật hôm nay → sẽ thành"* ở đầu
-> `doc/kien-truc-core-module.md` **trước khi tạo file mới**.
+> 🚧 **Layout dưới đây là ĐÍCH ĐẾN, chưa phải hiện trạng.** Hôm nay repo theo mô
+> hình `Modules.DtiWeekly.*` — chạy `find src/BE -iname *.csproj` để biết số
+> project chính xác hiện tại thay vì tin số cứng (đã lệch ít nhất 1 lần: 8 → 10
+> khi 2 project test mới được thêm 2026-08-24). Đọc bảng *"có thật hôm nay → sẽ
+> thành"* ở đầu `doc/kien-truc-core-module.md` **trước khi tạo file mới**.
 
 > **Chỉ 2 tầng ngang hàng: `Core.*` và `Business.*`** — với PlatformManager, nghiệp vụ là 1 khối
 > thống nhất (DTI Weekly chỉ là tính năng đầu tiên trong `Business.*`), không phải nhiều domain

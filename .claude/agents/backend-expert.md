@@ -20,18 +20,19 @@ CQRS-lite qua MediatR, EF Core + PostgreSQL** (trừ khi người dùng chỉ đ
 khác lúc scaffold).
 
 **Solution đã tồn tại và đang chạy**: `src/BE/PlatformManager.slnx` — `Core.*` ×3
-+ `Modules.DtiWeekly.*` ×3 + `PlatformManager.Api` + `Tests/PlatformManager.ArchTests`
-(**1 project test duy nhất**; `UnitTests`/`IntegrationTests` là đích đến, chưa có).
++ `Modules.DtiWeekly.*` ×3 + `PlatformManager.Api` + `Tests/` (chạy `ls src/BE/Tests`
+để biết chính xác project test nào đã có — đừng tin số cứng, số này đã lệch ít
+nhất 1 lần).
 
 > 📖 Schema: `doc/cau-truc-database.md` là **nguồn tham chiếu duy nhất** (mô tả
 > để đọc hiểu), kèm `doc/cau-truc-database.sql` (DDL viết tay mà EF không sinh
 > được). `doc/ERD/` đã xoá 2026-08-23 khi hợp nhất — kể cả file CSV dữ liệu mẫu,
 > sẽ bổ sung lại sau.
 
-⚠️ Kiến trúc đích là **v3** (`Core.*` **6 project** / `Business.*` **5 project**) — đã
-CHỐT nhưng **đang thi công**, chưa khớp cây thư mục hiện tại. Đọc mục "Trạng
-thái kiến trúc" trong `doc/huong_dan/quy-uoc/README.md` **trước khi tạo file mới**, để không
-tạo vào project chưa tồn tại.
+⚠️ Kiến trúc đích là **v3** — đã CHỐT nhưng **đang thi công**, chưa khớp cây
+thư mục hiện tại. Đọc bảng "có thật hôm nay → sẽ thành" ở
+`doc/kien-truc-core-module.md` **trước khi tạo file mới**, để không tạo vào
+project chưa tồn tại — đừng tin số project hardcode ở nơi khác.
 
 ---
 
@@ -90,16 +91,17 @@ kiến trúc nằm ở `doc/`. Mở đúng file của chủ đề đang làm:
 | Repository, query, index, N+1, cache | `doc/huong_dan/quy-uoc/be-performance.md` |
 | Ranh giới Core ↔ Business, ngưỡng tách module | `doc/kien-truc-core-module.md` |
 | "Core đã đủ chưa, còn thiếu mảng nào" | `doc/huong_dan/wiki-core/be/01-core-components.md` §Áp dụng |
-| Định hướng chung, stack, trạng thái kiến trúc | `doc/huong_dan/quy-uoc/README.md` |
+| Định hướng chung, stack | `doc/huong_dan/quy-uoc/README.md` |
+| Bảng "có thật hôm nay → sẽ thành" của kiến trúc | `doc/kien-truc-core-module.md` |
 
 `01-core-components.md` §Áp dụng là checklist tổng đã đối chiếu cả tiêu chuẩn
 ngành (Clean Architecture template, 12-Factor, OWASP), phân loại rõ mục nào bắt
 buộc ngay và mục nào cố tình hoãn kèm lý do — đọc nó trước khi tự đề xuất thêm
 abstraction mới, đừng lặp lại việc rà soát đó từ đầu mỗi task.
 
-⚠️ **Trạng thái kiến trúc:** đích đến là `Core.*` (**6 project**) + `Business.*`
-(**5 project**) — đã CHỐT nhưng **đang thi công**, cây thư mục thật hôm nay chưa như vậy.
-Đọc bảng *"có thật hôm nay → sẽ thành"* ở `doc/huong_dan/quy-uoc/README.md`
+⚠️ **Trạng thái kiến trúc:** đích đến là 2 tầng `Core.*` + `Business.*` — đã
+CHỐT nhưng **đang thi công**, cây thư mục thật hôm nay chưa như vậy.
+Đọc bảng *"có thật hôm nay → sẽ thành"* ở `doc/kien-truc-core-module.md`
 **trước khi tạo file mới**, để không tạo vào project chưa tồn tại.
 
 ---

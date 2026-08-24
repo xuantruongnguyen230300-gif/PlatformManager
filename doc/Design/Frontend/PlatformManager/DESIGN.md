@@ -425,7 +425,7 @@ Grid templates, control sizes, the six-value z-index stack and motion durations 
 
 ## Components
 
-The shipped set, grounded in `src/FE/src/app/`. Full anatomy and 5-state tables live in `COMPONENTS.md`, re-run against `src/FE/` on 2026-08-22: **27 documented components plus 1 obsolete** (`Fab`, which no longer ships). The index is the composition gate — a screen spec may only compose what it lists.
+The shipped set, grounded in `src/FE/src/app/`. Full anatomy and 5-state tables live in `COMPONENTS.md`, re-run against `src/FE/` on 2026-08-22 and corrected 2026-08-23: **26 documented components plus 1 obsolete** (`Fab`, which no longer ships; `TabBar` was also removed 2026-08-23 — it documented a switcher that never shipped). The index is the composition gate — a screen spec may only compose what it lists.
 
 `Sidebar` / `Topbar` / `Toast` (app shell, `shared/components/`) · `AuthCard` (`.login-shell` + `.login-card` + `.login-brand`) · `.card` and its `.kpi` tile variant · the `.btn` family (tonal default, `.primary`, `.danger`, `.btn-block`) · `.action-btn` and `.cell-icon-btn` (ghost, icon-only) · PrimeNG `p-table` with server-side paginators plus hand-rolled `<table>` matrices · form primitives (`.form-row`, `.field`, `.field-input`, `.role-checkboxes`) · `.filters` / `.search` · `.badge` (`.bdone`/`.bwork`/`.bstall`, plus `.active`/`.locked` on the user grid) · `.bar`/`.fill` progress · `.notice` · native `<dialog>` (default / `.form-dialog` / `.confirm-dialog`) · `.segmented`/`.seg-btn` · `TrendChart`.
 

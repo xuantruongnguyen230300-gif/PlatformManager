@@ -10,7 +10,7 @@ export interface ICurrentUserDto {
   mustChangePassword: boolean;
 }
 
-// Model app — PascalCase + prefix I (src/FE/.claude/docs/api-client.md).
+// Model app — PascalCase + prefix I (doc/huong_dan/quy-uoc/fe-api-client.md).
 export interface ICurrentUser {
   Id: string;
   UserName: string;

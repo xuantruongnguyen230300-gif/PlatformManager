@@ -1,4 +1,4 @@
-import { IUser, IUserDto, IUserPagedList, IUserPagedListDto } from '../models/quan-tri-nguoi-dung.model';
+import { IUser, IUserDto } from '../models/quan-tri-nguoi-dung.model';
 
 export function mapUserDtoToModel(dto: IUserDto): IUser {
   return {
@@ -10,14 +10,5 @@ export function mapUserDtoToModel(dto: IUserDto): IUser {
     IsLocked: dto.isLocked,
     MustChangePassword: dto.mustChangePassword,
     DateCreate: dto.dateCreate,
-  };
-}
-
-export function mapUserPagedListDtoToModel(dto: IUserPagedListDto): IUserPagedList {
-  return {
-    Items: dto.items.map(mapUserDtoToModel),
-    Total: dto.total,
-    Page: dto.page,
-    PageSize: dto.pageSize,
   };
 }

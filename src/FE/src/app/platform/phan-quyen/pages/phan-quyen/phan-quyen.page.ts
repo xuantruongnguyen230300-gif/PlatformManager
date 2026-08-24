@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { PhanQuyenService } from '../../services/phan-quyen.service';
-import { ToastService } from '../../../../shared/services/toast.service';
+import { ToastService } from '../../../../core/toast/toast.service';
+import { MenuService } from '../../../../core/menu/menu.service';
 import { IPermissionRow } from '../../models/phan-quyen.model';
 import { PermissionMatrix } from '../../components/permission-matrix/permission-matrix';
 
@@ -20,6 +21,7 @@ import { PermissionMatrix } from '../../components/permission-matrix/permission-
 export class PhanQuyenPage {
   private readonly service = inject(PhanQuyenService);
   private readonly toast = inject(ToastService);
+  private readonly menu = inject(MenuService);
 
   protected readonly roles = signal<string[]>([]);
   protected readonly rows = signal<IPermissionRow[]>([]);
@@ -59,6 +61,9 @@ export class PhanQuyenPage {
         this.saving.set(false);
         this.dirty.set(false);
         this.toast.success('Đã lưu thay đổi phân quyền.');
+        // `PUT` vừa đổi chính `SysMenuRole` mà sidebar render — ép tải lại ngay để nav rail phản
+        // ánh đúng quyền mới, không bắt người quản trị F5 (Normalize on redesign #6, 04-phan-quyen.md).
+        this.menu.refresh().subscribe();
       },
       error: () => this.saving.set(false),
     });

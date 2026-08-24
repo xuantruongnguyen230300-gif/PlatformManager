@@ -1,7 +1,7 @@
 import { HttpClient, HttpContext } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Observable, catchError, map, of, tap } from 'rxjs';
-import { IApiResult } from '../http/api-result.model';
+import { IApiResult, unwrapData } from '../http/api-result.model';
 import { SKIP_ERROR_TOAST } from '../http/http-context-tokens';
 import { ICurrentUser, ICurrentUserDto, mapCurrentUserDtoToModel } from './current-user.model';
 
@@ -37,7 +37,7 @@ export class CurrentUserService {
     return this.http
       .get<IApiResult<ICurrentUserDto>>('/auth/me', { context: new HttpContext().set(SKIP_ERROR_TOAST, true) })
       .pipe(
-        map((res) => mapCurrentUserDtoToModel(res.data as ICurrentUserDto)),
+        map((res) => mapCurrentUserDtoToModel(unwrapData(res))),
         tap((user) => {
           this.user.set(user);
           this.loaded.set(true);

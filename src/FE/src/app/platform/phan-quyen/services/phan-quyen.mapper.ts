@@ -5,7 +5,7 @@ function mapRowDtoToModel(dto: IPermissionRowDto): IPermissionRow {
     SysMenuId: dto.sysMenuId,
     SysMenuCode: dto.sysMenuCode,
     SysMenuName: dto.sysMenuName,
-    ParentId: dto.parentId,
+    ParentId: dto.parentId ?? null,
     AssignedRoles: dto.assignedRoles,
   };
 }

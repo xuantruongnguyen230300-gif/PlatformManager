@@ -54,5 +54,20 @@ public class CriteriaAssessmentConfiguration : IEntityTypeConfiguration<Criteria
             .HasDatabaseName("IX_CriteriaAssessments_CriteriaId_DateCreate");
 
         builder.HasQueryFilter(x => !x.IsDelete);
+
+        // Optimistic concurrency — 2 luồng ghi độc lập đụng cùng bản ghi (import CSV/Excel hàng
+        // loạt vs sửa tay UpdateCriteriaAssessmentCommand). `.UseXminAsConcurrencyToken()` (recipe
+        // cũ) đã bị Npgsql.EntityFrameworkCore.PostgreSQL OBSOLETE rồi GỠ HẲN kể từ bản 10.x —
+        // xác nhận 2026-08-24 bằng cách kiểm trực tiếp assembly 10.0.3 (không còn symbol này) +
+        // đối chiếu commit gốc "Obsolete UseXminAsConcurrencyToken" (npgsql/efcore.pg#2546,
+        // 2022-10-20) + tài liệu chính thức hiện hành (www.npgsql.org/efcore/modeling/
+        // concurrency.html). Cách ĐÚNG bây giờ là "cơ chế EF Core chuẩn": property CLR kiểu
+        // `uint` (Version, khai ở CriteriaAssessment.cs) + `.IsRowVersion()` — Npgsql provider tự
+        // nhận diện property `uint` + IsRowVersion và bind thẳng vào cột hệ thống `xmin` có sẵn
+        // (KHÔNG tạo cột mới, KHÔNG cần migration riêng). KHÁC hẳn `.IsRowVersion()` trên `byte[]`
+        // (ngữ nghĩa SQL Server `rowversion`, vô hiệu hoàn toàn trên Npgsql) — chỉ đúng khi kiểu
+        // là `uint`. Xem doc/huong_dan/quy-uoc/be-entity-domain.md §RowVersion (đã cập nhật cùng
+        // ngày).
+        builder.Property(x => x.Version).IsRowVersion();
     }
 }

@@ -63,6 +63,17 @@ export class UserFormDialog {
   protected readonly title = computed(() => (this.editing() ? 'Sửa người dùng' : 'Thêm người dùng'));
   protected readonly errorMessage = computed(() => this.localError() ?? this.serverError());
 
+  /**
+   * Role của user đích KHÔNG thuộc `ASSIGNABLE_ROLES` (vd `SuperAdmin`, hoặc chuỗi casing lạ do BE
+   * trả) — form không có ô tick cho các role này nên phải tự giữ lại NGUYÊN VĂN, VÔ ĐIỀU KIỆN
+   * (không phụ thuộc role người gọi). Thiếu bước này, `PUT /api/users/{id}` (ghi đè trọn gói
+   * `Roles`) sẽ âm thầm gỡ role hệ thống của user đích — 403 nếu người gọi là Admin, hạ quyền âm
+   * thầm nếu người gọi là SuperAdmin. Xem doc/contracts/users.md §"Luật cấp/gỡ role SuperAdmin".
+   */
+  private readonly preservedSystemRoles = computed(() =>
+    (this.editing()?.Roles ?? []).filter((r) => !(this.assignableRoles as readonly string[]).includes(r)),
+  );
+
   private readonly dialogEl = viewChild.required<ElementRef<HTMLDialogElement>>('dialogEl');
 
   constructor() {
@@ -115,6 +126,10 @@ export class UserFormDialog {
     const email = this.emailField().trim();
     const fullName = this.fullNameField().trim();
     const roles = this.selectedRoles();
+    const editing = this.editing();
+    // Vai trò cuối cùng gửi lên BE — gồm cả role hệ thống giữ nguyên, nên "chưa tick ô nào" (Admin
+    // sửa user SuperAdmin, bỏ hết tick Admin/User) vẫn là trạng thái HỢP LỆ, không phải lỗi rỗng.
+    const finalRoles = editing ? [...this.preservedSystemRoles(), ...roles] : roles;
 
     if (!email) {
       this.localError.set('Email bắt buộc.');
@@ -124,12 +139,10 @@ export class UserFormDialog {
       this.localError.set('Họ tên bắt buộc.');
       return;
     }
-    if (roles.length === 0) {
+    if (finalRoles.length === 0) {
       this.localError.set('Chọn ít nhất 1 vai trò.');
       return;
     }
-
-    const editing = this.editing();
     if (!editing) {
       const userName = this.userNameField().trim();
       const tempPassword = this.tempPasswordField();
@@ -150,6 +163,9 @@ export class UserFormDialog {
     }
 
     this.localError.set(null);
-    this.saved.emit({ IsEditing: true, Update: { Email: email, FullName: fullName, Roles: roles } });
+    this.saved.emit({
+      IsEditing: true,
+      Update: { Email: email, FullName: fullName, Roles: finalRoles },
+    });
   }
 }

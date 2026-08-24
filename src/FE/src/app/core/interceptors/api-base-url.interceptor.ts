@@ -4,7 +4,7 @@ import { environment } from '../../../environments/environment';
 /**
  * Gắn base URL API (`environment.apiBaseUrl`) trước mọi request tương đối — service của feature
  * chỉ gọi đường dẫn ngắn (vd `/criteria`), KHÔNG hardcode domain/port (xem
- * src/FE/.claude/docs/api-client.md §Service pattern). Request đã là absolute URL (bắt đầu
+ * doc/huong_dan/quy-uoc/fe-api-client.md §Service pattern). Request đã là absolute URL (bắt đầu
  * bằng `http`) hoặc gọi tài nguyên tĩnh (`/assets/...`) thì giữ nguyên, không prepend.
  */
 export const apiBaseUrlInterceptor: HttpInterceptorFn = (req, next) => {

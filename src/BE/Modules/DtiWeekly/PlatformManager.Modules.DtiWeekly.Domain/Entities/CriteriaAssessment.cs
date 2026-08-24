@@ -30,6 +30,14 @@ public class CriteriaAssessment : BaseEntity
     public DateOnly? Deadline { get; private set; }
     public string? Note { get; private set; }
 
+    /// <summary>Optimistic concurrency token — 2 luồng ghi độc lập đụng cùng bản ghi (import
+    /// CSV/Excel hàng loạt vs sửa tay UpdateCriteriaAssessmentCommand). KIỂU PHẢI LÀ <c>uint</c>
+    /// — trên Npgsql, EF Core map property <c>uint</c> khai <c>.IsRowVersion()</c> thẳng vào cột
+    /// hệ thống <c>xmin</c> có sẵn của Postgres (KHÔNG tạo cột mới, KHÔNG cần app tự set giá trị
+    /// — DB tự tăng ở mọi UPDATE). Xem CriteriaAssessmentConfiguration.cs +
+    /// doc/huong_dan/quy-uoc/be-entity-domain.md §RowVersion.</summary>
+    public uint Version { get; private set; }
+
     private CriteriaAssessment() { }
 
     public static CriteriaAssessment Create(Guid criteriaId)

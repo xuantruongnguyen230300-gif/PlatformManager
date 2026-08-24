@@ -65,6 +65,14 @@ public static class DependencyInjection
             .AddEntityFrameworkStores<PlatformManagerDbContext>()
             .AddDefaultTokenProviders();
 
+        // Mật khẩu bootstrap của tài khoản SuperAdmin/Admin do CoreSeeder tạo — KHÔNG hardcode,
+        // fail-fast nếu thiếu cấu hình (xem BootstrapOptions.cs cho lý do đầy đủ + nơi đặt giá
+        // trị theo từng môi trường, và be-architecture.md §"Cấu hình — fail-fast validation").
+        services.AddOptions<BootstrapOptions>()
+            .Bind(configuration.GetSection(BootstrapOptions.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddSingleton<IDateTimeProvider, SystemDateTimeProvider>();
 

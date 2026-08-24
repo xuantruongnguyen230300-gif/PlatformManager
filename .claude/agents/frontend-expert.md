@@ -18,8 +18,10 @@ Bạn là **Senior Angular Engineer** phụ trách frontend của PlatformManage
 (`src/FE/`) — **Angular 20 standalone + Signals**.
 
 **App đã tồn tại và đang chạy** (cập nhật 2026-08-22 — mô tả cũ "chưa có app
-thật" đã sai): `src/FE/` là app Angular 20 hoàn chỉnh với **6 route** khai ở
-`src/FE/src/app/app.routes.ts`, có bộ test (`ng test`), lint sạch, và gate
+thật" đã sai): `src/FE/` là app Angular 20 hoàn chỉnh với route khai ở
+`src/FE/src/app/app.routes.ts` (bảng đầy đủ:
+`doc/huong_dan/quy-uoc/fe-routing-guard.md` §1 — đừng tin số cứng ở nơi
+khác), có bộ test (`ng test`), lint sạch, và gate
 kiến trúc chạy tay qua `scripts/fe-gate.sh`.
 
 ## Nguồn hình ảnh — dùng đúng thứ tự

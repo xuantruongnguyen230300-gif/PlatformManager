@@ -32,7 +32,7 @@ public sealed class UserAdminService(UserManager<AppUser> userManager) : IUserAd
         foreach (var user in items)
             dtos.Add(await ToDtoAsync(user));
 
-        return new PagedList<UserDto> { Items = dtos, Total = total, Page = page, PageSize = pageSize };
+        return new PagedList<UserDto> { Items = dtos, TotalCount = total, Page = page, PageSize = pageSize };
     }
 
     public async Task<bool> UserNameExistsAsync(string userName, CancellationToken ct)
@@ -75,17 +75,34 @@ public sealed class UserAdminService(UserManager<AppUser> userManager) : IUserAd
         if (user is null)
             return false;
 
+        // Tính TRƯỚC tập role thực sự đổi — quyết định có cần đổi con dấu hay không PHẢI dựa
+        // trên diff này, không phải "có gọi UpdateAsync hay không" (xem
+        // doc/huong_dan/wiki-core/be/02-identity-auth.md §"Quy tắc bắt buộc: đường ghi nào phải
+        // đổi con dấu"). Chỉ sửa email/fullName (roles giữ nguyên) → toAdd/toRemove đều rỗng →
+        // KHÔNG đổi con dấu, đá người ta ra vì bị sửa tên là thiệt hại không mua được gì.
+        var currentRoles = await userManager.GetRolesAsync(user);
+        var toRemove = currentRoles.Except(roles).ToList();
+        var toAdd = roles.Except(currentRoles).ToList();
+
+        // Con dấu TRƯỚC, quyền SAU — hai lệnh ghi KHÔNG chung 1 transaction (UserManager tự
+        // SaveChanges mỗi lần gọi). Hỏng ở bước sau chỉ đá người dùng ra (đăng nhập lại), không
+        // để quyền mới có hiệu lực mà cookie cũ còn sống tới 14 ngày (hỏng theo hướng an toàn).
+        if (toRemove.Count > 0 || toAdd.Count > 0)
+        {
+            var stampResult = await userManager.UpdateSecurityStampAsync(user);
+            if (!stampResult.Succeeded)
+                return false;
+        }
+
         user.Email = email;
         user.FullName = fullName;
         user.DateUpdate = DateTimeOffset.UtcNow;
 
+        // CÙNG instance user đã đổi con dấu ở trên — UpdateAsync tự làm mới ConcurrencyStamp
+        // TRÊN CHÍNH instance đó; lấy lại instance cũ sẽ ra ConcurrencyFailure.
         var updateResult = await userManager.UpdateAsync(user);
         if (!updateResult.Succeeded)
             return false;
-
-        var currentRoles = await userManager.GetRolesAsync(user);
-        var toRemove = currentRoles.Except(roles).ToList();
-        var toAdd = roles.Except(currentRoles).ToList();
 
         if (toRemove.Count > 0)
             await userManager.RemoveFromRolesAsync(user, toRemove);
@@ -99,6 +116,13 @@ public sealed class UserAdminService(UserManager<AppUser> userManager) : IUserAd
     {
         var user = await userManager.FindByIdAsync(id.ToString());
         if (user is null)
+            return false;
+
+        // Con dấu TRƯỚC SetLockoutEndDateAsync — nếu không, SecurityStampValidator (đọc con dấu
+        // mỗi 30 phút) không có gì để phát hiện, và phiên đang chạy của người bị khoá sống tiếp
+        // vô thời hạn (xem doc/huong_dan/wiki-core/be/02-identity-auth.md).
+        var stampResult = await userManager.UpdateSecurityStampAsync(user);
+        if (!stampResult.Succeeded)
             return false;
 
         var result = await userManager.SetLockoutEndDateAsync(user, DateTimeOffset.MaxValue);

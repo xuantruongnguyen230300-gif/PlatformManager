@@ -1,8 +1,9 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 import { QuanTriNguoiDungService } from '../../services/quan-tri-nguoi-dung.service';
-import { ToastService } from '../../../../shared/services/toast.service';
+import { ToastService } from '../../../../core/toast/toast.service';
+import { CurrentUserService } from '../../../../core/auth/current-user.service';
 import { IHttpErrorWithApiResult } from '../../../../core/http/api-result.model';
 import { ICreateUserPayload, IUpdateUserPayload, IUser, IUserListParams } from '../../models/quan-tri-nguoi-dung.model';
 import { UserGridTable } from '../../components/user-grid-table/user-grid-table';
@@ -27,6 +28,9 @@ const DEFAULT_PAGE_SIZE = 10;
 export class QuanTriNguoiDungPage {
   private readonly service = inject(QuanTriNguoiDungService);
   private readonly toast = inject(ToastService);
+  private readonly currentUser = inject(CurrentUserService);
+
+  protected readonly currentUserId = computed(() => this.currentUser.currentUser()?.Id ?? null);
 
   protected readonly searchInput = signal('');
   private readonly searchSubject = new Subject<string>();
@@ -53,18 +57,37 @@ export class QuanTriNguoiDungPage {
   }));
 
   constructor() {
-    // effect() gọi API theo filter/phân trang đang chọn — side-effect thật, không derive state.
-    // (Không dùng `effect` gọn ở đây vì cần watch `requestParams`; viết thủ công tương tự
-    // danh-muc-dti.page.ts để nhất quán codebase.)
-    this.loadList();
+    // `effect()` gọi API theo đúng filter/phân trang ĐANG CHỌN — side-effect thật (gọi HTTP),
+    // không derive state. Chạy ĐÚNG 1 LẦN mỗi khi `requestParams()` (phụ thuộc `debouncedSearch`,
+    // `page`, `pageSize`) thực sự đổi giá trị — không phải mỗi phím gõ. Cùng mẫu với
+    // danh-muc-dti.page.ts để nhất quán codebase.
+    //
+    // Regression đã có test chốt (quan-tri-nguoi-dung.page.spec.ts): bản cũ gọi thẳng `loadList()`
+    // trong `onSearchInputEvent` mỗi phím gõ — vừa bắn 1 request/phím (sai
+    // doc/huong_dan/wiki-core/fe/13-performance.md §6) vừa gửi SAI chuỗi tìm kiếm (giá trị TRƯỚC
+    // debounce, vì `requestParams()` đọc `debouncedSearch()` chứ không phải `searchInput()`).
+    effect(() => {
+      const params = this.requestParams();
+      this.loading.set(true);
+      this.service.getList(params).subscribe({
+        next: (result) => {
+          this.rows.set(result.Items);
+          this.totalCount.set(result.TotalCount);
+          this.loading.set(false);
+        },
+        error: () => this.loading.set(false),
+      });
+    });
   }
 
-  private loadList(): void {
+  /** Nạp lại NGOÀI effect — dùng sau CUD (tạo/sửa/khoá) khi `requestParams()` không đổi giá trị
+   * nên effect không tự kích lại, nhưng dữ liệu server đã đổi. */
+  private reload(): void {
     this.loading.set(true);
     this.service.getList(this.requestParams()).subscribe({
       next: (result) => {
         this.rows.set(result.Items);
-        this.totalCount.set(result.Total);
+        this.totalCount.set(result.TotalCount);
         this.loading.set(false);
       },
       error: () => this.loading.set(false),
@@ -76,13 +99,11 @@ export class QuanTriNguoiDungPage {
     this.searchInput.set(value);
     this.searchSubject.next(value);
     this.page.set(1);
-    this.loadList();
   }
 
   onGridPageChange(event: { Page: number; PageSize: number }): void {
     this.page.set(event.Page);
     this.pageSize.set(event.PageSize);
-    this.loadList();
   }
 
   openCreateForm(): void {
@@ -114,7 +135,7 @@ export class QuanTriNguoiDungPage {
     this.service.create(payload).subscribe({
       next: () => {
         this.formOpen.set(false);
-        this.loadList();
+        this.reload();
         this.toast.success('Đã thêm người dùng.');
       },
       error: (err: IHttpErrorWithApiResult) => {
@@ -127,7 +148,7 @@ export class QuanTriNguoiDungPage {
     this.service.update(id, payload).subscribe({
       next: () => {
         this.formOpen.set(false);
-        this.loadList();
+        this.reload();
         this.toast.success('Đã cập nhật người dùng.');
       },
       error: (err: IHttpErrorWithApiResult) => {
@@ -140,7 +161,7 @@ export class QuanTriNguoiDungPage {
     const request$ = user.IsLocked ? this.service.unlock(user.Id) : this.service.lock(user.Id);
     request$.subscribe({
       next: () => {
-        this.loadList();
+        this.reload();
         this.toast.success(user.IsLocked ? 'Đã mở khoá tài khoản.' : 'Đã khoá tài khoản.');
       },
       error: () => {

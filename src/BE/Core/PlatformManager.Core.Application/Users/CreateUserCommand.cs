@@ -2,6 +2,7 @@ using FluentValidation;
 using MediatR;
 using PlatformManager.Core.Application.Common;
 using PlatformManager.Core.Application.Common.CQRS;
+using PlatformManager.Core.Application.Common.Interfaces;
 using PlatformManager.Core.Application.Common.Results;
 
 namespace PlatformManager.Core.Application.Users;
@@ -25,11 +26,18 @@ public sealed class CreateUserValidator : AbstractValidator<CreateUserCommand>
     }
 }
 
-public sealed class CreateUserHandler(IUserAdminService userAdminService)
+public sealed class CreateUserHandler(IUserAdminService userAdminService, ICurrentUser currentUser)
     : BaseResponse, IRequestHandler<CreateUserCommand, IApiResult<Guid>>
 {
     public async Task<IApiResult<Guid>> Handle(CreateUserCommand cmd, CancellationToken ct)
     {
+        // Luật 1 (SuperAdminAccountGuard) — TẠO user chưa có id để so với người gọi, nên
+        // targetUserId=null/targetHasSuperAdmin=false (xem CheckRoleChange). Chặn leo thang:
+        // chỉ SuperAdmin mới tạo được user có role SuperAdmin. Chạy TRƯỚC mọi lệnh đọc/ghi khác.
+        var guardError = SuperAdminAccountGuard.CheckRoleChange(currentUser, null, false, cmd.Roles);
+        if (guardError is not null)
+            return Fail<Guid>(guardError);
+
         if (await userAdminService.UserNameExistsAsync(cmd.UserName, ct))
             return Fail<Guid>(UserErrors.DuplicateUserName, cmd.UserName);
 

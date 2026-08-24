@@ -140,3 +140,151 @@ Service unwrap `data`, map DTO → model, và **để lỗi bay lên** qua
 `httpErrorInterceptor` — không tự `catchError` lặp lại logic dịch lỗi
 (giống nguyên tắc BE: middleware toàn cục lo lỗi chung, chỗ cần ngữ cảnh cụ
 thể — như bind `fields` vào form — mới tự xử lý thêm).
+
+## Hủy request khi rời trang giữa chừng — `takeUntilDestroyed()`
+
+> Bổ sung 2026-08-24, đối chiếu thực hành ngành cho hệ thống tầm trung: file
+> này bàn kỹ cách **đọc** response nhưng chưa bàn thời điểm subscribe
+> **không còn cần** — `HttpClient` trả về `Observable`, không tự huỷ theo
+> vòng đời component.
+
+User điều hướng sang trang khác (đổi route) trong lúc request cũ chưa về —
+nếu component bị destroy mà `subscribe()` không được huỷ, hệ quả không chỉ
+là request chạy phí công: callback `next()` vẫn chạy khi component đã biến
+mất, và nếu nó ghi vào 1 store/service dùng chung (`providedIn: 'root'`),
+response **đến trễ của trang cũ** có thể ghi đè state mà trang mới vừa load
+xong — race condition không có lỗi biên dịch, không có test đỏ, chỉ lộ ra
+khi mạng chậm đúng lúc user thao tác nhanh.
+
+```ts
+export class PositionDetailPage {
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly service = inject(PositionService);
+  protected readonly item = signal<IPositionRow | null>(null);
+
+  ngOnInit(): void {
+    this.service.getById(this.route.snapshot.params['id'])
+      .pipe(takeUntilDestroyed(this.destroyRef))   // huỷ subscribe khi component destroy
+      .subscribe(item => this.item.set(item));
+  }
+}
+```
+
+`takeUntilDestroyed()` gọi **không tham số** chỉ hợp lệ trong injection
+context (constructor, field initializer) — gọi trong `ngOnInit()` như trên
+**bắt buộc** truyền `DestroyRef` tường minh, cùng dạng bẫy với `inject()`
+trong `catchError` đã nêu ở trên: thiếu injection context không lỗi biên
+dịch, chỉ sai lúc chạy. Với luồng master-detail (đổi tham số route liên tục,
+vd click nhanh qua nhiều dòng danh sách), ưu tiên `switchMap` trên
+`Observable` của route param thay vì gọi lại `subscribe()` thủ công mỗi lần
+— `switchMap` tự huỷ request trước đó khi có request mới, không cần đợi
+component destroy.
+
+## Retry khi lỗi mạng tạm thời — không retry lỗi nghiệp vụ
+
+> Bổ sung 2026-08-24, đối chiếu thực hành ngành cho hệ thống tầm trung: mất
+> mạng thoáng qua (wifi chập chờn, chuyển từ wifi sang 4G) là lỗi **khác bản
+> chất** với lỗi 4xx/5xx mà interceptor ở trên đang dịch — nhầm 2 loại này
+> làm interceptor hoặc retry sai chỗ: retry mãi 1 lỗi 403 (không bao giờ hết
+> lỗi), hoặc không retry 1 lỗi mạng đáng lẽ tự khỏi sau 1 giây.
+
+```ts
+// core/http/retry-transient.operator.ts
+import { retry, throwError, timer } from 'rxjs';
+
+export function retryTransient<T>() {
+  return retry<T>({
+    count: 2,
+    delay: (error: HttpErrorResponse, retryCount) => {
+      if (error.status !== 0) return throwError(() => error);  // 4xx/5xx thật: fail ngay, KHÔNG thử lại
+      return timer(retryCount * 500);                           // status 0 = network lỗi: backoff 500ms, 1000ms
+    },
+  });
+}
+```
+
+`error.status === 0` là tín hiệu đáng tin cho "request chưa từng tới được
+server" (mất mạng, DNS lỗi, CORS preflight chặn) — **không** phải kết quả
+nghiệp vụ nào cả, nên retry an toàn. Mọi status khác (kể cả 5xx) là response
+**có thật** từ server — retry mù có thể lặp lại đúng lỗi (server đang lỗi
+thật, không tự khỏi) hoặc tệ hơn, nếu áp cho `POST` ghi dữ liệu, retry sau
+khi request đầu đã xử lý xong ở server (chỉ mất response) sẽ ghi trùng —
+đây chính là lý do BE phải có `Idempotency-Key` cho endpoint ghi
+(`doc/huong_dan/wiki-core/be/09-security-beyond-auth.md`). Vì vậy
+`retryTransient()` chỉ áp cho request **đọc** (`GET`, tự nhiên idempotent):
+
+```ts
+list(): Observable<IPositionRow[]> {
+  return this.http.get<IApiResult<PositionDto[]>>('/api/positions')
+    .pipe(retryTransient(), map(res => (res.data ?? []).map(mapPositionDtoToRow)));
+}
+```
+
+## Double-submit khi bấm nút Save 2 lần liên tiếp
+
+> Bổ sung 2026-08-24, đối chiếu thực hành ngành cho hệ thống tầm trung: đây
+> là lớp phòng thủ ở **FE**, bổ sung cho `Idempotency-Key` ở BE
+> (`be/09-security-beyond-auth.md`) chứ không thay thế — chặn ở UI rẻ hơn
+> nhiều (không cần round-trip) và chặn được cả những double-click không bao
+> giờ chạm tới tầng HTTP nếu chặn đúng chỗ.
+
+```ts
+protected readonly saving = signal(false);
+
+save(): void {
+  if (this.saving()) return;      // chặn ngay cả khi [disabled] chưa kịp render lại DOM
+  this.saving.set(true);
+  this.service.create(this.form.getRawValue())
+    .pipe(finalize(() => this.saving.set(false)))
+    .subscribe({
+      next: () => this.router.navigate(['..']),
+      error: () => { /* toast đã lo ở interceptor, chỉ cần reset saving */ },
+    });
+}
+```
+
+```html
+<button [disabled]="saving()" (click)="save()">Lưu</button>
+```
+
+`[disabled]` trên template **không đủ một mình**: binding chỉ cập nhật DOM ở
+lần change detection kế tiếp, còn double-click thật (2 lần bấm cách nhau vài
+chục mili-giây) có thể xảy ra trước khi Angular kịp re-render nút. Guard
+`if (this.saving()) return;` ở đầu hàm mới là lớp chặn thật — set `saving`
+**trước** khi gọi API (không đợi vào `next`), và luôn reset qua `finalize()`
+để không kẹt nút vĩnh viễn khi lỗi.
+
+## Upload file lớn — progress thật, không phải spinner mù
+
+> Bổ sung 2026-08-24, đối chiếu thực hành ngành cho hệ thống tầm trung: màn
+> import CSV/Excel gọi `HttpClient.post()` mặc định **không** phát sự kiện
+> nào cho tới khi cả file upload xong — với file vài MB qua mạng chậm, user
+> nhìn spinner đứng yên nhiều giây không biết có đang chạy hay đã treo.
+
+```ts
+import { HttpEventType } from '@angular/common/http';
+
+upload(file: File): Observable<number> {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  return this.http.post<IApiResult<ImportResultDto>>('/api/positions/import', formData, {
+    reportProgress: true,
+    observe: 'events',
+  }).pipe(
+    filter(e => e.type === HttpEventType.UploadProgress || e.type === HttpEventType.Response),
+    map(e => e.type === HttpEventType.UploadProgress
+      ? Math.round((100 * e.loaded) / (e.total ?? e.loaded))   // total có thể undefined — fallback tránh chia lỗi
+      : 100),
+  );
+}
+```
+
+Lưu ý bắt buộc khi dùng cho import: đây là % của **upload** (đẩy file lên
+server), không phải % **xử lý** (server parse CSV, validate từng dòng, ghi
+DB) — 2 giai đoạn có thể lệch xa nhau về thời gian (upload 2MB mất 1 giây,
+nhưng validate 10.000 dòng mất 30 giây sau đó). `UploadProgress` không phủ
+được giai đoạn xử lý; cần cơ chế riêng (polling job status hoặc SignalR) nếu
+muốn hiện tiến trình xử lý thật — nếu chỉ dùng `UploadProgress` một mình,
+UI nên chuyển sang trạng thái "đang xử lý..." (không còn %) ngay sau khi
+progress chạm 100, tránh hiểu lầm 100% nghĩa là đã xong.

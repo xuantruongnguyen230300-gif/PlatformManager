@@ -270,3 +270,127 @@ tồn tại.
 
 Đó cũng là lý do **không hardcode `ValidationInterval`** rải rác trong code sản phẩm: test cần
 override được nó qua cấu hình.
+
+---
+
+# CSRF — lỗ hổng đặc thù của cookie auth, JWT không có
+
+> Bổ sung 2026-08-24, sau khi rà nội dung `wiki-core` đối chiếu thực hành bảo
+> mật chuẩn ngành cho hệ thống tầm trung: toàn bộ tài liệu trước đó **không
+> có một dòng nào** về CSRF/anti-forgery, dù hệ thống đã CHỐT cookie session
+> — đây là lỗ hổng OWASP xếp ngang hàng broken access control, và **chỉ tồn
+> tại vì chọn cookie**. Đọc mục này cùng lúc với "Vòng đời phiên đăng nhập" ở
+> trên, không tách rời.
+
+## Vì sao JWT không có vấn đề này mà cookie có
+
+JWT (khi FE tự gắn `Authorization: Bearer <token>` bằng JavaScript) **không
+tự động gửi kèm** khi 1 trang web khác gọi API của bạn — trình duyệt không
+biết token nằm ở đâu để tự đính kèm. Cookie thì ngược lại: **trình duyệt tự
+động gắn cookie vào MỌI request tới đúng domain, bất kể request đó khởi phát
+từ đâu.**
+
+Kịch bản tấn công cụ thể: nạn nhân đã đăng nhập PlatformManager (cookie còn
+hiệu lực), sau đó mở 1 trang độc hại ở tab khác. Trang đó chứa:
+
+```html
+<form action="https://platformmanager.example.com/api/users/abc/lock" method="POST"></form>
+<script>document.forms[0].submit()</script>
+```
+
+Trình duyệt gửi request tới domain thật của bạn **kèm cookie session thật**
+của nạn nhân — server thấy 1 request hợp lệ, đã đăng nhập, đúng quyền. Nạn
+nhân không hề biết mình vừa khoá tài khoản của ai đó (hoặc tệ hơn, tự khoá
+chính mình nếu là SuperAdmin — xem liên hệ với `SuperAdminAccountGuard` ở
+dưới).
+
+## Vì sao `[ValidateAntiForgeryToken]` kinh điển KHÔNG áp dụng thẳng được
+
+Filter `[ValidateAntiForgeryToken]` của ASP.NET Core MVC được thiết kế cho
+**Razor form** — token được render sẵn vào `<form>` lúc server trả HTML. Hệ
+thống này là **SPA Angular gọi API JSON**, không có form server-render nào —
+áp thẳng filter đó vào controller sẽ đòi hỏi FE gửi 1 token nó chưa từng
+nhận được. Đây là lỗi thường gặp nhất khi mới đụng vào CSRF: nhầm "ASP.NET
+Core có sẵn CSRF protection" với "tôi không cần làm gì thêm".
+
+## Phòng thủ 2 lớp — bắt buộc cả hai, không chọn một
+
+### Lớp 1 — `SameSite` cookie attribute
+
+```csharp
+// Program.cs, ConfigureApplicationCookie — cùng chỗ đã cấu hình ExpireTimeSpan/SlidingExpiration
+options.Cookie.SameSite = SameSiteMode.Strict;   // xem ngoại lệ dev bên dưới
+options.Cookie.HttpOnly = true;                  // JS không đọc được cookie — chặn XSS đánh cắp cookie
+options.Cookie.SecurePolicy = CookieSecurePolicy.Always;  // chỉ gửi qua HTTPS
+```
+
+`SameSite=Strict` chặn trình duyệt gửi cookie khi request khởi phát từ site
+khác — vô hiệu hoá kịch bản tấn công ở trên hoàn toàn cho phần lớn trường
+hợp. **Nhưng đây không phải lưới đủ một mình:**
+
+- Một số trình duyệt cũ/cấu hình lạ không tôn trọng `SameSite` đúng chuẩn.
+- Nếu FE và BE **khác origin thật sự** (không chỉ khác port lúc dev mà khác
+  domain lúc production — vd `app.example.com` gọi `api.example.com`),
+  `Strict` chặn luôn cả request hợp lệ. `Lax` nới hơn nhưng vẫn cho qua GET
+  điều hướng top-level — không đủ mạnh một mình cho request ghi dữ liệu.
+
+### Lớp 2 — custom header bắt buộc trên mọi request ghi
+
+CSRF tấn công qua `<form>` hoặc request đơn giản **không thể tự thêm custom
+HTTP header** (bị chặn bởi CORS preflight nếu header không nằm trong danh
+sách "safe-listed"). Vì vậy: **mọi request `POST`/`PUT`/`PATCH`/`DELETE`
+phải bắt buộc có 1 header tuỳ ý mà kẻ tấn công không đặt được**, ví dụ chuẩn
+Angular `HttpClient` đã hỗ trợ sẵn (`XSRF-TOKEN` cookie + header
+`X-XSRF-TOKEN`, cấu hình qua `withXsrfConfiguration()`), hoặc đơn giản hơn —
+dùng `IAntiforgery` của ASP.NET Core theo mô hình SPA (không phải mô hình
+Razor form):
+
+```csharp
+// Program.cs
+builder.Services.AddAntiforgery(options =>
+{
+    options.HeaderName = "X-XSRF-TOKEN";   // FE đọc token từ cookie riêng, gửi lại qua header này
+});
+
+// 1 endpoint nhỏ để FE lấy token lúc load app (hoặc lúc login)
+app.MapGet("/api/antiforgery/token", (IAntiforgery antiforgery, HttpContext ctx) =>
+{
+    var tokens = antiforgery.GetAndStoreTokens(ctx);
+    return Results.Ok(new { token = tokens.RequestToken });
+});
+
+// Middleware validate — CHỈ áp cho method ghi, GET không cần
+app.Use(async (ctx, next) =>
+{
+    if (HttpMethods.IsPost(ctx.Request.Method) || HttpMethods.IsPut(ctx.Request.Method) ||
+        HttpMethods.IsDelete(ctx.Request.Method) || HttpMethods.IsPatch(ctx.Request.Method))
+    {
+        await ctx.RequestServices.GetRequiredService<IAntiforgery>().ValidateRequestAsync(ctx);
+    }
+    await next();
+});
+```
+
+Kẻ tấn công gửi form CSRF **không biết token** (không đọc được cookie/state
+của nạn nhân từ site khác) nên request bị `ValidateRequestAsync` từ chối
+trước khi chạm tới `[RequirePermission]`/`[Authorize]`.
+
+## Liên hệ trực tiếp với rủi ro đã biết trong hệ thống này
+
+`SuperAdminAccountGuard` được dựng để chặn chính người dùng tự khoá/tự gỡ
+quyền `SuperAdmin` của mình **qua API hợp lệ**. CSRF là đường tấn công khiến
+một request "hợp lệ" đó **không thực sự do người dùng chủ ý gửi** — 2 lớp
+phòng thủ này bảo vệ đúng lớp mà `SuperAdminAccountGuard` không chạm tới
+(guard kiểm *nội dung* request, CSRF-protection kiểm *nguồn gốc* request).
+Thiếu CSRF-protection thì `SuperAdminAccountGuard` vẫn đúng nhưng dễ bị đánh
+lừa để tự kích hoạt bởi chính nạn nhân.
+
+## CORS — điều kiện đi kèm bắt buộc, không phải chi tiết vặt
+
+`AllowCredentials()` (bắt buộc để cookie gửi được từ Angular qua
+`withCredentials`) **không được đi cùng** `AllowAnyOrigin()` — trình duyệt
+tự chặn tổ hợp này, nhưng nếu lỡ cấu hình origin động kiểu
+`SetIsOriginAllowed(_ => true)` thì coi như tự vô hiệu hoá toàn bộ 2 lớp
+phòng thủ CSRF ở trên (bất kỳ origin nào cũng coi là hợp lệ). Danh sách
+origin cho phép phải là **danh sách tường minh, hữu hạn** (domain FE thật +
+localhost dev), không suy luận động.

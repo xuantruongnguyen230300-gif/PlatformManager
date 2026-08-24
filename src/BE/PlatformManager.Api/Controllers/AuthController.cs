@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using PlatformManager.Api.Common;
 using PlatformManager.Core.Application.Auth;
 
@@ -18,6 +19,7 @@ public class AuthController(ISender mediator) : ApiControllerBase
 {
     [HttpPost("login")]
     [AllowAnonymous]
+    [EnableRateLimiting("login")] // gắn riêng action nhạy cảm — CỘNG DỒN với GlobalLimiter, không thay thế
     public async Task<IActionResult> Login([FromBody] LoginCommand cmd, CancellationToken ct)
         => HandleResult(await mediator.Send(cmd, ct));
 

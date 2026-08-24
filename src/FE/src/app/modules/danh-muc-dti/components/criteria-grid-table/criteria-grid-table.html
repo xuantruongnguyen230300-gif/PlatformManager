@@ -115,8 +115,12 @@
       </td>
 
       <td pFrozenColumn alignFrozen="right">
-        <button type="button" class="action-btn" (click)="editRow.emit(row)">Sửa</button>
-        <button type="button" class="action-btn danger" (click)="deleteRow.emit(row)">Xoá</button>
+        @if (row.IsEditable) {
+          <button type="button" class="action-btn" (click)="editRow.emit(row)">Sửa</button>
+          <button type="button" class="action-btn danger" (click)="deleteRow.emit(row)">Xoá</button>
+        } @else {
+          —
+        }
       </td>
     </tr>
   </ng-template>

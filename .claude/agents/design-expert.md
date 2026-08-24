@@ -37,8 +37,9 @@ below is a placeholder; substitute the real resolved path.
 **The real app has landed (2026-08-22).** The earlier text here said `src/FE/`
 and `src/BE/` were empty — that is no longer true.
 
-- `{FE_ROOT}` = **`src/FE/`** — Angular 20, 6 routes in `src/FE/src/app/app.routes.ts`,
-  token layer in `src/FE/src/styles.scss`.
+- `{FE_ROOT}` = **`src/FE/`** — Angular 20, routes in `src/FE/src/app/app.routes.ts`
+  (full table: `doc/huong_dan/quy-uoc/fe-routing-guard.md` §1 — don't trust a
+  hardcoded count elsewhere), token layer in `src/FE/src/styles.scss`.
 - `{BE_ROOT}` = **`src/BE/`** — .NET solution, `PlatformManager.slnx`.
 
 Still resolve each project's live source from **its own `UiInventory.md` →
@@ -61,7 +62,7 @@ the house-style example for future ones.
 
 | Project | Group | Tech | Live source | Status |
 |---------|-------|------|-------------|--------|
-| **PlatformManager** | Frontend | **Angular 20** standalone + Signals, PrimeNG + PrimeIcons, SCSS | **`src/FE/src/app/**`** (6 lazy routes in `app.routes.ts`) + **`src/FE/src/styles.scss`** (the `:root` token layer) | Stages 1–2 current; 3–4 being refreshed against the app |
+| **PlatformManager** | Frontend | **Angular 20** standalone + Signals, PrimeNG + PrimeIcons, SCSS | **`src/FE/src/app/**`** (lazy routes in `app.routes.ts`, full table: `doc/huong_dan/quy-uoc/fe-routing-guard.md` §1) + **`src/FE/src/styles.scss`** (the `:root` token layer) | Stages 1–2 current; 3–4 being refreshed against the app |
 
 Material used by more than one app (brand assets, cross-app user flows) goes
 in `{DESIGN_ROOT}/Shared/`, never inside a single project's folder. `Shared`

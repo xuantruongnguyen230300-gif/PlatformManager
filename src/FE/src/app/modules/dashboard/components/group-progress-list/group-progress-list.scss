@@ -17,7 +17,7 @@
 
 .bar {
   height: 9px;
-  background: #edf1f6;
+  background: var(--surface-track);
   border-radius: var(--radius-pill);
   overflow: hidden;
 }

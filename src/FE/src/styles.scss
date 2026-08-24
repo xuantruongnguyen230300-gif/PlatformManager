@@ -42,6 +42,16 @@
   --bad-bg: #fbdcdc;
   --shadow: 0 4px 16px rgba(23, 39, 67, 0.1), 0 1px 3px rgba(23, 39, 67, 0.06); /* 2 lớp — đậm hơn để gánh việc tách lớp thay cho viền */
 
+  /* Bổ sung khi dọn gate G1 (2026-08-24) — tên/giá trị lấy nguyên xi từ
+     doc/Design/Frontend/PlatformManager/Tokens/colors.md §"Surface / text roles
+     added 2026-08-20", trước đó doc đã đặt tên nhưng chưa được khai báo thật
+     trong :root. Chỉ thêm 3 token thực sự cần cho các hex literal bị gate bắt
+     — không thêm --text-table-header/--surface-notice/--border-notice vì
+     chưa có literal nào trong src/app cần đến. */
+  --on-primary: #fff; /* chữ/icon trên nền --brand: brand mark, avatar, active seg-btn */
+  --surface-track: #edf1f6; /* nền track thanh tiến độ (.bar) */
+  --surface-table-header: #f8fafc; /* nền th, zebra dòng chẵn, chip .role-tag */
+
   --fs-xs: 11px;
   --fs-sm: 12px;
   --fs-base: 13px;

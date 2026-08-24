@@ -7,7 +7,7 @@ sources:
   - "src/FE/src/app/shared/components/toast/toast.html"
   - "src/FE/src/app/shared/components/toast/toast.scss"
   - "src/FE/src/app/shared/components/toast/toast.ts"
-  - "src/FE/src/app/shared/services/toast.service.ts"
+  - "src/FE/src/app/core/toast/toast.service.ts"
   - "src/FE/src/app/app.html"
 ---
 
@@ -79,7 +79,7 @@ export interface IToastMessage { Id: number; Severity: ToastSeverity; Text: stri
 const AUTO_DISMISS_MS = 5000;
 ```
 
-Sources: `src/FE/src/app/shared/components/toast/toast.html:1-15`, `src/FE/src/app/shared/components/toast/toast.scss:1-81`, `src/FE/src/app/shared/components/toast/toast.ts:11-18`, `src/FE/src/app/shared/services/toast.service.ts:3-11`, `:19-50`, `src/FE/src/app/app.html:14`
+Sources: `src/FE/src/app/shared/components/toast/toast.html:1-15`, `src/FE/src/app/shared/components/toast/toast.scss:1-81`, `src/FE/src/app/shared/components/toast/toast.ts:11-18`, `src/FE/src/app/core/toast/toast.service.ts:3-11`, `:19-50`, `src/FE/src/app/app.html:14`
 
 ## Do / Don't
 

@@ -72,11 +72,17 @@ CHỐT tường minh với người dùng **và** ghi rõ trong code.
 Entity mới/sửa có **≥2 luồng ghi độc lập** chạm cùng bản ghi (vd import hàng loạt
 + sửa tay từng field) mà **thiếu token concurrency** → **MISSING**.
 
-⚠️ **Chấm theo provider, không chấm theo tên cột.** Dự án chạy **Npgsql**, nên
-đúng là `builder.UseXminAsConcurrencyToken()`. Thấy `byte[] RowVersion` +
-`.IsRowVersion()` thì đó **là finding nghiêm trọng, không phải đạt** — công thức
-SQL Server trên PostgreSQL tạo cột không ai cập nhật, check concurrency **vô hiệu
-im lặng**.
+⚠️ **Chấm theo KIỂU CLR của property, không chấm theo tên method.** Dự án chạy
+**Npgsql**, nên đúng là property CLR **`uint`** + `.Property(x => x.Version)
+.IsRowVersion()` (Npgsql tự bind vào cột hệ thống `xmin`) — `builder
+.UseXminAsConcurrencyToken()` (recipe cũ) đã bị Npgsql GỠ HẲN khỏi
+`Npgsql.EntityFrameworkCore.PostgreSQL` từ khoảng bản 7.x, KHÔNG còn biên dịch được
+với package version dự án đang dùng (xác nhận 2026-08-24), nên thấy method đó trong
+diff là dấu hiệu code chưa build thật, không phải điểm cộng. Ngược lại thấy
+`.IsRowVersion()` trên property **`byte[]`** thì đó **là finding nghiêm trọng,
+không phải đạt** — công thức SQL Server trên PostgreSQL tạo cột không ai cập nhật,
+check concurrency **vô hiệu im lặng**. Xem `be-entity-domain.md` §RowVersion (đã
+cập nhật 2026-08-24) cho recipe đầy đủ.
 
 **KHÔNG phải finding:** entity chỉ có 1 luồng ghi (CRUD thường).
 

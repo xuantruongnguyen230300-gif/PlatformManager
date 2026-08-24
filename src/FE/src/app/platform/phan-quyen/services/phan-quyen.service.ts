@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
-import { IApiResult } from '../../../core/http/api-result.model';
+import { IApiResult, unwrapData } from '../../../core/http/api-result.model';
 import { IPermissionMatrix, IPermissionMatrixDto, IPermissionRow, ISavePermissionMatrixRequestDto } from '../models/phan-quyen.model';
 import { mapPermissionMatrixDtoToModel } from './phan-quyen.mapper';
 
@@ -13,7 +13,7 @@ export class PhanQuyenService {
   getMatrix(): Observable<IPermissionMatrix> {
     return this.http
       .get<IApiResult<IPermissionMatrixDto>>('/admin/permissions')
-      .pipe(map((res) => mapPermissionMatrixDtoToModel(res.data as IPermissionMatrixDto)));
+      .pipe(map((res) => mapPermissionMatrixDtoToModel(unwrapData(res))));
   }
 
   /**

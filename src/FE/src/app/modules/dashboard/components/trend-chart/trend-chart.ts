@@ -55,12 +55,16 @@ export class TrendChart {
     : { brand: '#0f5bd7', muted: '#57647a', line: '#dfe6ef' };
 
   protected readonly chartData = computed<ChartData<'line'>>(() => {
-    const pts = this.points().filter((p) => p.Value !== null);
+    // GIỮ NGUYÊN mọi kỳ (kể cả kỳ thiếu số liệu) trên trục x — lọc `Value === null` ra trước khi
+    // dựng `labels` làm kỳ thiếu biến mất khỏi trục, khiến 2 kỳ không liền nhau bị vẽ sát nhau và
+    // nối bằng đường thẳng liền, ngụ ý một chuỗi liên tục không có thật. `null` phải đi vào ĐÚNG vị
+    // trí trong mảng `data` để `spanGaps: false` ngắt nét ở đó.
+    const pts = this.points();
     return {
       labels: pts.map((p) => p.Label),
       datasets: [
         {
-          data: pts.map((p) => Math.min(100, Math.max(0, p.Value as number))),
+          data: pts.map((p) => (p.Value === null ? null : Math.min(100, Math.max(0, p.Value)))),
           borderColor: this.colors.brand,
           backgroundColor: hexToRgba(this.colors.brand, 0.12),
           pointBackgroundColor: this.colors.brand,
@@ -71,6 +75,23 @@ export class TrendChart {
         },
       ],
     };
+  });
+
+  /**
+   * `p-chart` render `<canvas role="img">` — `role="img"` bỏ qua mọi nội dung con, nên trình đọc
+   * màn hình cần `ariaLabel` mô tả trực tiếp thay vì dựa vào DOM bên trong canvas.
+   */
+  protected readonly chartAriaLabel = computed(() => {
+    const pts = this.points();
+    const withData = pts.filter((p) => p.Value !== null);
+    const missing = pts.length - withData.length;
+    const first = withData[0]?.Label;
+    const last = withData.at(-1)?.Label;
+
+    const parts = [`Biểu đồ xu hướng ${withData.length} kỳ có số liệu`];
+    if (first !== undefined && last !== undefined) parts.push(`từ ${first} đến ${last}`);
+    if (missing > 0) parts.push(`${missing} kỳ chưa có số liệu`);
+    return parts.join(', ');
   });
 
   protected readonly chartOptions = computed<ChartOptions<'line'>>(() => ({

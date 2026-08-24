@@ -133,3 +133,114 @@ phải thứ cần implement ngay ở F0–F3.
 mới chốt gần đây, xem lý do đầy đủ ở `doc/cau-truc-database.md` §4.1 §2.3. Khi implement
 `GET /api/meta/menu` thật, map `RequiredRole` (DB) → `requiredPermission`
 (FE model) giữ nguyên tên phía FE, không đổi hợp đồng đã thiết kế.
+
+## Export dữ liệu grid — API export riêng cho dữ liệu lớn, không export những gì đã load
+
+> Bổ sung 2026-08-24, đối chiếu thực hành ngành cho hệ thống tầm trung: mục
+> "Tính năng ERP-grade có sẵn" ở trên liệt kê `exportCSV()` built-in của
+> `p-table` như 1 tính năng có sẵn — đúng, nhưng chưa cảnh báo giới hạn quan
+> trọng nhất: `exportCSV()` chỉ export **`value` đang có trong bộ nhớ
+> browser**. Với server-side pagination (mặc định của hệ thống, xem
+> [13-performance.md](13-performance.md) §5), `value` chỉ chứa **đúng 1
+> trang** (`pageSize` dòng) — bấm "Export" ở trang 1/50 chỉ ra file 20 dòng,
+> không phải toàn bộ dataset lọc được, và phần lớn user không nhận ra cho
+> tới khi mở file ra đếm dòng.
+
+**Quy tắc: export "toàn bộ kết quả đang lọc" phải là 1 lời gọi API riêng,
+không tái dùng `rows()` đang hiển thị trên grid:**
+
+```ts
+// grid đang [lazy] qua onLazyLoad — nút Export gọi API riêng, KHÔNG dùng rows()
+onExportClick(): void {
+  this.criteriaService.exportGrid(this.currentFilter()).subscribe(blob => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `criteria-${todayIso()}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+}
+```
+
+Gọi API export bằng đúng bộ **filter** đang áp trên grid (không phải
+`Page`/`PageSize`), để "export" và "đang xem" luôn khớp nghĩa với user dù số
+dòng trả về khác nhau. Phía BE trả file trực tiếp (không qua envelope
+`IApiResult<T>` — cùng dạng ngoại lệ với response 429 của rate limit đã ghi ở
+`doc/huong_dan/wiki-core/be/09-security-beyond-auth.md`), hoặc với dataset
+thật sự lớn, trả job nền (mẫu "Command chạy lâu → job nền" ở
+`doc/huong_dan/quy-uoc/be-cqrs-handler.md`) + endpoint tải file khi xong.
+
+`exportCSV()` built-in **vẫn dùng được** cho đúng 1 trường hợp: dataset nhỏ
+đã tải hết ở client, không `[lazy]` — như bảng 6 `CriteriaGroup` cố định đã
+nêu ở [13-performance.md](13-performance.md) §5.
+
+## Column resize/reorder — lưu preference theo user, không mất khi F5
+
+> Bổ sung 2026-08-24, đối chiếu thực hành ngành cho hệ thống tầm trung:
+> `columnResize`/`reorderableColumns` đã liệt kê ở trên là tính năng có sẵn,
+> nhưng mặc định `p-table` chỉ giữ state đó **trong bộ nhớ component** — F5
+> hoặc điều hướng rời trang là mất, user phải chỉnh lại từ đầu mỗi phiên.
+> Với grid nhiều cột (10+), đây là kiểu khó chịu nhỏ nhưng lặp lại **mỗi
+> ngày** — đáng lưu dù chi phí thêm vào thấp.
+
+`localStorage` là đúng chỗ cho preference này — không phải state cần đồng bộ
+server, mất thì user chỉnh lại chứ không hỏng dữ liệu nghiệp vụ nào:
+
+```ts
+// modules/danh-muc-dti/components/criteria-grid-table/criteria-grid-table.ts
+private readonly storageKey = 'grid-pref:criteria-list';   // tiền tố gridKey riêng, tránh đụng key khác
+
+onColReorder(event: { columns: { field: string }[] }): void {
+  this.savePref({ order: event.columns.map(c => c.field) });
+}
+onColResize(event: { element: HTMLElement; delta: number }): void {
+  this.savePref({ [event.element.id]: event.element.offsetWidth });
+}
+
+private savePref(patch: Record<string, unknown>): void {
+  const current = JSON.parse(localStorage.getItem(this.storageKey) ?? '{}');
+  localStorage.setItem(this.storageKey, JSON.stringify({ ...current, ...patch }));
+}
+```
+
+Đọc lại lúc khởi tạo component, áp vào cấu hình cột trước khi render lần đầu
+để không bị "nhảy" layout sau khi mount. **Khoá key theo cả `gridKey` lẫn
+user** nếu nhiều người dùng chung máy (`localStorage` không tự phân biệt
+user đăng nhập) — xác nhận với nghiệp vụ trước khi giả định 1 user/máy.
+Không đồng bộ preference này lên server trừ khi có yêu cầu thật ("mở trên
+máy khác vẫn giữ layout cũ") — thêm bảng/endpoint cho việc này trước khi có
+nỗi đau là đi ngược nguyên tắc chung của cả bộ tài liệu.
+
+## Virtual scroll — ngưỡng chuyển từ phân trang server sang `[virtualScroll]`
+
+> Bổ sung 2026-08-24, đối chiếu thực hành ngành cho hệ thống tầm trung:
+> [13-performance.md](13-performance.md) §3 đã nói `CdkVirtualScrollViewport`
+> là lựa chọn "hiếm, vì server-side pagination đã là mặc định" — đúng,
+> nhưng chưa ghi ngưỡng cụ thể cho riêng `p-table`, và `p-table` có cơ chế
+> virtual scroll **riêng** của nó (không dùng chung với CDK) nên cách bật
+> khác hẳn.
+
+`p-table` hỗ trợ `[virtualScroll]="true"` kèm `[virtualScrollItemSize]` (số
+px cố định mỗi dòng):
+
+```html
+<p-table [value]="rows()" [scrollable]="true" scrollHeight="400px"
+         [virtualScroll]="true" [virtualScrollItemSize]="46">
+  <ng-template #body let-row>
+    <tr style="height: 46px">...</tr>
+  </ng-template>
+</p-table>
+```
+
+**Ngưỡng cân nhắc: >500 dòng đã tải hết ở client trong 1 lần.** Dưới ngưỡng
+đó, phân trang server (đã có, đủ dùng — [13-performance.md](13-performance.md)
+§5) rẻ hơn về độ phức tạp: không giữ cả tập dữ liệu ở client, không phải
+tính lại chiều cao dòng khi nội dung động (`[virtualScrollItemSize]` cố định
+px — sai lệch với chiều cao dòng thật do nội dung dài ngắn khác nhau sẽ làm
+cuộn giật). Virtual scroll chỉ đáng bật khi **bản chất dữ liệu không hợp
+phân trang** — vd dropdown lookup nhiều trăm mục cần cuộn mượt trong 1 lần
+mở (đã nêu ở [13-performance.md](13-performance.md) §3), hoặc màn hình cần
+xem/so sánh nhiều dòng cùng lúc mà phân trang cắt ngang thao tác đó (chưa
+gặp ở PlatformManager hiện tại). **Không** bật virtual scroll "cho chắc" khi
+phân trang server đã hoạt động tốt — 2 cơ chế giải quyết cùng vấn đề, chọn 1.

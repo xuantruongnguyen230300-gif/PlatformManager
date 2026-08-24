@@ -34,6 +34,10 @@ export class UserGridTable {
   readonly totalCount = input<number>(0);
   readonly page = input<number>(1);
   readonly pageSize = input<number>(10);
+  /** Id người đang đăng nhập — `null` khi chưa biết (không chặn dòng nào trong lúc đó). Dùng để
+   * chặn UI trước cho `USER.SELF_LOCK_FORBIDDEN` (doc/contracts/users.md §"Bảo vệ tài khoản quản
+   * trị" luật #4) — áp cho MỌI role, chỉ chặn "Khoá", không chặn "Mở khoá". */
+  readonly currentUserId = input<string | null>(null);
 
   readonly editRow = output<IUser>();
   readonly toggleLock = output<IUser>();
@@ -47,5 +51,15 @@ export class UserGridTable {
     const first = event.first ?? 0;
     const page = Math.floor(first / rows) + 1;
     this.pageChange.emit({ Page: page, PageSize: rows });
+  }
+
+  /** Chỉ đúng khi đang bấm "Khoá" (chưa khoá) trên chính dòng của người đang đăng nhập. */
+  isSelfLock(row: IUser): boolean {
+    return !row.IsLocked && this.currentUserId() !== null && row.Id === this.currentUserId();
+  }
+
+  lockButtonTitle(row: IUser): string {
+    if (this.isSelfLock(row)) return 'Không thể tự khoá tài khoản của chính mình — dùng Đăng xuất';
+    return row.IsLocked ? 'Mở khoá tài khoản' : 'Khoá tài khoản';
   }
 }

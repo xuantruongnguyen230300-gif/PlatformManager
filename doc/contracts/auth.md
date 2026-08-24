@@ -21,17 +21,27 @@ key (khớp tên property C#, vd `"UserName"`) — xem `wiki-core/fe/02-http-env
 Request (`[FromBody]`, phẳng):
 
 ```json
-{ "userName": "SuperAdmin", "password": "SuperAdmin@123" }
+{ "userName": "SuperAdmin", "password": "<Bootstrap:SuperAdminPassword>" }
 ```
+
+⚠️ **Cập nhật 2026-08-24: KHÔNG còn mật khẩu hardcode `"SuperAdmin@123"`.** `CoreSeeder` seed
+**2 tài khoản bootstrap RIÊNG BIỆT** — `SuperAdmin` (role `SuperAdmin` DUY NHẤT) và `Admin` (role
+`Admin` DUY NHẤT) — mật khẩu đọc từ `BootstrapOptions` (User Secrets `Bootstrap:SuperAdminPassword`
+/ `Bootstrap:AdminPassword` lúc dev, biến môi trường `Bootstrap__SuperAdminPassword` /
+`Bootstrap__AdminPassword` lúc production; fail-fast — app không khởi động được nếu thiếu). Xem
+`scripts/setup-database.sh` bước 5/5 và `src/BE/Core/PlatformManager.Core.Infrastructure/Persistence/BootstrapOptions.cs`.
 
 Response thành công — `Data: CurrentUserInfo`:
 
 ```json
 {
   "id": "guid", "userName": "SuperAdmin", "email": "superadmin@platformmanager.local",
-  "fullName": "Quản trị viên hệ thống", "roles": ["SuperAdmin", "Admin"], "mustChangePassword": true
+  "fullName": "Quản trị viên hệ thống", "roles": ["SuperAdmin"], "mustChangePassword": true
 }
 ```
+
+(Trước 2026-08-24: `roles` là `["SuperAdmin", "Admin"]` — 1 tài khoản gộp cả 2 role. Đã tách
+làm 2 tài khoản như trên; đăng nhập bằng `Admin` trả `"roles": ["Admin"]`.)
 
 Lỗi:
 | BusinessCode | HTTP | Khi nào |
@@ -115,6 +125,92 @@ BE tham chiếu: `src/BE/PlatformManager.Api/Program.cs` (`ResolveRateLimitParti
 `doc/huong_dan/quy-uoc/be-api-controller.md` §"Rate limiting", test chốt
 `src/BE/Tests/PlatformManager.Core.IntegrationTests/RateLimiting/` (`LoginRateLimitPartitionTests`
 + `GlobalRateLimitTests`).
+
+## 🛡️ CSRF — `GET /api/antiforgery/token` (mới, 2026-08-24)
+
+Cookie session (không phải JWT) ⇒ cần chống CSRF — xem
+`doc/huong_dan/wiki-core/be/02-identity-auth.md` §CSRF cho lý do đầy đủ. Áp dụng **Lớp 2** (Lớp 1
+là `SameSite` đã có sẵn ở cookie phiên): mọi request `POST`/`PUT`/`PATCH`/`DELETE` **bắt buộc**
+mang header `X-XSRF-TOKEN`, kể cả `POST /api/auth/login` — CSRF áp theo METHOD, không có ngoại lệ
+theo endpoint.
+
+**Tên cookie/header — CHỌN ĐÚNG mặc định của Angular `HttpClient`, không cần tham số tuỳ biến:**
+
+| | Giá trị |
+| --- | --- |
+| Cookie (server phát, KHÔNG `HttpOnly` — JS phải đọc được) | `XSRF-TOKEN` |
+| Header (client tự gắn lại) | `X-XSRF-TOKEN` |
+| Endpoint phát hành | `GET /api/antiforgery/token` (KHÔNG cần đăng nhập, KHÔNG bị rate-limit) |
+
+Response `GET /api/antiforgery/token` **KHÔNG bọc `IApiResult`** (theo đúng mẫu SPA nêu ở
+`02-identity-auth.md`, khác mọi endpoint khác của contract này):
+
+```json
+{ "token": "CfDJ8..." }
+```
+
+⚠️ **Sửa 2026-08-24 (core-reviewer phát hiện lỗi thật, đã chặn được TRƯỚC khi lên môi trường
+dùng chung):** `IAntiforgery` của ASP.NET Core có **2 nửa khác nhau** của cùng cơ chế
+double-submit-cookie — **cookie-token** (bí mật, server tự quản trong 1 cookie riêng, `HttpOnly`)
+và **request-token** (giá trị phải gửi lại qua header). Bản đầu đặt nhầm tên cookie nội bộ của
+`AddAntiforgery` thành `"XSRF-TOKEN"`, khiến chính cookie-token bị lộ ra đúng cái tên Angular tự
+đọc — Angular echo nhầm cookie-token vào header thay vì request-token, và **mọi request ghi từ
+trình duyệt thật bị 403**, kể cả `POST /api/auth/login`. Đã sửa: `AddAntiforgery` giữ nguyên tên
+cookie nội bộ (không đổi, vẫn `HttpOnly`), còn endpoint `GET /api/antiforgery/token` **tự tay**
+`Response.Cookies.Append("XSRF-TOKEN", tokens.RequestToken, ...)` — set MỘT cookie khác, đúng
+chứa request-token, cho Angular đọc.
+
+Gọi endpoint này đồng thời set cookie `XSRF-TOKEN` (chứa request-token, như trên) — bản thân body
+JSON **không cần FE tự đọc** nếu dùng `withXsrfConfiguration()` mặc định của Angular (đọc thẳng
+cookie, tự gắn header cho mọi request ghi tới cùng origin). Chỉ cần gọi 1 lần lúc app khởi động để
+cookie tồn tại.
+
+⚠️ **Cạm bẫy khác đã gặp khi build seam activation test (xem
+`Tests/PlatformManager.Core.IntegrationTests/Csrf/CsrfSeamTests.cs`): token phát hành lúc
+ANONYMOUS không dùng lại được cho request ghi SAU khi đã đăng nhập** — `IAntiforgery` của
+ASP.NET Core còn gắn request-token với danh tính (`ClaimsPrincipal`) tại thời điểm phát hành; đổi
+danh tính (login) rồi dùng token cũ sẽ bị từ chối `403` với thông điệp "meant for a different
+claims-based user". **Cookie `XSRF-TOKEN` KHÔNG tự đổi giá trị theo thời gian hay theo sự kiện
+login** — nó chỉ đổi khi có ai đó gọi lại `GET /api/antiforgery/token` (endpoint duy nhất set
+cookie này, không có cơ chế tự động nào khác). Với Angular `withXsrfConfiguration()`, việc đọc lại
+cookie ở MỖI request là tự động đúng — **miễn là FE tự gọi lại `GET /api/antiforgery/token` ngay
+sau khi login thành công** để cookie mang giá trị mới khớp danh tính vừa đăng nhập; không tự gọi
+lại thì cookie vẫn giữ token cũ (lúc anonymous) và request ghi đầu tiên sau login sẽ 403. Nêu ra ở
+đây để `frontend-expert` biết: **không chỉ gọi 1 lần lúc app khởi động rồi coi là xong** — phải
+gọi lại đúng lúc đăng nhập thành công.
+
+Lỗi khi thiếu/sai token:
+
+```
+HTTP/1.1 403 Forbidden
+{"message":"Yêu cầu bị từ chối — thiếu hoặc sai token chống giả mạo (CSRF).",
+ "status":"BUSINESS_ERROR","code":"AuthorizationError","traceId":"..."}
+```
+
+Không có `businessCode` riêng (không phải lỗi nghiệp vụ) — FE nhận diện qua `code =
+"AuthorizationError"` kèm `status = "BUSINESS_ERROR"`, cùng dạng với lỗi 403 phân quyền khác;
+message khác biệt là điểm phân biệt duy nhất nếu cần hiển thị riêng.
+
+**🔴 Việc FE cần làm (`frontend-expert`):**
+
+1. Bật `withXsrfConfiguration()` (mặc định `cookieName: 'XSRF-TOKEN'`, `headerName:
+   'X-XSRF-TOKEN'` — khớp thẳng, không cần tham số) trong `provideHttpClient(...)`.
+2. Gọi `GET /api/antiforgery/token` lúc app khởi động (trước hoặc cùng lúc probe
+   `GET /api/auth/me` hiện có) để cookie `XSRF-TOKEN` tồn tại trước request ghi đầu tiên
+   (kể cả `POST /api/auth/login`).
+3. **Gọi LẠI `GET /api/antiforgery/token` ngay sau khi `POST /api/auth/login` thành công** —
+   token lúc anonymous không dùng được cho request ghi sau khi đã đăng nhập (xem cạm bẫy ở trên).
+   Thiếu bước này: mọi request ghi ĐẦU TIÊN sau login (đổi mật khẩu, tạo/sửa user...) sẽ 403 dù
+   người dùng thao tác hoàn toàn bình thường.
+4. `withCredentials: true` (đã bật sẵn cho cookie phiên) cũng áp dụng cho cookie CSRF — không
+   cần cấu hình thêm.
+
+BE tham chiếu: `src/BE/PlatformManager.Api/Program.cs` (`AddAntiforgery`, endpoint
+`/api/antiforgery/token`, middleware validate trước `MapControllers()`),
+`src/BE/PlatformManager.Api/Common/GlobalExceptionHandler.cs` (dịch
+`AntiforgeryValidationException` → 403), quy tắc ở
+`doc/huong_dan/wiki-core/be/02-identity-auth.md` §CSRF, test chốt
+`src/BE/Tests/PlatformManager.Core.IntegrationTests/Csrf/CsrfSeamTests.cs`.
 
 ## `POST /api/auth/logout`
 

@@ -219,7 +219,7 @@ chứa `đã xoá`/`trước ở`/`không còn tồn tại` được bỏ qua �
 chúng thì mọi ghi chép *"vì sao ta bỏ X"* đều bị báo lỗi, và người ta sẽ xoá bài
 học đi cho gate xanh — đúng hành vi §4 sinh ra để ngăn.
 
-Repo **không có CI** (`.github/workflows/` rỗng, có chủ đích) — không còn máy
+Repo **không có CI** (`.github/` không tồn tại, có chủ đích) — không còn máy
 nào chạy hộ. Gate hỏng mà không ai biết là kịch bản đã xảy ra thật: đợt
 2026-08-23 phát hiện `scripts/fe-gate.sh` không tồn tại, nên 3 trong 9 gate FE
 đã không chạy được suốt một thời gian dài, trong khi tài liệu vẫn ghi là bình

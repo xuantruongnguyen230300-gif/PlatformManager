@@ -3,7 +3,7 @@ import { inject } from '@angular/core';
 import { catchError, throwError } from 'rxjs';
 import { IApiResult } from '../http/api-result.model';
 import { SKIP_ERROR_TOAST } from '../http/http-context-tokens';
-import { ToastService } from '../../shared/services/toast.service';
+import { ToastService } from '../toast/toast.service';
 
 /**
  * Chỉ dùng khi response KHÔNG có body `IApiResult<T>` hợp lệ (network lỗi, CORS chặn,

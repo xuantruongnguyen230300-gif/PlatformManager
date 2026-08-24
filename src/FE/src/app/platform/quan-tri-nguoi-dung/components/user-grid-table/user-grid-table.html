@@ -3,6 +3,7 @@
     [value]="rows()"
     [loading]="loading()"
     [lazy]="true"
+    [lazyLoadOnInit]="false"
     [paginator]="true"
     [rows]="pageSize()"
     [first]="(page() - 1) * pageSize()"
@@ -54,7 +55,8 @@
               type="button"
               class="action-btn"
               [class.danger]="!row.IsLocked"
-              [title]="row.IsLocked ? 'Mở khoá tài khoản' : 'Khoá tài khoản'"
+              [disabled]="isSelfLock(row)"
+              [title]="lockButtonTitle(row)"
               (click)="toggleLock.emit(row)"
             >
               <i class="pi" [class.pi-lock]="!row.IsLocked" [class.pi-lock-open]="row.IsLocked"></i>

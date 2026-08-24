@@ -6,12 +6,19 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Hangfire.Core: StartImportCommandHandler gọi BackgroundJob.Enqueue<IImportJobRunner>()
+         trực tiếp — xem doc/huong_dan/quy-uoc/be-cqrs-handler.md §"Command chạy lâu → job nền".
+         Server/Dashboard/PostgreSql storage chỉ cần ở PlatformManager.Api (composition root). -->
+    <PackageReference Include="Hangfire.Core" Version="1.8.24" />
     <PackageReference Include="MediatR" Version="12.5.0" />
     <PackageReference Include="FluentValidation" Version="12.0.0" />
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.0.0" />
     <!-- CsvHelper: thư viện parse thuần, không phải hạ tầng DB/web — CsvImportService
          (Assessments/) cần nó để đọc file Import CSV tiếng Việt. -->
     <PackageReference Include="CsvHelper" Version="33.1.0" />
+    <!-- Ghim tường minh — Hangfire.Core 1.8.24 kéo transitively Newtonsoft.Json 11.0.1, dính
+         NU1903 (high severity). Bản 13.0.4 không còn cảnh báo. -->
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
   </ItemGroup>
 
   <ItemGroup>

@@ -7,7 +7,16 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Hangfire chạy job nền cho Import CSV/Excel (xem
+         doc/huong_dan/quy-uoc/be-cqrs-handler.md §"Command chạy lâu → job nền") — kéo theo
+         Hangfire.Core nên KHÔNG cần khai lại ở đây. AspNetCore = AddHangfireServer()/
+         UseHangfireDashboard(); PostgreSql = UsePostgreSqlStorage() (dùng chung connection
+         string "Default" với PlatformManagerDbContext, tự tạo schema "hangfire" lúc khởi động
+         lần đầu — KHÔNG đi qua EF Core migration). -->
+    <PackageReference Include="Hangfire.AspNetCore" Version="1.8.24" />
+    <PackageReference Include="Hangfire.PostgreSql" Version="1.21.1" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.9" />
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="10.0.11" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="10.2.3" />
     <!-- dotnet-ef yêu cầu chính startup project reference package Design (dù DbContext nằm
          ở Infrastructure) — chỉ cần lúc build-time cho tooling, không chạy runtime. -->

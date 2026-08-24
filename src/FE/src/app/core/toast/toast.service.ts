@@ -11,10 +11,10 @@ export interface IToastMessage {
 const AUTO_DISMISS_MS = 5000;
 
 /**
- * Notification/toast abstraction dùng chung toàn app — service hạ tầng UI singleton, thuộc
- * ngoại lệ "app-shell" đã ghi nhận (doc/huong_dan/wiki-core/fe/05-component-library.md), nên
- * `core/interceptors/http-error.interceptor.ts` (core/) được phép inject thẳng service này dù
- * nó nằm ở shared/.
+ * Notification/toast abstraction dùng chung toàn app — service hạ tầng UI singleton, sống ở
+ * `core/` (KHÔNG phải `shared/`) đúng nguyên tắc tầng đáy — gate G9, xem
+ * doc/huong_dan/wiki-core/fe/trien-khai/05-gate.md. Component hiển thị
+ * (`shared/components/toast/toast.ts`) import ngược từ đây — chiều `shared/` → `core/` được phép.
  */
 @Injectable({ providedIn: 'root' })
 export class ToastService {

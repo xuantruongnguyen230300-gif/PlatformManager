@@ -1,9 +1,16 @@
 # 12. Thông báo (Notification)
 
-> **Trạng thái: TẠM DỪNG có chủ đích.** Seam cũ đã được gỡ; chưa dựng lại cho
-> tới khi Modules có nghiệp vụ thật cần thông báo. File này là bản thiết kế
-> sẵn để lúc bắt tay làm không phải mò lại từ đầu — **đọc hết trước khi viết
-> dòng code đầu tiên**.
+> **Trạng thái: 🚧 ĐANG THI CÔNG — xác minh lại 2026-08-24, khác bản rà
+> 2026-08-23 bên dưới.** Working copy hiện tại (chưa commit) đã có
+> `Core.Application/Notifications/`, `Core.Infrastructure/Notifications/`
+> (`SmtpNotificationSender`, `SmtpOptions`) và trọn bộ
+> `Modules/DtiWeekly/.../Application/Import/` (`StartImportCommand`,
+> `ImportJobRunner`, `GetImportJobStatusQuery`...) + entity `ImportJob` +
+> migration `20260818090451_AddRolePermissionAndImportJob` — nghĩa là §0 và
+> bảng §4 dưới đây (viết khi seam **chưa tồn tại**) không còn mô tả đúng hiện
+> trạng. Chưa đối chiếu lại chi tiết implementation mới với các nguyên tắc
+> §3 (outbox, idempotency, template, opt-out) — **đọc hết trước khi sửa file
+> này hoặc viết thêm code**, đừng coi bảng "0 kết quả" ở §4 là còn đúng.
 
 ## 0. Vì sao gỡ seam cũ thay vì giữ lại
 
@@ -109,6 +116,40 @@ Tách template ra, tham số hoá bằng biến. Với ZNS thì đây là **bắ
 `fe/08-i18n.md` — chuỗi do BE sinh thì **BE chịu trách nhiệm dịch**, không
 đẩy sang FE.
 
+> Bổ sung 2026-08-24, đối chiếu thực hành chuẩn ngành: tách template khỏi
+> code (vừa quyết ở trên) chưa tự động an toàn. Nếu template chèn thẳng dữ
+> liệu người dùng nhập (ví dụ tên chỉ tiêu, ghi chú) vào HTML email mà không
+> encode, đây là injection HTML — cùng bản chất với XSS phản chiếu, chỉ khác
+> nơi hiển thị là hộp thư/thông báo thay vì trình duyệt trực tiếp. Người
+> dùng nhập tên chỉ tiêu kiểu `<img src=x onerror=alert(1)>` hoặc chèn link
+> giả mạo, template ráp chuỗi trực tiếp sẽ đưa nguyên văn vào email HTML gửi
+> tới người khác.
+
+**Luôn encode dữ liệu người dùng khi ráp vào template**, không tự tay nối
+chuỗi:
+
+```csharp
+// SAI — ráp chuỗi trực tiếp, dữ liệu người dùng đi thẳng vào HTML
+var body = $"<p>Chỉ tiêu <b>{criteriaName}</b> đã quá hạn.</p>";
+
+// ĐÚNG — encode trước khi chèn, hoặc dùng template engine tự động escape
+var body = $"<p>Chỉ tiêu <b>{HtmlEncoder.Default.Encode(criteriaName)}</b> đã quá hạn.</p>";
+```
+
+Nếu dùng template engine thật (Scriban, RazorLight — khuyến nghị hơn ráp
+chuỗi tay khi số lượng template tăng), ưu tiên engine **auto-escape theo mặc
+định** (Razor `@Model.CriteriaName` tự encode; Scriban cần bật tường minh) —
+đừng chọn engine bắt tự nhớ encode ở từng chỗ chèn, vì kiểu lỗi này không lộ
+ra khi test tay bằng dữ liệu sạch, chỉ lộ khi có dữ liệu thật độc hại.
+
+Kênh **in-app** rủi ro cao hơn email: nếu FE (Angular) render nội dung thông
+báo bằng `[innerHTML]` hoặc `bypassSecurityTrustHtml`, dữ liệu độc hại chạy
+được JavaScript thật trong phiên người dùng đang đăng nhập — khác hẳn email
+(phần lớn mail client không thực thi script trong HTML). Angular tự sanitize
+theo mặc định khi bind `[innerHTML]`; **tuyệt đối không** dùng
+`bypassSecurityTrustHtml` cho nội dung thông báo có nguồn gốc từ dữ liệu
+người dùng nhập.
+
 ### 3.4 Tuỳ chọn người nhận + lưu vết
 
 - **Opt-out:** phải có đường tắt nhận. Thông báo không tắt được sẽ bị người
@@ -119,24 +160,98 @@ Tách template ra, tham số hoá bằng biến. Với ZNS thì đây là **bắ
   vừa để tra cứu khi người dùng nói "tôi không nhận được", vừa là nơi tự
   nhiên để đặt khoá idempotency ở §3.2.
 
+> Bổ sung 2026-08-24, đối chiếu thực hành chuẩn ngành: digest ở trên gộp
+> đúng **một** loại thông báo định kỳ có sẵn (nhắc hạn hằng ngày, một job,
+> một lần quét). Nó không chặn được trường hợp **nhiều loại sự kiện khác
+> nhau**, từ nhiều handler độc lập, cùng dội vào 1 người nhận trong thời
+> gian ngắn — ví dụ user được gán vào 5 chỉ tiêu khác nhau trong 1 phút, mỗi
+> lần gán là 1 command riêng, không đi qua job digest nào để gộp. Cần thêm
+> một lớp chặn ở tầng gửi, độc lập với digest:
+
+- Đặt **ngưỡng cứng theo (người nhận, kênh)** trong 1 cửa sổ thời gian — ví
+  dụ tối đa **20 email/giờ/người** — dùng chính bảng lưu vết ở trên để đếm
+  số đã gửi trong cửa sổ trước khi gửi tiếp:
+
+```csharp
+var sentInLastHour = await _db.NotificationHistory
+    .CountAsync(n => n.RecipientId == recipientId
+        && n.Channel == NotificationChannel.Email
+        && n.SentAt > DateTime.UtcNow.AddHours(-1));
+
+if (sentInLastHour >= 20)
+{
+    // Không gửi ngay — đẩy vào hàng chờ digest kỳ tiếp theo, không huỷ bỏ
+    await _db.PendingDigestItems.AddAsync(new PendingDigestItem(recipientId, notification));
+    return;
+}
+```
+
+- Ngưỡng này là **lưới an toàn cho lỗi/tăng đột biến** (bug gọi lặp, import
+  hàng loạt kích hoạt hàng trăm event), không phải cơ chế thay thế digest —
+  vận hành bình thường không nên chạm ngưỡng; chạm thường xuyên là dấu hiệu
+  cần thêm digest cho đúng loại sự kiện đó, không phải nâng ngưỡng lên.
+
+### 3.5 Bounce — khác Opt-out, hệ thống phải tự phát hiện chứ không đợi người dùng báo
+
+> Bổ sung 2026-08-24, đối chiếu thực hành gửi email chuẩn ngành: Opt-out ở
+> trên xử lý trường hợp người dùng **chủ động** từ chối nhận. Bounce là
+> trường hợp ngược lại — địa chỉ **không còn nhận được** (gõ sai, hộp thư đã
+> đóng, domain hết tồn tại) nhưng không ai chủ động báo. Thiếu cơ chế này,
+> hệ thống cứ gửi mãi vào một địa chỉ chết, tốn quota SMTP và (nếu dùng dịch
+> vụ gửi email thứ 3) kéo tụt uy tín domain gửi (sender reputation) — ảnh
+> hưởng lây sang cả việc gửi cho những địa chỉ còn sống.
+
+Cùng một dạng suy biến với `AppUser.Email = null` đã cảnh báo ở §4 — chỉ
+khác là ở đây địa chỉ **có giá trị nhưng không còn hợp lệ**, nên không lọc
+được bằng kiểm tra `null` đơn giản, phải phát hiện dần từ kết quả gửi thật.
+
+- **Hard bounce** (địa chỉ không tồn tại, domain sai) — dừng gửi **ngay từ
+  lần đầu phát hiện**, không retry.
+- **Soft bounce** (hộp thư đầy, server tạm thời từ chối) — cho phép thử lại
+  vài lần (dùng lại backoff đã bàn ở §3.2), nhưng vẫn thất bại liên tục sau
+  ngưỡng thì coi như hard bounce, chuyển sang danh sách chặn.
+
+```csharp
+public interface IBounceHandler
+{
+    Task MarkSuppressedAsync(string email, BounceReason reason, CancellationToken ct);
+}
+
+// Trước khi gửi bất kỳ thông báo nào — kiểm danh sách chặn trước, không đợi lỗi
+if (await _suppressionList.IsSuppressedAsync(recipient.Email, ct))
+{
+    _logger.LogInformation("Bỏ qua gửi tới {Email} — đã trong danh sách bounce", recipient.Email);
+    return;
+}
+```
+
+Cách phát hiện bounce phụ thuộc kênh gửi:
+
+- **SMTP tự host** (không qua dịch vụ ngoài) — bounce thường trả về
+  **muộn**, qua 1 email lỗi gửi tới hộp `From`, không đồng bộ ngay lúc gọi
+  hàm gửi. Tối thiểu, bắt `SmtpException` với mã lỗi 5xx (permanent failure)
+  ngay tại điểm gửi để phát hiện được phần bounce tức thời.
+- **Dịch vụ gửi email thứ 3** (SendGrid, AWS SES, Mailgun...) — có webhook
+  bounce/complaint riêng, đáng tin cậy hơn hẳn tự parse SMTP response; nếu
+  hệ thống chuyển sang dùng dịch vụ ngoài, đăng ký webhook đó thay vì tự dò.
+
 ## 4. Những mảnh dự kiến tái dùng — kiểm tồn tại TRƯỚC khi dựa vào
 
-> ### ⚠️ Bảng này chưa xác minh lại được (2026-08-23)
+> ### ⚠️ Bảng rà 2026-08-23 đã lạc hậu — rà lại 2026-08-24
 >
-> Tiêu đề trước 2026-08-23 là *"Những mảnh dự án **ĐÃ CÓ** — tái dùng, **đừng dựng lại**"*, tức
-> nó ra lệnh cho agent **không** xây những thứ dưới đây. Rà ngày 2026-08-23 trên
-> working copy hiện tại:
+> Bảng 2026-08-23 (giữ bên dưới để biết lịch sử) kết luận cả 3 mảnh dưới đều
+> **chưa có**. Rà lại trên working copy 2026-08-24 (chưa commit) cho kết quả
+> khác hẳn — cả 3 mảnh coi là "chưa có" trước đây **giờ đã tồn tại thật**:
 >
-> | Mảnh | Kiểm 2026-08-23 |
-> | --- | --- |
-> | Hangfire | `grep -r Hangfire src/BE` = **0**, kể cả trong `.csproj` |
-> | `StartImportCommand`, `ImportJobRunner`, `GetImportJobStatusQuery`, bảng `ImportJobs` | cả 4 = **0**; `ImportController` hiện import **đồng bộ**, không trả 202 |
-> | `AppUser` | **có thật** — `Core.Infrastructure/Identity/AppUser.cs` |
+> | Mảnh | Kiểm 2026-08-23 (lạc hậu) | Kiểm 2026-08-24 |
+> | --- | --- | --- |
+> | Hangfire | `grep -r Hangfire src/BE` = 0 | Cấu hình đầy đủ trong `Program.cs` (xem bảng dưới) |
+> | `StartImportCommand`, `ImportJobRunner`, `GetImportJobStatusQuery`, bảng `ImportJobs` | cả 4 = 0 | Cả 4 **tồn tại thật** trong `Modules/DtiWeekly/.../Application/Import/` + migration `20260818090451_AddRolePermissionAndImportJob` — chưa xác minh `ImportController` đã trả 202 hay còn đồng bộ |
+> | `AppUser` | có thật | vẫn có thật |
 >
-> Working copy là **bản cũ** (xác nhận 2026-08-23) nên chưa kết luận được bảng
-> này sai hay code chưa về. Nhưng cho tới khi xác minh lại: **kiểm sự tồn tại
-> trước khi dựa vào**, và đừng đọc *"đừng dựng lại"* như một mệnh lệnh — một
-> tiêu đề như vậy đặt lên hạ tầng không tồn tại sẽ khiến việc cần làm bị bỏ qua.
+> Vẫn giữ nguyên tắc: **kiểm sự tồn tại trước khi dựa vào** thay vì tin bảng
+> dưới đây theo mặt chữ — bảng dưới viết khi các mảnh này chưa tồn tại, nên
+> có thể đã lệch so với implementation thật hiện tại (interface, tên field...).
 
 | Mảnh có sẵn | Ở đâu | Dùng làm gì |
 | --- | --- | --- |
@@ -204,6 +319,53 @@ Cách tránh khi dựng lại:
 - Thêm một health check cho kênh gửi (xem `be/07-observability.md`) — cấu
   hình sai lộ ra ở `/health` chứ không đợi tới lúc có người cần nhận thông
   báo.
+
+### Cách làm cụ thể — sink log-only / MailHog, không chỉ dừng ở ý tưởng
+
+> Bổ sung 2026-08-24, đối chiếu thực hành chuẩn ngành: gợi ý "một sink ghi
+> ra file/log" ở trên đúng hướng nhưng mới dừng ở ý tưởng. Cụ thể hoá thành
+> 2 lựa chọn thật, chọn theo môi trường — cả hai đều tránh lặp lại đúng bẫy
+> vừa nêu (cấu hình giả trông như thật, chỉ vỡ lúc gửi thật):
+
+- **Development (chạy tay trên máy dev):** trỏ SMTP tới
+  [MailHog](https://github.com/mailhog/MailHog) (hoặc
+  [Mailpit](https://github.com/axllent/mailpit) — bản kế thừa đang được duy
+  trì tích cực hơn) chạy local qua Docker. Nó nhận mọi email gửi tới, có UI
+  web xem nội dung, **không** gửi ra Internet thật — dù code chạy y hệt
+  luồng production, không cần rẽ nhánh `if (isDev)` nào trong code gửi:
+
+```yaml
+# docker-compose.yml — chỉ cho dev
+mailhog:
+  image: mailhog/mailhog
+  ports:
+    - "1025:1025"   # SMTP giả — trỏ SmtpOptions.Host/Port vào đây khi Development
+    - "8025:8025"   # UI xem email đã "gửi"
+```
+
+- **Integration test (chạy tự động, không có Docker/mạng):** đăng ký 1
+  implementation khác hẳn của interface gửi, chỉ ghi vào danh sách in-memory
+  để test assert, không chạm mạng — override đúng registration mà production
+  dùng, qua `WebApplicationFactory` hoặc fixture DI riêng của test:
+
+```csharp
+// Test fixture — override đúng registration production dùng
+services.AddSingleton<INotificationSender, FakeNotificationSender>();
+
+public class FakeNotificationSender : INotificationSender
+{
+    public List<SentNotification> Sent { get; } = new();
+    public Task SendAsync(SentNotification n, CancellationToken ct)
+    {
+        Sent.Add(n);   // Test assert trên danh sách này, không có gì rời khỏi process
+        return Task.CompletedTask;
+    }
+}
+```
+
+MailHog/Mailpit là "giá trị không thể nhầm là thật" ở mức hạ tầng (không
+cấu hình thật, luôn thấy ngay qua UI); fake sender ở integration test tránh
+việc test vô tình gửi email thật ra ngoài khi có người quên đổi cấu hình.
 
 ## 8. Vẫn hoãn — chưa tới ngưỡng
 

@@ -3,7 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { httpErrorInterceptor } from './http-error.interceptor';
-import { ToastService } from '../../shared/services/toast.service';
+import { ToastService } from '../toast/toast.service';
 import { IApiResult, IHttpErrorWithApiResult } from '../http/api-result.model';
 
 // Kiểm chứng F0 (doc/huong_dan/wiki-core/fe/trien-khai/01-f0-dong-bo-envelope.md): test này BAN

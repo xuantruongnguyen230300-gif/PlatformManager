@@ -13,15 +13,11 @@ export interface IUserDto {
   dateCreate: string;
 }
 
-// `PagedList<UserDto>` — LƯU Ý: khác `IPagedResultDto<T>` (core/http/paged-result.model.ts, dùng
-// cho danh-muc-dti) — contract Users dùng field `total` (không phải `totalCount`) và KHÔNG có
-// `totalPages`, xem doc/contracts/users.md. Không tái dùng nhầm type chung.
-export interface IUserPagedListDto {
-  items: IUserDto[];
-  total: number;
-  page: number;
-  pageSize: number;
-}
+// `PagedList<UserDto>` dùng chung shape `IPagedResultDto<T>` (core/http/paged-result.model.ts) —
+// shape phân trang đã CHỐT một bản duy nhất cho mọi endpoint list, xem
+// doc/huong_dan/quy-uoc/be-cqrs-handler.md §"Shape phân trang" + doc/contracts/users.md. Trước
+// đây có type riêng `IUserPagedListDto` (field `total`) vì tưởng contract Users khác — không còn
+// đúng sau khi CHỐT, đã gộp lại dùng `IPagedResultDto<IUserDto>`/`IPagedResult<IUser>` chung.
 
 export interface ICreateUserRequestDto {
   userName: string;
@@ -48,13 +44,6 @@ export interface IUser {
   IsLocked: boolean;
   MustChangePassword: boolean;
   DateCreate: string;
-}
-
-export interface IUserPagedList {
-  Items: IUser[];
-  Total: number;
-  Page: number;
-  PageSize: number;
 }
 
 export interface IUserListParams {

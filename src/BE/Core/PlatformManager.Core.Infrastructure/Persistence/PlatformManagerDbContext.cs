@@ -29,6 +29,7 @@ public class PlatformManagerDbContext(
 
     public DbSet<SysMenu> SysMenus => Set<SysMenu>();
     public DbSet<SysMenuRole> SysMenuRoles => Set<SysMenuRole>();
+    public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

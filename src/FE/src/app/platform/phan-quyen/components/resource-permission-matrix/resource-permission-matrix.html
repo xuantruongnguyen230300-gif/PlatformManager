@@ -1,0 +1,48 @@
+<div class="tablewrap">
+  <table>
+    <thead>
+      <tr>
+        <th style="width:40%">Tài nguyên</th>
+        @for (role of roles(); track role) {
+          <th class="num">
+            {{ role }}
+            @if (isAlwaysAllowed(role)) {
+              <span class="always-tag muted">luôn có toàn quyền</span>
+            }
+          </th>
+        }
+      </tr>
+    </thead>
+    <tbody>
+      @for (row of rows(); track row.ResourceKey) {
+        <tr>
+          <td>{{ row.ResourceName }}</td>
+          @for (role of roles(); track role) {
+            <td class="num">
+              <input
+                type="checkbox"
+                [checked]="isChecked(row, role)"
+                [disabled]="isDisabled(role)"
+                (change)="permissionToggle.emit({ ResourceKey: row.ResourceKey, Role: role })"
+                [attr.aria-label]="cellAriaLabel(row, role)"
+              />
+            </td>
+          }
+        </tr>
+      } @empty {
+        <tr>
+          <td [attr.colspan]="roles().length + 1" class="muted">Chưa có tài nguyên nào.</td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>
+
+@if (hasAlwaysAllowedRole()) {
+  <p class="muted always-note">
+    Cột <strong>{{ alwaysAllowedRole }}</strong> luôn được tick và không sửa được ở đây: role này
+    mặc định có mọi quyền với mọi tài nguyên, nên bỏ tick cũng không thu hồi được gì. Muốn một
+    người không còn toàn quyền, vào "Quản trị hệ thống → Người dùng" và gỡ role
+    <strong>{{ alwaysAllowedRole }}</strong> khỏi tài khoản của họ.
+  </p>
+}

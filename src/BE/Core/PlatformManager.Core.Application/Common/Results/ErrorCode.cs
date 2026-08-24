@@ -17,5 +17,6 @@ public enum ErrorCode
     NotFound = 404,
     Conflict = 409,
     BusinessRuleError = 422,
+    TooManyRequests = 429,
     SystemError = 500,
 }

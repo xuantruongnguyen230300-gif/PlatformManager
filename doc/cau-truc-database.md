@@ -69,16 +69,30 @@ Hệ quả cần biết:
 | `AspNetRoleClaims` | Claim cấp role (Identity sinh sẵn, chưa dùng) |
 | `AspNetUserLogins` | Đăng nhập ngoài (Google/Microsoft...), chưa dùng |
 | `AspNetUserTokens` | Token nội bộ Identity (reset password, 2FA) |
-| `RolePermissions` | 🚧 **Phân quyền theo hành động** (chưa thi công — xem §2.1) — role nào được phép chạm `ResourceKey` nào. PK ghép (`RoleId`, `ResourceKey`), `ResourceKey` `varchar(100)`; FK `RoleId → AspNetRoles.Id` `ON DELETE CASCADE`. Index phụ `IX_RolePermissions_ResourceKey_RoleId` (`ResourceKey`, `RoleId`) — xem §4 |
+| `RolePermissions` | ✅ **Phân quyền theo hành động** (đã thi công 2026-08-24 — xem §2.1) — role nào được phép chạm `ResourceKey` nào. PK ghép (`RoleId`, `ResourceKey`), `ResourceKey` `varchar(100)`; FK `RoleId → AspNetRoles.Id` `ON DELETE CASCADE`. Index phụ `IX_RolePermissions_ResourceKey_RoleId` (`ResourceKey`, `RoleId`) — xem §4 |
 | `SysMenus` | Menu điều hướng động (sidebar), tự tham chiếu `ParentId` cho cây 1 cấp |
 | `SysMenuRoles` | Role nào được thấy menu nào (nhiều-nhiều) |
 | `__EFMigrationsHistory` | Bảng nội bộ EF Core theo dõi migration đã áp dụng |
 
 > **⚠️ `RolePermissions` rỗng = mọi role (trừ `SuperAdmin`) bị 403.**
-> `RequirePermissionFilter` là deny-by-default. `CoreSeeder.SeedRolePermissionsAsync()`
-> cấp đủ key cho `Admin`/`User`, nhưng seeder **chỉ chạy khi `IsDevelopment()`**
-> — DB thật/production phải seed tay. Xem §5.1 và `doc/contracts/permissions.md`
-> § "Rủi ro rollout".
+> `RequirePermissionFilter` là deny-by-default. **✅ Đóng 2026-08-24:**
+> `CoreSeeder.SeedRolePermissionsAsync()` (gọi ngay sau `SeedRolesAsync()`
+> trong `SeedAsync()`) nay seed đủ 3 `ResourceKeys.All` cho `Admin`/`User` ở
+> Development. `[RequirePermission]` cũng đã gắn lên cả 3 controller
+> (`CriteriaController`/`CriteriaGroupsController`/`ImportController`) CÙNG
+> lúc với đợt seed này — đúng thứ tự "expand trước, contract sau" ở §2.1
+> `doc/huong_dan/wiki-core/be/13-core-data-migration.md`. Production (không đi
+> qua `CoreSeeder`, chỉ chạy `IsDevelopment()`) seed bằng
+> `scripts/seed-role-permissions.sql` (idempotent, `ON CONFLICT DO NOTHING`) —
+> **bắt buộc chạy** trên mọi DB thật trước hoặc cùng lúc với việc áp migration
+> `0004_role_permission_import_job.sql`, nếu không mọi role trừ `SuperAdmin`
+> vẫn bị 403 hàng loạt trên chính DB đó. Xem `doc/contracts/permissions.md`
+> §"Rủi ro rollout".
+>
+> *(Lịch sử: trước 2026-08-24, `CoreSeeder` không có method seed bảng này —
+> bảng rỗng ở MỌI môi trường kể cả Development. Xem
+> `doc/huong_dan/wiki-core/be/13-core-data-migration.md` §"Áp dụng vào
+> PlatformManager" để biết đầy đủ bối cảnh khoảng trống đó.)*
 
 ### Schema `business`
 
@@ -86,26 +100,31 @@ Hệ quả cần biết:
 |---|---|
 | `CriteriaGroups` | Nhóm chỉ tiêu đánh giá DTI Weekly |
 | `Criteria` | Chỉ tiêu đánh giá cụ thể, thuộc 1 `CriteriaGroups` |
-| `CriteriaAssessments` | Kết quả đánh giá 1 `Criteria` theo từng kỳ (phần ngày của `DateCreate` = kỳ) |
+| `CriteriaAssessments` | Kết quả đánh giá 1 `Criteria` theo từng kỳ (phần ngày của `DateCreate` = kỳ). ✅ Optimistic concurrency (2026-08-24, migration `0006_criteria_assessment_row_version.sql`) — property CLR `Version` (`uint`) bind thẳng vào cột hệ thống `xmin` có sẵn của Postgres, KHÔNG tạo cột thật nào (xem `doc/huong_dan/quy-uoc/be-entity-domain.md` §RowVersion) |
 | `CriteriaEvidences` | Minh chứng đính kèm 1 `CriteriaAssessments` (nhiều dòng/bản ghi) |
-| `ImportJobs` | 🚧 **Trạng thái job import CSV/Excel chạy nền qua Hangfire** (chưa thi công — xem §2.1). Cột: `Id` (uuid, PK), `FileName` `varchar(260)` NOT NULL, `Format` `varchar(20)` NOT NULL, `StoragePath` `varchar(1000)` NOT NULL, `Status` `varchar(20)` NOT NULL, `ResultJson` `text`, `ErrorMessage` `text` + 6 field `BaseEntity`. Index `IX_ImportJobs_Status` phục vụ endpoint poll `GET /api/import/{jobId}`. **Không có FK nào** — job độc lập với dữ liệu nó ghi ra |
+| `ImportJobs` | ✅ **Trạng thái job import CSV/Excel chạy nền qua Hangfire** (đã thi công 2026-08-24 — xem §2.1). Cột: `Id` (uuid, PK), `FileName` `varchar(260)` NOT NULL, `Format` `varchar(20)` NOT NULL, `StoragePath` `varchar(1000)` NOT NULL, `Status` `varchar(20)` NOT NULL, `ResultJson` `text`, `ErrorMessage` `text` + 5 field còn lại của `BaseEntity` (`Id` đã liệt kê ở
+đầu, `BaseEntity` có 6 field tổng cộng). Index `IX_ImportJobs_Status` phục vụ endpoint poll `GET /api/import/{jobId}`. **Không có FK nào** — job độc lập với dữ liệu nó ghi ra |
 
 > `ImportJobs` là bảng *trạng thái tiến trình*, khác 4 bảng còn lại (dữ liệu
 > nghiệp vụ). Nó lưu **đường dẫn** file tạm (`StoragePath`), không lưu nội
 > dung file — file upload không sống sót qua ranh giới request→job nền, xem
 > `doc/huong_dan/quy-uoc/be-cqrs-handler.md` § "Command chạy lâu → job nền".
 
-## 2.1. 🚧 Hai bảng ĐÃ CHỐT nhưng CHƯA thi công — `RolePermissions`, `ImportJobs`
+## 2.1. ✅ `RolePermissions`/`ImportJobs` — ĐÃ CHỐT, đã thi công (2026-08-24)
 
-**Trạng thái (đối chiếu 2026-08-23):** hai bảng liệt kê ở §2 là **thiết kế đã
-chốt**, **chưa tồn tại** trong code. Đừng đọc chúng như bảng đang chạy.
+**Trạng thái (xác minh 2026-08-24, sau đợt nối dây Hangfire + permission-by-action
++ seed) — khác 2 bản trước đó (2026-08-23, 2026-08-24 sáng), không còn dòng
+"chưa có" nào ở bảng dưới:**
 
-| Có thật hôm nay | Sẽ thành |
-| --- | --- |
-| Không có entity/configuration `RolePermission`, `ImportJob` | 2 entity + EF configuration |
-| `ModelSnapshot` không có 2 bảng này | có trong snapshot |
-| `CoreSeeder` chỉ có `SeedRolesAsync`/`SeedBootstrapUserAsync`/`SeedMenuAsync` | thêm `SeedRolePermissionsAsync()` |
-| Không có `RequirePermissionFilter`, không có `ResourceKeys` | có, deny-by-default |
+| Mã | Kiểm 2026-08-23 (lạc hậu) | Kiểm 2026-08-24 |
+| --- | --- | --- |
+| Entity/configuration `RolePermission`, `ImportJob` | chưa có | **đã có** — `RolePermission.cs`, `RolePermissionConfiguration.cs`, `ImportJob.cs` |
+| `RequirePermissionFilter`, `ResourceKeys` | chưa có | **đã có**, deny-by-default, ĐÃ GẮN lên `CriteriaController`/`CriteriaGroupsController`/`ImportController` (xem `doc/huong_dan/quy-uoc/be-api-controller.md`) |
+| `AddPermissionInfrastructure()` + `options.Filters.Add<RequirePermissionFilter>()` ở `Program.cs` | chưa có | **đã có** — filter thật sự nằm trong pipeline MVC (kiểm bằng seam activation test `RequirePermissionSeamTests`, không chỉ unit test) |
+| `CoreSeeder.SeedRolePermissionsAsync()` | chưa có | **đã có** — seed đủ 3 `ResourceKeys.All` cho `Admin`/`User` ở Development; production seed bằng `scripts/seed-role-permissions.sql` |
+| `Hangfire` (`AddHangfire`/`AddHangfireServer`/`UseHangfireDashboard`) ở `Program.cs` | chưa có | **đã có** — package `Hangfire.Core`/`Hangfire.AspNetCore`/`Hangfire.PostgreSql`, storage dùng chung connection string `Default`, tự tạo schema `hangfire` lúc khởi động lần đầu. Kiểm bằng seam activation test `ImportBackgroundJobSeamTests` (poll `Pending` → `Succeeded` qua HTTP thật) |
+| `ImportController` gọi `StartImportCommand` (đường job nền) | chưa có (còn gọi `ImportCsvCommand` đồng bộ cũ) | **đã có** — `POST /api/import` (đổi từ `/api/import/csv`), DI đủ `IImportJobRunner`/`IImportFileStorage`/`IImportJobRepository`/`IImportFileReader` (2 impl: CSV ở Application, Excel ở Infrastructure) |
+| `ModelSnapshot` có 2 bảng này | chưa có | **đã có** — vá bằng cách sinh 1 migration tạm (`dotnet ef migrations add`) để buộc EF tự regenerate `PlatformManagerDbContextModelSnapshot.cs` đúng, rồi xoá migration tạm, giữ lại snapshot đã đúng. Xác nhận không còn model drift bằng `dotnet ef migrations add` thử lần nữa ra migration RỖNG |
 
 **Định nghĩa đầy đủ để thi công** — đây là bản duy nhất còn lại sau khi gộp
 `doc/ERD/` (đã xoá), nên ghi đủ cả tên constraint:

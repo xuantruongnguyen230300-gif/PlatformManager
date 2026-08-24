@@ -63,7 +63,7 @@ public sealed class GetCriteriaListHandler(
         {
             IsLive = isLive,
             Items = paged,
-            Total = total,
+            TotalCount = total,
             Page = page,
             PageSize = pageSize,
         });

@@ -1,7 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
-import { IApiResult } from '../../../core/http/api-result.model';
+import { IApiResult, unwrapData } from '../../../core/http/api-result.model';
 import { IDashboardAggregate, IDashboardAggregateDto, IDashboardQueryParams, IReport, IReportDto } from '../models/dashboard.model';
 import { mapDashboardAggregateDtoToModel, mapReportDtoToModel } from './dashboard.mapper';
 
@@ -27,12 +27,12 @@ export class DashboardService {
   getAggregate(params: IDashboardQueryParams): Observable<IDashboardAggregate> {
     return this.http
       .get<IApiResult<IDashboardAggregateDto>>('/dashboard', { params: buildQueryParams(params) })
-      .pipe(map((res) => mapDashboardAggregateDtoToModel(res.data as IDashboardAggregateDto)));
+      .pipe(map((res) => mapDashboardAggregateDtoToModel(unwrapData(res))));
   }
 
   getReport(params: IDashboardQueryParams): Observable<IReport> {
     return this.http
       .get<IApiResult<IReportDto>>('/dashboard/report', { params: buildQueryParams(params) })
-      .pipe(map((res) => mapReportDtoToModel(res.data as IReportDto)));
+      .pipe(map((res) => mapReportDtoToModel(unwrapData(res))));
   }
 }

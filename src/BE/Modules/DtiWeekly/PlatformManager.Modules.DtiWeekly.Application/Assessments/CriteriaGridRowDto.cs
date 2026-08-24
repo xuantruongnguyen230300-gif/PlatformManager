@@ -33,7 +33,7 @@ public sealed class CriteriaGridResultDto
     /// duy nhất trạng thái cho phép sửa (xem spec/danh-muc-dti/business-rules.md mục 2.4).</summary>
     public bool IsLive { get; init; }
     public IReadOnlyList<CriteriaGridRowDto> Items { get; init; } = [];
-    public int Total { get; init; }
+    public int TotalCount { get; init; }
     public int Page { get; init; }
     public int PageSize { get; init; }
 }

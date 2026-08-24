@@ -1,13 +1,15 @@
 using FluentValidation;
+using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Diagnostics;
 using PlatformManager.Core.Application.Common.Results;
 
 namespace PlatformManager.Api.Common;
 
 /// <summary>
-/// Bắt 2 loại lỗi không đi qua HandleResult: FluentValidation.ValidationException (validator
-/// fail trước handler) và exception không mong đợi (bug/hạ tầng) — dịch cả hai thành đúng
-/// IApiResult envelope, KHÔNG lộ stack trace ra response. Xem
+/// Bắt 3 loại lỗi không đi qua HandleResult: FluentValidation.ValidationException (validator
+/// fail trước handler), AntiforgeryValidationException (thiếu/sai token CSRF — xem
+/// doc/huong_dan/wiki-core/be/02-identity-auth.md §CSRF) và exception không mong đợi (bug/hạ
+/// tầng) — dịch cả ba thành đúng IApiResult envelope, KHÔNG lộ stack trace ra response. Xem
 /// .claude/rules/api-controller.md §Exception-handling middleware toàn cục.
 /// </summary>
 public sealed class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) : IExceptionHandler
@@ -27,6 +29,15 @@ public sealed class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logge
                 Fields = vex.Errors
                     .GroupBy(e => NormalizeField(e.PropertyName))
                     .ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).ToArray()),
+            },
+            // Thiếu/sai header X-XSRF-TOKEN (hoặc cookie XSRF-TOKEN) trên request ghi — 403, KHÔNG
+            // phải 500: đây là request bị TỪ CHỐI có chủ đích, không phải lỗi hệ thống.
+            AntiforgeryValidationException => new ApiResult<object>
+            {
+                Status = ApiResultStatus.BUSINESS_ERROR,
+                Code = ErrorCode.AuthorizationError,
+                Message = "Yêu cầu bị từ chối — thiếu hoặc sai token chống giả mạo (CSRF).",
+                TraceId = traceId,
             },
             _ => new ApiResult<object>
             {

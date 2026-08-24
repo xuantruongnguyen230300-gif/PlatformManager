@@ -1,0 +1,40 @@
+.tablewrap {
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-table);
+  overflow: auto;
+  max-height: 560px;
+}
+
+input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--brand);
+}
+
+input[type='checkbox']:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+/* Cột break-glass (`SuperAdmin`) — ô khoá: vẫn thấy rõ là đã tick, nhưng không mời gọi bấm. */
+input[type='checkbox']:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Nhãn nhỏ dưới tên role ở header. Chỉ layout — màu/cỡ chữ lấy từ class global `.muted`. */
+.always-tag {
+  display: block;
+  margin-top: 2px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: nowrap;
+}
+
+/* Chú thích dưới bảng — màu/cỡ chữ từ `.muted`, ở đây chỉ khoảng cách + độ dễ đọc. */
+.always-note {
+  margin-top: var(--sp-3);
+  line-height: 1.5;
+}

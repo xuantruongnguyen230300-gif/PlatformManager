@@ -15,7 +15,7 @@
   height: 30px;
   border-radius: 50%;
   background: var(--brand);
-  color: #fff;
+  color: var(--on-primary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -40,7 +40,7 @@
   padding: 2px 8px;
   font-size: var(--fs-xs);
   color: var(--text);
-  background: #f8fafc;
+  background: var(--surface-table-header);
   margin-right: 4px;
 }
 

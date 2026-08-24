@@ -77,7 +77,7 @@ Nothing here requires touching `src/`. Every finding is a documentation correcti
 
 ### Verified beyond the required checks
 
-- **Component gate** — 28 specs on disk, 28 indexed, **0** screen-spec references to an unindexed component. All 27 live components are cited by at least one screen; the 1 obsolete (`Fab`) is cited by none, which is correct.
+- **Component gate** — 27 specs on disk, 27 indexed (stale after 2026-08-23's `TabBar` deletion — see `COMPONENTS.md`; re-run `/design-audit` for a fresh verdict), **0** screen-spec references to an unindexed component. All 26 live components are cited by at least one screen; the 1 obsolete (`Fab`) is cited by none, which is correct.
 - **Prompt packs** — all 5 flows present. **0** unresolved `{token.reference}`, **0** `var(--…)`, and every hex in all five files resolves to a colour that exists in the live `:root`. No invented values.
 - **`tokens.json`** — valid W3C DTCG: 81 `global` + 33 `light` tokens, every one carrying `$type`; `dark` deliberately empty because no dark mode ships. Every colour traces to `styles.scss`.
 

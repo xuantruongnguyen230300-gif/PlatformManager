@@ -1,15 +1,19 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using PlatformManager.Api.Common;
+using PlatformManager.Core.Application.Permissions;
 using PlatformManager.Modules.DtiWeekly.Application.Assessments;
 using PlatformManager.Modules.DtiWeekly.Application.Criteria;
 
 namespace PlatformManager.Api.Controllers;
 
-// [Authorize] kế thừa từ ApiControllerBase — mọi user đã đăng nhập đều thao tác được (đã CHỐT
-// với người dùng, không phân biệt role cho nghiệp vụ DTI Weekly).
+// [Authorize] kế thừa từ ApiControllerBase — [RequirePermission] cộng dồn (không thay thế): chỉ
+// role được cấp ResourceKeys.Criteria mới thao tác được. "Không phân biệt role" (comment cũ) là
+// hành vi TRƯỚC KHI PERM-2 bật — nay phân quyền theo hành động qua RolePermission (Admin/User đã
+// seed đủ cả 3 key, xem doc/contracts/permissions.md §"Rủi ro rollout").
 [ApiController]
 [Route("api/criteria")]
+[RequirePermission(ResourceKeys.Criteria)]
 public class CriteriaController(ISender mediator) : ApiControllerBase
 {
     [HttpGet]

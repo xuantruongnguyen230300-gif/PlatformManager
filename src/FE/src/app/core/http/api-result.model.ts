@@ -40,3 +40,18 @@ export interface IApiResult<T> {
 export interface IHttpErrorWithApiResult {
   apiResult?: IApiResult<unknown> | null;
 }
+
+/**
+ * Đọc `data` khỏi envelope, ném lỗi rõ ràng nếu thiếu — dùng ở MỌI service gọi HTTP thay cho
+ * `res.data as T` / `res.data!` vốn tắt hẳn kiểm tra kiểu và biến `data` vắng mặt thành lỗi vô
+ * nghĩa ("cannot read property of undefined") ở tận trong mapper.
+ *
+ * CHỈ coi `null`/`undefined` là "thiếu" — `false`, `0`, `''` là giá trị hợp lệ (BE trả
+ * `data: false` cho logout/lock/unlock). KHÔNG rút gọn thành `if (!res.data)`.
+ */
+export function unwrapData<T>(res: IApiResult<T>): T {
+  if (res.data === null || res.data === undefined) {
+    throw new Error(`Envelope thiếu \`data\` (traceId: ${res.traceId ?? 'không có'})`);
+  }
+  return res.data;
+}

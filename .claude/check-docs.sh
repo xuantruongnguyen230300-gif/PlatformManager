@@ -13,6 +13,14 @@
 # số phận của scripts/fe-gate.sh. Giữ nguyên hình dạng này khi sửa.
 
 set -uo pipefail
+
+# Ép locale UTF-8 tường minh — không dựa vào locale sẵn có của shell gọi script.
+# Phát hiện 2026-08-24 (core-reviewer): trên Git Bash với LANG rỗng, `grep -P`
+# (dùng ở nhiều mục bên dưới) lỗi "-P supports only unibyte and UTF-8 locales"
+# và THOÁT MÃ 2 — nhưng vòng lặp `while read` bọc ngoài chỉ đơn giản không nhận
+# được dòng nào, nên mục đó luôn in "OK" dù không hề chạy kiểm tra thật. Gate
+# PASS giả kiểu này nguy hiểm hơn FAIL thật, vì không ai nghi ngờ để kiểm lại.
+export LC_ALL=en_US.UTF-8
 cd "$(dirname "$0")/.." || exit 2
 
 FAIL=0

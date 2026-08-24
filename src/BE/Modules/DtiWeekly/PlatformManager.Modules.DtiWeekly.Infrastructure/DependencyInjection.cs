@@ -5,6 +5,8 @@ using PlatformManager.Modules.DtiWeekly.Application;
 using PlatformManager.Modules.DtiWeekly.Application.Criteria;
 using PlatformManager.Modules.DtiWeekly.Application.CriteriaGroups;
 using PlatformManager.Modules.DtiWeekly.Application.Assessments;
+using PlatformManager.Modules.DtiWeekly.Application.Import;
+using PlatformManager.Modules.DtiWeekly.Infrastructure.Import;
 using PlatformManager.Modules.DtiWeekly.Infrastructure.Persistence;
 using PlatformManager.Modules.DtiWeekly.Infrastructure.Persistence.Repositories;
 
@@ -38,6 +40,13 @@ public static class DependencyInjection
         services.AddScoped<ICriteriaAssessmentQueryRepository>(sp => sp.GetRequiredService<CriteriaAssessmentRepository>());
 
         services.AddScoped<DtiWeeklySeeder>();
+
+        // Import job nền (CONTRACT DM-7) — phần cần hạ tầng ASP.NET Core/EF Core cụ thể.
+        // IImportFileReader (Excel, NPOI) đăng ký CỘNG THÊM vào CsvFileReader đã đăng ký ở
+        // Application (AddDtiWeeklyApplication) — cả 2 cùng vào IEnumerable<IImportFileReader>.
+        services.AddScoped<IImportFileStorage, LocalImportFileStorage>();
+        services.AddScoped<IImportJobRepository, ImportJobRepository>();
+        services.AddScoped<IImportFileReader, ExcelFileReader>();
 
         return services;
     }

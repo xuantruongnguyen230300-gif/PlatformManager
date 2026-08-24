@@ -19,10 +19,12 @@ tools: ["stitch", "claude-design", "ai-studio", "generic"]
 
      THE FAILURE MODE THIS PACK EXISTS TO PREVENT: inventing structure. The route is ONE
      card holding ONE matrix — 19 lines of template. Earlier versions of this pack asked
-     for a tab bar and a second "resource permissions" matrix; neither exists in src/FE/,
-     and every image generated from that text showed a screen that does not ship. The
-     resource matrix is contract PERM-2, still Status: DRAFT — see Screens/04-phan-quyen.md
-     § Normalize on redesign #1. Do not add it back until it ships. -->
+     for a tab bar and a second "resource permissions" matrix; a tab bar never existed in
+     src/FE/, and every image generated from that text showed a screen that does not ship.
+     The resource matrix is contract PERM-2, still Status: DRAFT — a component implementing
+     it now exists (2026-08-24, uncommitted) but is NOT wired into phan-quyen.page.ts, so it
+     still does not render on this route — see Screens/04-phan-quyen.md § Normalize on
+     redesign #1. Do not add it back until it actually ships wired in. -->
 
 ## Master Prompt (tool-agnostic)
 

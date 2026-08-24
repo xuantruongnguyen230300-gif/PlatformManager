@@ -91,6 +91,18 @@ chỗ gọi**. Đây cũng chính là "distributed + local, tự fallback êm kh
 down" mà [01-core-components.md](01-core-components.md) #8 mô tả — .NET 9 đã
 đóng gói sẵn, không cần tự viết abstraction.
 
+> **Đừng nhầm "cache" với "session" khi tính tới scale-out.** Cookie
+> authentication của hệ thống này **không cần** Redis/session store phân
+> tán khi chạy ≥2 instance — cookie tự chứa toàn bộ danh tính (claim, con
+> dấu), và `SecurityStampValidator` xác thực lại bằng cách đọc thẳng
+> `AspNetUsers` — bảng dùng chung, không phải state in-memory riêng từng
+> instance (xem [02-identity-auth.md](02-identity-auth.md)). Nghĩa là khi
+> scale-out thật, chỉ **tầng cache permission/dashboard** ở mục này cần xét
+> nâng cấp Redis — session đăng nhập vẫn hoạt động đúng xuyên nhiều instance
+> mà không cần đổi gì. Ngoại lệ duy nhất: **sticky session ở load balancer
+> KHÔNG cần thiết** cho kiến trúc này — chính vì cookie không cần state phía
+> server, request nào tới instance nào cũng xử lý được.
+
 ### 4.5 Invalidation
 
 - **Dữ liệu ảnh hưởng quyền hạn → invalidate tường minh, KHÔNG dựa TTL.**
@@ -202,7 +214,7 @@ Nhóm B — chấp nhận được ở quy mô hiện tại, **theo dõi**, chư
 | --- | --- | --- | --- |
 | **B1** | Phân trang + search chạy trong bộ nhớ (load hết rồi `Skip/Take`) | [`GetCriteriaListQuery.cs:57-60`](../../../../src/BE/Modules/DtiWeekly/PlatformManager.Modules.DtiWeekly.Application/Criteria/GetCriteriaListQuery.cs) | Khi số `Criteria` vượt ~vài trăm, hoặc grid chuyển sang liệt kê record lịch sử nhiều năm |
 | **B2** | Menu load 4 query mỗi lần dựng sidebar | [`SysMenuRoleRepository.cs:29-45`](../../../../src/BE/Core/PlatformManager.Core.Infrastructure/Persistence/Repositories/SysMenuRoleRepository.cs) | Sau khi A0 xong — cùng bản chất (dữ liệu nhỏ, ghi hiếm), gộp chung đợt cache nếu đo thấy đáng |
-| **B3** | FE không cache `GET /meta/menu`, gọi lại mỗi lần khởi tạo sidebar | `src/FE/src/app/shared/services/menu.service.ts` | Thuộc `frontend-expert` — xem [fe/13-performance.md](../fe/13-performance.md) |
+| ~~B3~~ | ✅ **Đã sửa 2026-08-24** — FE nay cache `GET /meta/menu` theo session, không còn gọi lại mỗi lần khởi tạo sidebar | `src/FE/src/app/core/menu/menu.service.ts` (bản cache; bản cũ không cache đã xoá) | Chi tiết + số đo: xem "Rà lần 3" bên dưới |
 
 **Trạng thái sau đợt 1 (2026-08-18) — người dùng chốt phạm vi CHỈ Core, cố ý
 không đụng `Modules.DtiWeekly`:**
@@ -231,10 +243,57 @@ không đụng `Modules.DtiWeekly`:**
 > trong repo: `RequirePermissionFilter.cs` (A0) và `menu-cache-scenario.spec.ts`
 > (§7.1) — nên link tới chúng đã gỡ, giữ lại tên file để tra lại sau.
 
+> ### Rà lần 2 — 2026-08-24, trên working copy hiện tại (chưa commit)
+>
+> Rà lần 1 (2026-08-23, trên) kết luận "chưa xác minh được, có thể là bản cũ".
+> Working copy 2026-08-24 đã có thêm `Permissions/*`, `RolePermission`,
+> migration `20260818101335_AddRolePermissionResourceKeyIndex` — kết quả khác
+> nhau theo từng dòng, **không phải tất cả đều đã về**:
+>
+> | Mã | Kiểm 2026-08-24 |
+> | --- | --- |
+> | A0 | `RequirePermissionFilter.cs` tồn tại thật; `PermissionChecker.cs:11` tự ghi "ĐÚNG 1 query... trước đây tách làm 2" — **đã sửa thật** |
+> | A1 (Core) | `RolePermissionRepository.cs` có `AsNoTracking` ×5 — **đã sửa thật** |
+> | A2 (Core) | Migration `20260818101335_AddRolePermissionResourceKeyIndex` tồn tại thật — **đã sửa thật** |
+> | A4 | `UserAdminService.cs:118-124` vẫn `foreach` gọi `GetRolesAsync` mỗi user — **CHƯA sửa**, nhãn "Xong (22→3)" 2026-08-18 bên dưới sai |
+> | B2 | `SysMenuRoleRepository.cs` (`GetVisibleSysMenuIdsForRolesAsync`) vẫn đúng 4 `ToListAsync` — **CHƯA sửa**, nhãn "Xong (4→1)" 2026-08-18 bên dưới sai |
+>
+> Đã sửa lại nhãn A0/A1/A2/A4/B2 trong bảng dưới cho khớp kết quả này.
+
+> ### Rà lần 3 — 2026-08-24, B3 (menu cache FE) — SAU KHI WIRE XONG THẬT, bởi `frontend-expert`
+>
+> Rà lần 1 (2026-08-23) tìm ra nhãn "✅ Xong (2026-08-19)" ở B3 (bảng trạng
+> thái dưới) trỏ tới `shared/services/menu.service.ts` (đường dẫn cũ, **đã
+> xoá** 2026-08-24 sau khi wire lại — xem dưới) — đọc code file đó lúc bấy
+> giờ: gọi thẳng `HttpClient` mỗi lần, không `signal()`, không
+> `invalidate()`, tức là KHÔNG cache — và ghi nhận `menu-cache-scenario.spec.ts`
+> **không tồn tại ở bất kỳ đâu** trong repo. Nói cách khác nhãn "Xong" kèm số
+> đo S1 3→2 / S2 5→1 (§7.1) là claim **chưa từng đúng** tại thời điểm ghi —
+> đúng loại lỗi CLAUDE.md §4 mô tả (nhãn "đã xong" không ai kiểm lại).
+>
+> Hôm nay đã wire lại THẬT: cache theo `SessionKey` vốn đã có sẵn ở
+> `src/FE/src/app/core/menu/menu.service.ts` (đúng vị trí, chỉ là chưa ai
+> dùng) — `Sidebar` (`shared/components/sidebar/sidebar.ts`) đổi import từ
+> bản không-cache sang bản này; `AuthService.login()/logout()`
+> (`core/auth/auth.service.ts`) gọi `menu.invalidate()`; `PhanQuyenPage.onSave()`
+> (`platform/phan-quyen/pages/phan-quyen/phan-quyen.page.ts`) gọi
+> `menu.refresh()` sau khi lưu ma trận phân quyền. Bản không-cache
+> (`shared/services/menu.service.ts` + `shared/models/menu-item.model.ts`) đã
+> **XOÁ** — không còn ai import.
+>
+> `menu-cache-scenario.spec.ts` (`shared/components/sidebar/`) giờ tồn tại
+> thật và chạy **PASS**: kịch bản S1 tổng **2** request `GET /meta/menu`
+> (1 lần dựng shell đầu, 0 khi điều hướng trong shell, 0 khi dựng lại shell
+> CÙNG phiên, 1 khi dựng lại shell sau khi đổi phiên — breakdown đầy đủ nằm
+> trong chính spec), kịch bản S2 **1** request trên 5 lần dựng shell cùng
+> phiên. Trùng khớp CHÍNH XÁC với số đã ghi năm 2026-08-19 (3→2, 5→1) — nhưng
+> đó là trùng hợp giữa một dự đoán và kết quả thật, không phải bằng chứng dự
+> đoán đó từng được đo thật lúc viết.
+
 | Mã | Trạng thái | Ghi chú |
 | --- | --- | --- |
-| A0 | ⚠️ ✅ Xong (2026-08-18, gộp 2 → 1 query) — chưa xác minh lại 2026-08-23 | KHÔNG cache — xem §6.2 mục 5 |
-| A1 | ⚠️ ✅ Xong **phần Core** (2026-08-18) — chưa xác minh lại 2026-08-23 | Query đọc thuần trong `Core.*` đã có `AsNoTracking`; 2 chỗ **cố ý giữ tracking** (`RolePermissionRepository.ReplaceAllAsync`, `SysMenuRoleRepository.ReplaceAllAsync` — entity lấy ra để `RemoveRange` rồi `SaveChanges`). Repository của `Modules.*` **chưa** làm |
+| A0 | ✅ Xong (2026-08-18, gộp 2 → 1 query) — xác minh lại 2026-08-24, `RequirePermissionFilter.cs` + `PermissionChecker.cs:11` tồn tại thật | KHÔNG cache — xem §6.2 mục 5 |
+| A1 | ✅ Xong **phần Core** (2026-08-18) — xác minh lại 2026-08-24, `RolePermissionRepository.cs` có `AsNoTracking` ×5 | Query đọc thuần trong `Core.*` đã có `AsNoTracking`; 2 chỗ **cố ý giữ tracking** (`RolePermissionRepository.ReplaceAllAsync`, `SysMenuRoleRepository.ReplaceAllAsync` — entity lấy ra để `RemoveRange` rồi `SaveChanges`). Repository của `Modules.*` **chưa** làm |
 
 > **`Modules.*` chưa có `AsNoTracking()` — HOÃN CÓ CHỦ ĐÍCH, không phải sót.**
 > Người dùng đang tập trung phát triển **core**, `src/BE/Modules/**` nằm ngoài
@@ -243,14 +302,14 @@ không đụng `Modules.DtiWeekly`:**
 > ra để sửa rồi `SaveChanges` thì KHÔNG được thêm `AsNoTracking`), nên việc này
 > phải đọc kỹ từng call-site chứ không sed toàn bộ. Ghi nhận 2026-08-20, chuyển
 > vào đây 2026-08-21 khi bỏ thư mục `audit/`.
-| A2 | ⚠️ ✅ Xong **phần Core** (2026-08-18) — chưa xác minh lại 2026-08-23 | Migration `20260818101335_AddRolePermissionResourceKeyIndex`, script `doc/cau-truc-database.md` §2.1. Phần `CriteriaAssessment.DateCreate` thuộc Modules — **chưa** làm |
+| A2 | ✅ Xong **phần Core** (2026-08-18) — xác minh lại 2026-08-24, migration tồn tại thật | Migration `20260818101335_AddRolePermissionResourceKeyIndex`, script `doc/cau-truc-database.md` §2.1. Phần `CriteriaAssessment.DateCreate` thuộc Modules — **chưa** làm |
 | A3 | ⛔ Ngoài phạm vi đợt này (Modules) | |
-| A4 | ⚠️ ✅ Xong (2026-08-18, 22 → 3 query) — chưa xác minh lại 2026-08-23 | |
+| A4 | ❌ CHƯA XONG — nhãn "✅ Xong (22→3)" 2026-08-18 sai, xác minh lại 2026-08-24: `UserAdminService.cs:118-124` vẫn `foreach` gọi `GetRolesAsync` mỗi user | N+1 vẫn còn nguyên |
 | A5 | ⛔ Ngoài phạm vi đợt này (Modules) | Đo lại khi có dữ liệu `CriteriaAssessments` thật — lúc đo bảng này **rỗng**, số đo hiện tại không phản ánh A5/A6 |
 | A6 | ⛔ Ngoài phạm vi đợt này (Modules) | |
 | B1 | ⛔ Ngoài phạm vi đợt này (Modules) | |
-| B2 | ⚠️ ✅ Xong (2026-08-18, 4 → 1 query) — chưa xác minh lại 2026-08-23 | Nâng lên sửa luôn thay vì "theo dõi": gộp round-trip không cần hạ tầng mới, và điều kiện "gộp chung đợt cache" ở cột bên đã không còn vì cache bị bác bỏ |
-| B3 | ✅ Xong (2026-08-19, `frontend-expert`) | Cache theo **khoá phiên** trong `MenuService` (`src/FE/src/app/shared/services/menu.service.ts`); invalidate ở `AuthService.login/logout` + sau khi lưu ma trận phân quyền màn hình. Số đo S1 3→2, S2 5→1 (§7.1) |
+| B2 | ❌ CHƯA XONG — nhãn "✅ Xong (4→1)" 2026-08-18 sai, xác minh lại 2026-08-24: `SysMenuRoleRepository.cs` (`GetVisibleSysMenuIdsForRolesAsync`) vẫn đúng 4 `ToListAsync` | Nâng lên sửa luôn thay vì "theo dõi": gộp round-trip không cần hạ tầng mới, và điều kiện "gộp chung đợt cache" ở cột bên đã không còn vì cache bị bác bỏ |
+| B3 | ✅ Xong THẬT — nhãn "Xong (2026-08-19)" trỏ sai vị trí (bản không-cache) và chưa hề wire; đã wire + xác minh lại 2026-08-24, `frontend-expert` (xem "Rà lần 3" ở trên) | Cache theo **khoá phiên** trong `MenuService` (`src/FE/src/app/core/menu/menu.service.ts`, KHÔNG phải `shared/services/menu.service.ts` — bản đó đã xoá); `Sidebar` import từ đây; invalidate ở `AuthService.login/logout` + `refresh()` sau khi lưu ma trận phân quyền màn hình. Số đo S1 3→2, S2 5→1 (§7.1) — `menu-cache-scenario.spec.ts` tồn tại thật, chạy PASS, khớp đúng con số này |
 
 ### 6.4 Thứ tự thực hiện đã chốt
 
@@ -319,7 +378,8 @@ latency ở cỡ dữ liệu/thiết bị này bị nhiễu chi phối, chỉ d�
 căn cứ. Ghi lại nguyên vẹn để lần sau không ai tưởng đã có baseline latency đáng
 tin.
 
-**Số đo FE — B3 (2026-08-19, `frontend-expert`).** Đơn vị là **số request
+**Số đo FE — B3 (2026-08-19, `frontend-expert`; xác minh lại 2026-08-24 sau
+khi wire xong thật — xem "Rà lần 3" ở §6.3).** Đơn vị là **số request
 `GET /api/meta/menu` trên một kịch bản điều hướng xác định**, không phải
 query/request và không phải milli-giây — thứ cache FE thay đổi là *số lần gọi*,
 nên đó là con số phải đo (đúng `doc/huong_dan/wiki-core/be/11-performance-caching.md` §Đo).
@@ -399,3 +459,39 @@ Chạy thật trên DB đo, KHÔNG chỉ dựa vào build xanh:
   này; ghi ở đây chỉ để đóng câu hỏi "sao không làm luôn".
 - **Compiled model của EF Core** (`UseCompiledModel`) — chỉ đáng khi startup
   time thành vấn đề thật (model rất lớn); hiện chưa.
+
+## 9. Connection pool — cấu hình bắt buộc TRƯỚC khi có traffic thật, không phải "chưa cần"
+
+> Bổ sung 2026-08-24 — đối chiếu thực hành chuẩn ngành cho hệ thống tầm
+> trung: đây là khoảng trống thật, khác các mục Nhóm B ở §8 (những mục đó
+> đúng là hoãn hợp lý; mục này thì nên có sẵn từ đầu vì chi phí cấu hình
+> gần bằng 0 nhưng hậu quả thiếu lại xuất hiện đúng lúc tệ nhất — khi tải
+> tăng đột biến).
+
+Npgsql tự quản lý connection pool, mặc định **`Maximum Pool Size = 100`**.
+Ở quy mô nhỏ điều này vô hại — nhưng đây là dạng lỗi **im lặng cho tới khi
+tải thật xuất hiện**: mỗi request đang xử lý giữ 1 connection suốt thời gian
+sống của nó; nếu số request đồng thời vượt pool size (traffic tăng đột
+biến, hoặc 1 endpoint chạy chậm bất thường giữ connection lâu), request tiếp
+theo **không lỗi ngay** mà **treo chờ** tới khi hết `Timeout` (mặc định 15s)
+rồi mới ném `NpgsqlException: Timeout during connecting`— khó chẩn đoán hơn
+nhiều so với một lỗi rõ ràng ngay từ đầu.
+
+```
+// appsettings.json — connection string, không phải code
+"Host=...;Database=...;Maximum Pool Size=100;Minimum Pool Size=5;Timeout=15;Command Timeout=500"
+```
+
+- **Đặt tường minh, không để mặc định ẩn.** Số 100 nên xuất hiện trong
+  connection string thật, không phải "tự nhiên Npgsql lo hết" — để khi cần
+  điều chỉnh, người sau tìm thấy ngay giá trị đang dùng thay vì phải tra
+  tài liệu Npgsql.
+- **Theo dõi bằng chỉ số thật khi có traffic** — số connection đang mở
+  (`pg_stat_activity` phía Postgres) so với `Maximum Pool Size`; tăng pool
+  size khi số connection chạm trần thường xuyên, **không** tăng phòng hờ
+  trước khi có bằng chứng.
+- Liên hệ trực tiếp với `Command Timeout = 500` (giây) đã cấu hình ở
+  [`04-p3-platform-persistence.md`](trien-khai/04-p3-platform-persistence.md)
+  — 1 command chạy chậm giữ connection tối đa 500s trước khi bị huỷ; pool
+  quá nhỏ + timeout quá dài = cửa sổ nghẽn pool kéo dài, cả 2 số cần xét
+  cùng nhau, không chỉnh riêng lẻ.

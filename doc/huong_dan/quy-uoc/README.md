@@ -55,18 +55,10 @@ Giao diện người dùng — **mọi** surface, cả FE lẫn BE: [`../../Desi
 ### 🚧 Layout project — ĐÃ CHỐT, ĐANG THI CÔNG
 
 Đích đến là 2 tầng `Core.*` + `Business.*`. **Hiện trạng chưa phải như vậy** —
-đối chiếu `PlatformManager.slnx` ngày **2026-08-23**:
-
-| Có thật hôm nay (8 project) | Sẽ thành |
-| --- | --- |
-| `Core.Domain`, `Core.Application`, `Core.Infrastructure` | tách thêm `Core.Common` + `Core.Persistence` + `Core.Api` → **6 project** |
-| `Modules.DtiWeekly.{Domain,Application,Infrastructure}` | gộp thành `Business.{Domain,Application,Persistence,Infrastructure,Api}` |
-| `PlatformManager.Api` (host mỏng, composition root) | giữ nguyên |
-| `Tests/PlatformManager.ArchTests` | giữ nguyên |
-
-**Chưa tồn tại:** `Core.Persistence`, `Core.Api`, và toàn bộ `Business.*`.
-`PlatformManagerDbContext`/`CoreSeeder` hiện ở `Core.Infrastructure/Persistence/`;
-mọi controller hiện ở `PlatformManager.Api/Controllers/`.
+bảng đầy đủ "có thật hôm nay → sẽ thành" (đối chiếu `PlatformManager.slnx`)
+là **`doc/kien-truc-core-module.md`** §"ĐÃ CHỐT — ĐANG THI CÔNG", đọc file đó
+trước khi tạo file mới — đừng tin số project chép lại ở nơi khác, số này đã
+lệch ít nhất 1 lần (8 → 10 khi 2 project test mới được thêm).
 
 Vì vậy **chưa** thêm tính năng nghiệp vụ vào `Business.*` — project đó chưa có.
 Đọc [`../../kien-truc-core-module.md`](../../kien-truc-core-module.md) trước khi

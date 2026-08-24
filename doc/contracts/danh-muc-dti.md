@@ -137,10 +137,17 @@
   `doc/huong_dan/quy-uoc/be-cqrs-handler.md` §"Command chạy lâu → job nền")
 - **Bước 1 — bắt đầu import**: `POST /api/import`, `multipart/form-data`,
   field tên `file` — chấp nhận `.csv`/`.xlsx`/`.xls` (không còn riêng
-  `/api/import/csv`). Trả **202 Accepted** ngay, KHÔNG đợi xử lý xong:
+  `/api/import/csv`). Trả ngay, KHÔNG đợi xử lý xong:
   ```
   IApiResult<{ jobId: guid }>
   ```
+  ⚠️ Sửa 2026-08-24: HTTP status là **200** (không phải 202 Accepted như bản
+  trước) — `ApiControllerBase.HandleResult<T>` map MỌI response thành công
+  (kể cả "đã bắt đầu, chưa xử lý xong") về 200, đúng dispatcher chung áp dụng
+  cho toàn bộ API (xem `src/BE/PlatformManager.Api/Common/ApiControllerBase.cs`).
+  "Đã bắt đầu chứ chưa xong" thể hiện ở tầng dữ liệu (`jobId` cần poll tiếp),
+  không phải HTTP status — 1 endpoint tự trả 202 sẽ là ngoại lệ duy nhất phá
+  quy ước "1 chỗ map HTTP" của toàn hệ thống.
 - **Bước 2 — poll trạng thái**: `GET /api/import/{jobId}`
   ```
   IApiResult<{

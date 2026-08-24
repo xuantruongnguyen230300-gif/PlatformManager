@@ -2,9 +2,9 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { filter, map } from 'rxjs';
-import { MenuService } from '../../services/menu.service';
+import { MenuService } from '../../../core/menu/menu.service';
 import { SidebarStateService } from '../../services/sidebar-state.service';
-import { IMenuItem } from '../../models/menu-item.model';
+import { IMenuItem } from '../../../core/menu/menu-item.model';
 
 /** BE trả thẳng class PrimeIcons thật (`pi-th-large`, `pi-folder`...) trong field `icon` — xem
  * doc/contracts/meta-menu.md §Icon. KHÔNG còn map qua bảng khoá trừu tượng (đã bỏ

@@ -131,14 +131,16 @@ Xem quy tắc chung + lý do ở
 public class CriteriaAssessment : BaseEntity
 {
     // ... field nghiệp vụ hiện có
-    // KHÔNG khai cột RowVersion — PostgreSQL dùng cột hệ thống `xmin` sẵn có
+
+    // Optimistic concurrency token — PHẢI là uint, KHÔNG shadow property, KHÔNG byte[].
+    public uint Version { get; private set; }
 }
 
-// EF configuration — Npgsql
-builder.UseXminAsConcurrencyToken();
+// EF configuration — API CHUẨN của EF Core, không phải helper riêng của Npgsql
+builder.Property(x => x.Version).IsRowVersion();
 ```
 
-> ### ⚠️ KHÔNG dùng `IsRowVersion()` — đó là ngữ nghĩa SQL Server
+> ### ⚠️ `.IsRowVersion()` đúng hay sai tuỳ **kiểu CLR** của property, không tuỳ provider
 >
 > `.IsRowVersion()` trên `byte[]` ánh xạ sang kiểu `rowversion` của **SQL Server**,
 > nơi **DB tự tăng giá trị mỗi lần UPDATE**. PostgreSQL **không có kiểu đó**: Npgsql
@@ -147,14 +149,31 @@ builder.UseXminAsConcurrencyToken();
 > toàn, im lặng**. Không lỗi biên dịch, không lỗi lúc chạy; ghi đè vẫn xảy ra đúng
 > như khi chưa làm gì.
 >
-> Cách đúng trên Npgsql: `UseXminAsConcurrencyToken()` — dùng cột hệ thống **`xmin`**
-> mà PostgreSQL vốn đã tăng ở mọi UPDATE. Không tốn thêm cột, không tốn thêm index.
+> Nhưng `.IsRowVersion()` trên property CLR kiểu **`uint`** là chuyện KHÁC — đây là
+> "standard EF Core mechanism" mà chính tài liệu Npgsql hướng dẫn dùng
+> (www.npgsql.org/efcore/modeling/concurrency.html §"The PostgreSQL xmin system
+> column"): Npgsql provider tự nhận diện property `uint` + `IsRowVersion` và bind
+> thẳng vào cột hệ thống **`xmin`** có sẵn — không tạo cột mới, không cần migration
+> riêng cho property này. Tóm lại: `byte[]` → sai trên Postgres (SQL Server rowversion
+> giả); `uint` → đúng trên Postgres (bind `xmin` thật).
+>
+> **Đổi 2026-08-24 — `builder.UseXminAsConcurrencyToken()` (recipe cũ) KHÔNG CÒN BIÊN
+> DỊCH ĐƯỢC.** Xác nhận bằng cách kiểm trực tiếp assembly
+> `Npgsql.EntityFrameworkCore.PostgreSQL` 10.0.3 (không còn symbol này) — method này
+> bị chính Npgsql OBSOLETE rồi GỠ HẲN kể từ khoảng bản 7.x (commit gốc "Obsolete
+> UseXminAsConcurrencyToken", npgsql/efcore.pg#2546, 2022-10-20), thay bằng đúng cách
+> ở trên. Ai còn thấy `UseXminAsConcurrencyToken()` trong code cũ hơn — đó là dấu hiệu
+> code chưa từng build được với package version hiện tại trong `.csproj`, không phải
+> lựa chọn thiết kế.
 >
 > Đổi sang SQL Server sau này thì đây là **một trong số ít chỗ phải sửa theo
 > provider** — lúc đó mới dùng `byte[] RowVersion` + `.IsRowVersion()`.
 >
-> *(Sửa 2026-08-23. Recipe sai từng tồn tại **song song ở 3 file** — chính nó là ca
-> được `.claude/CLAUDE.md` §3 lấy làm bằng chứng cho luật "một chủ đề, một file chủ".)*
+> *(Sửa 2026-08-23: hợp nhất recipe sai từng tồn tại song song ở 3 file — ca này được
+> `.claude/CLAUDE.md` §3 lấy làm bằng chứng cho luật "một chủ đề, một file chủ". Sửa
+> tiếp 2026-08-24: recipe hợp nhất đó tự nó cũng sai — `UseXminAsConcurrencyToken()`
+> không còn tồn tại trong package version dự án đang dùng, phát hiện khi build thật
+> lần đầu với `[RequirePermission]`/Hangfire/RowVersion cùng đợt.)*
 
 EF Core tự thêm `WHERE xmin = @original` vào UPDATE — bị người khác ghi đè trong lúc
 đang sửa → `DbUpdateConcurrencyException` → handler trả `Conflict` (409) thay vì âm

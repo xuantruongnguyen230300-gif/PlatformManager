@@ -1,5 +1,5 @@
 ---
-updated: "2026-08-11"
+updated: "2026-08-24"
 ---
 
 # Setup Guide — Design → Figma Pipeline
@@ -20,8 +20,10 @@ bám vào **source thật** (không bịa) — xem "Fidelity Policy" trong
 
 Pipeline này được đưa vào từ một dự án tham chiếu (`VNR.Successor`) và điều
 chỉnh lại cho quy mô của `PlatformManager` — hiện chỉ có một project
-(`Frontend/PlatformManager`) trỏ vào prototype tĩnh
-the deleted prototype, vì `src/FE/` và `src/BE/` còn đang rỗng.
+(`Frontend/PlatformManager`), trỏ vào **`src/FE/`** (app Angular 20 thật, 6
+route) làm nguồn sống. Trước 2026-08-22 project này trỏ vào prototype tĩnh
+(đã xoá 2026-08-23) vì lúc đó `src/FE/`/`src/BE/` còn rỗng — carve-out đó đã
+**hết hạn 2026-08-22**, xem `CLAUDE.md` § Fidelity Policy.
 
 ## 1. Yêu cầu môi trường
 
@@ -124,12 +126,15 @@ Bước 1 (`/design-new-project`) đã chạy sẵn cho `Frontend/PlatformManage
 trong lần setup này — không cần chạy lại trừ khi bạn muốn thêm một project
 khác (vd. `Backend/Api` khi `src/BE/` có app thật).
 
-## 5. Ghi chú "greenfield"
+## 5. Ghi chú lịch sử — carve-out "greenfield" (hết hạn 2026-08-22)
 
-`src/FE/` và `src/BE/` hiện đang rỗng — chưa chọn framework. Pipeline vẫn
-chạy được bằng cách coi the deleted prototype là "live source" tạm
-thời (xem carve-out trong `CLAUDE.md` § Fidelity Policy). Khi một app thật
-xuất hiện trong `src/FE/`:
+Trước 2026-08-22, `src/FE/` và `src/BE/` còn rỗng — chưa chọn framework.
+Pipeline lúc đó chạy tạm bằng cách coi prototype tĩnh (đã xoá 2026-08-23) là
+"live source" (carve-out cũ trong `CLAUDE.md` § Fidelity Policy). Carve-out
+đó **đã hết hạn 2026-08-22** — `src/FE/` giờ là app Angular 20 thật (6
+route), `src/BE/` là solution .NET đang chạy, và pipeline đã re-run trên
+nguồn thật này (xem bảng trạng thái ở `README.md`). 3 bước dưới đây đã làm
+xong, giữ lại chỉ để biết lịch sử — không phải việc còn tồn đọng:
 
 1. Cập nhật `source_paths` trong
    `doc/Design/Frontend/PlatformManager/README.md` để trỏ vào đó.

@@ -11,7 +11,7 @@ import { TrendChart } from '../../components/trend-chart/trend-chart';
 import { HistoryList } from '../../components/history-list/history-list';
 import { CriteriaTable } from '../../components/criteria-table/criteria-table';
 import { ReportDialog, ReportCopyResult } from '../../components/report-dialog/report-dialog';
-import { ToastService } from '../../../../shared/services/toast.service';
+import { ToastService } from '../../../../core/toast/toast.service';
 
 const EMPTY_AGGREGATE: IDashboardAggregate = {
   Mode: 'week',

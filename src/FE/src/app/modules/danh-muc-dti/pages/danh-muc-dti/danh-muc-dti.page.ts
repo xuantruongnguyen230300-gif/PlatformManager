@@ -4,7 +4,7 @@ import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 import { DanhMucDtiService } from '../../services/danh-muc-dti.service';
 import { PeriodOptionsService } from '../../../../shared/services/period-options.service';
 import { IPeriodOptions } from '../../../../shared/models/period-options.model';
-import { ToastService } from '../../../../shared/services/toast.service';
+import { ToastService } from '../../../../core/toast/toast.service';
 import { IHttpErrorWithApiResult } from '../../../../core/http/api-result.model';
 import {
   ICriteria,
@@ -63,7 +63,6 @@ export class DanhMucDtiPage {
 
   protected readonly rows = signal<ICriteriaRow[]>([]);
   protected readonly totalCount = signal(0);
-  protected readonly totalPages = signal(0);
   protected readonly loading = signal(false);
 
   /**
@@ -116,7 +115,6 @@ export class DanhMucDtiPage {
         next: (result) => {
           this.rows.set(result.Items);
           this.totalCount.set(result.TotalCount);
-          this.totalPages.set(result.TotalPages);
           this.loading.set(false);
         },
         error: () => this.loading.set(false),
@@ -132,7 +130,6 @@ export class DanhMucDtiPage {
       next: (result) => {
         this.rows.set(result.Items);
         this.totalCount.set(result.TotalCount);
-        this.totalPages.set(result.TotalPages);
       },
       error: () => {
         // httpErrorInterceptor đã hiện toast — giữ nguyên rows cũ, không xoá dữ liệu đang hiển thị.

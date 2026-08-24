@@ -23,6 +23,33 @@ const moduleBoundaryZones = BUSINESS_MODULES.map((moduleName) => ({
     `doc/kien-truc-core-module.md.`,
 }));
 
+// Gate G9 (doc/huong_dan/wiki-core/fe/trien-khai/05-gate.md) — `core/` là tầng đáy: mọi tầng
+// khác (shared/, platform/, modules/) được phép phụ thuộc vào core/, nhưng core/ không được
+// import ngược lên bất kỳ tầng nào trong 3 tầng đó. Vi phạm thật đã từng xảy ra: `core/interceptors`
+// import `ToastService` từ `shared/services/` — đã sửa bằng cách chuyển ToastService vào
+// `core/toast/` (service hạ tầng thuộc core/, component hiển thị vẫn ở `shared/components/toast/`
+// và import ngược lại từ core/ — đúng chiều được phép).
+const coreLayerZones = [
+  {
+    target: "./src/app/core",
+    from: "./src/app/shared",
+    message:
+      "core/ không được import shared/ — core/ là tầng đáy, shared/ mới được phép phụ thuộc " +
+      "vào core/. Hạ tầng dùng chung cho cả core/ lẫn shared/ thì đưa THẲNG vào core/, không " +
+      "đặt ở shared/ rồi import ngược.",
+  },
+  {
+    target: "./src/app/core",
+    from: "./src/app/platform",
+    message: "core/ không được import platform/ — core/ là tầng đáy, platform/ mới được phép phụ thuộc vào core/.",
+  },
+  {
+    target: "./src/app/core",
+    from: "./src/app/modules",
+    message: "core/ không được import modules/ — core/ là tầng đáy, modules/ mới được phép phụ thuộc vào core/.",
+  },
+];
+
 module.exports = defineConfig([
   {
     files: ["**/*.ts"],
@@ -67,6 +94,19 @@ module.exports = defineConfig([
     },
     rules: {
       "import/no-restricted-paths": ["error", { zones: moduleBoundaryZones }],
+    },
+  },
+  {
+    // Gate G9 — core/ là tầng đáy, không được import ngược lên shared/, platform/, modules/.
+    files: ["src/app/core/**/*.ts"],
+    plugins: { import: importPlugin },
+    settings: {
+      "import/resolver": {
+        node: { extensions: [".ts", ".js"] },
+      },
+    },
+    rules: {
+      "import/no-restricted-paths": ["error", { zones: coreLayerZones }],
     },
   },
   {

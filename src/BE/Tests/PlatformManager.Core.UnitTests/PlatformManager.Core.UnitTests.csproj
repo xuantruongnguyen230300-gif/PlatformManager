@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <RootNamespace>PlatformManager.Core.UnitTests</RootNamespace>
+  </PropertyGroup>
+
+  <!-- RequirePermissionFilter dùng kiểu MVC (AuthorizationFilterContext, DefaultHttpContext) —
+       FrameworkReference cho phép classlib test dựng được các kiểu đó mà không phải đổi sang
+       Microsoft.NET.Sdk.Web (không có host/Kestrel nào ở đây). -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <!-- NSubstitute chứ KHÔNG Moq — theo doc/huong_dan/wiki-core/be/04-testing-strategy.md. -->
+    <PackageReference Include="NSubstitute" Version="5.3.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Core\PlatformManager.Core.Application\PlatformManager.Core.Application.csproj" />
+    <ProjectReference Include="..\..\Core\PlatformManager.Core.Infrastructure\PlatformManager.Core.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

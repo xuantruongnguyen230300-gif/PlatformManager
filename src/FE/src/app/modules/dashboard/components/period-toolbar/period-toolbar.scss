@@ -25,7 +25,7 @@
 select {
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
-  background: #fff;
+  background: var(--card);
   padding: var(--sp-2) var(--sp-3);
   font-size: var(--fs-sm);
 
@@ -45,7 +45,7 @@ select {
 
 .seg-btn {
   border: 0;
-  background: #fff;
+  background: var(--card);
   padding: var(--sp-2) var(--sp-4);
   font-weight: 700;
   font-size: var(--fs-sm);
@@ -68,7 +68,7 @@ select {
 
   &.active {
     background: var(--brand);
-    color: #fff;
+    color: var(--on-primary);
   }
 }
 

@@ -1,7 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
-import { IApiResult } from '../../../core/http/api-result.model';
+import { IApiResult, unwrapData } from '../../../core/http/api-result.model';
 import { IPagedResult, IPagedResultDto, mapPagedResultDto } from '../../../core/http/paged-result.model';
 import {
   IAssessmentUpsertPayload,
@@ -59,7 +59,7 @@ export class DanhMucDtiService {
       .pipe(
         map((res) =>
           mapPagedResultDto(
-            res.data ?? { items: [], page: params.Page, pageSize: params.PageSize, totalCount: 0, totalPages: 0 },
+            res.data ?? { items: [], page: params.Page, pageSize: params.PageSize, totalCount: 0 },
             mapCriteriaRowDtoToModel,
           ),
         ),
@@ -69,19 +69,19 @@ export class DanhMucDtiService {
   create(payload: ICriteriaUpsertPayload): Observable<ICriteria> {
     return this.http
       .post<IApiResult<ICriteriaDto>>('/criteria', toUpsertRequestBody(payload))
-      .pipe(map((res) => mapCriteriaDtoToModel(res.data as ICriteriaDto)));
+      .pipe(map((res) => mapCriteriaDtoToModel(unwrapData(res))));
   }
 
   update(id: string, payload: ICriteriaUpsertPayload): Observable<ICriteria> {
     return this.http
       .put<IApiResult<ICriteriaDto>>(`/criteria/${id}`, toUpsertRequestBody(payload))
-      .pipe(map((res) => mapCriteriaDtoToModel(res.data as ICriteriaDto)));
+      .pipe(map((res) => mapCriteriaDtoToModel(unwrapData(res))));
   }
 
   delete(id: string): Observable<IDeleteCriteriaResult> {
     return this.http
       .delete<IApiResult<IDeleteCriteriaResultDto>>(`/criteria/${id}`)
-      .pipe(map((res) => mapDeleteResultDtoToModel(res.data as IDeleteCriteriaResultDto)));
+      .pipe(map((res) => mapDeleteResultDtoToModel(unwrapData(res))));
   }
 
   /**
@@ -103,7 +103,7 @@ export class DanhMucDtiService {
         { progressPercent: payload.ProgressPercent, note: payload.Note },
         { params: httpParams },
       )
-      .pipe(map((res) => res.data as IAssessmentUpsertResultDto));
+      .pipe(map((res) => unwrapData(res)));
   }
 
   importCsv(file: File): Observable<ICsvImportResult> {
@@ -111,6 +111,6 @@ export class DanhMucDtiService {
     formData.append('file', file);
     return this.http
       .post<IApiResult<ICsvImportResultDto>>('/import/csv', formData)
-      .pipe(map((res) => mapCsvImportResultDtoToModel(res.data as ICsvImportResultDto)));
+      .pipe(map((res) => mapCsvImportResultDtoToModel(unwrapData(res))));
   }
 }

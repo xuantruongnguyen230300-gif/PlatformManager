@@ -3,14 +3,24 @@
   <PropertyGroup>
     <RootNamespace>PlatformManager.Modules.DtiWeekly.Infrastructure</RootNamespace>
     <AssemblyName>PlatformManager.Modules.DtiWeekly.Infrastructure</AssemblyName>
+    <!-- NPOI bundle định dạng OOXML theo giấy phép OSMF riêng (khác Apache 2.0 của chính NPOI) —
+         chấp nhận tường minh để build không cảnh báo, đọc kỹ trước khi đổi:
+         https://github.com/nissl-lab/npoi/blob/master/OSMFEULA.txt -->
+    <AcceptNPOIOSMFLicense>true</AcceptNPOIOSMFLicense>
   </PropertyGroup>
 
-  <!-- Chỉ cần Microsoft.EntityFrameworkCore (IEntityTypeConfiguration/ModelBuilder/Set<T>()) —
-       KHÔNG cần Npgsql/Identity/FrameworkReference AspNetCore.App riêng: DbContext thật + kết
-       nối DB + Identity đã được Core.Infrastructure sở hữu, module này chỉ định nghĩa entity
-       configuration + repository cho entity của chính mình. -->
+  <!-- Chỉ cần Microsoft.EntityFrameworkCore (IEntityTypeConfiguration/ModelBuilder/Set<T>()/
+       .IsRowVersion() — base API, KHÔNG cần package Npgsql riêng) — KHÔNG cần Npgsql/Identity/
+       FrameworkReference AspNetCore.App riêng: DbContext thật + kết nối DB + Identity đã được
+       Core.Infrastructure sở hữu, module này chỉ định nghĩa entity configuration + repository
+       cho entity của chính mình. -->
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.11" />
+    <!-- ExcelFileReader (Import/) đọc .xlsx/.xls cho CONTRACT DM-7. -->
+    <PackageReference Include="NPOI" Version="2.8.0" />
+    <!-- Ghim tường minh — NPOI 2.8.0 kéo transitively System.Security.Cryptography.Xml 8.0.2,
+         dính NU1903 (high severity). Bản 10.0.11 (khớp SDK) không còn cảnh báo. -->
+    <PackageReference Include="System.Security.Cryptography.Xml" Version="10.0.11" />
   </ItemGroup>
 
   <ItemGroup>
