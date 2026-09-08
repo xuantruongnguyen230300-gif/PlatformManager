@@ -13,7 +13,7 @@ namespace PlatformManager.Core.IntegrationTests.RateLimiting;
 /// pipeline (WebApplication tự chèn) nên metadata <c>[Authorize]</c> đã sẵn sàng khi
 /// <c>UseAuthorization</c> chạy ⇒ request CHƯA ĐĂNG NHẬP bị **cắt mạch bằng 401 TRƯỚC KHI** tới
 /// rate limiter. Số đo trước bản sửa: 150 request vô danh liên tiếp tới <c>GET /api/auth/me</c>
-/// trả 401 toàn bộ, <b>0 lượt 429</b>, và không tiêu slot nào của hạn mức 100. Tức
+/// trả 401 toàn bộ, <b>0 lượt 429</b>, và không tiêu slot nào của hạn mức nền. Tức
 /// <c>GlobalLimiter</c> khi ấy chỉ bảo vệ lưu lượng ĐÃ ĐĂNG NHẬP — đúng phần lưu lượng ít cần
 /// bảo vệ nhất trước flood.</para>
 ///
@@ -40,14 +40,20 @@ namespace PlatformManager.Core.IntegrationTests.RateLimiting;
 [Collection(PostgresCollection.Name)]
 public sealed class PipelineOrderRateLimitTests : IAsyncLifetime
 {
-    /// <summary>Khớp <c>GlobalPermitLimitPerMinute = 100</c> trong <c>Program.cs</c>. Đổi con số
+    /// <summary>Khớp <c>GlobalPermitLimitPerMinute = 200</c> trong <c>Program.cs</c> (nâng từ 100
+    /// và đổi sang cửa sổ trượt 2026-08-30). Đổi con số
     /// ở đó thì phải đổi ở đây — CỐ Ý không đọc động từ cấu hình, vì test phải phát hiện được
     /// việc hạn mức bị nới ra một cách âm thầm.</summary>
-    private const int GlobalPermitLimit = 100;
+    private const int GlobalPermitLimit = 200;
 
-    /// <summary>Phải là origin CÓ trong <c>Cors:AllowedOrigins</c> của
+    /// <summary>Phải là origin CÓ trong <c>Cors:AllowedOrigins</c> mà máy đang chạy khai ở
     /// <c>appsettings.Development.json</c> — preflight từ origin lạ đi theo nhánh khác, không phải
-    /// thứ đang muốn đo.</summary>
+    /// thứ đang muốn đo.
+    ///
+    /// <para>⚠️ Sửa 2026-09-08: file đó là cấu hình CỤC BỘ, KHÔNG có trong repo
+    /// (<c>src/BE/.gitignore</c> khuôn <c>appsettings.*.json</c>). Máy mới clone về phải tự tạo nó
+    /// và cho origin dưới đây vào allowlist — xem doc/huong_dan/quy-uoc/repo-artifact.md §1.1 —
+    /// nếu không, allowlist rỗng và ca preflight ở đây đo nhầm nhánh "origin lạ".</para></summary>
     private const string AllowedOrigin = "http://localhost:4200";
 
     private readonly RateLimitPartitionFactory _factory;
@@ -136,7 +142,7 @@ public sealed class PipelineOrderRateLimitTests : IAsyncLifetime
         Assert.True(
             real.StatusCode == HttpStatusCode.Unauthorized,
             $"Request nghiệp vụ đầu tiên sau {burst * 2} lượt OPTIONS trả {(int)real.StatusCode} thay vì 401 — " +
-            "OPTIONS đã ăn vào hạn mức 100/phút của IP đó.");
+            "OPTIONS đã ăn vào hạn mức nền của IP đó.");
     }
 
     // ── Hạ tầng test ─────────────────────────────────────────────────────────

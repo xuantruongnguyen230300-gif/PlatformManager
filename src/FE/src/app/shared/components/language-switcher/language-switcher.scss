@@ -1,0 +1,45 @@
+// Chỉ dùng token đã khai ở `src/styles.scss :root` — không hex trần (gate G1) và không màu thập
+// phân trần (gate G11). Xem doc/huong_dan/wiki-core/fe/trien-khai/05-gate.md.
+//
+// Ghi chú cho người sửa file này: G11 quét bằng `grep` trên CẢ dòng chú thích, nên viết tên hàm
+// màu thập phân ra đây (kể cả để nói "không dùng nó") cũng làm gate ĐỎ. Đó là đánh đổi đã biết của
+// một gate `grep`, không phải lỗi.
+.lang-switch {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-1);
+}
+
+.lang-switch__option {
+  padding: var(--sp-1) var(--sp-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: var(--fs-sm);
+  cursor: pointer;
+
+  &:hover {
+    color: var(--text);
+    background: var(--surface-2);
+  }
+
+  // Viền focus KHÔNG được gỡ: hai nút này là thứ duy nhất trên màn đăng nhập không nằm trong
+  // `<form>`, nên người dùng bàn phím tới đây bằng Tab và cần thấy mình đang ở đâu
+  // (WCAG 2.4.7 Focus Visible). `outline` mặc định của trình duyệt là đủ, chỉ đẩy ra cho rõ.
+  &:focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 2px;
+  }
+
+  // Ngôn ngữ ĐANG dùng: đổi cả màu chữ lẫn độ đậm, không chỉ màu — phân biệt bằng riêng màu sắc là
+  // vi phạm WCAG 1.4.1 Use of Color.
+  &.is-active {
+    color: var(--brand);
+    border-color: var(--line);
+    font-weight: 700;
+    cursor: default;
+  }
+}

@@ -57,7 +57,7 @@ vd 1 tính năng theo dõi/tiêu chí mới thuộc khối `Business.*`/`modules
 
 ### 4. Cần màn hình mới không?
 
-- Nếu feature cần UI mới và `doc/Design/<Group>/<Project>/Screens/` chưa có
+- Nếu feature cần UI mới và `{DESIGN_ROOT}/<Group>/<Project>/Screens/` chưa có
   spec cho flow này → gọi `Agent(subagent_type: "design-expert", ...)`
   trước, yêu cầu chạy pipeline cho flow này (design-expert tự nối các skill
   `/design-*` liên tiếp tới hết stage 7 - audit, rồi dừng lại xin xác nhận

@@ -4,11 +4,14 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { Sidebar } from './sidebar';
+import { provideCoreBranding } from '../../../core/config/core-branding';
 import { AuthService } from '../../../core/auth/auth.service';
 import { CurrentUserService } from '../../../core/auth/current-user.service';
 import { IApiResult } from '../../../core/http/api-result.model';
 import { ICurrentUserDto } from '../../../core/auth/current-user.model';
 import { IMenuItemDto } from '../../../core/menu/menu-item.model';
+import { provideTranslateService } from '@ngx-translate/core';
+import { useTranslationsInTest } from '../../../core/i18n/i18n.testing';
 
 function envelope<T>(data: T): IApiResult<T> {
   return {
@@ -37,7 +40,8 @@ function userDto(id: string, roles: string[]): ICurrentUserDto {
  * doc/huong_dan/wiki-core/be/11-performance-caching.md §7.
  *
  * Đo bằng ĐẾM SỐ REQUEST trên một kịch bản điều hướng xác định, không đo milli-giây (đúng tinh
- * thần src/BE/.claude/rules/performance.md §Đo: con số đếm được, lặp lại được). Harness là chính
+ * thần doc/huong_dan/quy-uoc/be-performance.md §"Trước khi thêm bất kỳ cache nào" điểm 1 — phải
+ * có SỐ ĐO, mà số đo thì phải đếm được và lặp lại được). Harness là chính
  * `Sidebar` thật + `AuthService` thật, vì cơ chế sinh request nằm ở vòng đời component: app-shell
  * (`app.html`) bọc trong `@if (showShell())`, nên MỖI lần vào/ra route `noShell`
  * (`login`, `doi-mat-khau`) là một lần `Sidebar` bị huỷ rồi dựng lại → 1 lần gọi `getMenu()`.
@@ -49,15 +53,20 @@ describe('Kịch bản đo B3 — số request GET /meta/menu trong 1 phiên là
   let auth: AuthService;
   let currentUser: CurrentUserService;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     TestBed.configureTestingModule({
       providers: [
         provideZonelessChangeDetection(),
         provideRouter([]),
         provideHttpClient(),
         provideHttpClientTesting(),
+        // `Sidebar` inject CORE_BRANDING (tên sản phẩm cho ô thương hiệu) — token cố ý không có
+        // giá trị mặc định, nên harness phải tự cấp. Xem core/config/core-branding.ts.
+        provideCoreBranding({ name: 'Ứng Dụng Thử', shortName: 'UT' }),
+        provideTranslateService(),
       ],
     });
+    await useTranslationsInTest();
     httpMock = TestBed.inject(HttpTestingController);
     auth = TestBed.inject(AuthService);
     currentUser = TestBed.inject(CurrentUserService);

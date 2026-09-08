@@ -1,0 +1,303 @@
+{
+  "AUTH": {
+    "CHANGE_PASSWORD_FAILED": "Could not change the password.",
+    "CSRF_REJECTED": "Request rejected — the anti-forgery (CSRF) token is missing or invalid.",
+    "FORBIDDEN": "You do not have permission to access this.",
+    "INVALID_CREDENTIALS": "The user name or password is incorrect.",
+    "LOCKED_OUT": "This account is locked — please contact an administrator.",
+    "NOT_AUTHENTICATED": "You are not signed in.",
+    "ORIGIN_REJECTED": "Request rejected: the sending origin is not allowed."
+  },
+  "PERMISSION": {
+    "VERSION_CONFLICT": "Someone else changed the permission matrix after you opened this screen. Reload the page and redo your changes — nothing you just did was saved."
+  },
+  "RATE_LIMIT": {
+    "TOO_MANY_REQUESTS": "You have sent too many requests — please try again shortly."
+  },
+  "ROLE_PERMISSION": {
+    "RESOURCE_KEY_REQUIRED": "ResourceKey is required.",
+    "ROLE_REQUIRED": "RoleId is required."
+  },
+  "ROUTE": {
+    "METHOD_NOT_ALLOWED": "That HTTP method is not supported for this resource.",
+    "NOT_FOUND": "The requested resource was not found."
+  },
+  "SYSTEM": {
+    "UNEXPECTED": "Something went wrong."
+  },
+  "SYS_MENU": {
+    "CODE_REQUIRED": "The menu code is required.",
+    "NAME_REQUIRED": "The menu name is required."
+  },
+  "SYS_MENU_ROLE": {
+    "MENU_REQUIRED": "SysMenuId is required.",
+    "ROLE_REQUIRED": "RoleId is required."
+  },
+  "USER": {
+    "CREATE_FAILED": "Could not create the user.",
+    "DUPLICATE_EMAIL": "The email '{{Email}}' is already in use.",
+    "DUPLICATE_USERNAME": "The user name '{{UserName}}' already exists.",
+    "LOCK_FAILED": "Could not lock the account. Please try again; if it keeps failing, check the account status before assuming it is locked.",
+    "NOT_FOUND": "User not found.",
+    "SELF_LOCK_FORBIDDEN": "You cannot lock your own account. Sign out instead if you want to end your session.",
+    "SELF_SUPERADMIN_REMOVAL_FORBIDDEN": "You cannot remove the SuperAdmin role from yourself. Ask another SuperAdmin to do it.",
+    "SUPERADMIN_LOCK_FORBIDDEN": "Only a SuperAdmin can lock an account that has the SuperAdmin role.",
+    "SUPERADMIN_ROLE_CHANGE_FORBIDDEN": "Only a SuperAdmin can grant or remove the SuperAdmin role for other users.",
+    "UNLOCK_FAILED": "Could not unlock the account. Please try again.",
+    "UPDATE_FAILED": "Could not update the user.",
+    "VERSION_CONFLICT": "Someone else just updated this user. Reload the list and redo your changes — nothing you just did was saved."
+  },
+  "VALIDATION": {
+    "DuplicateEmail": "This email address is already in use.",
+    "DuplicateRoleName": "This role already exists.",
+    "DuplicateUserName": "This user name already exists.",
+    "FAILED": "The data is not valid.",
+    "InvalidEmail": "The email address is not in a valid format.",
+    "InvalidRoleName": "The role name is not valid.",
+    "InvalidUserName": "The user name contains characters that are not allowed.",
+    "NotEmptyValidator": "Please enter {{PropertyName}}.",
+    "PasswordMismatch": "The current password is incorrect.",
+    "PasswordRequiresDigit": "The password must contain at least one digit.",
+    "PasswordRequiresLower": "The password must contain at least one lowercase letter (a–z).",
+    "PasswordRequiresNonAlphanumeric": "The password must contain at least one special character.",
+    "PasswordRequiresUniqueChars": "The password must use more distinct characters.",
+    "PasswordRequiresUpper": "The password must contain at least one uppercase letter (A–Z).",
+    "PasswordTooShort": "The password is too short.",
+    "UserAlreadyInRole": "The user already has this role.",
+    "UserNotInRole": "The user does not have this role."
+  },
+  "doi-mat-khau": {
+    "routeTitle": "Change password",
+    "error": {
+      "changeFailed": "Could not change the password — please try again later.",
+      "confirmPasswordMismatch": "The confirmation does not match the new password.",
+      "confirmPasswordRequired": "Please re-enter the new password.",
+      "currentPasswordRequired": "Please enter your current password.",
+      "newPasswordRequired": "Please enter the new password.",
+      "newPasswordTooShort": "The new password is too short."
+    },
+    "field": {
+      "confirmPassword": "Confirm the new password",
+      "confirmPasswordPlaceholder": "Re-enter the new password",
+      "currentPassword": "Current password",
+      "currentPasswordPlaceholder": "Enter your current password",
+      "newPassword": "New password",
+      "newPasswordPlaceholder": "Enter the new password"
+    },
+    "hint": {
+      "forcedSubtitle": "You must change your password before you can continue using the system.",
+      "subtitle": "Change the password of your account."
+    }
+  },
+  "login": {
+    "routeTitle": "Sign in",
+    "subtitle": "Sign in to continue",
+    "action": {
+      "hidePassword": "Hide password",
+      "showPassword": "Show password",
+      "submit": "Sign in",
+      "submitting": "Signing in…"
+    },
+    "error": {
+      "failed": "Sign-in failed — please try again later.",
+      "missingCredentials": "Please fill in both the user name and the password."
+    },
+    "field": {
+      "password": "Password",
+      "passwordPlaceholder": "Enter your password",
+      "rememberMe": "Remember me",
+      "userNamePlaceholder": "e.g. nguyen.van.a"
+    },
+    "hint": {
+      "forgotPassword": "Forgot your password? Contact an administrator to have it reset."
+    }
+  },
+  "phan-quyen": {
+    "menuSectionLabel": "Permissions by screen",
+    "menuTitle": "Screen permissions",
+    "resourceTitle": "Permissions by resource",
+    "routeTitle": "Permissions",
+    "action": {
+      "save": "Save changes",
+      "tabGroupLabel": "Choose the permission type",
+      "tabMenu": "By screen",
+      "tabResource": "By resource"
+    },
+    "dialog": {
+      "leaveCancel": "Stay",
+      "leaveConfirm": "Leave the page",
+      "leaveDescription": "You have unsaved permission changes. Leaving the page now discards all of them.",
+      "leaveTitle": "Leave this page?"
+    },
+    "error": {
+      "noVersion": "The matrix version could not be read (the last load failed), so saving is not safe. Reload the page and redo your changes.",
+      "versionConflict": "Someone else just changed the permissions, so your changes were NOT saved. Reload to see the latest version and tick again — reloading discards what you have just selected."
+    },
+    "grid": {
+      "alwaysAllowedTag": "always has full access",
+      "cellAriaLabel": "{{resource}} — {{role}}",
+      "cellAriaLabelAlwaysAllowed": "{{resource}} — {{role}} — always allowed, cannot be changed",
+      "emptyMenu": "There is no menu item yet.",
+      "emptyResource": "There is no resource yet.",
+      "resource": "Resource",
+      "screen": "Screen"
+    },
+    "hint": {
+      "alwaysAllowedBody": "column is always ticked and cannot be edited here: this role has every permission on every resource by default, so unticking it revokes nothing. To take full access away from someone, go to \"System administration → Users\" and remove the",
+      "alwaysAllowedLead": "The",
+      "alwaysAllowedTail": "role from their account.",
+      "menuMatrix": "Tick a role to let it see the matching screen. An item with no role ticked is open to every signed-in user.",
+      "noEnforcement": "No business API enforces these permissions yet, so changes made here are saved but do not block or unlock anything for users.",
+      "nothingToSave": "There is no change to save",
+      "resourceEmphasis": "ticking no role denies everyone",
+      "resourceLead": "Tick a role to let it perform the matching action. Unlike the \"By screen\" tab, here",
+      "resourceTail": ", rather than opening it to everyone.",
+      "unsaved": "unsaved"
+    },
+    "toast": {
+      "savedMenu": "Permission changes saved.",
+      "savedResource": "Resource permissions saved."
+    }
+  },
+  "quan-tri-nguoi-dung": {
+    "routeTitle": "System users",
+    "title": "User list",
+    "action": {
+      "create": "Add user",
+      "edit": "Edit",
+      "retry": "Try again",
+      "save": "Save"
+    },
+    "dialog": {
+      "createTitle": "Add user",
+      "editTitle": "Edit user",
+      "lockConfirm": "Lock the account",
+      "lockDescription": "This account will no longer be able to sign in from now on. Any session it currently has ends within 30 minutes, NOT immediately. You can unlock it again at any time.",
+      "lockDescriptionNamed": "“{{name}}” will no longer be able to sign in from now on. Any session this user currently has ends within 30 minutes, NOT immediately. You can unlock the account again at any time.",
+      "lockTitle": "Lock this account?",
+      "preservedRoles": "System role {{roles}} is preserved and will not change on save."
+    },
+    "error": {
+      "createFailed": "Could not create the user — please try again later.",
+      "emailRequired": "Email is required.",
+      "fullNameRequired": "Full name is required.",
+      "loadFailed": "Could not load the user list. Check your connection and try again.",
+      "rolesRequired": "Select at least one role.",
+      "tempPasswordTooShort": "The temporary password is too short.",
+      "updateFailed": "Could not update the user — please try again later.",
+      "updateNotSaved": "The change was not saved — reopen the list and check before assuming it was applied.",
+      "userNameRequired": "User name is required."
+    },
+    "field": {
+      "emailPlaceholder": "name@company.com",
+      "fullName": "Full name",
+      "fullNamePlaceholder": "Jane Doe",
+      "tempPassword": "Temporary password",
+      "tempPasswordPlaceholder": "e.g. TempPass@123",
+      "userNamePlaceholder": "e.g. nguyen.van.a"
+    },
+    "filter": {
+      "allRoles": "All roles",
+      "allStatuses": "All statuses",
+      "chipRole": "Role: {{value}}",
+      "chipStatus": "Status: {{value}}",
+      "searchAriaLabel": "Search by name or email",
+      "searchPlaceholder": "Search by name or email..."
+    },
+    "grid": {
+      "actions": "Actions",
+      "active": "Active",
+      "dateCreate": "Created on",
+      "empty": "No user matches the filter.",
+      "lockTitle": "Lock the account",
+      "locked": "Locked",
+      "selfLockTitle": "You cannot lock your own account — use Sign out instead",
+      "status": "Status",
+      "totalCount": "{{count}} users",
+      "unlockTitle": "Unlock the account",
+      "user": "User"
+    },
+    "toast": {
+      "created": "User added.",
+      "lockFailed": "The account was not locked. Check the account status before assuming it is locked.",
+      "locked": "Account locked. Any session this user currently has will end within 30 minutes.",
+      "unlockFailed": "The account was not unlocked. Check the account status and try again.",
+      "unlocked": "Account unlocked.",
+      "updated": "User updated."
+    }
+  },
+  "shared": {
+    "action": {
+      "cancel": "Cancel",
+      "changePassword": "Change password",
+      "close": "Close",
+      "confirm": "Confirm",
+      "reload": "Reload",
+      "saving": "Saving…"
+    },
+    "app": {
+      "newVersion": "A new version is available — reload to continue.",
+      "skipToContent": "Skip navigation, go to the main content"
+    },
+    "field": {
+      "email": "Email",
+      "role": "Role",
+      "userName": "User name"
+    },
+    "grid": {
+      "empty": "No data."
+    },
+    "httpError": {
+      "endedText": "Please sign in again to continue.",
+      "endedTitle": "Your session has ended",
+      "forbidden": "You are not allowed to perform this action.",
+      "forbiddenTitle": "Not allowed",
+      "notFound": "The requested data was not found.",
+      "notFoundTitle": "Not found",
+      "offline": "Cannot reach the server. Check your network connection.",
+      "offlineTitle": "No connection",
+      "tooMany": "You have sent too many requests — please wait a moment and try again.",
+      "tooManyTitle": "Too many requests",
+      "unauthenticated": "You need to sign in to continue.",
+      "unauthenticatedTitle": "Not signed in",
+      "unexpected": "Something went wrong. Please try again.",
+      "unexpectedTitle": "System error"
+    },
+    "languageSwitcher": {
+      "label": "Language"
+    },
+    "menu": {
+      "loadFailed": "Could not load the navigation menu. Reload the page to try again."
+    },
+    "sidebar": {
+      "collapse": "Collapse the menu",
+      "expand": "Expand the menu",
+      "mainNav": "Main navigation"
+    },
+    "toast": {
+      "dismiss": "Dismiss notification"
+    },
+    "toolbar": {
+      "applyFilter": "Apply",
+      "clearFilter": "Clear filters",
+      "filter": "Filter",
+      "removeFilter": "Remove filter {{label}}",
+      "searchAriaLabel": "Search",
+      "searchPlaceholder": "Search…"
+    },
+    "topbar": {
+      "logout": "Sign out",
+      "openMenu": "Open the navigation menu"
+    }
+  },
+  "trang-chu": {
+    "greeting": "Hello",
+    "greetingNamed": "Hello, {{name}}",
+    "routeTitle": "Home",
+    "hint": {
+      "intro": "This is the home page of {{name}}. The features listed in the menu on the left are served by the server according to the account's permissions, so two users with different roles see two different menus.",
+      "noModules": "No business module is installed yet. Use the menu on the left to reach the system administration features.",
+      "noRoles": "No role assigned"
+    }
+  }
+}

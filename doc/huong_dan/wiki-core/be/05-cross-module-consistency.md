@@ -1,3 +1,9 @@
+---
+kind: luat
+scope: core
+verified: 2026-09-06
+---
+
 # 5. Nhất quán dữ liệu khi 1 nghiệp vụ chạm nhiều module/Process
 
 Đây là bài toán chắc chắn sẽ gặp khi hệ thống lớn dần theo đúng hướng modular đã bàn ở [02-identity-auth.md](02-identity-auth.md). Ví dụ: "Tạo đơn hàng" cần trừ tồn kho (module Inventory) + tạo hoá đơn (module Billing) — 2 module khác nhau, có nên gói trong 1 transaction DB không?
@@ -21,7 +27,19 @@ Module A (Order)                       Module B (Inventory)
 
 ---
 
-## Outbox đã quyết định dùng — 5 câu hỏi vận hành chưa được trả lời
+## Outbox — 📐 ĐÍCH ĐẾN, CHƯA THI CÔNG: 5 câu hỏi vận hành phải trả lời trước
+
+> **Trạng thái (đối chiếu source 2026-09-06): `src/BE` KHÔNG có Outbox, cũng không có
+> integration event nào.** Kiểm:
+> `grep -rn "Outbox\|IntegrationEvent" src/BE --include=*.cs | grep -v /obj/` ra **rỗng**.
+> Điều kiện kích hoạt cũng chưa tới: repo hiện **không còn module nghiệp vụ nào**, nên chưa
+> có ranh giới module nào để event đi qua.
+>
+> *(🔄 LẬT 2026-09-06: tiêu đề cũ là *"Outbox **đã quyết định dùng** — 5 câu hỏi vận hành
+> chưa được trả lời"*, mâu thuẫn thẳng với đoạn ngay phía trên trong cùng file — đoạn đó
+> viết *"Chỉ cần đầu tư Outbox khi đã có nghiệp vụ thật sự nhạy cảm với việc mất 1 event…
+> không cần làm ngay từ đầu"*. Hai câu trong một file nói ngược nhau về cùng một quyết
+> định, và cái đứng làm tiêu đề là cái người ta đọc.)*
 
 > Bổ sung 2026-08-24, đối chiếu thực hành Outbox/event-driven chuẩn ngành cho
 > hệ thống tầm trung: đoạn "Khi nào cần chặt hơn nữa (Outbox pattern)" ở trên

@@ -1,8 +1,11 @@
 ---
+kind: luat
+scope: core
+verified: 2026-09-06
 project: "<project-slug>"
 status: "draft"
 updated: "YYYY-MM-DD"
-library: "<e.g. none yet — text-only buttons/badges>"
+library: "<the icon set(s) actually loaded, e.g. PrimeIcons v7 (icon font, loaded via angular.json) + any set a component library injects at runtime>"
 legacy_exceptions: []         # non-standard sets still shipped, e.g. ["Font Awesome", "Material Design Icons"]
 ---
 
@@ -23,9 +26,14 @@ legacy_exceptions: []         # non-standard sets still shipped, e.g. ["Font Awe
 
 <!-- One row per action/context the shipped UI covers. Keep mappings stable across specs and Figma so dev handoff is 1:1. -->
 
-| Action/context | Icon | Library | Live class | Source file:line |
-|----------------|------|---------|------------|------------------|
-| Save action | — (text button "Lưu tuần này") | none | `.btn.primary` | `dashboard.html:67` |
+**Last column is a file, never `file:line`.** The glyph name is the anchor — `grep -n 'pi-pencil' <file>`
+answers "where" in one command and cannot rot. A line number can be wrong while still pointing inside
+its file, and `check-docs.sh` §4 passes on every one of those. Same move as
+`doc/Design/CLAUDE.md` § Neo trích dẫn vào `styles.scss`, same reason.
+
+| Action/context | Icon | Library | Live class | Source file |
+|----------------|------|---------|------------|-------------|
+| Edit row | `pi pi-pencil` | PrimeIcons v7 | `.icon-btn.primary` | `<shared/components/.../<name>.html>` |
 
 ## Legacy Exceptions
 
@@ -39,4 +47,4 @@ legacy_exceptions: []         # non-standard sets still shipped, e.g. ["Font Awe
 
 <!-- Numbered replacement plan: each legacy icon → its standard-library equivalent. Applied only during redesigns, never retro-fitted into as-shipped specs. -->
 
-1. <!-- e.g. adopt a real icon set once the app moves off the static prototype. -->
+1. <!-- e.g. replace the Unicode glyph standing in for a tree branch with the icon set's own equivalent. -->

@@ -14,6 +14,15 @@ public interface ISysMenuRoleRepository
     /// user thấy được (mở cho mọi người HOẶC có ít nhất 1 role trùng khớp).</summary>
     Task<HashSet<Guid>> GetVisibleSysMenuIdsForRolesAsync(IReadOnlyCollection<string> roleNames, CancellationToken ct);
 
-    /// <summary>Ghi đè TOÀN BỘ SysMenuRole theo ma trận gửi lên — UpdatePermissionMatrixCommand.</summary>
+    /// <summary>Ghi đè TOÀN BỘ SysMenuRole theo ma trận gửi lên — UpdatePermissionMatrixCommand.
+    /// Từ 2026-08-31 ghi đè bằng xoá MỀM (dòng cũ ở lại với <c>IsDeleted = true</c>), xem
+    /// doc/huong_dan/quy-uoc/be-entity-domain.md §"Quyết định người dùng 2026-08-31".</summary>
     Task ReplaceAllAsync(IReadOnlyDictionary<Guid, IReadOnlyCollection<string>> assignments, CancellationToken ct);
+
+    /// <summary>
+    /// Token phiên bản của TOÀN BỘ ma trận đang sống — <c>GET</c> trả kèm, <c>PUT</c> gửi lại,
+    /// server tính lại rồi so (lệch ⇒ 409, không ghi gì). Chỉ tính trên dòng CHƯA xoá mềm; xem
+    /// <see cref="Permissions.MatrixVersion"/> cho bẫy đi kèm.
+    /// </summary>
+    Task<string> GetVersionAsync(CancellationToken ct);
 }

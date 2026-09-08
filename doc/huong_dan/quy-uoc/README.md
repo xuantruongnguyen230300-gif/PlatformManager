@@ -1,3 +1,9 @@
+---
+kind: luat
+scope: core
+verified: 2026-09-06
+---
+
 # Quy ước đang thực thi — PlatformManager
 
 Đây là **quy ước thi hành hiện tại** cho `src/BE` và `src/FE`: layer rule, cách
@@ -33,11 +39,18 @@ giới DTO/model. `backend-expert` và `frontend-expert` đọc file tương ứ
 | [`be-entity-domain.md`](be-entity-domain.md) | Base entity, soft delete, Value Object, factory method, `RowVersion` |
 | [`be-cqrs-handler.md`](be-cqrs-handler.md) | Command/Query, Handler, Validator, `ErrorDescriptor` |
 | [`be-api-controller.md`](be-api-controller.md) | Controller, envelope response, error → HTTP, rate limiting, phân quyền |
+| [`be-performance.md`](be-performance.md) | Repository, query, index, N+1, cache — đọc cùng `wiki-core/be/11-performance-caching.md` |
 | [`fe-architecture.md`](fe-architecture.md) | Tầng `core`/`modules`/`shared`, cấu trúc 1 feature |
 | [`fe-api-client.md`](fe-api-client.md) | Gọi API, ranh giới DTO/model, mapper |
 | [`fe-ui-conventions.md`](fe-ui-conventions.md) | Dựng UI, form, responsive, style theo token |
 | [`fe-routing-guard.md`](fe-routing-guard.md) | Route + lazy-load, guard auth/role, `mustChangePassword` |
+| [`repo-artifact.md`](repo-artifact.md) | Cái gì được commit: artifact build, dữ liệu runtime, secret |
 | [`tieu-chi-review.md`](tieu-chi-review.md) | **`core-reviewer`**: cái gì là finding, cái gì KHÔNG phải |
+
+> 🔄 **LẬT 2026-09-06.** Bảng trên trước đây **thiếu `be-performance.md`** — file
+> tồn tại thật, được `doc/README.md` trỏ tới, nhưng ai vào thư mục này qua mục lục
+> thì không thấy nó. Đếm lại bằng lệnh thay vì tin bảng:
+> `ls doc/huong_dan/quy-uoc/*.md` phải khớp số dòng của bảng cộng chính `README.md`.
 
 Ranh giới Core ↔ Business và ngưỡng tách module: [`../../kien-truc-core-module.md`](../../kien-truc-core-module.md).
 Giao diện người dùng — **mọi** surface, cả FE lẫn BE: [`../../Design/`](../../Design/).
@@ -57,8 +70,13 @@ Giao diện người dùng — **mọi** surface, cả FE lẫn BE: [`../../Desi
 Đích đến là 2 tầng `Core.*` + `Business.*`. **Hiện trạng chưa phải như vậy** —
 bảng đầy đủ "có thật hôm nay → sẽ thành" (đối chiếu `PlatformManager.slnx`)
 là **`doc/kien-truc-core-module.md`** §"ĐÃ CHỐT — ĐANG THI CÔNG", đọc file đó
-trước khi tạo file mới — đừng tin số project chép lại ở nơi khác, số này đã
-lệch ít nhất 1 lần (8 → 10 khi 2 project test mới được thêm).
+trước khi tạo file mới. Đừng tin số project chép lại ở bất kỳ đâu — con số này
+đã lệch nhiều lần khi project test được thêm rồi module nghiệp vụ bị gỡ. Đếm
+bằng lệnh:
+
+```bash
+find src/BE -name "*.csproj" -not -path "*/obj/*" | sort
+```
 
 Vì vậy **chưa** thêm tính năng nghiệp vụ vào `Business.*` — project đó chưa có.
 Đọc [`../../kien-truc-core-module.md`](../../kien-truc-core-module.md) trước khi
@@ -70,7 +88,7 @@ tạo project mới, và hỏi người dùng nếu không chắc.
 - Control flow `@if` / `@for` / `@switch` / `@defer`; `input()` / `output()` kiểu
   signal thay cho decorator `@Input()`/`@Output()`.
 - **PrimeNG** + PrimeIcons v7 với preset riêng
-  (`core/theme/platform-manager-preset.ts`); SCSS scoped theo component.
+  (`core/theme/core-preset.ts`, bảng màu do app bơm vào); SCSS scoped theo component.
 - Token màu/spacing lấy từ [`../../Design/Frontend/PlatformManager/`](../../Design/Frontend/PlatformManager/)
   — không tự phát minh giá trị song song.
 
@@ -85,7 +103,13 @@ tạo project mới, và hỏi người dùng nếu không chắc.
 4. UI mới phải khớp token/component đã tài liệu hoá trong
    [`../../Design/`](../../Design/) — đây là nguồn giao diện **duy nhất**
    (`.claude/CLAUDE.md` §7).
-5. Schema: nguồn chuẩn duy nhất là `doc/cau-truc-database.md` (mô tả) +
-   và `*.dbml` là tài liệu **ý đồ thiết kế**, hiện đã lệch — xem
-   `doc/cau-truc-database.sql` (DDL viết tay EF không sinh được). `doc/ERD/` đã xoá 2026-08-23.
-   [`../../cau-truc-database.md`](../../cau-truc-database.md).
+5. Schema: nguồn chuẩn là [`../../cau-truc-database.md`](../../cau-truc-database.md)
+   (schema `core`, đang sống) + [`../../cau-truc-database-business.md`](../../cau-truc-database-business.md)
+   (schema `business`, đóng băng) + [`../../cau-truc-database.sql`](../../cau-truc-database.sql)
+   (DDL viết tay EF không sinh được). Ba file, hai schema, **một** database —
+   bảng trạng thái ở [`../../README.md`](../../README.md).
+
+   > 🔄 **LẬT 2026-09-06.** Bản trước của mục này là một câu bị nối vỡ và sai hai
+   > điểm: (a) nó trỏ tới `*.dbml` như một tài liệu đang tồn tại — `find doc -name "*.dbml"`
+   > không cho kết quả nào; (b) nó gọi `cau-truc-database.md` là *"nguồn chuẩn duy nhất"*
+   > trong khi phần nghiệp vụ đã tách ra file riêng từ 2026-09-03 để khai đúng khoá `scope`.

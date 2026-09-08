@@ -1,30 +1,27 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
+import { CORE_ROUTES } from '../config/core-routes';
 import { CurrentUserService } from './current-user.service';
 
-const CHANGE_PASSWORD_PATH = '/doi-mat-khau';
-
 /**
- * Chặn route cần đăng nhập + tự động ép về `/doi-mat-khau` khi `mustChangePassword===true` —
- * gộp 2 việc vào 1 guard (thay vì tách riêng, xem doc/ke-hoach-xay-lai-corebase.md §F3) vì cả
- * hai đều cần chạy TRƯỚC MỌI route đã đăng nhập, kể cả chính route `/doi-mat-khau` (guard đó tự
- * biết không redirect vòng lặp vào chính nó qua so khớp `state.url`).
+ * Chỉ trả lời MỘT câu hỏi: "đã đăng nhập chưa?". Không kiểm role, không kiểm cờ buộc đổi mật
+ * khẩu — hai việc đó thuộc `roleGuard` (role.guard.ts) và `mustChangePasswordGuard`
+ * (must-change-password.guard.ts). Xem doc/huong_dan/quy-uoc/fe-routing-guard.md §3.
  *
- * Áp dụng cho MỌI route cần đăng nhập, kể cả `/doi-mat-khau` — route đó KHÔNG được bỏ guard này
- * (vẫn cần chặn user chưa đăng nhập truy cập thẳng `/doi-mat-khau`).
+ * Trả `UrlTree` chứ KHÔNG gọi `router.navigate()` — `UrlTree` để Angular huỷ điều hướng cũ rồi
+ * chuyển hướng trong MỘT chu kỳ; `navigate()` bên trong guard tạo hai lần điều hướng chồng nhau.
+ *
+ * `returnUrl` đi kèm để màn đăng nhập đưa user về đúng chỗ họ định vào sau khi đăng nhập.
+ *
+ * Đường dẫn màn đăng nhập đến từ `CORE_ROUTES` (core/config/core-routes.ts), KHÔNG khai cứng ở
+ * đây — `core/` giữ luật chuyển hướng, app cung cấp đường dẫn.
  */
 export const authGuard: CanActivateFn = (_route, state) => {
   const currentUser = inject(CurrentUserService);
   const router = inject(Router);
+  const coreRoutes = inject(CORE_ROUTES);
 
-  if (!currentUser.isAuthenticated()) {
-    return router.createUrlTree(['/dang-nhap'], { queryParams: { returnUrl: state.url } });
-  }
-
-  const isChangePasswordRoute = state.url.startsWith(CHANGE_PASSWORD_PATH);
-  if (currentUser.mustChangePassword() && !isChangePasswordRoute) {
-    return router.createUrlTree([CHANGE_PASSWORD_PATH]);
-  }
-
-  return true;
+  return currentUser.isAuthenticated()
+    ? true
+    : router.createUrlTree([coreRoutes.signIn], { queryParams: { returnUrl: state.url } });
 };

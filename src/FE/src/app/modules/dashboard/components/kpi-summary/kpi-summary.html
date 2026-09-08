@@ -1,7 +1,0 @@
-<section class="kpis">
-  <app-kpi-tile [label]="progressLabel()" [value]="progressValue()" sub="Bình quân gia quyền theo điểm" />
-  <app-kpi-tile [label]="deltaLabel()" [value]="deltaValue()" [tone]="deltaTone()" [sub]="prevSub()" />
-  <app-kpi-tile label="Chỉ tiêu tăng" [value]="kpi().Up + ''" tone="good" sub="Có tiến bộ so với kỳ trước" />
-  <app-kpi-tile label="Không tăng" [value]="kpi().Flat + ''" tone="warn" sub="Cần chú ý theo dõi" />
-  <app-kpi-tile label="Hoàn thành 100%" [value]="doneFraction()" sub="Số chỉ tiêu đạt đủ tiến độ" />
-</section>

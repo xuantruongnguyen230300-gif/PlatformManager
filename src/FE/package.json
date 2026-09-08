@@ -9,6 +9,24 @@
     "test": "ng test",
     "lint": "ng lint"
   },
+  "//browserslist": [
+    "Khai TƯỜNG MINH mặc định hiện tại của Angular (node_modules/@angular/build/.browserslistrc,",
+    "Angular 20.3) — CHƯA có số liệu người dùng thật để thu hẹp/nới rộng, nên chép đúng hành vi",
+    "đang chạy thay vì đoán một danh sách khác (doc/huong_dan/wiki-core/fe/16-nen-tang-va-nang-cap.md §5).",
+    "Mục đích: phạm vi trình duyệt do ĐỘI quyết định, không tự đổi sau mỗi lần nâng Angular —",
+    "nâng Angular mà list mặc định của nó xê dịch thì diff ở file này là chỗ duy nhất thấy được.",
+    "Khai đúng bằng danh sách của Angular nên cũng không sinh cảnh báo 'unsupported browsers'.",
+    "Có khảo sát người dùng thật rồi thì sửa list dưới đây và ghi lại căn cứ."
+  ],
+  "browserslist": [
+    "Chrome >= 107",
+    "ChromeAndroid >= 107",
+    "Edge >= 107",
+    "Firefox >= 104",
+    "FirefoxAndroid >= 104",
+    "Safari >= 16",
+    "iOS >= 16"
+  ],
   "prettier": {
     "printWidth": 100,
     "singleQuote": true,
@@ -22,6 +40,15 @@
     ]
   },
   "private": true,
+  "//dependencies": [
+    "@angular/animations: KHÔNG file nào trong src/ import trực tiếp, nhưng ĐỪNG gỡ. primeng khai nó",
+    "là peerDependency bắt buộc (không optional), và bundle của chính component ta đang dùng —",
+    "node_modules/primeng/fesm2022/primeng-table.mjs:6 — import { trigger, transition, style, animate }",
+    "từ @angular/animations. Gỡ là build gãy ngay. Kiểm lại khi nâng primeng:",
+    "grep -rl '@angular/animations' node_modules/primeng/fesm2022/ — hết sạch thì mới bỏ được.",
+    "chart.js đã gỡ 2026-09-04: chỉ TrendChart của module DtiWeekly (xoá 2026-08-29) dùng nó;",
+    "sau khi gỡ, 0 file trong src/ và 0 gói nào trong package-lock.json phụ thuộc vào nó."
+  ],
   "dependencies": {
     "@angular/animations": "^20.3.0",
     "@angular/common": "^20.3.0",
@@ -30,9 +57,11 @@
     "@angular/forms": "^20.3.0",
     "@angular/platform-browser": "^20.3.0",
     "@angular/router": "^20.3.0",
+    "@ngx-translate/core": "^18.0.0",
+    "@ngx-translate/http-loader": "^18.0.0",
     "@primeng/themes": "^20.2.0",
-    "chart.js": "^4.5.0",
     "primeicons": "^7.0.0",
+    "primelocale": "^2.4.0",
     "primeng": "^20.2.0",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"

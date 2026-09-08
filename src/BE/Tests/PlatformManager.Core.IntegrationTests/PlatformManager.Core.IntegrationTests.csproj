@@ -21,6 +21,13 @@
     <!-- Postgres THẬT trong container — TUYỆT ĐỐI không UseInMemoryDatabase (bỏ qua FK/unique
          index/transaction thật), xem doc/huong_dan/wiki-core/be/04-testing-strategy.md. -->
     <PackageReference Include="Testcontainers.PostgreSql" Version="4.1.0" />
+    <!-- Ghim tường minh — Testcontainers 4.1.0 kéo transitively SSH.NET 2024.1.0, dính NU1903
+         (high severity, GHSA-q939-rpr3-3284 / CVE-2026-48798 — path traversal khi ScpClient tải
+         thư mục đệ quy). Advisory ghi vulnerable range "<= 2025.1.0", first patched 2026.0.0:
+         2024.2.0 và 2025.x KHÔNG đủ (đã thử 2024.2.0, cảnh báo vẫn còn). Cùng khuôn với 2 lần
+         ghim trước (Newtonsoft.Json ở Core.Infrastructure.csproj, và một lần ở module nghiệp
+         vụ nay đã xoá): ghim bản VÁ THẤP NHẤT, đặt ngay cạnh package kéo nó vào. Gỡ được khi Testcontainers tự nâng. -->
+    <PackageReference Include="SSH.NET" Version="2026.0.0" />
     <!-- Phải khớp version Npgsql mà Npgsql.EntityFrameworkCore.PostgreSQL 10.0.3 kéo theo —
          khai thấp hơn sẽ thành package downgrade (NU1605, đang bật WarningsAsError). -->
     <PackageReference Include="Npgsql" Version="10.0.3" />

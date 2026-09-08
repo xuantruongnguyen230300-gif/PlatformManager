@@ -1,161 +1,227 @@
 ---
+kind: luat
+scope: du-an
+verified: 2026-09-06
 project: "PlatformManager"
 status: "draft"
-updated: "2026-08-22"
+updated: "2026-09-06"
 category: "colors"
 live_source: "src/FE/src/styles.scss"
 ---
 
 # Colors — PlatformManager Design System
 
-> **Fidelity:** every value below is extracted from the live app AS-SHIPPED — never invent values outside this file. Proposed changes go to "Normalize on redesign" in the relevant spec, not here.
+> **Fidelity:** every value below is a real value of the shipped palette, checked against the live app — never invent values while recording what ships. Agreeing a **new** value is a different act, and it starts here: decide it in this file (plus `tokens.json` and the `DESIGN.md` frontmatter), then land it in code. Anything you would prefer different in the *shipped* UI goes to "Normalize on redesign" in the relevant spec, not here.
 
 ## Live Source & Extraction Method
 
-**Live source changed 2026-08-22.** Until this refresh every value in this file came from the deleted prototype. Per `doc/Design/CLAUDE.md` § Fidelity Policy (greenfield carve-out expired 2026-08-22) the shipped Angular 20 app is now the only source of truth; the prototype is design-intent reference only. Every row below was re-read from `src/FE/` — see § Drift from the prototype-era extraction for the exact old → new deltas.
+**Re-synced 2026-08-29 — a one-time catch-up, not the working direction.** `src/FE/src/styles.scss` was rewritten the same day against the approved preview at `doc/Design/Frontend/PlatformManager/Prototypes/index.html`, so this pass read the shipped values back into this file to close the gap that rewrite opened. The standing direction is the opposite one: **this file is the source and `styles.scss` follows it** (`doc/Design/CLAUDE.md` Core Principle 4). The reasoning is held in exactly one place — `doc/huong_dan/wiki-core/fe/04-design-token-system.md` § Chiều — read it there rather than restating it here. Extraction tooling (`/design-extract-tokens`) records what already ships; it never decides a value.
 
-**Where the values live.** All **24** named color/elevation tokens are declared in the single `:root { … }` block of `src/FE/src/styles.scss:10-86`. Verified exhaustively: `grep -rE '^\s*--[a-z0-9-]+\s*:' src/FE/src --include=*.scss` returns matches **only** inside that block — there is no second `:root`, no component-scoped custom property, no `element.style.setProperty()` call anywhere in the TypeScript. There is no Style Dictionary, no token build step and no generated token file; the SCSS is compiled as-is by the Angular CLI.
+**Where the values live.** `src/FE/src/styles.scss` declares every custom property in a single `:root { … }` block (`src/FE/src/styles.scss` § `:root`). Count them rather than copying a number — an earlier revision of this line said "42", which stopped being true the moment audit FE-7 added four more:
 
-**Naming rule (changed this refresh).** A design token's name is now **exactly its live CSS custom property, minus the `--` prefix** (`--bad-bg` → `bad-bg`). The prototype-era files used a parallel semantic vocabulary (`surface-badge-danger` for `--bad-bg`, `border-input` for `--border-strong`) and that translation layer is what let the two sides drift apart unnoticed for eleven days. It also actively blocked the FE: `styles.scss:45-48` records that when six loose hex literals were tokenised on 2026-08-20 the names were taken "nguyên xi" (verbatim) from this design system's `colors:` keys, which only works while the two vocabularies agree. One name, one value, one place to check.
+```bash
+grep -cE '^\s*--[a-z0-9-]+\s*:' src/FE/src/styles.scss
+```
 
-**Colors used but never tokenised.** Three colors are written as literals inside selectors rather than declared in `:root`. They are listed in their own table below, cited to file + line, and are **not** invented names — the value is real, the name is this document's.
+PASS = that count equals the sum of the rows in the `:root` tables of this file, `Tokens/typography.md` and `Tokens/spacing.md`. Verified exhaustively on 2026-08-29: `grep -rlE '^\s*--[a-z0-9-]+\s*:' src/FE/src --include=*.scss` returns `src/FE/src/styles.scss` and nothing else, and `grep -rn setProperty src/FE/src` returns nothing — there is no second `:root`, no component-scoped custom property, no runtime `style.setProperty()`. There is no Style Dictionary and no token build step; the Angular CLI compiles the SCSS as-is.
 
-**One deliberate exception to the naming rule.** `DESIGN.md` frontmatter carries an extra key `primary: "#0f5bd7"` that has no matching `--primary` in the source. It is an **alias of `brand`**, required by the design.md schema: without a key literally named `primary`, `designmd lint` raises `missing-primary` and Stitch auto-generates its own key colors, ignoring this palette entirely. It is deliberately **not** mirrored into `tokens.json` — that file feeds Figma Tokens Studio, where a duplicate would create two variables for one color. So the counts differ on purpose: `DESIGN.md` has 34 color keys, `tokens.json` has 33. Do not "fix" this mismatch; if `--brand` ever changes, change `primary` with it.
+**Naming rule.** A design token's name is **exactly its live CSS custom property, minus the `--` prefix** (`--bad-bg` → `bad-bg`). Colors that ship as literals inside a selector rather than in `:root` are listed in their own table; their **value** is real and cited, the **name** is this document's.
 
-**How themes switch: they do not.** There is no `data-theme` attribute, no `prefers-color-scheme` query, no theme toggle and no alternate palette anywhere in `src/FE/`. `trend-chart.ts:52-54` states the constraint in the code itself ("màu không đổi runtime — chưa có dark mode/theme switch"). The single shipped palette is therefore the `light` set in `tokens.json`; the `dark` set stays empty rather than inventing values.
+**One deliberate exception.** `DESIGN.md` frontmatter carries an extra key `primary` with the same value as `brand`, required by the design.md schema — without a key literally named `primary`, `designmd lint` raises `missing-primary` and Stitch ignores this palette. It is deliberately **not** mirrored into `tokens.json`, where a duplicate would create two Figma variables for one color. If `brand` ever changes, change `primary` with it.
 
-**PrimeNG consistency check.** `src/FE/src/app/core/theme/platform-manager-preset.ts:60-69` re-declares ten of these values as TypeScript constants (`BRAND`, `GOOD`, `WARN`, `BAD`, `BG`, `CARD`, `TEXT`, `MUTED`, `LINE`, `BORDER_STRONG`) to build the PrimeNG Aura ramps, with an explicit instruction not to edit them there first. All ten were compared against `:root` during this extraction and **all ten match**. Any future token rename must land in both files.
+**How themes switch: they do not.** No `data-theme` attribute, no `prefers-color-scheme` query, no theme toggle, no alternate palette anywhere in `src/FE/`. The single shipped palette is therefore the `light` set in `tokens.json`; the `dark` set stays empty rather than inventing values.
+
+**PrimeNG consistency check.** `src/FE/src/app/app.config.ts` re-declares part of this palette in its `APP_PALETTE` constant, which `src/FE/src/app/core/theme/core-preset.ts` expands into the PrimeNG Aura ramps. The ⚠️ paragraph in the header comment of `src/FE/src/styles.scss` (`grep -n APP_PALETTE src/FE/src/styles.scss`) warns that a change made here which skips that file makes CSS and PrimeNG render two different colors with nothing failing. Read the current key set rather than copying a list — it has grown once already:
+
+```bash
+sed -n '/^export const APP_PALETTE/,/^};/p' src/FE/src/app/app.config.ts
+```
+
+PASS = every key's value equals the matching `:root` property in the tables below. Compared key by key on **2026-09-06**: all match, `onPrimary` included.
+
+> 🔄 **SỬA 2026-09-06.** The previous revision said *"re-declares **ten** of these values"* and listed them. `onPrimary: '#ffffff'` was added on 2026-09-03 — it moved out of `core/theme/core-preset.ts`, where it had been the hard-coded constant `contrastColor`, so that a product whose brand colour needs dark ink would not have to edit the platform. The value did not change; only its home did. The `styles.scss` header comment still says "10 giá trị màu", which is the same stale count in `src/` — out of scope for this file to edit.
+
+**Citation policy — no line numbers into `styles.scss` at all (changed 2026-09-04).** The rule and its reasoning are held in one place: `doc/Design/CLAUDE.md` § Neo trích dẫn vào `styles.scss`. Read it there.
+
+> The previous revision of this paragraph carved out an exception — *"line numbers are given **only** for the `:root` block, which held still across two edits"* — and kept `:38-117` plus one number per token row. **That carve-out was wrong, and it failed exactly as predicted for everything else.** The 2026-08-29 rewrite later grew a 12-line table of contents above `:root`, which pushed the whole block down by 12: `--bg` was cited at `:44` and is declared at `:56`, `--brand` at `:58` against `:70`, `--shadow-toast` correct only because it was written after the shift. Nothing reported it, because the repo gate only asks whether a cited line is **inside** the file — and in a 1015-line file every number under 1015 is. All rows now cite the file plus the identifier.
+
+## Contrast, as measured
+
+The 2026-08-29 palette was computed with the WCAG relative-luminance formula, not picked by eye; the palette comment that opens `:root` in `src/FE/src/styles.scss` (`grep -n 'Bảng màu 2026-08-29' src/FE/src/styles.scss`) records the measurements that motivated it. Every ratio below was recomputed from the shipped hex values on 2026-08-29 and is re-checkable from this table alone.
+
+| Pair | Ratio | Threshold it targets |
+| --- | --- | --- |
+| `card` on `bg` — card lifts off the page | **1.41:1** | no formal minimum; was 1.12:1 |
+| `line` on `card` — component boundary | **3.00:1** | WCAG 2.2 SC 1.4.11, 3:1 non-text |
+| `border-strong` on `card` — input boundary | **4.51:1** | one visible step darker than `line` |
+| `muted` on `bg` | **5.16:1** | AA body text, 4.5:1 |
+| `muted` on `card` | **7.28:1** | AA |
+| `muted` on `surface-2` (icon-button hover) | **4.54:1** | AA, worst case |
+| `tonal-ink` on `tonal-bg` | **5.82:1** | AA |
+| `brand` on `surface-track` — progress fill vs track | **4.68:1** | 3:1 non-text |
+| `surface-table-header` on `card` — zebra stripe | **1.16:1** | no minimum; was 1.05:1 |
+| `text` on `card` | **16.33:1** | AAA |
+| `good` / `warn` / `bad` on their `*-bg` | **5.15 / 4.66 / 5.69:1** | AA for 10px badge text |
+
+`line` measures **2.13:1** against `bg`, not 3:1 — the 3:1 target is met where the boundary actually has to be seen, which is on `card`. Recorded, not hidden.
 
 ## Token Table
 
-### Semantic base — `:root`, `src/FE/src/styles.scss:19-50`
+### Semantic base — `src/FE/src/styles.scss` § `:root`
 
-| Name | Value (light) | Value (dark) | Live variable | Source line |
+| Name | Value (light) | Value (dark) | Live variable | Declared at |
 | --- | --- | --- | --- | --- |
-| bg | `#eef2f8` | *(not shipped)* | `--bg` | `styles.scss` |
-| card | `#ffffff` | *(not shipped)* | `--card` | `styles.scss` — shorthand for `#ffffff`; `tokens.json` and `DESIGN.md` carry the 6-digit form for tool compatibility |
-| surface-2 | `#e1e7f1` | *(not shipped)* | `--surface-2` | `styles.scss` — hover tint for ghost/icon-only buttons; no longer a default button fill |
-| tonal-bg | `#dbe7fa` | *(not shipped)* | `--tonal-bg` | `styles.scss` — default `.btn` fill (pale tint of `--brand`) |
-| tonal-ink | `#0f4a9e` | *(not shipped)* | `--tonal-ink` | `styles.scss` — text on `--tonal-bg`; deliberately darker than `--brand` |
-| text | `#152033` | *(not shipped)* | `--text` | `styles.scss` |
-| muted | `#57647a` | *(not shipped)* | `--muted` | `styles.scss` |
-| line | `#dfe6ef` | *(not shipped)* | `--line` | `styles.scss` — faint hairline for cards/table rules; NOT for interactive components |
-| border-strong | `#7e91b4` | *(not shipped)* | `--border-strong` | `styles.scss` — inputs/selects/`.tablewrap` ONLY |
-| brand | `#0f5bd7` | *(not shipped)* | `--brand` | `styles.scss` |
-| brand2 | `#174ca8` | *(not shipped)* | `--brand2` | `styles.scss` — **no longer an orphan**: consumed by `.btn.primary:hover` (`styles.scss:155-156`) |
-| good | `#0e7050` | *(not shipped)* | `--good` | `styles.scss` |
-| good-bg | `#d9f2e6` | *(not shipped)* | `--good-bg` | `styles.scss` |
-| warn | `#965e08` | *(not shipped)* | `--warn` | `styles.scss` |
-| warn-bg | `#ffedc7` | *(not shipped)* | `--warn-bg` | `styles.scss` |
-| bad | `#a02b2b` | *(not shipped)* | `--bad` | `styles.scss` |
-| bad-bg | `#fbdcdc` | *(not shipped)* | `--bad-bg` | `styles.scss` |
-| shadow | `0 4px 16px rgba(23,39,67,.1), 0 1px 3px rgba(23,39,67,.06)` | *(not shipped)* | `--shadow` | `styles.scss` — two layers; carries the layer separation that borders used to |
+| bg | `#cfdaea` | *(not shipped)* | `--bg` | `src/FE/src/styles.scss` § `--bg` — page background; also `.toolbar` fill and table row hover |
+| card | `#ffffff` | *(not shipped)* | `--card` | `src/FE/src/styles.scss` § `--card` — declared as the shorthand `#fff`; `tokens.json` and `DESIGN.md` carry the 6-digit form for tool compatibility |
+| surface-2 | `#c1cde2` | *(not shipped)* | `--surface-2` | `src/FE/src/styles.scss` § `--surface-2` — hover fill for the ghost `.icon-btn` |
+| tonal-bg | `#c4d8f6` | *(not shipped)* | `--tonal-bg` | `src/FE/src/styles.scss` § `--tonal-bg` — default `.btn` fill, `.notice` fill, `.filter-chip` fill |
+| tonal-ink | `#0f4a9e` | *(not shipped)* | `--tonal-ink` | `src/FE/src/styles.scss` § `--tonal-ink` — text on `--tonal-bg`; deliberately darker than `--brand` |
+| text | `#152033` | *(not shipped)* | `--text` | `src/FE/src/styles.scss` § `--text` |
+| muted | `#4c576b` | *(not shipped)* | `--muted` | `src/FE/src/styles.scss` § `--muted` |
+| line | `#7a97bd` | *(not shipped)* | `--line` | `src/FE/src/styles.scss` § `--line` — component boundary: card, toolbar, table rules, `.segmented`, `.notice` |
+| border-strong | `#6077a2` | *(not shipped)* | `--border-strong` | `src/FE/src/styles.scss` § `--border-strong` — inputs/selects/textarea and `.tablewrap` ONLY; it says "you can type here" |
+| brand | `#0f5bd7` | *(not shipped)* | `--brand` | `src/FE/src/styles.scss` § `--brand` |
+| brand2 | `#174ca8` | *(not shipped)* | `--brand2` | `src/FE/src/styles.scss` § `--brand2` — consumed by `.btn.primary:hover` |
+| good | `#0e7050` | *(not shipped)* | `--good` | `src/FE/src/styles.scss` § `--good` |
+| good-bg | `#d9f2e6` | *(not shipped)* | `--good-bg` | `src/FE/src/styles.scss` § `--good-bg` |
+| warn | `#965e08` | *(not shipped)* | `--warn` | `src/FE/src/styles.scss` § `--warn` |
+| warn-bg | `#ffedc7` | *(not shipped)* | `--warn-bg` | `src/FE/src/styles.scss` § `--warn-bg` |
+| bad | `#a02b2b` | *(not shipped)* | `--bad` | `src/FE/src/styles.scss` § `--bad` |
+| bad-bg | `#fbdcdc` | *(not shipped)* | `--bad-bg` | `src/FE/src/styles.scss` § `--bad-bg` |
+| shadow | `0 4px 16px rgba(23,39,67,.1), 0 1px 3px rgba(23,39,67,.06)` | *(not shipped)* | `--shadow` | `src/FE/src/styles.scss` § `--shadow` — two layers; `.card`, `.login-card`, sidebar drawer + flyout. **Not** `.toast-item`, which declares a deeper shadow of its own — see § Elevation used outside `--shadow` |
 
-### Surface / text roles added 2026-08-20 — `:root`, `src/FE/src/styles.scss:56-61`
+### Surface / text roles — `src/FE/src/styles.scss` § `:root`
 
-Named at gate G1 from hex literals that already existed scattered across component SCSS — not new values.
-
-| Name | Value (light) | Value (dark) | Live variable | Source line |
+| Name | Value (light) | Value (dark) | Live variable | Declared at |
 | --- | --- | --- | --- | --- |
-| on-primary | `#fff` | *(not shipped)* | `--on-primary` | `styles.scss` — text/icon on `--brand` (brand mark, avatar, active seg-btn, `.btn.primary`) |
-| surface-track | `#edf1f6` | *(not shipped)* | `--surface-track` | `styles.scss` — progress-bar track (`.bar`, `group-progress-list.scss:20`) |
-| surface-table-header | `#f8fafc` | *(not shipped)* | `--surface-table-header` | `styles.scss` — `th` fill, even-row zebra stripe, `.role-tag` chip |
-| text-table-header | `#536076` | *(not shipped)* | `--text-table-header` | `styles.scss` |
-| surface-notice | `#edf4ff` | *(not shipped)* | `--surface-notice` | `styles.scss` |
-| border-notice | `#cfe0ff` | *(not shipped)* | `--border-notice` | `styles.scss` |
+| on-primary | `#ffffff` | *(not shipped)* | `--on-primary` | `src/FE/src/styles.scss` § `--on-primary` — declared as `#fff`; text/icon on `--brand` (brand mark, avatar, `.btn.primary`, `.seg-btn.active`, `.filter-count`) |
+| btn-hover-bg | `#c7dbf5` | *(not shipped)* | `--btn-hover-bg` | `src/FE/src/styles.scss` § `--btn-hover-bg` — `.btn:hover` fill |
+| danger-border | `#e0a8a8` | *(not shipped)* | `--danger-border` | `src/FE/src/styles.scss` § `--danger-border` — the edge of anything that means *danger*: `.btn.danger` border **and** `.login-error` border |
+| danger-hover-bg | `#f5c6c6` | *(not shipped)* | `--danger-hover-bg` | `src/FE/src/styles.scss` § `--danger-hover-bg` — `.btn.danger:hover` fill |
+| th-ink | `#536076` | *(not shipped)* | `--th-ink` | `src/FE/src/styles.scss` § `--th-ink` — column-header text; 5.49:1 on `surface-table-header` |
+| surface-track | `#dbe4f0` | *(not shipped)* | `--surface-track` | `src/FE/src/styles.scss` § `--surface-track` — progress-bar track and disabled-input fill; deliberately pale because it is a **fill**, not a boundary |
+| surface-table-header | `#e9eff6` | *(not shipped)* | `--surface-table-header` | `src/FE/src/styles.scss` § `--surface-table-header` — `th` fill, even-row zebra stripe, `.badge.neutral` |
 
-### Shipped as literals — used in selectors, not declared in `:root`
+> **These four were promoted on 2026-08-29 (audit FE-7).** `btn-hover-bg`, `danger-border`, `danger-hover-bg` and `th-ink` were selector literals in the previous revision of this file and are now real custom properties, so under the naming rule above their names changed with them: `tonal-bg-hover` → `btn-hover-bg`, `bad-bg-hover` → `danger-hover-bg`, `text-table-header` → `th-ink`, and `bad-border-btn` + `bad-border-notice` collapsed into the single `danger-border`. The comment above them in `src/FE/src/styles.scss` (`grep -n 'audit FE-7' src/FE/src/styles.scss`) records why the FE side promoted them: gate G1 only scans `src/FE/src/app`, so a literal inside `styles.scss` itself was invisible to it and kept regrowing after each manual cleanup.
 
-| Name | Value (light) | Value (dark) | Live variable | Source line |
+### Alpha-composited surfaces — promoted to `:root` on 2026-09-03
+
+| Name | Value (light) | Value (dark) | Live variable | Declared at |
 | --- | --- | --- | --- | --- |
-| surface-topbar | `rgba(255,255,255,0.95)` | *(not shipped)* | `.topbar{background:…}` (+ `backdrop-filter: blur(10px)`) | `shared/components/topbar/topbar.scss:5-6` |
-| overlay-backdrop | `rgba(20,28,40,0.45)` | *(not shipped)* | `dialog::backdrop{background:…}` and `.sidebar-backdrop{background:…}` — same value, two declarations | `styles.scss:472`, `shared/components/sidebar/sidebar.scss:228` |
-| surface-nav-active | `rgba(15,91,215,0.08)` | *(not shipped)* | `.sidebar-navitem.active{background:…}` | `shared/components/sidebar/sidebar.scss:132` |
+| surface-topbar | `rgba(255,255,255,0.95)` | *(not shipped)* | `--surface-topbar` — `.topbar{background:…}` (+ `backdrop-filter: blur(10px)`) | `src/FE/src/styles.scss` § `--surface-topbar` |
+| overlay-backdrop | `rgba(20,28,40,0.45)` | *(not shipped)* | `--overlay-backdrop` — `dialog::backdrop{background:…}` **and** `.sidebar-backdrop{background:…}`, now one declaration read from two places | `src/FE/src/styles.scss` § `--overlay-backdrop` |
+| surface-nav-active | `rgba(15,91,215,0.08)` | *(not shipped)* | `--surface-nav-active` — `.sidebar-navitem.active{background:…}` | `src/FE/src/styles.scss` § `--surface-nav-active` |
 
-### ✅ The three `CÒN NỢ` requests — named here, now declared in the source
+> **These three were promoted on 2026-09-03 when gate G11 went in.** They kept the
+> names this table already gave them and their values are byte-identical, so nothing
+> on screen changed — this was a split, not a redesign. What forced the move: all three
+> lived in `shared/` SCSS, which is inside CoreBase, so this project's brand alpha would
+> have travelled to a second product and refused to follow its palette. Gate G1 never
+> saw them because G1 only scans `#rrggbb`; G11 scans the decimal form too.
 
-`src/FE/src/styles.scss` used to carry three self-declared debts where the FE deliberately left a raw hex in place rather than invent a parallel token name. This refresh assigned the names (following the `<semantic>-<role>` convention the `good`/`warn`/`bad` family already uses), and the FE side then declared them in `:root` and replaced the literals — **no pixel changed**, the values were already shipping.
-
-`grep "CÒN NỢ" src/FE/src/styles.scss` now returns **nothing**.
-
-| Name | Value (light) | Value (dark) | Live variable | Source |
-| --- | --- | --- | --- | --- |
-| tonal-bg-hover | `#c7dbf5` | *(not shipped)* | `--tonal-bg-hover`, consumed by `.btn:hover` | `styles.scss` |
-| bad-bg-hover | `#f5c6c6` | *(not shipped)* | `--bad-bg-hover`, consumed by `.btn.danger:hover` | `styles.scss` |
-| bad-border | `#e5a8a8` | *(not shipped)* | `--bad-border`, consumed by `.login-error` — completes the `bad` family (`--bad` ink, `--bad-bg` fill, `--bad-border` edge) | `styles.scss` |
-
-Only `bad` needs a border token today — `.notice` uses `--border-notice` and no `good`/`warn` block draws a border — so `--good-border` / `--warn-border` are deliberately **not** declared. Add them the day a selector needs one.
+Four rows fewer than the previous revision: `tonal-bg-hover`, `bad-bg-hover`, `bad-border-btn`/`bad-border-notice` and `text-table-header` left this table on **2026-08-29** when audit FE-7 promoted them to `:root` — they are now in the § Surface / text roles table above under their live property names.
 
 ### Elevation used outside `--shadow`
 
-| Name | Value (light) | Value (dark) | Live variable | Source line |
+| Name | Value (light) | Value (dark) | Live variable | Declared at |
 | --- | --- | --- | --- | --- |
-| shadow-primary-hover | `0 8px 20px rgba(15,91,215,0.35)` | *(not shipped)* | `.btn.primary:hover{box-shadow:…}` | `styles.scss:157` |
-| shadow-btn-hover | `0 3px 10px rgba(23,39,67,0.1)` | *(not shipped)* | `.btn:hover{box-shadow:…}` | `styles.scss:177` |
-| shadow-dialog | `0 24px 70px rgba(0,0,0,0.25)` | *(not shipped)* | `dialog{box-shadow:…}` | `styles.scss:467` |
-| shadow-focus-ring | `0 0 0 3px rgba(15,91,215,0.12)` | *(not shipped)* | `.field-input input:focus-visible{box-shadow:…}` — auth fields only; every other control uses `outline: 2px solid var(--brand)` | `styles.scss:544` |
+| shadow-primary-hover | `0 8px 20px rgba(15,91,215,0.35)` | *(not shipped)* | `.btn.primary:hover{box-shadow:…}` | `src/FE/src/styles.scss` |
+| shadow-btn-hover | `0 3px 10px rgba(23,39,67,0.1)` | *(not shipped)* | `.btn:hover{box-shadow:…}` | `src/FE/src/styles.scss` |
+| shadow-panel | `0 16px 40px rgba(23,39,67,0.22)` | *(not shipped)* | `.filter-panel{box-shadow:…}` — the toolbar filter dropdown | `src/FE/src/styles.scss` |
+| shadow-dialog | `0 24px 70px rgba(0,0,0,0.25)` | *(not shipped)* | `dialog{box-shadow:…}` | `src/FE/src/styles.scss` |
+| shadow-toast | `0 14px 38px rgba(23,39,67,0.26), 0 2px 6px rgba(23,39,67,0.12)` | *(not shipped)* | `--shadow-toast` — `.toast-item{box-shadow:…}`; two layers, deliberately deeper than `--shadow`: a toast floats over content, a card sits in it | `src/FE/src/styles.scss` § `--shadow-toast` (promoted 2026-09-03 with the three surfaces above) |
+| shadow-focus-ring | `0 0 0 3px rgba(15,91,215,0.12)` | *(not shipped)* | every input `:focus-visible`; other controls use `outline: 2px solid var(--brand)` | `src/FE/src/styles.scss` |
+| shadow-focus-ring-invalid | `0 0 0 3px rgba(160,43,43,0.14)` | *(not shipped)* | `.input.invalid:focus-visible` | `src/FE/src/styles.scss` |
 
 ## Chart Palette
 
-**The app ships exactly one chart** (this section previously read "None — app has no charts" and that is now wrong): `src/FE/src/app/modules/dashboard/components/trend-chart/` — a PrimeNG `p-chart type="line"` (`primeng` 20.2 + `chart.js` 4.5, `src/FE/package.json:33-36`) rendering the weekly DTI trend.
+📐 **ĐÍCH ĐẾN — CHƯA THI CÔNG.** Four role names, restored **2026-09-05**, consumed by exactly one component: [`../Components/TrendChart.md`](../Components/TrendChart.md).
 
-It has **no palette of its own and no categorical scale.** There is a single dataset (`trend-chart.ts:97-106`), so there is no series-2 color to document. Chart.js draws to a 2D canvas, which cannot resolve `var(--x)`, so `readCssVar()` (`trend-chart.ts:13-16`) resolves three tokens once via `getComputedStyle(document.documentElement)` and hands literal strings to Chart.js.
-
-| Chart role | Token read | Resolved value | Source line |
+| Role | Resolves to | Value | Chart element |
 | --- | --- | --- | --- |
-| Series 1 line (`borderColor`) | `--brand` | `#0f5bd7` | `trend-chart.ts:57`, `:99` |
-| Series 1 area fill (`backgroundColor`) | `--brand` @ 12% alpha via `hexToRgba()` | `rgba(15, 91, 215, 0.12)` | `trend-chart.ts:18-24`, `:99` |
-| Series 1 point fill (`pointBackgroundColor`) | `--brand` | `#0f5bd7` | `trend-chart.ts:101` |
-| Axis tick labels, both axes | `--muted` | `#57647a` | `trend-chart.ts:58`, `:119`, `:123` |
-| Y-axis grid lines | `--line` | `#dfe6ef` | `trend-chart.ts:59`, `:120` |
-| X-axis grid lines | — | not drawn (`grid: { display: false }`) | `trend-chart.ts:124` |
-| Legend | — | not drawn (`legend: { display: false }`) | `trend-chart.ts:114` |
+| chart-series-1 | `brand` | `#0f5bd7` | the series line, and the point fill |
+| chart-series-1-fill | `brand` at **12%** alpha | `rgba(15,91,215,0.12)` | the area under the line |
+| chart-axis-label | `muted` | `#4c576b` | tick labels on **both** axes |
+| chart-grid | `line` | `#7a97bd` | grid lines on the **y** axis only; the x axis draws none |
 
-Non-color chart facts, as-shipped: y-axis pinned `min: 0` / `max: 100` with a `${v}%` tick callback (`trend-chart.ts:116-119`); `pointRadius: 4`; `tension: 0` (straight segments, no spline); `fill: true`; `spanGaps: false` over the **full** series — every period the API returns keeps its label, and one with no value is passed through as `null`, so the line breaks at the gap instead of closing over it (fixed 2026-08-22; the previous build pre-filtered nulls, which deleted the missing period from the axis entirely and made `spanGaps` dead configuration); values clamped to `[0,100]`, `null` passing through unclamped; canvas fixed at `height: 220px, width: 100%` via an inline `[style]` binding (`trend-chart.html:8`), with `.chart-wrap{min-height:220px}` (`trend-chart.scss:6`). Empty state is a `.muted` paragraph, not an empty chart (`trend-chart.html:11`).
+**None of these four is a CSS custom property, and none should become one.** They are *role names* over three base tokens already in `:root`. A `<canvas>` cannot resolve `var(--x)`, so the component reads `--brand` / `--muted` / `--line` once through `getComputedStyle` and passes literal strings to the chart library — the indirection is the whole reason the roles exist. Verify they are absent from the stylesheet rather than trusting this paragraph:
 
-**Quirk, recorded not fixed:** `trend-chart.ts:55-61` duplicates all three hex values as SSR fallbacks (`readCssVar('--brand', '#0f5bd7')`). They are a second copy of the palette outside `:root` and will silently diverge if a token value changes. See § Normalize on redesign.
+```bash
+grep -c 'chart' src/FE/src/styles.scss     # PASS = 0
+```
 
-## Drift from the prototype-era extraction
+**One series, no categorical palette.** There is no `chart-series-2`, and none should be invented: the design has a single line. A second series is a design decision, not a token gap.
 
-Every delta between this file's previous revision (2026-08-11, sourced from the deleted prototype) and the shipped app. Recorded so the change is traceable rather than silent.
+> ### This line has now been flipped **twice** — read the whole history before flipping it again.
+>
+> | When | What this section said | Why |
+> | --- | --- | --- |
+> | before 2026-08-29 | the four roles, with values | a `TrendChart` (PrimeNG `p-chart type="line"` over `chart.js`) shipped and consumed them |
+> | 2026-08-29 | `None — app has no charts` | the DTI module was removed, taking the only consumer with it. Correct at the time: `find src/FE/src -iname '*trend*'` and `grep -rni chart src/FE/src` both returned nothing |
+> | 2026-09-04 | unchanged, but the note under it went stale | `chart.js` was dropped from `src/FE/package.json` the same day, for the same reason |
+> | **2026-09-05** | the four roles again (above) | **decision Q17 — the product owner asked for the chart back**, rendered by `p-chart` as before. This is a product decision reversing a cleanup, not a correction of an error: the 2026-08-29 removal was right about the code as it then stood |
+>
+> The earlier revision of this note also claimed *"`chart.js` remains in `src/FE/package.json` as an **unused dependency**"*. That stopped being true on 2026-08-29+6 days — it was removed 2026-09-04, and the removal is recorded in that file's own `//dependencies` block. Re-adding it is now a prerequisite of building the chart, and it is **not** something this file can do: `src/` is out of scope for the design area (`doc/Design/CLAUDE.md` § Scope). Tracked in [`../Components/TrendChart.md`](../Components/TrendChart.md).
+>
+> The lesson worth keeping: *a package in `package.json` is not evidence of a shipped chart, and its absence is not evidence that no chart is wanted.* Read the component spec, not the manifest.
 
-**Values changed (same role, new number):**
+## Drift — 2026-08-22 extraction → 2026-08-29 rewrite
 
-| Token | Prototype-era value | Shipped value |
+**Values changed (same token, new number).** Eight, all computed from the WCAG contrast formula:
+
+| Token | Value before | Value now | Why |
+| --- | --- | --- | --- |
+| bg | `#eef2f8` | `#cfdaea` | card lifted off the page: 1.12:1 → 1.41:1 |
+| muted | `#57647a` | `#4c576b` | darker to hold AA against the darker page: was 4.24:1 on the new `bg`, now 5.16:1 |
+| line | `#dfe6ef` | `#7a97bd` | component boundary 1.26:1 → **3.00:1** on `card`, clearing WCAG 2.2 SC 1.4.11 |
+| border-strong | `#7e91b4` | `#6077a2` | kept one clearly darker step than the new `line`: 4.51:1 |
+| surface-2 | `#e1e7f1` | `#c1cde2` | icon-button hover fill now readable at 1.60:1 on `card` |
+| tonal-bg | `#dbe7fa` | `#c4d8f6` | secondary-button fill, 1.45:1 on `card`; the boundary itself moved to the `line` border |
+| surface-track | `#edf1f6` | `#dbe4f0` | progress fill vs track now 4.68:1 |
+| surface-table-header | `#f8fafc` | `#e9eff6` | zebra stripe 1.05:1 → 1.16:1 (was effectively invisible) |
+
+**Left `:root`, then came back — the round trip, closed 2026-08-29.** The stylesheet rewrite earlier that day pushed four values out of `:root` and back into selectors; audit **FE-7**, later the same day, promoted them again under new names. Both halves are recorded because the intermediate state is what the previous revision of this file describes, and someone reading it needs to know which end they are at.
+
+| Former token | Out of `:root` (rewrite) | Back in `:root` as (audit FE-7) |
 | --- | --- | --- |
-| bg | `#f3f6fb` | `#eef2f8` |
-| muted *(was `text-muted`)* | `#6d788b` | `#57647a` |
-| good *(was `success`)* | `#14855b` | `#0e7050` |
-| warn *(was `warning`)* | `#c07a00` | `#965e08` — darkened **twice**: `#a8690a` on 2026-08-15, then again 2026-08-22 to clear AA |
-| bad *(was `danger`)* | `#c83c3c` | `#a02b2b` — darkened **twice**: `#b83232` on 2026-08-15, then again 2026-08-22 to clear AA |
-| good-bg *(was `surface-badge-success`)* | `#e7f7f0` | `#d9f2e6` |
-| warn-bg *(was `surface-badge-warning`)* | `#fff3da` | `#ffedc7` |
-| bad-bg *(was `surface-badge-danger`)* | `#fdecec` | `#fbdcdc` |
-| border-strong *(was `border-input`)* | `#cad4e1` | `#7e91b4` |
-| shadow | `0 7px 24px rgba(23,39,67,.08)` | `0 4px 16px rgba(23,39,67,.1), 0 1px 3px rgba(23,39,67,.06)` |
+| `--text-table-header` | literal `#536076` in `th` | **`--th-ink`** (`src/FE/src/styles.scss` § `--th-ink`) |
+| `--tonal-bg-hover` | literal `#c7dbf5` in `.btn:hover` | **`--btn-hover-bg`** (`src/FE/src/styles.scss` § `--btn-hover-bg`) |
+| `--bad-bg-hover` | literal `#f5c6c6` in `.btn.danger:hover` | **`--danger-hover-bg`** (`src/FE/src/styles.scss` § `--danger-hover-bg`) |
+| `--bad-border` | literal, **split in two** — `#e0a8a8` on `.btn.danger`, `#e5a8a8` on `.login-error` | **`--danger-border`** (`src/FE/src/styles.scss` § `--danger-border`), one value again at `#e0a8a8`; `#e5a8a8` no longer appears anywhere in the stylesheet (`grep -c e5a8a8 src/FE/src/styles.scss` → 0, checked 2026-08-29) |
+| `--surface-notice` (`#edf4ff`) | gone; `.notice` now fills with `var(--tonal-bg)` | not restored — the value has no consumer |
+| `--border-notice` (`#cfe0ff`) | gone; `.notice` now borders with `var(--line)` | not restored — the value has no consumer |
 
-The contrast moves (`muted`, `good`, `warn`, `bad`) are deliberate and dated in the source itself — `styles.scss:11-18` records a 2026-08-15 decision to fix surface tiers measuring ~1.1:1–1.3:1, below WCAG 2.2's 3:1 for UI components. `styles.scss:21-27` records the follow-up "fill-first" decision that produced `--tonal-bg`/`--tonal-ink`/`--surface-2` and demoted `--border-strong` to inputs only.
+**Removed entirely (the consumer no longer existed):** the four `chart-*` roles (`chart-series-1`, `chart-series-1-fill`, `chart-axis-label`, `chart-grid`). ⬅️ **Restored 2026-09-05** by decision Q17 — see § Chart Palette, which carries the full flip history. The row stays here because the 2026-08-29 removal was correct at the time and the reasoning is worth keeping.
 
-**Renamed only (value unchanged):** `primary`→`brand`, `primary-alt`→`brand2`, `surface`→`card`, `border`→`line`, `text`→`text`. Per the naming rule above.
+**Added:** `shadow-panel` and `shadow-focus-ring-invalid` (both new selectors in the 2026-08-29 stylesheet), and the four promoted properties `btn-hover-bg` / `danger-border` / `danger-hover-bg` / `th-ink` (see the round-trip table above).
 
-**Added (live in the app, previously undocumented):** `surface-2`, `tonal-bg`, `tonal-ink`, `border-strong`, `good-bg`, `warn-bg`, `bad-bg`, `surface-nav-active`, `shadow-primary-hover`, `shadow-btn-hover`, `shadow-focus-ring` — plus the three named above (`tonal-bg-hover`, `bad-bg-hover`, `bad-border`).
+**Renamed 2026-08-29 — update any spec that still uses the left column.** These are token *names*, not values, so a stale reference resolves to nothing rather than to a wrong colour:
 
-**Removed (no longer exists anywhere in `src/FE/`):**
+| Old spec name | Live property name now |
+| --- | --- |
+| `tonal-bg-hover` | `btn-hover-bg` |
+| `bad-bg-hover` | `danger-hover-bg` |
+| `bad-border-btn` **and** `bad-border-notice` | `danger-border` (one token) |
+| `text-table-header` | `th-ink` |
 
-| Token | Prototype value | Why removed |
-| --- | --- | --- |
-| surface-report | `#f8fafc` | `.report` survives as a class name (`report-dialog.html:6`) but **has no CSS rule in any SCSS file** — the prototype's `background`/`border` were not ported. The element renders unstyled. |
-| border-report-dashed | `#cbd6e5` | Same — the dashed border was not ported. |
-| shadow-fab | `0 12px 30px rgba(15,91,215,.3)` | The floating action button was not ported; `grep -rn fab src/FE/src` returns nothing. |
+**Unchanged:** `card`, `tonal-ink`, `text`, `brand`, `brand2`, `good`, `good-bg`, `warn`, `warn-bg`, `bad`, `bad-bg`, `shadow`, `on-primary`, and every literal in the topbar / sidebar / backdrop group.
+
+## Resolved — no longer open
+
+Items move here from § Normalize on redesign when the **code** changed — never when only the wording did. Count them by reading the list; do not quote a number.
+
+1. ~~**Four `bad`-family reds where two would do** — `#e0a8a8` (button border) and `#e5a8a8` (notice border) differ by one hex digit on the same semantic role.~~ — **fixed in the source 2026-08-29** by audit FE-7. Both edges now read the single `--danger-border` custom property (`src/FE/src/styles.scss` § `--danger-border`), and `#e5a8a8` appears nowhere in the stylesheet any more (`grep -c e5a8a8 src/FE/src/styles.scss` → 0, checked 2026-08-29). The `bad` family is now `--bad`, `--bad-bg`, `--danger-hover-bg`, `--danger-border` — four names, four distinct jobs.
+2. ~~**Eight colors ship as literals inside selectors**, four of them values a previous stylesheet had already promoted to `:root`.~~ — **half fixed 2026-08-29, closed 2026-09-03.** Audit FE-7 promoted `#c7dbf5`, `#f5c6c6`, `#e0a8a8` and `#536076` back into `:root` as `--btn-hover-bg`, `--danger-hover-bg`, `--danger-border` and `--th-ink`. The remaining topbar / backdrop / nav-active alpha group went in on **2026-09-03** as `--surface-topbar`, `--overlay-backdrop` and `--surface-nav-active` (`src/FE/src/styles.scss` § `--surface-nav-active` … `--surface-topbar`), together with `--shadow-toast` (§ `--shadow-toast`).
+3. ~~**`overlay-backdrop` `rgba(20,28,40,0.45)` is declared twice**~~ — **fixed 2026-09-03.** `dialog::backdrop` (`src/FE/src/styles.scss` § `dialog::backdrop`) and `.sidebar-backdrop` (`src/FE/src/app/shared/components/sidebar/sidebar.scss:211`) now both read `var(--overlay-backdrop)`; the value exists once.
+
+**Why these two closed together, and what now keeps them closed.** Both were invisible to gate G1, which only greps `#rrggbb` — the same decision written in decimal walked straight past it. Gate **G11** (`scripts/fe-gate.sh`) closes that hole: no `rgb()`/`rgba()` literal is allowed in the SCSS of `core/`, `shared/` or `platform/`, with one syntax-only exemption for `rgb(var(--x) / a)`. It is deliberately **not** exempt by value — `rgba(0,0,0,.5)` looks harmless and is still a design decision that belongs in this file. Verified red-then-green on 2026-09-03: red listed exactly the four lines above, green after the promotion.
 
 ## Normalize on redesign
 
-1. ~~**Two pairs still fail WCAG AA after the 2026-08-15 contrast pass**~~ — **FIXED 2026-08-22.** `designmd lint` measured `--warn` on `--warn-bg` (`#a8690a` on `#ffedc7`) = **3.88:1** and `--bad` on `--bad-bg-hover` (`#b83232` on `#f5c6c6`) = **3.89:1**, both under the 4.5:1 that 10px badge text requires (too small for the relaxed 3:1 large-text threshold). Fixed at the source: `--warn` → `#965e08`, `--bad` → `#a02b2b`, then mirrored into `DESIGN.md`, `tokens.json`, this file **and `platform-manager-preset.ts`**. Lint warnings dropped 8 → 6. The two remaining 1.00:1 reports (`sidebar-item-active`, `chart-line`) are linter **false positives** — it compares an alpha-composited brand tint against brand itself instead of against the surface underneath.
-2. **`trend-chart.ts:55-61` duplicates `--brand`/`--muted`/`--line` as SSR fallback hex.** Necessary today (canvas cannot read `var()`, and `document` is absent under SSR) but it is a second uncontrolled copy of the palette. A generated constants file, or dropping the fallbacks now that SSR is off (`--ssr=false`), would remove the divergence risk.
-3. **`overlay-backdrop` `rgba(20,28,40,0.45)` is declared twice** — `styles.scss:472` and `sidebar.scss:228` — with no shared token. Promote to `:root`.
-4. **`.report` renders unstyled** — the class is bound in `report-dialog.html:6` but matches no rule. Either port the prototype's surface/dashed-border treatment or drop the class.
-5. **`--card` is declared as `#fff`** while every other color in `:root` is 6-digit. Cosmetic, but it forces every consumer of this file to normalise.
-6. **`surface-nav-active` and the focus ring are alpha-composited brand** (`rgba(15,91,215,0.08)` / `…,0.12)`) written as literals. If a `--brand-rgb` channel triplet were declared, both could be expressed as `rgb(var(--brand-rgb) / 8%)` and stay in sync with `--brand`.
+1. **Both focus rings are alpha-composited brand/bad** written as literals. A `--brand-rgb` / `--bad-rgb` channel triplet would let them be written as `rgb(var(--brand-rgb) / 8%)` and stay in step with the base color.
+2. **`--card` is declared as `#fff`** while every other color in `:root` is 6-digit. Cosmetic, but every consumer of this file has to normalise it.
+3. **`line` measures 2.13:1 against `bg`.** Boundaries drawn on the page background rather than on a card — the `.toolbar` border is the live case — do not reach the 3:1 the token was chosen for. Either accept it (the toolbar also changes fill to separate itself) or introduce a second boundary color for on-`bg` use.
+4. **The chart library has to come back before the chart can.** ~~`chart.js` is an unused dependency in `src/FE/package.json`; removing it prevents the next reader from concluding that a chart ships.~~ That advice was taken on **2026-09-04** and reversed by decision **Q17** on **2026-09-05**, one day later. `src/FE/package.json` § `dependencies` currently lists no chart package while § Chart Palette above declares four chart roles — a gap that is deliberate and visible rather than hidden, because the design area may not edit `src/`. The next reader should conclude from § Chart Palette, not from the manifest. Owned by [`../Components/TrendChart.md`](../Components/TrendChart.md).
 
 ## Appendix: tokens.json rules
 

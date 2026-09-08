@@ -27,7 +27,7 @@ namespace PlatformManager.Core.IntegrationTests.Auth;
 [Collection(PostgresCollection.Name)]
 public sealed class SuperAdminLockoutExemptionTests : IAsyncLifetime
 {
-    private const string Password = "Test@12345";
+    private const string Password = "Test@123456789";
     private const string WrongPassword = "Sai@00000";
 
     /// <summary>Khớp <c>options.Lockout.MaxFailedAccessAttempts</c> ở

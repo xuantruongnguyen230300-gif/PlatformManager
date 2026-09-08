@@ -1,3 +1,9 @@
+---
+kind: luat
+scope: core
+verified: 2026-09-06
+---
+
 # F2 — Auth + routing/guard
 
 > **Định nghĩa hoàn thành:** đăng nhập qua form thật tại `/dang-nhap` →
@@ -11,14 +17,20 @@
 
 Bản trước của file này ghi *"chờ `backend-expert` scaffold Identity, không tự
 đoán shape request/response"*. Nay **[`../../../../contracts/auth.md`](../../../../contracts/auth.md)
-đã chốt và đã verify thật 2026-08-16**: cookie session (không JWT), ba endpoint
-`POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`, và
-`CurrentUserInfo` có `mustChangePassword`.
+đã chốt và đã verify thật 2026-08-16**: cookie session (không JWT), bốn endpoint
+`POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`,
+`POST /api/auth/change-password`, và `CurrentUserInfo` có `mustChangePassword`.
+
+> 🔄 **LẬT 2026-09-06** — bản trước ghi *"ba endpoint"* và bỏ sót
+> `POST /api/auth/change-password`, tức đúng endpoint mà bước 5 của §Thứ tự viết ngay dưới cần
+> để dựng màn `/doi-mat-khau`. Đối chiếu: `src/BE/PlatformManager.Api/Controllers/AuthController.cs:34`
+> và `doc/contracts/auth.md` §`POST /api/auth/change-password`. Ngoài bốn endpoint đó, luồng
+> đăng nhập còn cần `GET /api/antiforgery/token` (CSRF, thêm 2026-08-24) — khai ở cùng contract.
 
 Vì shape đã cố định, FE **dựng được ngay** trên mock theo đúng contract, không
 phải đợi. Nhưng **đóng** F2 thì cần endpoint thật chạy — tức BE phải đi tới
 phần auth trong lộ trình của nó
-([`../../be/trien-khai/00-lo-trinh-tong-the.md`](../../be/trien-khai/00-lo-trinh-tong-the.md)).
+([`../../../../tham-khao-ngoai/vnr-successor/00-lo-trinh-tong-the.md`](../../../../tham-khao-ngoai/vnr-successor/00-lo-trinh-tong-the.md)).
 Dựng trên mock rồi đổi sang thật là một dòng đổi base URL; đợi BE xong mới bắt
 đầu là mất trắng thời gian đó.
 
@@ -63,7 +75,7 @@ thì họ vào được toàn bộ app. Không có lỗi biên dịch nào báo,
 
 - [ ] Gọi API cần auth khi chưa login → điều hướng `/dang-nhap?returnUrl=…`
       (không phải màn trắng hay lỗi console)
-- [ ] Login xong → quay đúng về `returnUrl`, không phải luôn về `/dashboard`
+- [ ] Login xong → quay đúng về `returnUrl`, không phải luôn về `/trang-chu`
 - [ ] Tài khoản `mustChangePassword: true`: gõ thẳng URL bất kỳ đều bị đưa về
       `/doi-mat-khau`; riêng `/doi-mat-khau` **không** lặp vô hạn
 - [ ] Đổi mật khẩu xong đi thẳng vào app — **không** bắt đăng nhập lại

@@ -10,7 +10,7 @@ using Xunit;
 namespace PlatformManager.Core.IntegrationTests.RateLimiting;
 
 /// <summary>
-/// <c>RateLimiterOptions.GlobalLimiter</c> — hạn mức 100 request/phút/IP áp cho MỌI endpoint,
+/// <c>RateLimiterOptions.GlobalLimiter</c> — hạn mức 200 request/phút/IP (cửa sổ TRƯỢT) áp cho MỌI endpoint,
 /// kể cả endpoint KHÔNG khai <c>[EnableRateLimiting]</c> — cộng thêm envelope chuẩn cho 429.
 ///
 /// Lỗ hổng được chốt lại ở đây (sửa 2026-08-21, finding F8 của audit 2026-08-20): policy
@@ -49,15 +49,17 @@ namespace PlatformManager.Core.IntegrationTests.RateLimiting;
 [Collection(PostgresCollection.Name)]
 public sealed class GlobalRateLimitTests : IAsyncLifetime
 {
-    /// <summary>Khớp <c>GlobalPermitLimitPerMinute = 100</c> trong <c>Program.cs</c>. Đổi con số
+    /// <summary>Khớp <c>GlobalPermitLimitPerMinute = 200</c> trong <c>Program.cs</c> (nâng từ 100 và
+    /// đổi sang cửa sổ TRƯỢT ngày 2026-08-30 — xem
+    /// <c>doc/huong_dan/quy-uoc/be-api-controller.md</c> §"Hiệu chỉnh hạn mức"). Đổi con số
     /// ở đó thì phải đổi ở đây — CỐ Ý không đọc động từ cấu hình, vì test phải phát hiện được
     /// việc hạn mức bị nới ra một cách âm thầm.</summary>
-    private const int GlobalPermitLimit = 100;
+    private const int GlobalPermitLimit = 200;
 
     /// <summary>Khớp <c>LoginPermitLimitPerMinute = 5</c> trong <c>Program.cs</c>.</summary>
     private const int LoginPermitLimit = 5;
 
-    private const string Password = "Test@12345";
+    private const string Password = "Test@123456789";
 
     private readonly RateLimitPartitionFactory _factory;
 
@@ -109,7 +111,7 @@ public sealed class GlobalRateLimitTests : IAsyncLifetime
     [Fact(DisplayName = "429 trả ĐÚNG envelope IApiResult + header Retry-After (không còn body rỗng)")]
     public async Task RejectedRequest_ReturnsApiResultEnvelope_WithRetryAfterHeader()
     {
-        // Dùng policy "login" (5 lượt) thay vì global (100 lượt) chỉ vì rẻ hơn 20 lần — thứ đang
+        // Dùng policy "login" (5 lượt) thay vì global (200 lượt) chỉ vì rẻ hơn 40 lần — thứ đang
         // kiểm là OnRejected, mà OnRejected là MỘT hàm dùng chung cho cả hai limiter.
         var client = await CreateClientAsync("203.0.113.40");
 
@@ -148,6 +150,12 @@ public sealed class GlobalRateLimitTests : IAsyncLifetime
         //    mọi response lỗi khác, FE không phải xử lý riêng cho 429.
         Assert.False(root.TryGetProperty("data", out _));
         Assert.False(root.TryGetProperty("fields", out _));
+
+        // fieldErrors (thêm 2026-09-03 cho nhánh 400) cũng phải vắng mặt ở đây. Khẳng định này rẻ
+        // và nó canh đúng cách hỏng dễ xảy ra nhất khi thêm một trường vào envelope: gán nó cho
+        // MỌI nhánh "cho tiện" thay vì chỉ nhánh sinh ra nó — khi đó FE phải viết thêm nhánh xử lý
+        // một dictionary rỗng ở những response chẳng liên quan gì tới ô nhập nào.
+        Assert.False(root.TryGetProperty("fieldErrors", out _));
     }
 
     [Fact(DisplayName = "/health KHÔNG bị siết kể cả khi hạn mức global của chính IP đó đã cạn")]

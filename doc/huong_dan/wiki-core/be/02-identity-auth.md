@@ -1,3 +1,9 @@
+---
+kind: luat
+scope: core
+verified: 2026-09-06
+---
+
 # 2. Xác thực (Identity) khi hệ thống có nhiều Process riêng biệt
 
 ## Câu hỏi: 2-3 Process riêng biệt thì Identity + JWT còn hợp lý không?
@@ -167,6 +173,40 @@ gọi. Nên buộc phải chọn: hỏng ở giữa thì hỏng theo hướng n�
 
 **Hỏng theo hướng an toàn** ⇒ con dấu luôn đi trước.
 
+> ### ✅ CÓ THẬT (thi công xong, đối chiếu 2026-09-06) — tiền đề "buộc phải chọn" là SAI
+>
+> Câu mở đầu mục này nói *"Hai lệnh ghi này **không nằm chung 1 transaction** —
+> `UserManager` tự `SaveChanges` mỗi lần gọi. Nên buộc phải chọn."*
+>
+> Vế đầu đúng: `UserManager` **có** tự `SaveChanges`. Vế sau sai: các store của
+> Identity dùng **chính** `DbContext` của ứng dụng, nên mở một transaction tường
+> minh bao quanh cả cụm là làm được. Không hề "buộc phải chọn" — chỉ là chưa làm.
+>
+> **Chốt 2026-08-30: bọc cả cụm trong MỘT transaction.** Bảng chọn thứ tự ở trên
+> **vẫn giữ nguyên giá trị** — nó là phòng thủ lớp hai cho trường hợp transaction
+> không dùng được (vd đường ghi đi qua nhiều `DbContext`), và nó giải thích vì sao
+> thứ tự hiện tại là thứ tự đúng. Thay đổi là: hỏng giữa chừng nay **hoàn tác sạch**
+> thay vì để lại trạng thái nửa vời cần người đi dọn.
+>
+> Vì sao đổi: thứ tự chỉ chọn được *hướng* hỏng cho **một** cặp lệnh. Với ba cặp
+> trở lên — con dấu → cập nhật → **gỡ role** → **thêm role** — không tồn tại thứ tự
+> nào an toàn cả hai chiều. Gỡ trước rồi thêm hỏng ⇒ mất quyền; thêm trước rồi gỡ
+> hỏng ⇒ **leo thang quyền**, tệ hơn. Đó là dấu hiệu bài toán cần transaction chứ
+> không cần sắp xếp lại.
+>
+> **🔄 LẬT 2026-09-06 — nhãn `🚧` gỡ, việc đã xong.** Ba đường ghi đều đã bọc transaction
+> tường minh quanh cả cụm:
+>
+> | Đường ghi | Mở transaction | Commit |
+> |---|---|---|
+> | `UserAdminService.CreateAsync` | `UserAdminService.cs:142` | `:178` |
+> | `UserAdminService.UpdateAsync` | `:249` (con dấu ở `:257`) | `:293` |
+> | `UserAdminService.LockAsync` | `:315` (con dấu ở `:324`, **trước** `SetLockoutEndDateAsync` ở `:332`) | `:336` |
+> | `IdentityService.ChangePasswordAsync` | `:88` | `:119` — `RefreshSignInAsync` (`:134`) **cố ý ngoài** transaction vì nó ghi cookie, không ghi DB |
+>
+> Ca thật đã đo, xem [`../../../contracts/users.md`](../../../contracts/users.md)
+> §`PUT /api/users/{id}`.
+
 Chi tiết dễ vấp khi hiện thực: dùng **cùng một instance `AppUser`** đã lấy ra cho cả hai lệnh
 ghi. `UserManager.UpdateAsync` tự làm mới `ConcurrencyStamp` **trên chính instance đó**; nếu
 lấy lại một instance cũ (đã đọc từ trước lần ghi thứ nhất) để ghi tiếp thì sẽ ra
@@ -225,9 +265,16 @@ chuyển thì phải cập nhật cả bảng ở §"Quy tắc bắt buộc" l�
 
 `Core.Infrastructure/DependencyInjection.cs` (`AddCoreModule`) đang dùng
 **`AddIdentity<AppUser, AppRole>()`** — bản **đầy đủ**. Chính nó là thứ nối
-`SecurityStampValidator` vào sự kiện `OnValidatePrincipal` của cookie. Không có dòng nào ở
-`Program.cs` làm việc này, và cũng **không cần** — nó đã được nối sẵn, đang chạy sẵn. Nó chỉ
-đang không phát hiện được gì vì hôm nay **không ai đổi con dấu**.
+`SecurityStampValidator` vào sự kiện `OnValidatePrincipal` của cookie
+(`src/BE/Core/PlatformManager.Core.Infrastructure/DependencyInjection.cs:110`). Không có dòng
+nào ở `Program.cs` làm việc này, và cũng **không cần** — nó đã được nối sẵn, đang chạy sẵn.
+
+> **🔄 LẬT 2026-09-06.** Bản trước kết câu bằng *"Nó chỉ đang không phát hiện được gì vì hôm
+> nay **không ai đổi con dấu**"*. Không còn đúng: `UserAdminService.LockAsync` (`:324`) và
+> `UserAdminService.UpdateAsync` (`:257`) đều gọi `UpdateSecurityStampAsync`, và có 5 test
+> integration chứng minh phiên thật sự bị chấm dứt
+> (`src/BE/Tests/PlatformManager.Core.IntegrationTests/Auth/SessionTerminationTests.cs`).
+> Câu cũ khiến người đọc kết luận cơ chế đang nằm im, tức đúng ngược lại.
 
 `AddIdentityCore<AppUser>()` là một "tối ưu" rất hay được đề xuất cho API không dùng Razor UI
 ("mình có dùng trang đăng nhập Razor đâu"). Nếu đổi sang nó:
@@ -251,11 +298,22 @@ services.AddAuthentication(IdentityConstants.ApplicationScheme)
 
 …và **có test chứng minh phiên bị huỷ sau khi đổi con dấu**. Đừng tin là nó vẫn chạy.
 
-## Cách chứng minh nó hoạt động thật
+## Cách chứng minh nó hoạt động thật — ✅ ĐÃ CÓ TEST (đối chiếu 2026-09-06)
 
 Không chứng minh được bằng unit test — validator sống ở tầng cookie middleware, không phải ở
 handler. Cách rẻ nhất là integration test qua `WebApplicationFactory` (xem
-[`04-testing-strategy.md`](04-testing-strategy.md)):
+[`04-testing-strategy.md`](04-testing-strategy.md)). **Bộ test đó đã tồn tại:**
+
+| File | Vai trò |
+|---|---|
+| `src/BE/Tests/PlatformManager.Core.IntegrationTests/Auth/SessionTerminationFactory.cs:29` | Ép `ValidationInterval = TimeSpan.Zero` — **thay đổi duy nhất** so với production |
+| `src/BE/Tests/PlatformManager.Core.IntegrationTests/Auth/SessionTerminationTests.cs` | 5 ca, phủ **cả hai chiều** của bảng ở §"Quy tắc bắt buộc": khoá → 401, đổi role → 401, **chỉ sửa email/fullName → KHÔNG ảnh hưởng**, đổi mật khẩu → phiên hiện tại sống/phiên khác chết, mở khoá → không đổi con dấu |
+
+Ba ca "KHÔNG bị ảnh hưởng" mới là phần đắt giá: chúng canh chiều ngược, tức chặn việc ai đó
+"cho chắc" bằng cách đổi con dấu ở mọi đường ghi.
+
+Các bước dưới đây giữ lại làm **khuôn cho seam khác** (xem
+[`04-testing-strategy.md`](04-testing-strategy.md) §"Seam activation test"):
 
 1. Trong cấu hình của **riêng test**, đặt
    `SecurityStampValidatorOptions.ValidationInterval = TimeSpan.Zero` để ép validator chạy mọi
@@ -315,6 +373,95 @@ Core có sẵn CSRF protection" với "tôi không cần làm gì thêm".
 
 ## Phòng thủ 2 lớp — bắt buộc cả hai, không chọn một
 
+> ### ✅ Hai lớp, nhưng Lớp 1 KHÔNG phải `SameSite` (đối chiếu source 2026-09-06)
+>
+> Tiêu đề mục này và mẫu code "Lớp 1" ngay dưới giả định `SameSite=Strict`. Cookie phiên
+> của dự án này khai `SameSiteMode.None`
+> (`src/BE/PlatformManager.Api/Program.cs:389`; cookie antiforgery cũng vậy, `:444`), và nó
+> **buộc phải là `None`**: FE nằm khác origin
+> ([`../fe/17-phuc-vu-va-trien-khai.md`](../fe/17-phuc-vu-va-trien-khai.md) §2), cookie
+> `Strict`/`Lax` sẽ không được gửi kèm và không ai đăng nhập được.
+>
+> `SameSite=None` **không phải một lớp yếu hơn — nó là không có lớp nào**. Nên chỗ của
+> Lớp 1 đã được thay bằng **kiểm header `Origin`**, xem mục ngay dưới. Hai lớp thật sự tồn
+> tại hôm nay:
+>
+> | | Cơ chế thật | Ở đâu |
+> |---|---|---|
+> | Lớp 1 | Mọi request ghi phải mang `Origin` trong allowlist, không thì 403 | `src/BE/PlatformManager.Api/Common/OriginValidationMiddleware.cs`, nối pipeline ở `Program.cs:544` |
+> | Lớp 2 | Token antiforgery (`X-XSRF-TOKEN`) | `Program.cs:421` trở đi |
+>
+> > **🔄 LẬT 2026-09-06.** Bản trước tuyên bố *"hệ thống này đang chạy trên MỘT lớp"* và
+> > dẫn hai bằng chứng, **cả hai đều sai ở thời điểm này**:
+> > 1. `Program.cs:218` cho `SameSiteMode.None` — dòng đó là
+> >    `.Bind(builder.Configuration.GetSection(CorsPolicyOptions.SectionName))`, không liên
+> >    quan cookie. Dòng đúng là `:389`.
+> > 2. *"Chú thích ở `Program.cs:252` vẫn nói Lớp 1 là SameSite"* — chú thích đó **đã được
+> >    sửa**, và nay nói **ngược lại** (`Program.cs:421-424`: *"chú thích cũ nói … SAI …
+> >    Lớp 1 thật là kiểm header Origin"*). `:252` hôm nay là
+> >    `const int GlobalSegmentsPerWindow = 6;`.
+> >
+> > Đây là dạng sai nguy hiểm nhất của tài liệu bảo mật: nó **báo động cho một lỗ hổng đã
+> > vá**, nên người đọc hoặc đi vá lại thứ đã vá, hoặc học cách bỏ qua cảnh báo của file này.
+
+### ✅ CÓ THẬT — kiểm header `Origin` thay cho Lớp 1 (chốt 2026-08-31, đối chiếu 2026-09-06)
+
+`SameSite` không dùng được ở cross-origin, nhưng có một cơ chế khác dùng được:
+**mọi request ghi (`POST`/`PUT`/`PATCH`/`DELETE`) phải mang header `Origin` nằm
+trong allowlist, không thì 403.**
+
+Vì sao nó là một lớp thật chứ không phải trang trí:
+
+| | |
+|---|---|
+| Trình duyệt **luôn** gắn `Origin` cho request cross-site | Cam kết của trình duyệt, không phải quy ước tự nguyện |
+| JavaScript **không** đặt hay sửa được `Origin` | Nằm trong danh sách header cấm ghi của Fetch |
+| Độc lập hoàn toàn với cơ chế token | Hỏng cái này không kéo theo cái kia — đúng định nghĩa phòng thủ nhiều lớp |
+
+Đây là khuyến nghị của OWASP cho đúng hình dạng SPA khác origin dùng cookie. Nó bắt
+được **cả hai** kịch bản sai sót nêu ở khung trên.
+
+#### Trạng thái thi công — đối chiếu source 2026-09-06
+
+| | Trước (2026-08-31) | ✅ Hôm nay |
+|---|---|---|
+| Lớp 1 | `SameSite=None` ⇒ không tồn tại | `OriginValidationMiddleware` — 403 cho request ghi có `Origin` ngoài allowlist (`OriginValidationMiddleware.cs:47`), nối pipeline ở `Program.cs:544` |
+| Lớp 2 | Token antiforgery, hoạt động đúng | Không đổi |
+| Chú thích trong `Program.cs` | Nói Lớp 1 là `SameSite` | Đã sửa — `Program.cs:421-424` nói đúng, kèm lý do `SameSite` không dùng được |
+| Mẫu code Lớp 1 trong file này | `SameSiteMode.Strict` | Giữ làm mẫu cho ca **cùng origin**; dự án này **không** thuộc ca đó — xem cảnh báo ngay dưới khối code |
+
+So khớp origin dùng `string.Equals(..., OrdinalIgnoreCase)`, **không** so theo tiền tố
+(`OriginValidationMiddleware.cs:88`) — `https://app.example.com.evil.net` bắt đầu bằng một
+origin hợp lệ nhưng là site hoàn toàn khác. Test chốt:
+`src/BE/Tests/PlatformManager.Core.IntegrationTests/Csrf/CsrfSeamTests.cs`.
+
+#### Nghiệm thu
+
+| # | Phép thử | PASS |
+|---|---|---|
+| 1 | `POST` request ghi với `Origin` đúng | 200 |
+| 2 | `POST` với `Origin` là một domain lạ, token antiforgery **hợp lệ** | **403** — chứng minh lớp mới độc lập với token |
+| 3 | `POST` **không** có `Origin` (vd gọi bằng `curl`) | Theo quyết định thi công — xem ghi chú dưới |
+| 4 | Đăng nhập bình thường từ FE thật | Không ảnh hưởng gì |
+
+Phép thử 2 là phép thử quyết định: token hợp lệ **mà vẫn bị chặn** mới chứng minh
+đây là lớp thứ hai thật, không phải cùng một lớp viết hai lần.
+
+Phép thử 3 là chỗ phải chọn có chủ đích, và **đã chọn khi thi công: CHO QUA**
+(`OriginValidationMiddleware.cs:78-81`, ba lý do ghi ngay tại chỗ ở `:62-77`). Tóm tắt:
+request không đi từ trình duyệt (script, công cụ tích hợp, kiểm thử) không có `Origin`;
+kẻ tấn công **không** dùng được đường này vì trình duyệt không cho phép bỏ `Origin` trong
+kịch bản CSRF; và **Lớp 2 vẫn áp đầy đủ** cho đúng những request đó, nên chúng không hề đi
+vào hệ thống mà không qua kiểm tra nào.
+
+Đổi hướng khi nào: nếu có yêu cầu "chỉ trình duyệt được ghi dữ liệu", đổi nhánh đó thành
+403 và cấp cho script một đường xác thực riêng (API key/service account) — **không** nới
+lỏng Lớp 2 để bù.
+
+> *(Sửa 2026-09-06: bản trước để mục này ở dạng câu hỏi mở *"Chốt khi thi công"*, trong khi
+> lựa chọn đã được chốt và ghi rõ trong code từ 2026-08-31. Để ngỏ một quyết định đã chốt
+> mời gọi người sau chốt lại theo hướng khác.)*
+
 ### Lớp 1 — `SameSite` cookie attribute
 
 ```csharp
@@ -346,18 +493,31 @@ dùng `IAntiforgery` của ASP.NET Core theo mô hình SPA (không phải mô h�
 Razor form):
 
 ```csharp
-// Program.cs
+// Program.cs — cookie NỘI BỘ của AddAntiforgery giữ nguyên tên mặc định và HttpOnly=true.
+// KHÔNG đổi tên nó thành "XSRF-TOKEN": xem bẫy "tokens swapped" ngay dưới khối này.
 builder.Services.AddAntiforgery(options =>
 {
-    options.HeaderName = "X-XSRF-TOKEN";   // FE đọc token từ cookie riêng, gửi lại qua header này
+    options.Cookie.HttpOnly = true;                            // cookie nội bộ — JS không cần đọc
+    options.Cookie.SameSite = SameSiteMode.None;               // FE khác origin, vẫn phải gửi được
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    options.HeaderName = "X-XSRF-TOKEN";                       // FE gửi REQUEST-TOKEN qua header này
 });
 
-// 1 endpoint nhỏ để FE lấy token lúc load app (hoặc lúc login)
+// 1 endpoint nhỏ để FE lấy token lúc load app. Nó phải TỰ TAY set MỘT cookie RIÊNG chứa
+// REQUEST-TOKEN — đây là bước dễ bỏ sót nhất, và bỏ sót thì Angular không có gì để đọc.
 app.MapGet("/api/antiforgery/token", (IAntiforgery antiforgery, HttpContext ctx) =>
 {
     var tokens = antiforgery.GetAndStoreTokens(ctx);
+
+    ctx.Response.Cookies.Append("XSRF-TOKEN", tokens.RequestToken!, new CookieOptions
+    {
+        HttpOnly = false,               // Angular PHẢI đọc được bằng JS — khác cookie nội bộ ở trên
+        SameSite = SameSiteMode.None,
+        Secure = true,
+    });
+
     return Results.Ok(new { token = tokens.RequestToken });
-});
+}).DisableRateLimiting();               // bước "lấy token" không nên ăn slot của GlobalLimiter
 
 // Middleware validate — CHỈ áp cho method ghi, GET không cần
 app.Use(async (ctx, next) =>
@@ -370,6 +530,26 @@ app.Use(async (ctx, next) =>
     await next();
 });
 ```
+
+> ### ⚠️ Bẫy "tokens swapped" — đã dính một lần, đừng dính lại
+>
+> Double-submit-cookie có **hai** giá trị khác nhau: **COOKIE-TOKEN** (bí mật server giữ, nằm
+> trong cookie nội bộ của `AddAntiforgery`) và **REQUEST-TOKEN** (thứ FE echo vào header).
+> Đặt `options.Cookie.Name = "XSRF-TOKEN"` khiến cookie **nội bộ** mang tên mà Angular đang
+> tìm, nên Angular echo nhầm cookie-token vào header ⇒ `ValidateRequestAsync` ném
+> `AntiforgeryValidationException` *"the cookie token and the request token were swapped"* —
+> **khoá mọi request ghi thật từ trình duyệt, kể cả `POST /api/auth/login`**. Ca này xảy ra
+> thật và đã sửa 2026-08-24; lời giải thích đầy đủ nằm ngay trong
+> `src/BE/PlatformManager.Api/Program.cs:431-440`.
+
+> **🔄 LẬT 2026-09-06 — khối mẫu cũ có hai lỗi, một lỗi không biên dịch được:**
+> 1. `HttpMethods.IsDeleted(...)` — **không tồn tại**. Tên đúng là `HttpMethods.IsDelete`
+>    (code thật: `Program.cs:587`).
+> 2. Endpoint mẫu chỉ `return Results.Ok(new { token = ... })` và **không set cookie
+>    `XSRF-TOKEN`**. Ai chép mẫu về sẽ có một endpoint trả token mà Angular
+>    `HttpXsrfInterceptor` không bao giờ đọc tới, nên **mọi** request ghi bị 403 — hỏng ở
+>    runtime, không ở biên dịch. Đây đúng nửa còn lại của bẫy "tokens swapped": bản mẫu cũ
+>    tránh được nửa đặt-sai-tên nhưng bỏ mất nửa phải-set-cookie-riêng.
 
 Kẻ tấn công gửi form CSRF **không biết token** (không đọc được cookie/state
 của nạn nhân từ site khác) nên request bị `ValidateRequestAsync` từ chối

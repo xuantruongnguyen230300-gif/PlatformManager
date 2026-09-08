@@ -1,133 +1,180 @@
 ---
+kind: luat
+scope: du-an
+verified: 2026-09-06
 project: "PlatformManager"
-status: "draft"
-updated: "2026-08-22"
-components_total: "26 documented + 1 obsolete"
+artifact: "Component index"
+status: "current"
+updated: "2026-09-08"
 ---
 
-# COMPONENTS.md — PlatformManager Component Library
+# Components — PlatformManager
 
-> **Purpose:** index of the reusable UI components extracted from the live views, so designers and AI tools generate UI that matches the shipped product.
-> **Principle:** every screen MUST be composed from these components — extend a spec in `Components/` instead of inventing new ones. All values come from `DESIGN.md` frontmatter and `Tokens/`; never hard-code colors/sizes outside them.
+This index is the **gate**. A screen spec may only compose components listed here; adding a
+`Components/*.md` without a row does not make it composable.
 
-**Live source: `src/FE/` (Angular 20).** Every spec below was re-verified against the shipped app on 2026-08-22. Until this pass the index described the deleted prototype, which is **frozen history** as of the same date (`doc/Design/CLAUDE.md` § Fidelity Policy) — it covers 4 of 6 screens, its token values have drifted, and its interaction model differs. Nothing here may be sourced from it.
+Count the specs rather than trusting a number written in prose:
 
-## General conventions
+```bash
+ls doc/Design/Frontend/PlatformManager/Components/*.md | wc -l
+```
 
-- **Five required states** — every component documents `default` / `hover` / `focus` / `active` / `disabled` as actually implemented. **This is no longer a formality:** the shipped app has real interactive states throughout. `.btn` ships all four interactive pseudo-classes — `:hover`, `:focus-visible`, `:active`, `:disabled` (`styles.scss:177-194`); `.action-btn` ships three (`:hover`, `:focus-visible`, `:disabled`, no `:active`); `.cell-icon-btn` ships two (`:hover`, `:focus-visible`); table rows highlight on hover; and `[disabled]` is bound at five real call sites. The prototype-era claim that "the entire stylesheet has exactly one interactive pseudo-class rule" is dead and has been removed.
-- **Angular 20 + PrimeNG, no Storybook.** Anatomy and variants are read from standalone component templates (`*.html`), their scoped SCSS, and the global primitives in `src/FE/src/styles.scss` (`.card`, `.btn`, `.action-btn`, `.badge`, `.notice`, `.filters`, `.form-row`, `.field`/`.field-input`, `.delta`, `table`/`th`/`td`, `dialog`). PrimeNG supplies `p-table` and `p-chart`; its colours are mapped to the same tokens in `core/theme/platform-manager-preset.ts`.
-- **Single light theme** — no dark mode, no `data-theme`, no toggle exists (`DESIGN.md` § Colors; `tokens.json`'s `dark` set is deliberately empty).
-- **Icon set: PrimeIcons v7**, loaded globally via `angular.json:38-39,100-101`, rendered as `<i class="pi pi-…">`. See `Icons.md` for the per-action map. Three Unicode glyphs (`↑`/`↓`, `└`, `●`) remain as text rather than icons — recorded there as legacy exceptions.
-- **Two shells** — the main shell (`Sidebar` + `Topbar` + `main`) and the bare auth shell used by routes carrying `data: { noShell: true }`. `Toast` overlays both.
+**Source of truth for every row:** the shared component layer in `src/FE/src/styles.scss`
+(layer 2) and the Angular components under `src/FE/src/app/shared/components/`. The design
+these were derived from lives in [`Prototypes/index.html`](./Prototypes/README.md) — open its
+"Thư viện component" screen to see every variant and state side by side.
 
-## Component index
+**Except for the rows marked 📐.** Those five are specified but not implemented — no class and
+no element for them exists in `src/FE` yet, so their source of truth is the approved prototype
+instead, and each spec says so in its own opening banner with the command to re-check. Do not
+read a 📐 row as a description of running code, and re-anchor it to the shipped file the day it
+lands. Count them rather than trusting this paragraph:
 
-| Component | File | Summary |
-| --- | --- | --- |
-| ActionButton | [Components/ActionButton.md](./Components/ActionButton.md) | Ghost row-action button (`.action-btn`, `.danger`) — transparent until hover **by design**; the one control shipping all 5 states |
-| AuthCard | [Components/AuthCard.md](./Components/AuthCard.md) | The second shell (`.login-shell`/`.login-card`/`.login-brand`) — the two auth routes render **without** sidebar or topbar |
-| AuthField | [Components/AuthField.md](./Components/AuthField.md) | Auth input tier (`.field`, `.field-input`, `.toggle-visibility`, `.field-row`, `.login-error`) |
-| Avatar | [Components/Avatar.md](./Components/Avatar.md) | Initials disc (`.avatar`) — 30px brand circle; the app has no image-avatar path at all |
-| Badge | [Components/Badge.md](./Components/Badge.md) | Pill status label (`.badge`) — 5 colour variants across 3 contexts: the BE-computed criteria triad `.bdone`/`.bwork`/`.bstall`, the user-grid pair `.active`/`.locked`, and a period-mode chip |
-| Button | [Components/Button.md](./Components/Button.md) | Tonal `.btn` + `.primary`, `.danger`, `.btn-block` and icon-only modifiers; all five states real, `[disabled]` bound at 5 call sites |
-| Card | [Components/Card.md](./Components/Card.md) | The white surface container (`.card`) shelling every section on the four in-shell routes; separates by shadow, not border |
-| CellIconButton | [Components/CellIconButton.md](./Components/CellIconButton.md) | Inline-edit ✓/✗ pair (`.cell-icon-btn.ok`/`.cancel`) + the `.cell-editable` double-click affordance |
-| DataTable | [Components/DataTable.md](./Components/DataTable.md) | The PrimeNG `p-table` grid **mechanism** — `[lazy]` 10/20/50 paginator, frozen columns, loading mask, empty message. Cell painting lives in `Table.md` |
-| DeltaIndicator | [Components/DeltaIndicator.md](./Components/DeltaIndicator.md) | `app-delta-indicator` — signed change text coloured `.up`/`.down`/`.flat` off a 0.001 epsilon; owns its own `vi-VN` formatting |
-| Dialog | [Components/Dialog.md](./Components/Dialog.md) | Native `<dialog>`, 6 instances in 3 width variants (default 700px, `.form-dialog` 560px, `.confirm-dialog` 420px); no `p-dialog` anywhere |
-| FilterBar | [Components/FilterBar.md](./Components/FilterBar.md) | Above-grid filter row (`.filters`, `.filters-actions`, `.search`) + the filter-tier field rule |
-| Footer | [Components/Footer.md](./Components/Footer.md) | `.footer` — the dashboard's closing footnote line + inline brand `routerLink`; page content, not app chrome. The rule is declared **twice, identically** (global + page-scoped) |
-| FormRow | [Components/FormRow.md](./Components/FormRow.md) | Dialog form group (`.form-row`, `.required`, `.form-error`, `.role-checkboxes`, `.form-grid`) |
-| HistoryRow | [Components/HistoryRow.md](./Components/HistoryRow.md) | `.histrow` — one saved-period row (date · progress · delta · `Xem`) in the dashboard history panel |
-| Input | [Components/Input.md](./Components/Input.md) | Native fields in **four** tiers (filter, table-cell edit, dialog form-row, auth `.field-input`) plus a checkbox treatment |
-| KpiTile | [Components/KpiTile.md](./Components/KpiTile.md) | `app-kpi-tile` — `.card.kpi` with label/value/sub and a 4-value `KpiTone`; 5 instances in `KpiSummary` |
-| NoticeBanner | [Components/NoticeBanner.md](./Components/NoticeBanner.md) | `.notice` — **conditional** read-only-mode explanation on the DTI catalogue (no longer the prototype's permanent workflow banner) |
-| ProgressBar | [Components/ProgressBar.md](./Components/ProgressBar.md) | `.bar`/`.fill` group-progress track, component-scoped to `GroupProgressList`; the app's only progress indicator |
-| RoleTag | [Components/RoleTag.md](./Components/RoleTag.md) | Neutral outlined role chip (`.role-tag`) in the user grid — one variant, deliberately no semantic colour |
-| SegmentedControl | [Components/SegmentedControl.md](./Components/SegmentedControl.md) | `.segmented`/`.seg-btn` — the dashboard's Tuần\|Tháng view switcher: one bordered group, `overflow:hidden`, `.active` filled `brand`. The app's **only** view switcher |
-| Sidebar | [Components/Sidebar.md](./Components/Sidebar.md) | App-shell nav rail (`.sidebar`) — **API-driven** menu tree, collapse rail, off-canvas drawer |
-| Table | [Components/Table.md](./Components/Table.md) | The global table primitive (`.tablewrap` + the global `th`/`td`/zebra rules) that paints **every** table including PrimeNG's, plus the hand-rolled permission matrix. The grid mechanism lives in `DataTable.md` |
-| Toast | [Components/Toast.md](./Components/Toast.md) | Fixed bottom-right notification stack (`.toast-stack`/`.toast-item`), 4 severities, 5 s auto-dismiss |
-| Topbar | [Components/Topbar.md](./Components/Topbar.md) | App-shell sticky header (`.topbar`) — hamburger, route title `<h1>`, user + logout |
-| TrendChart | [Components/TrendChart.md](./Components/TrendChart.md) | `app-trend-chart` — the app's **only** chart: PrimeNG `p-chart type="line"` behind `@defer (on viewport)`, one dataset, legend hidden, palette resolved from 3 tokens at runtime |
+```bash
+grep -c '📐 |' doc/Design/Frontend/PlatformManager/COMPONENTS.md
+```
 
-> **The index is the gate, not the file's existence.** A screen spec may only
-> compose components listed in the table above. Adding a `Components/*.md`
-> without an index row does not make it composable.
->
-> Merged 2026-08-22: 11 refreshed (pass A) + 13 newly written (pass B) = **24
-> documented**, plus `Fab` retained as obsolete — 25 files at that point, no
-> duplicates, no dangling links.
->
-> Pass C, 2026-08-22: the three specs listed as STILL UNWRITTEN — `TrendChart`,
-> `SegmentedControl`, `Footer` — were written against `src/FE/`, taking the
-> library to 27 documented + 1 obsolete. The unwritten list is now empty.
-> `.chart-skeleton` is folded into `TrendChart.md` as the `@defer` placeholder
-> state rather than given its own spec; `.period-display` remains undocumented
-> (see the note below).
->
-> Correction 2026-08-23: **`TabBar` deleted.** It documented a two-button view
-> switcher on `/quan-tri/phan-quyen` that has never existed in `src/FE/` — the
-> grep for its class and signal returns 0 matches, and `phan-quyen.page.html` is
-> 19 lines holding one `.card` with one `<app-permission-matrix>` and no tabs.
-> The second matrix it switched to belongs to `doc/contracts/permissions.md`
-> PERM-2, which is still `Status: DRAFT` — a plan, not a shipped screen. Library
-> is now **26 documented + 1 obsolete**. Verified index ↔ files on 2026-08-23:
-> 27/27, no duplicates, no dangling links.
+## The rule this index enforces
 
-<!-- =========================================================================
-     STILL UNWRITTEN — present in src/FE/, no spec either way:
-       - (none) — cleared 2026-08-22 by pass C.
+**One component, one definition.** No screen, page or component stylesheet re-declares a
+button, input, badge, toolbar, table frame or dialog footer. Screens compose the classes below.
+This is what makes the set implementable as shared Angular components: each row maps to exactly
+one thing to build.
 
-     Deliberately NOT given their own spec:
-       - .chart-skeleton (dashboard.page.scss:21-26) — 5 declarations of flex
-         centring, no states, no variants. Documented as the @defer placeholder
-         state inside Components/TrendChart.md. Note it is shared with the
-         history panel's placeholder (dashboard.page.html:51), so it belongs to
-         the dashboard page, not to TrendChart.
-       - .period-display (period-toolbar.scss:16-23) — a read-only chip styled
-         like an input (border-strong / radius-sm / bg / muted / sp-2 sp-3 /
-         fs-sm), one instance, no states, no variants, no interaction. Recorded
-         as plain markup in Screens/01-dashboard.md. Promote it to a spec only
-         if a second read-only-value chip appears, or fold it into Input.md as
-         a fifth, non-editable tier — that decision is open.
+---
 
-     Note: DataTable.md and Table.md deliberately split one subject —
-     Table.md owns the global cell/zebra/.tablewrap primitive that paints
-     EVERY table (PrimeNG emits real <table> elements) plus the one
-     hand-rolled permission matrix; DataTable.md owns the p-table grid
-     mechanism (lazy paginator, frozen columns, loading mask). See the scope
-     boundary blockquote at the top of Table.md.
-     ========================================================================= -->
+## Index
 
-## Known inconsistencies (current code — normalize in redesigns)
+| Component | Spec | What it is |
+|---|---|---|
+| AuthCard | [Components/AuthCard.md](./Components/AuthCard.md) | The second shell — the two auth routes render **without** sidebar or topbar |
+| AuthField | [Components/AuthField.md](./Components/AuthField.md) | The auth form layer (`.field`, `.field-row`, `.login-error`, `.btn-block`). The input itself is `Input.md` — the two tiers merged on 2026-08-29 |
+| Avatar | [Components/Avatar.md](./Components/Avatar.md) | Initials disc (`.avatar`) — the app has no image-avatar path at all |
+| Badge | [Components/Badge.md](./Components/Badge.md) | Pill label (`.badge`). Two families with different jobs: **status** (`.ok`/`.warn`/`.bad`/`.neutral`, semantic colour) and **identity** (`.outline`, bordered, no semantic colour) |
+| Button | [Components/Button.md](./Components/Button.md) | Text button (`.btn`) + `.primary`, `.danger`, `.sm`, `.btn-block`. Bordered — a tonal fill alone does not separate from a card |
+| Card | [Components/Card.md](./Components/Card.md) | The white surface container shelling every section |
+| Check | [Components/Check.md](./Components/Check.md) | Checkbox treatment (`.check`) — merged from two byte-identical copies in the permission matrices |
+| ConfirmDialog | [Components/ConfirmDialog.md](./Components/ConfirmDialog.md) | `<app-confirm-dialog>` — question / confirmation dialog on native `<dialog>`, severity icon, **exactly two buttons** |
+| DataGrid | [Components/DataTable.md](./Components/DataTable.md) § CHỐT 2026-09-06 | `<app-data-grid>` — **lưới bản ghi dùng chung** ở `shared/components/data-grid/`. Sở hữu KHUNG (chiều cao cố định + cuộn bên trong, phân trang, loading); màn hình truyền cột qua `TemplateRef`. Từ 2026-09-06 đây là nơi DUY NHẤT import `p-table` |
+| DataTable | [Components/DataTable.md](./Components/DataTable.md) | The PrimeNG `p-table` grid **mechanism** — lazy paging, scroll height, empty message, and since 2026-09-05 a 📐 frozen-edge-column variant with no shipped instance yet. Cell painting lives in `Table.md` |
+| DeltaIndicator 📐 | [Components/DeltaIndicator.md](./Components/DeltaIndicator.md) | Signed change text coloured by direction (`.delta` + `.up`/`.down`/`.flat`). **Split case:** the colour classes ship today in `src/FE/src/styles.scss`; the wrapper that classifies and formats the number does not |
+| Dialog | [Components/Dialog.md](./Components/Dialog.md) | Native `<dialog>` in three width variants, plus the `.dialog-head` / `.dialog-actions` anatomy |
+| Footer | [Components/Footer.md](./Components/Footer.md) | `.footer` — closing footnote line; page content, not app chrome |
+| FormRow | [Components/FormRow.md](./Components/FormRow.md) | Dialog form group (`.form-row`, `.form-grid`, `.required`, `.form-error`) |
+| HistoryRow 📐 | [Components/HistoryRow.md](./Components/HistoryRow.md) | One saved-period row in the Dashboard's history panel (`.history` / `.histrow`) — date range, progress, movement, a `Xem` button |
+| IconButton | [Components/IconButton.md](./Components/IconButton.md) | Icon-only ghost button (`.icon-btn`) + `.primary` / `.danger`. **Merged from five separate variants** that disagreed on size, radius and border |
+| LanguageSwitcher | [Components/LanguageSwitcher.md](./Components/LanguageSwitcher.md) | `<app-language-switcher>` — đổi ngôn ngữ lúc chạy; một nút cho mỗi ngôn ngữ khai ở `CORE_I18N`. Hôm nay chỉ có trên màn đăng nhập |
+| Input | [Components/Input.md](./Components/Input.md) | One input contract everywhere (`.input`), plus `.input-icon`, the six data-type width variants, `:disabled` and `.invalid` |
+| KpiTile 📐 | [Components/KpiTile.md](./Components/KpiTile.md) | Label / value / sub-caption stat tile — a `Card` with the `.kpi` modifier, four value tones, five to a row |
+| NoticeBanner | [Components/NoticeBanner.md](./Components/NoticeBanner.md) | In-page banner (`.notice`) in four severities |
+| ProgressBar 📐 | [Components/ProgressBar.md](./Components/ProgressBar.md) | Track + fill (`.bar` / `.fill`) for one criteria group's progress. The app's only progress indicator; one brand colour at every level |
+| SegmentedControl | [Components/SegmentedControl.md](./Components/SegmentedControl.md) | `.segmented` / `.seg-btn` — the app's only view switcher |
+| Sidebar | [Components/Sidebar.md](./Components/Sidebar.md) | App-shell nav rail — **API-driven** menu tree, collapse rail, off-canvas drawer |
+| Table | [Components/Table.md](./Components/Table.md) | The table primitive (`.tablewrap`, `.tablewrap.scroll`, global `th`/`td`/zebra) painting **every** table including PrimeNG's |
+| Toast | [Components/Toast.md](./Components/Toast.md) | Floating notification stack — severity icon, title, body, dismiss |
+| Toolbar | [Components/Toolbar.md](./Components/Toolbar.md) | `<app-toolbar>` — the above-list control surface: bounded search, filter panel behind a control with a count badge, removable condition chips, action group |
+| Topbar | [Components/Topbar.md](./Components/Topbar.md) | App-shell sticky header — hamburger, route title, user + logout |
+| TrendChart 📐 | [Components/TrendChart.md](./Components/TrendChart.md) | The app's only chart — single-series line over the saved periods. **Restored 2026-09-05 by decision Q17**: the four `chart-*` roles are declared again in `Tokens/colors.md` § Chart Palette. One prerequisite is left, and it is work rather than a decision — `chart.js` has to go back into `src/FE/package.json`, which the design area may not edit |
 
-Re-verified against `src/FE/` on 2026-08-22. The four prototype-era items are recorded with their outcome so the history is not lost.
+**📐 marks a spec that is design-only** — the component is approved and specified
+but nothing implements it in `src/FE` yet. A screen spec may compose it (that is
+what these five are for), but a build task must read the spec's own `Cần chốt`
+section first. Everything unmarked is shipped code.
 
-1. ~~`.btn.danger` is dead CSS, never applied to any element.~~ **RESOLVED.** `.btn.danger` is live on the delete-confirmation action (`confirm-dialog.html:8`) and has its own hover shade `--bad-bg-hover` (`styles.scss:168-174`).
-2. ~~No custom interactive states exist anywhere.~~ **RESOLVED.** All five states ship across the button families, and `[disabled]` is genuinely reachable — bound at `login.page.html:55`, `doi-mat-khau.page.html:58`, `phan-quyen.page.html:4`, `permission-matrix.html:25` and `csv-import-dialog.html:18`.
-3. ~~Two "text field" treatments coexist for one role.~~ **STILL OPEN, AND WIDER — now four.** Filter (`border-strong`), table-cell edit (`border-strong`, `padding:5px`), dialog form-row (**`line`**), and auth (`border-strong`, `10px 12px 10px 36px`). Focus is also inconsistent: two different treatments ship and the table-cell and form-row tiers have **none**. See `Components/Input.md`.
-4. ~~`--brand2` is declared but never consumed.~~ **RESOLVED.** `.btn.primary:hover` consumes it (`styles.scss:161-162`).
-5. **`.tablewrap` has two conflicting contracts under one name.** `overflow:hidden` in the two PrimeNG grids, `overflow:auto; max-height:560px` in the permission matrix — declared separately in three component stylesheets. See `Components/Table.md`.
-6. **`.dialog-actions` is duplicated in all six dialog stylesheets** and has already drifted into three `margin-top` values (8/12/16px), with one copy missing `gap`. See `Components/Dialog.md`.
-7. **Two class vocabularies for one badge pair.** `.bdone`/`.active` are the same green pill and `.bstall`/`.locked` the same red pill, under four names in two files. See `Components/Badge.md`.
-8. **Two implementations of the delta rule.** `DeltaIndicator` owns it, but `KpiSummary` computes its own delta text and tone for the KPI tile instead of using the component. See `Components/DeltaIndicator.md`.
-9. **`<p-table styleClass="dti-grid">` references a class that does not exist** anywhere in `src/FE/` (`criteria-grid-table.html:14`) — dead attribute.
-10. **Off-scale literals are widespread**: badge `10px`/`750`, KPI value `21px`/`850`, delta weight `850`, confirm message `13.5px`, progress track `9px`, table-cell input `padding:5px`, card `margin-top:16px`, notice `border-radius:12px` (hardcoded rather than `var(--radius-table)`). Weights and line-heights are not tokenised at all — see `Tokens/typography.md`.
-11. **No elevation or motion scale.** Four uncontrolled shadows ship (`--shadow`, two `.btn` hover shadows, the dialog's `0 24px 70px`), and every `transition` duration is a literal.
-12. **Accessibility gaps carried by these components**: `ProgressBar` has no `role="progressbar"`/`aria-value*`; `NoticeBanner` has no `aria-live`, so switching to read-only mode is announced to nobody; `DeltaIndicator`'s direction is a text glyph; the auth `.field-input` icons are decorative but not `aria-hidden` while the sidebar's are.
+---
 
-## Checklist when adding a new component
-- [ ] Clear, consistent name; one file in `Components/`; anatomy, all variants, and the five states documented.
-- [ ] Only token values from `DESIGN.md` / `Tokens/`; exact source file paths cited (`file:line` in `src/FE/`).
-- [ ] Verified against shipped markup + CSS — never record a variant you cannot point to in the source.
-- [ ] Row added to the index table above (and `components_total` bumped).
-- [ ] If it replaces or absorbs something, say so rather than deleting the old spec.
+## Retired on 2026-08-29
 
-## Obsolete
+Two things happened on this date. The dashboard and DTI-catalogue screens were removed from
+`src/FE` to be rebuilt, taking their components with them; and the remaining component layer was
+consolidated so that each kind of control has a single definition.
 
-Specs kept deliberately, for components with **no live counterpart**. Marked `status: obsolete` in their own frontmatter with the grep that proves absence. Never compose a screen or a prompt pack from these; losing the record of why something went is how the same component gets re-invented later.
+Verify any row below with `grep -rn "<class>" src/FE/src`. PASS = no hit outside a historical
+comment — **except for `.delta`**, which survived the consolidation and is declared in
+`src/FE/src/styles.scss` § `.delta` even though nothing calls it. That exception is real and
+is the reason the `DeltaIndicator` row below reads differently from the other four.
 
-| Component | File | Removed because | Absence proof |
-| --- | --- | --- | --- |
-| Fab | [Components/Fab.md](./Components/Fab.md) | Never ported to Angular. The prototype's mobile floating "Lưu tuần" button existed to reach a **page-level batch save**; the shipped dashboard is read-only and editing moved to per-cell inline confirm on the DTI catalogue, so there is no batch action to float. Mobile reachability was solved structurally instead (sticky topbar + off-canvas drawer). | `grep -rni "fab" src/FE/src` → **0 matches** (verified 2026-08-22 at stage 3 and again at stage 4); `DESIGN.md` § Components records the same |
+| Retired spec | Why | Where it went |
+|---|---|---|
+| ActionButton | Class `.action-btn` carried **two different components** — text buttons in one screen, icon-only buttons in another | Split by intent: `Button.md` (`.btn.sm`) and `IconButton.md` (`.icon-btn`) |
+| CellIconButton | Inline-edit confirm/cancel pair; the screen that hosted it was removed. The class had **zero usages** even before that | `IconButton.md` |
+| DeltaIndicator | Dashboard-only signed-change display | ⬅️ **Returned 2026-09-05** — [`Components/DeltaIndicator.md`](./Components/DeltaIndicator.md). Its colour classes never actually left `styles.scss`; only the wrapper did |
+| Fab | Never ported to Angular; the batch action it floated does not exist | — |
+| FilterBar | `.filters` superseded by a toolbar that puts conditions behind a filter control instead of spreading them across a row | `Toolbar.md` |
+| HistoryRow | Dashboard history panel | ⬅️ **Returned 2026-09-05** — [`Components/HistoryRow.md`](./Components/HistoryRow.md) |
+| KpiTile | Dashboard KPI tile | ⬅️ **Returned 2026-09-05** — [`Components/KpiTile.md`](./Components/KpiTile.md) |
+| ProgressBar | Group-progress track, scoped to a dashboard component | ⬅️ **Returned 2026-09-05** — [`Components/ProgressBar.md`](./Components/ProgressBar.md) |
+| RoleTag | A second chip primitive at the same size as `.badge` with different radius, padding and colour system | `Badge.md` — the `.outline` variant. Its argument was kept: a role name is an **identifier**, not a status, so it carries no semantic colour. What changed is that this is now a variant of one component rather than a separate class |
+| TrendChart | The app's only chart | ⬅️ **Returned 2026-09-05** — [`Components/TrendChart.md`](./Components/TrendChart.md). Decision Q17 restored the four `chart-*` roles in `Tokens/colors.md` § Chart Palette the same day. Still to do outside this folder: `chart.js` was dropped from `src/FE/package.json` on 2026-09-04, when this was its only consumer, and has to go back |
+
+> **TabBar** was deleted earlier, on 2026-08-23: it documented a switcher that never shipped.
+
+### Five of them came back on 2026-09-05 — and one more thing did not
+
+The rows above are **kept, not rewritten**. Five specs retired on 2026-08-29 were restored on
+2026-09-05 because the rebuilt Dashboard and DTI catalogue compose them again: `KpiTile`,
+`ProgressBar`, `TrendChart`, `DeltaIndicator` and `HistoryRow`. Each is a **restore, not a
+redesign** — the values come from the approved prototype, which is the same design those
+components were originally built from.
+
+Why the retirement record stays visible rather than being tidied away: the reason each one was
+retired (*"— screen removed"*, never *"— bad component"*) is exactly the evidence a future
+reader needs to know these five were removed for a scheduling reason and not a design one. A
+table that only ever showed the current state would have lost that.
+
+**`report-dialog` is the one that is not coming back.** It never had a spec in `Components/`,
+and after decision Q13 of 2026-09-05 it never will:
+
+- `Xuất báo cáo` now downloads an `.xlsx` file directly — no dialog, no HTML preview, no copy
+  or print button.
+- The `app-report-dialog` CSS block at LỚP 4 of
+  [`Prototypes/index.html`](./Prototypes/README.md) is therefore **dead style**. It is already
+  empty in that file (its rules were dropped during the 2026-08-29 consolidation, which is
+  defect **A3** — `class="report"` has no CSS behind it at all: `grep -n 'class="report"' doc/Design/Frontend/PlatformManager/Prototypes/index.html` returns the markup and nothing declares a `.report` rule); the remaining comment header should go when the prototype is next touched.
+- The endpoint behind it is replaced too. That is an API decision and it belongs to
+  `doc/contracts/dashboard.md`, not here — this index records only that **no component and no
+  spec exists for a report preview, and none should be added.**
+
+---
+
+## What a spec must contain
+
+Each file carries a **Sources** section citing the live file it was derived from, and a table of
+the five states — `default`, `:hover`, `:focus-visible`, `:active`, `:disabled`. Hand-rolled
+components must define all five explicitly; this is where the pre-Angular prototype was weakest,
+and porting it verbatim would have carried that gap forward.
+
+Extending a component is preferred over adding one. If a screen needs a variant that is not
+listed, add it to the existing spec and to the shared layer — do not introduce a parallel class.
+That is the failure this index exists to prevent, and the Retired table above is what it looks
+like when the rule is not held.
+
+### There is no central "Known inconsistencies" list here, on purpose
+
+An open library-level problem is recorded in **the spec of the component that owns the class** —
+its `## Normalize on redesign` section, or `## Cần chốt` for a 📐 spec. This index routes you
+there; it does not hold a second copy of the problem. Use the Index table to find the owning
+spec from a class name, and check that every spec has exactly one such section:
+
+```bash
+grep -c '## Normalize' doc/Design/Frontend/PlatformManager/Components/*.md
+```
+
+Why not a central register: it would be a second home for issues that already have exactly one
+each, and two homes drift (`.claude/CLAUDE.md` §5). The evidence is already in this folder —
+`Components/FormRow.md` § Normalize #3 was **closed in its own spec on 2026-08-29**, while a
+pointer to a central list left a reader believing a decision was still owed. Cross-spec debts
+are the other half of the argument: the specs still carrying a *"chưa đối chiếu lại toàn file"*
+banner, and those whose `Sources:` cite modules deleted on 2026-08-29, are already flagged in
+each file **and** countable by command, so listing them here would be a hand-maintained count of
+the kind `.claude/CLAUDE.md` §6 forbids:
+
+```bash
+grep -ln 'Chưa đối chiếu lại toàn file' doc/Design/Frontend/PlatformManager/Components/*.md
+grep -ln 'modules/danh-muc-dti/\|modules/dashboard/' doc/Design/Frontend/PlatformManager/Components/*.md
+```
+
+Recorded 2026-09-08, after six screen specs were found pointing at a `COMPONENTS.md` §
+*"Known inconsistencies"* that has never existed. They were stale copies of the boilerplate in
+`doc/Design/Templates/Screen.md:78`, which already names the component spec as the destination;
+all six now match that template again.

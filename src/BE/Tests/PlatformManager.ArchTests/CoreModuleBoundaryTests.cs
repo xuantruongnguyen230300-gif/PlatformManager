@@ -7,9 +7,13 @@ namespace PlatformManager.ArchTests;
 /// 2 ArchTest theo đúng doc/kien-truc-core-module.md §"2 ArchTest mới cần thêm" — bắt đúng 2
 /// hướng vi phạm dễ xảy ra nhất khi thêm code/module mới: Core lỡ tay biết tới 1 Module cụ thể,
 /// hoặc 1 Module lỡ tay reference thẳng Module khác thay vì nâng logic dùng chung lên
-/// Core.Application. `Modules_MustNotReference_OtherModules` hiện vô nghĩa (chỉ có 1 module
-/// DtiWeekly) — đó chính là điểm hay: bảo hiểm MIỄN PHÍ cho ngày có module #2, bắt lỗi ngay ở
-/// CI trước khi kịp ăn sâu vào code.
+/// Core.Application.
+///
+/// <para><b>2026-08-29:</b> <see cref="ModuleAssemblies"/> đang RỖNG — module nghiệp vụ duy nhất
+/// (DtiWeekly) đã bị xoá để xây lại. <c>Modules_MustNotReference_OtherModules</c> vì thế qua một
+/// cách hiển nhiên, còn <c>Core_MustNotReference_AnyModulesAssembly</c> vẫn kiểm thật (nó quét
+/// Core, không quét module). Giữ nguyên cả hai: đây là bảo hiểm MIỄN PHÍ cho module đầu tiên
+/// được dựng lại — chỉ cần thêm bộ 3 assembly vào mảng dưới là test tự phủ.</para>
 /// </summary>
 public class CoreModuleBoundaryTests
 {
@@ -22,12 +26,7 @@ public class CoreModuleBoundaryTests
 
     // Thêm module nghiệp vụ mới: thêm bộ 3 (Domain/Application/Infrastructure) vào đây, gắn
     // đúng tên module — 2 test bên dưới tự động bao phủ module mới mà không cần sửa gì khác.
-    private static readonly (string ModuleName, Assembly Assembly)[] ModuleAssemblies =
-    [
-        ("DtiWeekly", typeof(PlatformManager.Modules.DtiWeekly.Domain.Entities.Criteria).Assembly),
-        ("DtiWeekly", typeof(PlatformManager.Modules.DtiWeekly.Application.DependencyInjection).Assembly),
-        ("DtiWeekly", typeof(PlatformManager.Modules.DtiWeekly.Infrastructure.DependencyInjection).Assembly),
-    ];
+    private static readonly (string ModuleName, Assembly Assembly)[] ModuleAssemblies = [];
 
     [Fact]
     public void Core_MustNotReference_AnyModulesAssembly()

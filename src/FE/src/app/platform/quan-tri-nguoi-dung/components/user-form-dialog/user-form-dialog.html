@@ -1,63 +1,167 @@
 <dialog #dialogEl class="form-dialog" (close)="onNativeClose()">
+  <!-- Dùng `.title` + nút icon "×", KHÔNG dùng `.dialog-head`: theo thư viện component,
+       `.dialog-head` (icon tròn + tiêu đề + mô tả) là hợp đồng của hộp thoại HỎI/XÁC NHẬN
+       (`dialog.confirm-dialog`) — nơi icon màu nói trước mức độ nghiêm trọng của câu hỏi. Hộp
+       thoại NHẬP LIỆU (`dialog.form-dialog`) dùng `.title`; gắn icon cảnh báo cho một form thêm
+       người dùng là nói sai về việc sắp xảy ra. -->
   <div class="title">
-    <h2>{{ title() }}</h2>
-    <button type="button" class="btn" (click)="dialogEl.close()">Đóng</button>
+    <h2>{{ titleKey() | translate }}</h2>
+    <button
+      type="button"
+      class="icon-btn"
+      [attr.aria-label]="'shared.action.close' | translate"
+      [attr.title]="'shared.action.close' | translate"
+      (click)="dialogEl.close()"
+    >
+      <i class="pi pi-times"></i>
+    </button>
   </div>
 
+  <!-- Mỗi ô có 3 thứ đi cùng nhau, không tách rời được (WCAG 2.2 AA, xem
+       doc/huong_dan/wiki-core/fe/15-accessibility.md §1):
+         `.invalid`          → dấu hiệu NHÌN thấy (viền đỏ, class toàn cục ở styles.scss)
+         `aria-invalid`      → dấu hiệu cho trình đọc màn hình rằng ô này sai
+         `aria-describedby`  → trỏ tới đúng câu giải thích, để đọc được LÝ DO chứ không chỉ "sai"
+       Cả ba đều `null` khi không có lỗi: `aria-invalid="false"` thừa còn `aria-describedby` trỏ
+       tới thẻ không tồn tại là lỗi a11y thật, không phải vô hại.
+
+       Chiều rộng ô nhập theo LOẠI DỮ LIỆU (`.input.w-md` = 240px cho tên/email) thay vì để mọi ô
+       kéo dài hết hàng: ô rộng 520px cho một tên đăng nhập là tín hiệu sai về lượng chữ cần gõ.
+       `.form-grid` xếp 2 ô ngắn cùng hàng nên hộp thoại không bị kéo dài vô cớ. -->
   @if (!editing()) {
-    <div class="form-row">
-      <label for="ufUserName">Tên đăng nhập <span class="required">*</span></label>
-      <input
-        id="ufUserName"
-        appAutofocus
-        placeholder="vd nguyen.van.a"
-        [value]="userNameField()"
-        (input)="onUserNameInput($event)"
-      />
-    </div>
-  }
-
-  <div class="form-row">
-    <label for="ufEmail">Email <span class="required">*</span></label>
-    <input id="ufEmail" type="email" placeholder="ten@congty.vn" [value]="emailField()" (input)="onEmailInput($event)" />
-  </div>
-
-  <div class="form-row">
-    <label for="ufFullName">Họ tên <span class="required">*</span></label>
-    <input id="ufFullName" placeholder="Nguyễn Văn A" [value]="fullNameField()" (input)="onFullNameInput($event)" />
-  </div>
-
-  @if (!editing()) {
-    <div class="form-row">
-      <label for="ufTempPassword">Mật khẩu tạm <span class="required">*</span></label>
-      <input
-        id="ufTempPassword"
-        type="text"
-        placeholder="vd TempPass@123"
-        [value]="tempPasswordField()"
-        (input)="onTempPasswordInput($event)"
-      />
-    </div>
-  }
-
-  <div class="form-row">
-    <span id="ufRolesLabel" class="form-row-label">Vai trò <span class="required">*</span></span>
-    <div class="role-checkboxes" role="group" aria-labelledby="ufRolesLabel">
-      @for (role of assignableRoles; track role) {
-        <label class="role-checkbox">
-          <input type="checkbox" [checked]="isRoleSelected(role)" (change)="toggleRole(role)" />
-          {{ role }}
+    <div class="form-grid">
+      <div class="form-row">
+        <label for="ufUserName">
+          {{ 'shared.field.userName' | translate }} <span class="required">*</span>
         </label>
+        <input
+          id="ufUserName"
+          class="input w-md"
+          [class.invalid]="!!fieldErrors()['UserName']"
+          [attr.aria-invalid]="fieldErrors()['UserName'] ? 'true' : null"
+          [attr.aria-describedby]="fieldErrors()['UserName'] ? errorId('UserName') : null"
+          appAutofocus
+          [placeholder]="'quan-tri-nguoi-dung.field.userNamePlaceholder' | translate"
+          [value]="userNameField()"
+          (input)="onUserNameInput($event)"
+        />
+        @if (fieldErrors()['UserName']; as message) {
+          <div class="form-error" [id]="errorId('UserName')">{{ message }}</div>
+        }
+      </div>
+
+      <div class="form-row">
+        <label for="ufTempPassword">
+          {{ 'quan-tri-nguoi-dung.field.tempPassword' | translate }}
+          <span class="required">*</span>
+        </label>
+        <input
+          id="ufTempPassword"
+          class="input w-md"
+          type="text"
+          [class.invalid]="!!fieldErrors()['TempPassword']"
+          [attr.aria-invalid]="fieldErrors()['TempPassword'] ? 'true' : null"
+          [attr.aria-describedby]="fieldErrors()['TempPassword'] ? errorId('TempPassword') : null"
+          [placeholder]="'quan-tri-nguoi-dung.field.tempPasswordPlaceholder' | translate"
+          [value]="tempPasswordField()"
+          (input)="onTempPasswordInput($event)"
+        />
+        @if (fieldErrors()['TempPassword']; as message) {
+          <div class="form-error" [id]="errorId('TempPassword')">{{ message }}</div>
+        }
+      </div>
+    </div>
+  }
+
+  <div class="form-grid">
+    <div class="form-row">
+      <label for="ufEmail">{{ 'shared.field.email' | translate }} <span class="required">*</span></label>
+      <input
+        id="ufEmail"
+        class="input w-md"
+        type="email"
+        [class.invalid]="!!fieldErrors()['Email']"
+        [attr.aria-invalid]="fieldErrors()['Email'] ? 'true' : null"
+        [attr.aria-describedby]="fieldErrors()['Email'] ? errorId('Email') : null"
+        [placeholder]="'quan-tri-nguoi-dung.field.emailPlaceholder' | translate"
+        [value]="emailField()"
+        (input)="onEmailInput($event)"
+      />
+      @if (fieldErrors()['Email']; as message) {
+        <div class="form-error" [id]="errorId('Email')">{{ message }}</div>
+      }
+    </div>
+
+    <div class="form-row">
+      <label for="ufFullName">
+        {{ 'quan-tri-nguoi-dung.field.fullName' | translate }} <span class="required">*</span>
+      </label>
+      <input
+        id="ufFullName"
+        class="input w-md"
+        [class.invalid]="!!fieldErrors()['FullName']"
+        [attr.aria-invalid]="fieldErrors()['FullName'] ? 'true' : null"
+        [attr.aria-describedby]="fieldErrors()['FullName'] ? errorId('FullName') : null"
+        [placeholder]="'quan-tri-nguoi-dung.field.fullNamePlaceholder' | translate"
+        [value]="fullNameField()"
+        (input)="onFullNameInput($event)"
+      />
+      @if (fieldErrors()['FullName']; as message) {
+        <div class="form-error" [id]="errorId('FullName')">{{ message }}</div>
       }
     </div>
   </div>
 
-  @if (errorMessage()) {
-    <div class="form-error">{{ errorMessage() }}</div>
+  <div class="form-row">
+    <span id="ufRolesLabel" class="form-row-label">
+      {{ 'shared.field.role' | translate }} <span class="required">*</span>
+    </span>
+    <!-- `aria-invalid`/`aria-describedby` đặt trên chính NHÓM `role="group"`, không trên từng ô
+         tick: lỗi "chọn ít nhất 1 vai trò" nói về cả nhóm, gắn vào ô tick đầu tiên sẽ đọc thành
+         "ô Admin sai" — sai nghĩa. -->
+    <div
+      class="role-checkboxes"
+      role="group"
+      aria-labelledby="ufRolesLabel"
+      [attr.aria-invalid]="fieldErrors()['Roles'] ? 'true' : null"
+      [attr.aria-describedby]="fieldErrors()['Roles'] ? errorId('Roles') : null"
+    >
+      @for (role of assignableRoles; track role) {
+        <label class="role-checkbox">
+          <input type="checkbox" class="check" [checked]="isRoleSelected(role)" (change)="toggleRole(role)" />
+          {{ role }}
+        </label>
+      }
+    </div>
+    @if (fieldErrors()['Roles']; as message) {
+      <div class="form-error" [id]="errorId('Roles')">{{ message }}</div>
+    }
+    <!-- Vai trò hệ thống (vd SuperAdmin) không có trong ô tick vì BE cấm đổi. Không nói ra thì
+         người sửa thấy hai ô đều trống và tưởng tài khoản không có vai trò nào — xem
+         doc/Design/Frontend/PlatformManager/Components/FormRow.md §"Vai trò được giữ nguyên".
+         CHỈ ĐỌC, cố ý không phải ô tick: cho tick nghĩa là cho gỡ, mà BE thì cấm gỡ. -->
+    @if (preservedRoles().length > 0) {
+      <p class="role-preserved muted">
+        {{ 'quan-tri-nguoi-dung.dialog.preservedRoles' | translate: { roles: preservedRoles().join(', ') } }}
+      </p>
+    }
+  </div>
+
+  <!-- Chỉ còn lỗi KHÔNG gắn ô nào (vd 409 trùng tên đăng nhập, 403 thiếu quyền). Lỗi có `fields`
+       đã nằm dưới đúng ô ở trên rồi. -->
+  @if (generalError(); as message) {
+    <div class="form-error">{{ message }}</div>
   }
 
+  <!-- Nút Lưu TẮT trong suốt thời gian request đang bay (fe/09-forms-validation.md §"Khoá form
+       trong lúc đang gửi"), và đổi nhãn để người dùng biết vì sao nó không bấm được. Nút "Huỷ"
+       KHÔNG bị khoá: đóng hộp thoại giữa chừng là lối thoát, không phải thao tác ghi. -->
   <div class="dialog-actions">
-    <button type="button" class="btn" (click)="dialogEl.close()">Huỷ</button>
-    <button type="button" class="btn primary" (click)="onSubmit()">Lưu</button>
+    <button type="button" class="btn" (click)="dialogEl.close()">
+      {{ 'shared.action.cancel' | translate }}
+    </button>
+    <button type="button" class="btn primary" [disabled]="saving()" (click)="onSubmit()">
+      {{ (saving() ? 'shared.action.saving' : 'quan-tri-nguoi-dung.action.save') | translate }}
+    </button>
   </div>
 </dialog>

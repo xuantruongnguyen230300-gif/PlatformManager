@@ -1,3 +1,9 @@
+---
+kind: luat
+scope: core
+verified: 2026-09-06
+---
+
 # Lộ trình triển khai core FE — tổng thể
 
 > Phần thực hành của `wiki-core/fe/`. Các file `fe/01-…13-…` trả lời *"core
@@ -12,18 +18,18 @@
 > mới là viết đúng ngay từ đầu, không có gì để đồng bộ ngược và không có nợ
 > nào để dọn. File `03-f2-don-no-ky-thuat.md` đã xoá.
 >
-> Lộ trình dưới đây vì vậy mang đúng hình dạng của `be/trien-khai/`:
+> Lộ trình dưới đây vì vậy mang đúng hình dạng của `tham-khao-ngoai/vnr-successor/`:
 > **dựng nền → lên tầng → gate**.
 
 ## 5 giai đoạn
 
 | Giai đoạn | Tên | Đầu ra kiểm chứng được (Definition of Done) | Ước lượng |
 | --- | --- | --- | --- |
-| **F0** | Nền móng | `ng build` xanh trên app zoneless mới; có cây `core/ platform/ modules/ shared/`; `IApiResult<T>` + 2 interceptor + `ToastService` chạy được — gọi 1 endpoint lỗi thật hiện đúng `message` | 1–2 ngày |
+| **F0** | Nền móng | `ng build` xanh trên app zoneless mới; có cây `core/ platform/ shared/` (`modules/` chỉ dựng khi module nghiệp vụ đầu tiên về — xem ghi chú §Phạm vi); `IApiResult<T>` + chuỗi interceptor + `ToastService` chạy được — gọi 1 endpoint lỗi thật hiện đúng `message`. Số interceptor đếm bằng lệnh, đừng chép (`.claude/CLAUDE.md` §6): `grep -n 'withInterceptors' src/FE/src/app/app.config.ts` → đọc mảng tại chỗ. 🔄 LẬT 2026-09-08: ô này ghi **"2 interceptor"**, thực tế `app.config.ts` đăng ký **3** (`apiBaseUrl` · `withCredentials` · `httpError`); file anh em [01-f0-nen-mong.md](01-f0-nen-mong.md) §Bảng file đã liệt đủ ba từ trước mà bảng lộ trình không được sửa cùng lượt | 1–2 ngày |
 | **F1** | Design token → code | `styles.scss` `:root` đủ token lấy từ `doc/Design/…/Tokens/`; PrimeNG preset map token; grep hex ngoài `:root` = 0 | 1–2 ngày |
 | **F2** | Auth + routing/guard | Đăng nhập qua cookie tại `/dang-nhap`; `CurrentUserService`; 3 guard đúng thứ tự; user `mustChangePassword` bị ép sang `/doi-mat-khau`; logout chặn lại route cũ | 2–3 ngày |
 | **F3** | Hai màn quản trị Core | `/quan-tri/nguoi-dung` và `/quan-tri/phan-quyen` CRUD chạy thật qua HTTP; `Admin` bị chặn khỏi màn phân quyền | 3–5 ngày |
-| **Gate** | Luật có máy kiểm | `scripts/fe-gate.sh` **tồn tại** và chạy được; lint chặn hex trần và thiếu `track` | liên tục |
+| **Gate** | Luật có máy kiểm | ✅ `scripts/fe-gate.sh` đã có (2026-08-28) → **G1/G3/G6/G11/G12** chạy được bằng grep (đối chiếu 2026-09-06 — đếm bằng `grep -c '^section ' scripts/fe-gate.sh`); `ng lint` phủ G2/G8/G9, `ng build` phủ G7. `eslint.config.js` **không** có rule chặn hex — G1 do script lo, đừng tưởng lint bắt. Xem [05-gate.md](05-gate.md) | liên tục |
 
 ## Thứ tự phụ thuộc — vì sao đúng thứ tự đó
 
@@ -42,10 +48,16 @@ F0 ──► F1 ──► F2 ──► F3
 
 ## Phạm vi — chỉ Core
 
-Bốn màn Core (`/dang-nhap`, `/doi-mat-khau`, `/quan-tri/nguoi-dung`,
-`/quan-tri/phan-quyen`) nằm ở `platform/`. Hai màn nghiệp vụ (`/dashboard`,
-`/danh-muc/dti`) thuộc `modules/` và **không** nằm trong lộ trình này — chúng
-đi cùng giai đoạn nghiệp vụ, khi `spec/` được triển khai.
+Màn Core nằm ở `platform/`: `/dang-nhap`, `/doi-mat-khau`, `/trang-chu`,
+`/quan-tri/nguoi-dung`, `/quan-tri/phan-quyen`. Màn nghiệp vụ thuộc `modules/` và
+**không** nằm trong lộ trình này — chúng đi cùng giai đoạn nghiệp vụ, khi `spec/`
+được triển khai.
+
+> 🔄 **LẬT 2026-09-06.** Bản trước viết *"Bốn màn Core … Hai màn nghiệp vụ (`/dashboard`,
+> `/danh-muc/dti`) thuộc `modules/`"*. Cả hai con số đã sai: `platform/` có **năm** thư mục
+> (thêm `trang-chu/`), và `src/FE/src/app/modules/` **không tồn tại** — module DTI gỡ
+> 2026-08-29 để xây lại, nên không route `/dashboard` hay `/danh-muc/dti` nào đang chạy.
+> Bản đồ route thật ở [`../../../quy-uoc/fe-routing-guard.md`](../../../quy-uoc/fe-routing-guard.md) §1.
 
 Ranh giới `platform/` ↔ `modules/`:
 [`../../../quy-uoc/fe-routing-guard.md`](../../../quy-uoc/fe-routing-guard.md) §1.

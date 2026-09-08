@@ -1,5 +1,8 @@
-// Port từ doc/Prototype (khối "Sidebar shell") — token từ src/styles.scss, xem
-// spec/sidebar-menu/ui-spec.md §5.
+// Thiết kế: doc/Design/Frontend/PlatformManager/Prototypes/index.html — "LỚP 3 · sidebar.scss".
+// Token từ src/styles.scss; hành vi/breakpoint theo
+// doc/Design/Frontend/PlatformManager/Components/Sidebar.md §Variants (6 dòng cuối phủ collapsed
+// rail, flyout, drawer tablet/mobile kèm token bề rộng từng mức).
+// Sửa 2026-09-08: trước trỏ §5 của một ui-spec sidebar-menu nay đã bị xoá.
 .sidebar {
   position: fixed;
   top: 0;
@@ -52,31 +55,14 @@
   }
 }
 
+// Chỉ còn phần RIÊNG của nút thu gọn. Hình dạng (kích thước, viền, màu, hover, focus) đến từ
+// `.icon-btn` toàn cục — trước đây khối này chép lại nguyên bộ đó và đã trôi lệch: bán kính
+// 7px cứng thay vì --radius-sm, thiếu hẳn trạng thái :disabled.
 .sidebar-toggle {
   margin-left: auto;
-  border: 1px solid transparent;
-  background: transparent;
-  border-radius: 7px;
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  flex: none;
-  color: var(--muted);
 
   i {
     transition: transform 0.2s ease;
-  }
-
-  &:hover {
-    background: var(--surface-2);
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--brand);
-    outline-offset: 2px;
   }
 }
 
@@ -129,7 +115,7 @@
   }
 
   &.active {
-    background: rgba(15, 91, 215, 0.08);
+    background: var(--surface-nav-active);
     color: var(--brand);
     font-weight: 700;
 
@@ -225,7 +211,7 @@
   display: none;
   position: fixed;
   inset: 0;
-  background: rgba(20, 28, 40, 0.45);
+  background: var(--overlay-backdrop);
   z-index: 34;
 
   &.show {
@@ -335,9 +321,7 @@
   }
 }
 
-@media print {
-  .sidebar,
-  .sidebar-backdrop {
-    display: none !important;
-  }
-}
+// Đã gỡ `@media print` ngày 2026-08-29: quy tắc in đặt TẬP TRUNG ở styles.scss
+// (`.no-print { display: none !important }`), không rải vào từng component — xem
+// doc/huong_dan/quy-uoc/fe-ui-conventions.md §"In ấn". `.sidebar` và `.sidebar-backdrop` nay mang
+// thẳng class `no-print` trong sidebar.html, hiệu quả in y hệt nhưng chỉ còn MỘT quy tắc.

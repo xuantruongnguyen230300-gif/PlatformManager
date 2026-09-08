@@ -11,19 +11,30 @@ namespace PlatformManager.Core.Application.Permissions;
 /// doc/contracts/permissions.md CONTRACT PERM-2.</summary>
 public sealed record GetResourcePermissionMatrixQuery : IQuery<ResourcePermissionMatrixDto>;
 
-public sealed class GetResourcePermissionMatrixHandler(IRolePermissionRepository repo)
+/// <summary>
+/// Hàng của ma trận dựng từ DANH MỤC (<see cref="ICoreResourceKeySource"/>) chứ không từ dữ liệu
+/// trong bảng — deny-by-default nghĩa là "chưa role nào được cấp" được biểu diễn bằng KHÔNG CÓ
+/// DÒNG trong <c>RolePermissions</c>, nên dựng hàng từ DB sẽ làm biến mất đúng những key nguy hiểm
+/// nhất khỏi màn hình quản trị.
+/// </summary>
+public sealed class GetResourcePermissionMatrixHandler(
+    IRolePermissionRepository repo,
+    ICoreResourceKeySource resourceKeySource)
     : BaseResponse, IRequestHandler<GetResourcePermissionMatrixQuery, IApiResult<ResourcePermissionMatrixDto>>
 {
     public async Task<IApiResult<ResourcePermissionMatrixDto>> Handle(GetResourcePermissionMatrixQuery query, CancellationToken ct)
     {
         var assignments = await repo.GetAssignedRoleNamesByResourceKeyAsync(ct);
 
-        var rows = ResourceKeys.All
-            .Select(key => new ResourcePermissionRowDto(
-                key, ResourceKeys.DisplayNames[key],
-                assignments.TryGetValue(key, out var roles) ? roles : []))
+        // Xem chú thích cùng chỗ ở GetPermissionMatrixHandler cho lý do đọc token sau dữ liệu.
+        var version = await repo.GetVersionAsync(ct);
+
+        var rows = resourceKeySource.Catalog()
+            .Select(definition => new ResourcePermissionRowDto(
+                definition.Key, definition.DisplayName,
+                assignments.TryGetValue(definition.Key, out var roles) ? roles : []))
             .ToList();
 
-        return Ok(new ResourcePermissionMatrixDto(Roles.All, rows));
+        return Ok(new ResourcePermissionMatrixDto(Roles.All, rows, version));
     }
 }

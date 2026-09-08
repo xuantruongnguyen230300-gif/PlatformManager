@@ -1,3 +1,9 @@
+---
+kind: luat
+scope: core
+verified: 2026-09-06
+---
+
 # 6. Testing strategy — ưu tiên mapper/service, không coverage dàn trải
 
 ## Vì sao đây là Nhóm A (bắt buộc ngày đầu)
@@ -12,7 +18,7 @@ crash — chỉ hiển thị sai).
 
 | Tầng | Test gì | Vì sao ưu tiên |
 |---|---|---|
-| 1. Mapper (`services/*.service.ts`) | DTO → model giữ đủ field, đúng kiểu | Lỗi ở đây **không có exception** — chỉ UI hiển thị sai/thiếu, khó phát hiện bằng mắt |
+| 1. Mapper (`services/*.mapper.ts`, hoặc hàm map trong `*.service.ts`) | DTO → model giữ đủ field, đúng kiểu | Lỗi ở đây **không có exception** — chỉ UI hiển thị sai/thiếu, khó phát hiện bằng mắt |
 | 2. Interceptor/service lỗi (`core/interceptors/*.ts`) | `IApiResult<T>` → thông báo đúng, `fields` bind đúng key | Đây chính là nơi lỗi FE-1 (đọc sai field) từng xảy ra thật |
 | 3. Component có logic | `computed()` phức tạp, form validation, điều kiện hiển thị | Không test component chỉ render tĩnh — phí thời gian, ít giá trị |
 
@@ -27,12 +33,27 @@ crash — chỉ hiển thị sai).
 
 ```ts
 describe('mapPositionDtoToRow', () => {
-  it('giữ đủ field và đúng kiểu', () => {
-    const dto: PositionDto = { Id: '1', Name: 'A', Status: 'Active' };
+  it('đổi casing camelCase (dây) → PascalCase (app), giữ đủ field', () => {
+    const dto: IPositionDto = { id: '1', name: 'A', status: 'Active' };   // DTO: camelCase
     expect(mapPositionDtoToRow(dto)).toEqual({ Id: '1', Name: 'A', Status: 'Active' });
   });
 });
 ```
+
+> ### 🔄 LẬT 2026-09-06 — mẫu cũ dựng DTO bằng **PascalCase**, và đó là lỗi dạy sai
+>
+> Nguyên văn cũ: `const dto: PositionDto = { Id: '1', Name: 'A', Status: 'Active' }`. DTO tả
+> **những gì server thật sự trả**, và envelope của BE serialize **camelCase** (chốt 2026-08-15,
+> [`../../quy-uoc/fe-api-client.md`](../../quy-uoc/fe-api-client.md) §Quy tắc casing). Hai hệ
+> quả, cái sau tệ hơn:
+>
+> - Mẫu cũ để mapper trở thành **hàm đồng nhất** (vào sao ra vậy) — nó không còn kiểm được điều
+>   duy nhất mapper sinh ra để làm, tức test xanh mà không chứng minh gì.
+> - Ai chép hình dạng đó đi khai DTO thật sẽ nhận `undefined` **lúc chạy** trong khi build vẫn
+>   xanh — đúng loại lỗi mà cả `fe-api-client.md` lẫn file này mở đầu bằng cách cảnh báo.
+>
+> Ca thật để soi: `src/FE/src/app/core/auth/current-user.model.ts` (`ICurrentUserDto` camelCase
+> → `ICurrentUser` PascalCase) và `src/FE/src/app/core/menu/menu-item.model.ts`.
 
 ## Mẫu test interceptor
 
@@ -41,7 +62,7 @@ it('đọc message từ IApiResult, không phải field cũ', () => {
   const err = new HttpErrorResponse({
     status: 409,
     error: { data: null, message: "Mã '1.1' đã tồn tại.", status: 'BUSINESS_ERROR',
-              code: 'Conflict', businessCode: 'CRITERIA.DUPLICATE_CODE',
+              code: 'Conflict', businessCode: 'PERMISSION.VERSION_CONFLICT',
               traceId: 't1', retryable: false, fields: null } satisfies IApiResult<null>,
   });
   // assert ToastService.error được gọi với đúng message, không phải fallback chung
@@ -51,6 +72,13 @@ it('đọc message từ IApiResult, không phải field cũ', () => {
 Test này **chính là bài kiểm chứng cho việc F0 (nền móng `core/http`) đã làm
 đúng** — viết nó trước khi coi F0 hoàn thành, cùng tinh thần "luật chưa từng
 đỏ là luật chưa được chứng minh" của BE.
+
+✅ **Đã có thật (đối chiếu 2026-09-06):** `src/FE/src/app/core/interceptors/http-error.interceptor.spec.ts`.
+Từ 2026-09-05 câu toast đi qua `ApiErrorMessageService`, nên spec đó khoá thêm một điều mẫu
+trên không nói tới: **hình dạng lời gọi** `toast.error(text)` vs `toast.error(text, title)`. Hai
+cách chạy giống nhau nhưng **không** giống nhau dưới con mắt của một spy — giữ nguyên hình dạng
+lời gọi là cách chứng minh "hành vi không đổi sau đợt bọc i18n" thay vì sửa assert cho khớp code
+mới.
 
 ---
 
@@ -125,36 +153,54 @@ tất cả đều mock đúng thứ cần được test.
 Không cần E2E phủ mọi route — chỉ cần **một số ít kịch bản luồng quan trọng
 nhất**, đúng tinh thần "không coverage dàn trải" xuyên suốt file này:
 
+> 📐 **ĐÍCH ĐẾN — CHƯA THI CÔNG (đối chiếu 2026-09-06).** Không có thư mục `e2e/`, và
+> `playwright` không nằm trong `src/FE/package.json`. Tầng 4 chưa tồn tại; đừng đọc mục này như
+> một bộ test đang chạy.
+
 ```ts
-// e2e/login-to-dashboard.spec.ts (Playwright)
+// e2e/login-to-quan-tri.spec.ts (Playwright — chưa dựng)
 test('chưa đăng nhập vào route cần quyền → redirect kèm returnUrl → login xong quay lại đúng chỗ', async ({ page }) => {
-  await page.goto('/danh-muc-dti');
+  await page.goto('/quan-tri/nguoi-dung');
   await expect(page).toHaveURL(/\/dang-nhap\?returnUrl=/);
 
-  await page.fill('[formcontrolname=username]', 'admin');
-  await page.fill('[formcontrolname=password]', 'Admin@123');
+  await page.fill('#userName', 'admin');       // xem cảnh báo selector ngay dưới
+  await page.fill('#password', 'Admin@123');
   await page.click('button[type=submit]');
 
-  await expect(page).toHaveURL('/danh-muc-dti'); // đúng returnUrl, không phải route mặc định
+  await expect(page).toHaveURL('/quan-tri/nguoi-dung'); // đúng returnUrl, không phải route mặc định
 });
 ```
 
-Chạy tay trước khi release, cùng cách 4 lệnh gate khác đang chạy — repo chưa
+🔄 LẬT 2026-09-06 — mẫu cũ sai **hai** chỗ, và chỗ thứ hai đáng nhớ hơn:
+
+- Route `/danh-muc-dti` đã gỡ 2026-08-29. Dùng một route còn sống và **có guard theo role** thì
+  kịch bản mới kiểm được đúng thứ nó nhắm tới.
+- Selector cũ là `[formcontrolname=username]` — **màn đăng nhập không dùng Reactive Forms.** Nó
+  giữ giá trị bằng `signal()` và bind `(input)` trên `<input id="userName">` thuần
+  (`src/FE/src/app/platform/login/pages/login/login.page.html:28`). Không có thuộc tính
+  `formControlName` nào để bấu vào; test chép mẫu cũ sẽ treo ở bước điền form với một lỗi rất
+  khó đọc.
+
+Khi dựng thật: chạy tay trước khi release, cùng cách bộ lệnh gate khác đang chạy — repo không
 có CI (xem [trien-khai/05-gate.md](trien-khai/05-gate.md)).
 
 ## Visual regression — chưa cần, ghi ngưỡng kích hoạt (Nhóm B)
 
 Chưa thêm công cụ diff ảnh (Percy/Chromatic/Playwright `toHaveScreenshot()`)
 **có chủ đích**, không phải bỏ sót: dựng baseline lúc token/component vẫn
-đang đổi (token chưa hoá hết, hex vẫn hardcode rải rác — xem
-[04-design-token-system.md](04-design-token-system.md); component thiếu
-trạng thái tương tác — xem [05-component-library.md](05-component-library.md))
-sẽ ra diff **liên tục vì lý do đúng** (đang sửa token thật), dạy người review
+đang đổi sẽ ra diff **liên tục vì lý do đúng** (đang sửa token thật), dạy người review
 thói quen bấm "approve" mà không nhìn — đúng antipattern khiến visual
 regression mất tác dụng ngay từ lần đầu.
 
-**Ngưỡng kích hoạt:** khi token pipeline và trạng thái component ổn định (2
-khoản trên đóng lại), thêm bằng `expect(page).toHaveScreenshot()` sẵn có
+🔄 LẬT 2026-09-06 — lý do hoãn cũ nêu hai bằng chứng, và **một trong hai đã hết đúng**: *"hex
+vẫn hardcode rải rác"*. Cổng **G1** (và **G11** cho `rgb()/rgba()`) nay xanh — không còn màu
+trần nào ngoài `styles.scss`; kiểm bằng `bash scripts/fe-gate.sh`. Bằng chứng còn lại (component
+thiếu trạng thái tương tác, xem [05-component-library.md](05-component-library.md)) vẫn đứng,
+nên **quyết định hoãn không đổi** — nhưng nó nay chỉ còn một chân, và cần xem lại khi chân đó
+đóng.
+
+**Ngưỡng kích hoạt:** khi token pipeline và trạng thái component ổn định, thêm bằng
+`expect(page).toHaveScreenshot()` sẵn có
 trong Playwright — tái dùng đúng công cụ đã cần cho E2E ở mục trên, không
 thêm dịch vụ SaaS mới (Percy/Chromatic) khi chưa có bằng chứng cần
 collaborate review ảnh giữa nhiều người ngoài team.

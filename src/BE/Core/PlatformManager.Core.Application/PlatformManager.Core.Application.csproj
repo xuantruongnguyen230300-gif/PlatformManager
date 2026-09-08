@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <RootNamespace>PlatformManager.Core.Application</RootNamespace>
@@ -8,7 +8,14 @@
   <ItemGroup>
     <PackageReference Include="MediatR" Version="12.5.0" />
     <PackageReference Include="FluentValidation" Version="12.0.0" />
-    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.0.0" />
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.0.0" />
+    <!-- IModuleRegistrar (Modules/IModuleRegistrar.cs) khai IConfiguration trong hợp đồng —
+         mỗi tầng tự đọc cấu hình của mình lúc RegisterServices. CHỈ là abstraction, KHÔNG
+         kéo theo provider/binder nào, nên Core.Application vẫn không biết cấu hình đến từ
+         đâu (file, biến môi trường...). Bản 10.0.11 khớp với các gói Microsoft.* khác của
+         solution. Không vi phạm LayerDependencyTests: luật đó cấm EntityFrameworkCore /
+         AspNetCore / Hangfire / *.Infrastructure, không cấm Microsoft.Extensions.*. -->
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.11" />
   </ItemGroup>
 
   <ItemGroup>

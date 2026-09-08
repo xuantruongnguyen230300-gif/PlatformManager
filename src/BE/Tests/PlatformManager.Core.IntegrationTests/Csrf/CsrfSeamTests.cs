@@ -26,7 +26,7 @@ namespace PlatformManager.Core.IntegrationTests.Csrf;
 [Collection(PostgresCollection.Name)]
 public sealed class CsrfSeamTests : IAsyncLifetime
 {
-    private const string Password = "Test@12345";
+    private const string Password = "Test@123456789";
 
     private readonly PostgresFixture _fixture;
     private readonly WebApplicationFactory<Program> _factory;
@@ -112,8 +112,9 @@ public sealed class CsrfSeamTests : IAsyncLifetime
         return user.Id;
     }
 
-    /// <summary>Idempotent — host chạy Development nên CoreSeeder thường đã tạo sẵn, nhưng test
-    /// không được phụ thuộc việc seed có chạy thành công hay không.</summary>
+    /// <summary>Idempotent — PostgresFixture.SeedCoreAsync() đã tạo sẵn 3 role, nhưng test không
+    /// được phụ thuộc việc seed có chạy thành công hay không. (Trước 2026-09-01: "host chạy
+    /// Development nên CoreSeeder đã tạo sẵn" — hàng rào đó không còn.)</summary>
     private async Task EnsureRolesAsync()
     {
         using var scope = _factory.Services.CreateScope();

@@ -7,8 +7,15 @@ namespace PlatformManager.Core.IntegrationTests.Menu;
 
 /// <summary>
 /// NHÓM B — ngữ nghĩa hiển thị menu (<see cref="SysMenuRoleRepository.GetVisibleSysMenuIdsForRolesAsync"/>)
-/// trên Postgres THẬT. Đợt tối ưu 2026-08-18 gộp 4 round-trip thành 1 query với 2 <c>EXISTS</c>;
-/// 3 nhánh dưới đây trước đó chỉ được kiểm thủ công đúng một lần (finding #1, audit 2026-08-18).
+/// trên Postgres THẬT. 3 nhánh dưới đây trước đó chỉ được kiểm thủ công đúng một lần (finding #1,
+/// audit 2026-08-18).
+///
+/// <para><b>Sửa chú thích 2026-08-29:</b> bản trước của đoạn này ghi "đợt tối ưu 2026-08-18 gộp 4
+/// round-trip thành 1 query với 2 <c>EXISTS</c>" — hiện thực hôm nay KHÔNG như vậy, nó vẫn là 4
+/// query rời (xem chính <c>SysMenuRoleRepository</c>). Gỡ câu đó thay vì để nguyên: một chú thích
+/// mô tả sai hiện thực làm người đọc sau tin rằng chỗ này đã tối ưu và bỏ qua khi đi tìm chậm.
+/// Việc gộp query (nếu cần) là task RIÊNG, phải có số đo trước — xem
+/// doc/huong_dan/quy-uoc/be-performance.md §"Thứ tự bắt buộc".</para>
 ///
 /// Test chỉ khẳng định về CHÍNH các SysMenu do nó tạo (Contains/DoesNotContain), không khẳng định
 /// về tổng số — vì "menu không gán role = mở cho mọi user" nên menu của test khác cũng nằm trong

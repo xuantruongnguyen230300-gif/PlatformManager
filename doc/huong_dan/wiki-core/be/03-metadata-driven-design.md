@@ -1,3 +1,9 @@
+---
+kind: luat
+scope: core
+verified: 2026-09-06
+---
+
 # 3. Metadata-driven design — áp dụng cho phần nào trong thực tế
 
 ## 3.0 Vấn đề gốc — 3 tầng phải khớp nhau
@@ -106,12 +112,27 @@ Thiết kế theo lộ trình này vẫn "dễ mở rộng về sau" đúng ngh�
 
 ## Áp dụng vào PlatformManager — cụ thể
 
-| Vùng | Loại | Nên làm? |
-|---|---|---|
-| `CriteriaGroup` (6 nhóm) | (C) | ✅ Đã đúng — giữ nguyên |
-| Ngưỡng badge (`>=99.999%`, `delta<=0.001`) | (C) | ✅ Nên đưa vào config/`SysConfig` |
-| Menu sidebar | (C), nhưng chưa cần bảng riêng | ❌ Chưa cần — 2 màn hình, hard-code trong Angular route là đủ |
-| Cột grid (Danh mục DTI, bảng 62 chỉ tiêu) | (A) | ❌ Chưa cần engine generic — 2 màn hình, schema ổn định |
-| Field mở rộng kiểu "user tự thêm cột" | (B) | ❌ Không có nhu cầu này ở demo hiện tại — nhưng nếu có, đây chính xác là chỗ dùng cột JSON, không phải `ALTER TABLE` |
+Đối chiếu source 2026-09-06 — bảng này đã được sửa lại theo hiện trạng, xem ghi chú cuối mục:
 
-**Tóm lại cho PlatformManager**: giữ nguyên ở Loại (C) như hiện tại, chưa cần đầu tư Loại (A)/(B) — nhưng khi thiết kế **hệ thống mới** (mục tiêu thật sự của wiki này), nên tính trước cột JSON (Loại B) cho các entity có khả năng cần "field tự thêm" cao (vd Customer, Product trong ERP) ngay từ lúc thiết kế bảng đầu tiên — thêm 1 cột `jsonb` từ đầu rẻ hơn nhiều so với thêm sau khi đã có dữ liệu lớn.
+| Vùng | Loại | Hôm nay |
+|---|---|---|
+| **Menu sidebar** | (C) — **có bảng riêng** | ✅ **ĐÃ LÀM.** `SysMenus` + `SysMenuRoles` là bảng thật (`src/BE/Core/PlatformManager.Core.Domain/Entities/SysMenu.cs:11`), phục vụ qua `GET /api/meta/menu`; **dữ liệu** do host cấp qua seam `ICoreMenuSeedSource`, Core chỉ giữ **cơ chế** seed |
+| Cột grid | (A) | ❌ Chưa cần engine generic — chưa có màn hình nghiệp vụ nào (0 module) |
+| Field mở rộng kiểu "user tự thêm cột" | (B) | ❌ Không có nhu cầu — nhưng nếu có, đây chính xác là chỗ dùng cột JSON, không phải `ALTER TABLE` |
+| Hằng số ngưỡng của nghiệp vụ | (C) | — chưa có nghiệp vụ nào trong repo để xét |
+
+**Tóm lại cho PlatformManager**: Loại (C) đã dùng ở đúng một chỗ có nhu cầu thật (menu), chưa
+cần đầu tư Loại (A)/(B) — nhưng khi thiết kế **hệ thống mới** (mục tiêu thật sự của wiki
+này), nên tính trước cột JSON (Loại B) cho các entity có khả năng cần "field tự thêm" cao
+(vd Customer, Product trong ERP) ngay từ lúc thiết kế bảng đầu tiên — thêm 1 cột `jsonb` từ
+đầu rẻ hơn nhiều so với thêm sau khi đã có dữ liệu lớn.
+
+> **🔄 LẬT 2026-09-06 — bảng cũ sai ở dòng quan trọng nhất và dẫn ba thứ không còn tồn tại.**
+> 1. *"Menu sidebar | (C), nhưng **chưa cần bảng riêng** | ❌ Chưa cần — 2 màn hình,
+>    hard-code trong Angular route là đủ"* — **ngược với thực tế**. Menu đã có **hai** bảng
+>    (`SysMenus`, `SysMenuRoles`), một entity domain có factory + `ReviveWith`, một endpoint,
+>    một seam seed, và ma trận phân quyền menu chạy trên chính chúng. Đây là dạng sai tệ nhất
+>    của một file *"nên làm gì"*: nó khuyên bỏ đi thứ đã xây và đang chạy.
+> 2. `CriteriaGroup`, "Ngưỡng badge", "Danh mục DTI / bảng 62 chỉ tiêu" — tất cả thuộc module
+>    DtiWeekly, xoá 2026-08-29.
+> 3. `SysConfig` — bảng đó **chưa bao giờ tồn tại** trong `src/BE`.

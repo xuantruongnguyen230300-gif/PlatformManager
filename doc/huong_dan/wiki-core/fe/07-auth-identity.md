@@ -1,4 +1,14 @@
+---
+kind: luat
+scope: core
+verified: 2026-09-06
+---
+
 # 7. Auth/Identity phía FE — cookie session
+
+> **Phạm vi: ai đang đăng nhập và giữ phiên an toàn** — cookie, CSRF, 401 giữa
+> phiên. Bảo mật FE ngoài phạm vi đó (render HTML không tin cậy, CSP, secret
+> trong bundle, `npm audit`): [14-security.md](14-security.md).
 
 ## Đã CHỐT (2026-08-15)
 
@@ -13,28 +23,34 @@ Set `withCredentials: true` **tại mỗi request** qua interceptor riêng
 mới):
 
 ```ts
-// core/interceptors/with-credentials.interceptor.ts
+// core/interceptors/credentials.interceptor.ts
 export const withCredentialsInterceptor: HttpInterceptorFn = (req, next) =>
   next(req.clone({ withCredentials: true }));
 ```
 
 ```ts
-// app.config.ts
-export const appConfig: ApplicationConfig = {
-  providers: [
-    provideHttpClient(withInterceptors([withCredentialsInterceptor, httpErrorInterceptor])),
-  ],
-};
+// app.config.ts — thứ tự THẬT, ba interceptor
+provideHttpClient(
+  withInterceptors([apiBaseUrlInterceptor, withCredentialsInterceptor, httpErrorInterceptor]),
+  withXsrfConfiguration({}),
+),
 ```
 
 `withCredentialsInterceptor` đăng ký **trước** `httpErrorInterceptor` trong
 mảng `withInterceptors([...])` — thứ tự interceptor Angular chạy đúng theo
 thứ tự khai báo.
 
+🔄 LẬT 2026-09-06, hai chỗ:
+
+- Tên file là `credentials.interceptor.ts`, **không** `with-credentials.interceptor.ts`.
+- Mảng thật có **ba** phần tử, mở đầu bằng `apiBaseUrlInterceptor` (gắn `environment.apiBaseUrl`
+  vào URL tương đối). Bản trước bỏ sót nó, nên ai chép nguyên khối này sẽ dựng một
+  `provideHttpClient` không có base URL và mọi request bay tới sai chỗ.
+
 ## `ICurrentUser` — context, không phải HTTP
 
 ```ts
-// core/services/current-user.service.ts
+// core/auth/current-user.service.ts
 @Injectable({ providedIn: 'root' })
 export class CurrentUserService {
   private readonly user = signal<ICurrentUser | null>(null);
@@ -46,9 +62,10 @@ export class CurrentUserService {
 }
 ```
 
-- `CurrentUserService` **không** biết chi tiết envelope HTTP — 1 service
-  riêng trong `core/services/auth.service.ts` gọi API, mapper trả về
-  `ICurrentUser`.
+- `CurrentUserService` **không** biết chi tiết envelope HTTP ngoài `GET /auth/me` — service
+  riêng `core/auth/auth.service.ts` lo login/logout/change-password rồi gọi
+  `setUser()`/`clear()`/`markPasswordChanged()` để đồng bộ. (🔄 LẬT 2026-09-06: bản trước ghi
+  hai file này nằm ở `core/services/` — **không có** thư mục đó; cả hai ở `core/auth/`.)
 - Load 1 lần lúc app khởi động (`provideAppInitializer`), không load lại
   mỗi lần đổi route.
 
@@ -87,6 +104,12 @@ nghi ngờ code FE khi gặp "luôn 401 dù đã login".
 
 ## CSRF phía FE — nửa còn lại của phòng thủ 2 lớp
 
+> 🚧 **Cập nhật 2026-08-31.** Đoạn dưới nói *"phòng thủ 2 lớp — `SameSite` + custom header"*.
+> Trong triển khai đã chốt (FE khác origin) **lớp `SameSite` không tồn tại** — cookie buộc
+> phải khai `SameSite=None`. Lớp thay thế là kiểm header `Origin` ở BE. Nội dung phía FE
+> dưới đây **không đổi** (vẫn là lớp custom header), chỉ có tên của lớp còn lại là khác.
+> 📖 Đọc [`../be/02-identity-auth.md`](../be/02-identity-auth.md) §"Quyết định người dùng 2026-08-31".
+
 > Bổ sung 2026-08-24, đối chiếu thực hành ngành cho hệ thống tầm trung:
 > `doc/huong_dan/wiki-core/be/02-identity-auth.md` (mục "CSRF — lỗ hổng đặc
 > thù của cookie auth") vừa chốt phòng thủ 2 lớp — `SameSite` + custom header
@@ -108,14 +131,19 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideHttpClient(
       withInterceptors([withCredentialsInterceptor, httpErrorInterceptor]),
-      withXsrfConfiguration({
-        cookieName: 'XSRF-TOKEN',      // PHẢI khớp AntiforgeryOptions.Cookie.Name phía BE
-        headerName: 'X-XSRF-TOKEN',    // khớp options.HeaderName ở AddAntiforgery
-      }),
+      withXsrfConfiguration({}),      // rỗng — xem ghi chú 2026-09-06 ngay dưới
     ),
   ],
 };
 ```
+
+> **Vì sao code thật truyền object RỖNG (đối chiếu 2026-09-06).** `src/FE/src/app/app.config.ts`
+> gọi `withXsrfConfiguration({})`. Mặc định của Angular (`XSRF-TOKEN` / `X-XSRF-TOKEN`) đã khớp
+> thẳng cấu hình BE, nên khai lại hai tên đó chỉ tạo thêm hai chỗ có thể lệch. Gọi hàm này tường
+> minh **vẫn có ích** dù không truyền gì: nó là chỗ duy nhất trong file cấu hình nói ra rằng
+> CSRF đang BẬT (`provideHttpClient` vốn bật sẵn kể cả khi không gọi). Đoạn dưới vẫn đúng và
+> vẫn phải đọc — nếu **BE** đổi tên cookie/header thì object rỗng ngừng hoạt động, và lúc đó
+> mới phải khai tường minh.
 
 - **Tên cookie phải khớp tường minh 2 phía.** Mặc định Angular đọc cookie
   tên `XSRF-TOKEN`, nhưng `IAntiforgery.GetAndStoreTokens` mặc định của
@@ -140,6 +168,24 @@ không phải lỗ hổng: giá trị trong cookie CSRF không phải bí mật 
 thứ cần giấu) — thiết kế "double submit cookie" dựa đúng vào việc JS **đọc
 được** cookie này để gắn lại vào header.
 
+### Cookie CSRF phải được **mồi** trước request ghi đầu tiên — bổ sung 2026-09-06
+
+`withXsrfConfiguration()` chỉ *đọc lại* một cookie đã tồn tại. Nếu chưa ai gọi endpoint phát
+hành nó, cookie chưa có, header không được gắn, và **`POST /api/auth/login` — request ghi đầu
+tiên của app — dính 403** trước khi người dùng kịp đăng nhập lần nào.
+
+Hai chỗ mồi, cả hai đều cần (đối chiếu 2026-09-06):
+
+| Khi nào | Ở đâu | Vì sao |
+|---|---|---|
+| Lúc app khởi động | `provideCsrfInit()` — `src/FE/src/app/core/http/csrf-init.provider.ts` | Cookie phải có **trước** request ghi đầu tiên, kể cả login |
+| Ngay sau khi đăng nhập thành công | `AuthService.login()` gọi lại `csrf.primeToken()` | Token phát hành lúc **ẩn danh** gắn với danh tính tại thời điểm đó; dùng lại sau khi đổi danh tính ⇒ 403 *"meant for a different claims-based user"*. Không mồi lại thì luồng **buộc đổi mật khẩu lần đầu** (áp cho gần như mọi tài khoản mới) bị chặn ngay sau khi vừa login |
+
+`CsrfService.primeToken()` **tự nuốt lỗi** — hỏng ở bước mồi không được phép chặn app khởi
+động. Response của `GET /api/antiforgery/token` cũng là **ngoại lệ có chủ đích: không bọc
+`IApiResult`** (xem `doc/contracts/auth.md`); giá trị `token` không ai tiêu thụ, mục đích duy
+nhất của request là tác dụng phụ `Set-Cookie`.
+
 ## 401 bất ngờ giữa phiên — cookie bị revoke trong lúc đang dùng
 
 > Bổ sung 2026-08-24, đối chiếu thực hành ngành cho hệ thống tầm trung: file
@@ -153,13 +199,31 @@ thứ cần giấu) — thiết kế "double submit cookie" dựa đúng vào vi
 > ngay lúc điều hướng tiếp theo).
 
 Không xử lý thì hậu quả cụ thể: người dùng đang điền form, bấm lưu, request
-nhận 401 — `httpErrorInterceptor`
-(`doc/huong_dan/wiki-core/fe/02-http-envelope.md`) bắt được lỗi nhưng chỉ
-biết hiện toast theo `fallbackMessageForStatus(401)` — sai bản chất (đây
+nhận 401 và chỉ nhận được một toast lỗi chung — sai bản chất (đây
 không phải thiếu quyền, là **hết phiên**) và không dẫn người dùng tới việc
 cần làm (đăng nhập lại).
 
+> ### ✅ ĐÃ XỬ LÝ, nhưng **KHÔNG** bằng interceptor riêng — đối chiếu 2026-09-06
+>
+> 🔄 LẬT 2026-09-06: mục này mô tả một file `core/interceptors/session-expired.interceptor.ts`
+> **chưa bao giờ tồn tại**. Việc đó đã làm, và làm **bên trong** `httpErrorInterceptor`
+> (`src/FE/src/app/core/interceptors/http-error.interceptor.ts`). Khác biệt không chỉ là chỗ
+> đặt code — hình dạng giải pháp khác hẳn:
+>
+> | Mẫu dưới đây (chưa bao giờ dựng) | Bản đang chạy |
+> |---|---|
+> | Interceptor thứ 4, đặt **sau** `httpErrorInterceptor` để `catchError` chạy trước | Cùng một `catchError`, một nhánh `if` |
+> | Phân biệt bằng `wasAuthenticated` đọc trước request | Phân biệt bằng **cờ `SKIP_ERROR_TOAST` trên `HttpContext`** của request probe — chính xác hơn: nó đánh dấu *"401 ở đây là bình thường"* ngay tại nơi gọi, không đoán từ trạng thái toàn cục |
+> | Trả `EMPTY` để chặn lỗi | **Luôn rethrow** — nơi gọi vẫn cần biết request hỏng (tắt spinner, giữ dữ liệu form) |
+> | *(không có)* | Bỏ qua khi **đang ở màn đăng nhập**: `POST /auth/login` trả 401 nghĩa là SAI MẬT KHẨU, không phải hết phiên. Điều hướng ở đó sẽ ghi đè `returnUrl` người dùng đang giữ |
+> | *(không có)* | Cờ chống **nhiều 401 song song** — một trang bắn vài request cùng lúc; thiếu cờ thì 3 toast chồng nhau và 3 lần `navigate()` liên tiếp |
+> | Toast lỗi (đỏ) | `toast.warn` — `doc/contracts/auth.md` §"Vòng đời phiên" nói rõ 401 giữa chừng là chuyện **bình thường**, toast đỏ làm người dùng tưởng app hỏng |
+>
+> Ba dòng cuối là những ca chỉ lộ ra lúc thi công. Giữ mẫu dưới lại vì **lập luận về thứ tự
+> interceptor** vẫn đúng và vẫn đáng đọc; đừng dựng nó thành file thật.
+
 ```ts
+// 📐 MẪU MINH HOẠ — file này KHÔNG tồn tại, xem bảng đối chiếu ngay trên
 // core/interceptors/session-expired.interceptor.ts
 export const sessionExpiredInterceptor: HttpInterceptorFn = (req, next) => {
   const currentUser = inject(CurrentUserService);
@@ -204,7 +268,10 @@ provideHttpClient(withInterceptors([
   khi `sessionExpiredInterceptor` kịp làm gì.
 - `returnUrl` dùng lại đúng cơ chế đã có ở `authGuard`
   (`doc/huong_dan/quy-uoc/fe-routing-guard.md` §3) — người dùng đăng nhập lại
-  xong quay đúng về trang đang làm dở, không phải luôn về `/dashboard`.
+  xong quay đúng về trang đang làm dở, không phải luôn về màn mặc định.
+  (🔄 LẬT 2026-09-06: bản trước ghi `/dashboard`; route đó đã gỡ 2026-08-29. Màn mặc định nay
+  là `CORE_ROUTES.home` = `/trang-chu`, và `core/` **không** khai cứng đường dẫn nào — app bơm
+  vào từ `app.config.ts`, xem `src/FE/src/app/core/config/core-routes.ts`.)
 
 ## FOUC lúc khởi động — tránh flash màn login trước khi biết chắc
 
@@ -223,8 +290,12 @@ trong lúc chờ, Angular **chưa render gì cả** — nếu `index.html` khôn
 khác, người dùng thấy **màn trắng** không phản hồi, trông giống app treo hơn
 là đang tải, đặc biệt rõ trên mạng chậm.
 
+> 📐 **ĐÍCH ĐẾN — CHƯA THI CÔNG (đối chiếu 2026-09-06).** `src/FE/src/index.html` hiện để
+> `<app-root></app-root>` **rỗng**, tức màn trắng trong lúc `provideAppInitializer` chờ. Khối
+> dưới đây là việc phải làm.
+
 ```html
-<!-- index.html -->
+<!-- index.html  (chưa thi công — đích đến) -->
 <body>
   <app-root>
     <div class="app-boot-loading" aria-label="Đang tải…">
@@ -233,6 +304,11 @@ là đang tải, đặc biệt rõ trên mạng chậm.
   </app-root>
 </body>
 ```
+
+⚠️ Khi làm: câu `aria-label` này nằm **ngoài** Angular nên không đi qua bảng dịch
+(`public/i18n/*.json`) và cổng **G12** cũng không quét `.html` ở `src/` gốc — nó chỉ quét
+`src/app/**`. Đây là chuỗi tiếng Việt cứng duy nhất được phép, và phải cố ý chấp nhận nó:
+`index.html` được đọc trước khi bất cứ thứ gì của Angular chạy.
 
 Nội dung đặt **lồng bên trong** `<app-root>...</app-root>` trong chính
 `index.html` (file tĩnh, không phải template Angular) hiển thị ngay lập tức

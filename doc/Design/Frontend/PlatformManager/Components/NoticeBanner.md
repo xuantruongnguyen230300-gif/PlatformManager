@@ -1,70 +1,148 @@
 ---
+kind: luat
+scope: du-an
+verified: 2026-09-06
 project: "PlatformManager"
 status: "draft"
-updated: "2026-08-22"
+updated: "2026-08-29"
 component: "NoticeBanner"
-sources: ["src/FE/src/styles.scss", "src/FE/src/app/modules/danh-muc-dti/pages/danh-muc-dti/danh-muc-dti.page.html"]
+sources:
+  - "src/FE/src/styles.scss"
+  - "src/FE/src/app/platform/trang-chu/pages/trang-chu/trang-chu.page.html"
+  - "src/FE/src/app/platform/phan-quyen/pages/phan-quyen/phan-quyen.page.html"
 ---
 
 # NoticeBanner
-**Description:** Pale-blue instructional banner (`.notice`, `styles.scss:255-272`). **One instance ships**, on the DTI catalogue page, and it is **conditional** — it appears only while the user is viewing historical (read-only) data, explaining why the edit controls have disappeared (`danh-muc-dti.page.html:7-11`).
+**Description:** The in-page message strip (`.notice`, `src/FE/src/styles.scss` § 5) — a bordered block with a left accent rule, a leading icon, a text run and an optional close button. The 2026-08-29 redesign turned it from a single informational treatment into a **four-severity** component sharing one structure.
 
-> **Behaviour changed from the prototype.** The prototype's banner was permanent and sat at the top of every page load, describing the weekly workflow. The shipped banner is a **state explanation**, rendered by `@if (!isLive())` and absent the rest of the time. Any spec or prompt still describing an always-visible workflow banner is describing the frozen prototype.
+> **Citation policy.** Values cite `src/FE/src/styles.scss` plus the **selector name**, not a line number.
 
 ## Anatomy
-Single block of text in a rounded, pale-blue, bordered rectangle. No icon, no dismiss control, no heading. Full width of its container, with `margin-bottom: spacing.sp-5` separating it from the content below. The class supports inline links (`.notice a`: `colors.brand`, weight 700, underline on hover — `styles.scss:263-271`), though the one shipped instance contains none.
+
+`.notice` is a row flex with `align-items: flex-start` and gap `spacing.sp-3`, so a multi-line message stays indented past its icon. Box: fill `colors.tonal-bg`, border 1px `colors.line`, **`border-left: 4px solid colors.brand`**, radius `rounded.md`, padding `spacing.notice-padding`, `typography.notice`, and `margin-bottom: spacing.sp-5` so it can sit directly above content without a wrapper.
+
+The element itself is not fixed: the home screen ships a `<div class="notice">` wrapping a `<span>`, the permissions screen a `<p class="notice">` with the text as a direct child (`trang-chu.page.html:4-7`, `phan-quyen.page.html:97-101`). Both render identically — the rule sets no `display` on its text child.
+
+Three child contracts:
+
+- **`> .pi`** — the leading glyph. `flex: none` and `margin-top: 2px` to sit optically level with the first line of text; ink follows the severity.
+- **`a`** — inline links: ink follows the severity, weight 700, no underline at rest, underlined on hover.
+- **`> .icon-btn`** — an optional dismiss button, pushed right by `margin-left: auto` with `flex: none`. Shape comes entirely from the shared icon-button rule.
+
+A severity class changes exactly two things — the fill and the left rule — and recolours the glyph and the links to match. The border, radius, padding and rhythm never vary.
 
 ## Variants
 
 | Variant | Classes | Key values | When to use |
 | --- | --- | --- | --- |
-| Notice | `notice` | bg `colors.surface-notice`, border 1px `colors.border-notice`, radius 12px, `spacing.notice-padding` (`8px 14px`), `typography.table-cell`, `margin-bottom: spacing.sp-5` | The only variant. One shipped instance: the read-only-mode explanation on the DTI catalogue |
-| Notice with link | `notice` + child `<a>` | link `colors.brand`, weight 700, `text-decoration:none`, underlined on hover | Supported by the CSS but **not used by any shipped instance** |
+| Information (default) | `notice` | fill `colors.tonal-bg`, left rule and glyph `colors.brand` | A neutral state explanation. **Two shipped call sites**, both with `pi-info-circle` — the home screen's "no business module installed yet" line, and the resource tab of `/quan-tri/phan-quyen` stating that the matrix does not yet control anything. Count them rather than trusting this cell: `grep -rn 'class="notice' src/FE/src/app` |
+| Success | `notice ok` | fill `colors.good-bg`, left rule and glyph `colors.good` | A completed, persistent outcome worth keeping on screen. **No shipped call site today** |
+| Warning | `notice warn` | fill `colors.warn-bg`, left rule and glyph `colors.warn` | A deadline or an incomplete condition. **No shipped call site today** |
+| Danger | `notice bad` | fill `colors.bad-bg`, left rule and glyph `colors.bad` | A page-level failure the user must resolve. **No shipped call site today** |
+| With dismiss | `notice` + trailing `.icon-btn` | The button is pushed right by `margin-left: auto` | Any severity that the user may close. **No shipped call site today** |
 
-**Only one severity exists.** There is no `.notice.warn`/`.error`/`.success` — transient feedback goes through `Toast`, and form errors through `.form-error` / `.login-error`. The notice is specifically for a persistent, non-dismissible state explanation.
+**A notice is for a persistent state, a toast is for a transient one.** Transient feedback goes through `Toast`; per-form validation goes through `.form-error` (`FormRow.md`) and, on the auth screens, `.login-error` (`AuthField.md`). The four severities do not change that split — they mean the *page* has something to say, at four levels of seriousness.
 
 ## States
 <!-- Exactly these five rows, in this order — treatments as rendered by the shipped CSS. -->
 
 | State | Treatment |
 | --- | --- |
-| default | bg `colors.surface-notice`, border `colors.border-notice`, radius 12px, `spacing.notice-padding`, `typography.table-cell`, `margin-bottom: spacing.sp-5` |
-| hover | **N/A for the banner** — a static text block with no `:hover` rule. Its (unused) link child does have one: `text-decoration: underline` (`styles.scss:268-270`) |
-| focus | **N/A** — not focusable; no `tabindex`, no dismiss button. A link child would be focusable but no instance has one |
-| active | **N/A** — not interactive |
-| disabled | **N/A** — not a form control |
+| default | Per-severity fill and left rule; border 1px `colors.line`; `rounded.md`; `spacing.notice-padding`; `typography.notice`; `margin-bottom: spacing.sp-5` |
+| hover | **Not applicable to the banner** — a static block with no `:hover` rule. Its link child underlines on hover; its optional `.icon-btn` fills `colors.surface-2` from the shared icon-button rule |
+| focus | **Not applicable to the banner** — no `tabindex`, not focusable. A link child takes the browser default ring (see `Footer.md` § Normalize for the app-wide gap); the optional close button draws `outline: 2px solid colors.brand`, `outline-offset: 1px` |
+| active | **Not applicable** — not interactive, no `:active` rule |
+| disabled | **Not applicable** — not a form control |
 
-**Visibility is the real state.** The banner is present or absent, driven by `isLive()`; it never dims, collapses or animates. The same signal simultaneously hides the toolbar's action buttons (`danh-muc-dti.page.html:36-41`) and switches every grid row to read-only, so the banner and the missing controls always agree.
+**Visibility is the real state.** A notice is present or absent; it never dims, collapses or animates. Both shipped instances are rendered unconditionally — the permissions one only in the sense that it sits inside the resource tab's `@else` branch, so it appears with the tab rather than with a state change. The pattern the component is built for is a banner gated by the same signal that changes the page's behaviour, so the explanation and the changed behaviour can never disagree; neither instance does that yet, and the permissions template carries a comment naming the condition for deleting it (the first endpoint to carry `[RequirePermission]`, `phan-quyen.page.html:92-96`).
 
 ## Tokens Used
-- `colors.surface-notice`, `colors.border-notice`, `colors.text`, `colors.brand` (link child)
-- `spacing.notice-padding`, `spacing.sp-5` (bottom margin)
-- `typography.table-cell`
+- `colors.tonal-bg`, `colors.good-bg`, `colors.warn-bg`, `colors.bad-bg` (fills); `colors.brand`, `colors.good`, `colors.warn`, `colors.bad` (left rule, glyph, links); `colors.line` (border); `colors.text` (body copy)
+- `rounded.md`
+- `spacing.notice-padding`, `spacing.sp-3` (gap), `spacing.sp-5` (bottom margin)
+- `typography.notice`
+- Icons: PrimeIcons v7 — `pi-info-circle` shipped; the prototype pairs `pi-check-circle` with `.ok`, `pi-exclamation-triangle` with `.warn` and `pi-exclamation-circle` with `.bad`
 
-**`border-radius: 12px` is a literal** at `styles.scss:259`, not `var(--radius-table)`. The value is numerically identical to `rounded.table`, and `DESIGN.md` maps `notice-banner.rounded` to `{rounded.table}` on that basis — but the source does not reference the token, so the two can drift silently.
+The `4px` left rule and the `margin-top: 2px` optical nudge on the glyph are literals with no token behind them.
 
 ## Reference markup
 
 ```html
-@if (!isLive()) {
-  <div class="notice">
-    Đang xem dữ liệu lịch sử — chỉ đọc. Quay lại "Tất cả (mới nhất trong năm)" của năm hiện tại để chỉnh sửa.
-  </div>
-}
+<!-- shipped instance 1: home screen, default severity -->
+<div class="notice">
+  <i class="pi pi-info-circle"></i>
+  <span>Chưa có module nghiệp vụ nào được cài đặt. Dùng menu bên trái để vào các chức năng quản trị hệ thống.</span>
+</div>
+
+<!-- shipped instance 2: /quan-tri/phan-quyen, resource tab. Same severity, <p> instead of
+     <div>, and the glyph is aria-hidden because the sentence already carries the meaning. -->
+<p class="notice">
+  <i class="pi pi-info-circle" aria-hidden="true"></i>
+  Hiện chưa có API nghiệp vụ nào áp dụng các quyền này, nên thay đổi ở đây được lưu lại
+  nhưng chưa chặn hay mở thêm thao tác nào cho người dùng.
+</p>
+
+<!-- library shape: severity + inline link + dismiss -->
+<div class="notice warn">
+  <i class="pi pi-exclamation-triangle"></i>
+  <span>… <a href="#">Xem danh sách còn thiếu</a>.</span>
+  <button type="button" class="icon-btn" aria-label="Đóng thông báo"><i class="pi pi-times"></i></button>
+</div>
 ```
 
-Sources: `src/FE/src/styles.scss:255-272` (CSS, including the link child), `src/FE/src/app/modules/danh-muc-dti/pages/danh-muc-dti/danh-muc-dti.page.html:7-11` (the only instance, with its `@if` gate), `:36-41` (the paired action-bar gate)
+Copy — **mọi chỗ đều đi qua i18n** (đối chiếu 2026-09-06). Có **6** chỗ dùng, không phải 2:
+
+| Call site | Localization key | Ghi chú |
+| --- | --- | --- |
+| `app.html:10` | `shared.app.newVersion` | Dải "đã có phiên bản mới", kèm nút `shared.action.reload` |
+| `trang-chu.page.html:4` | `trang-chu.hint.noModules` | Màn chủ — chưa cài module nghiệp vụ |
+| `phan-quyen.page.html:151` | `phan-quyen.hint.noEnforcement` | Tab tài nguyên — quyền lưu được nhưng chưa chặn gì |
+| `phan-quyen.page.html:76` | **khoá động** `messageKey` | Xung đột phiên bản, tab màn hình |
+| `phan-quyen.page.html:126` | **khoá động** `messageKey` | Xung đột phiên bản, tab tài nguyên |
+| `quan-tri-nguoi-dung.page.html:69` | **khoá động** `messageKey` | Nạp danh sách hỏng |
+
+Ba chỗ cuối nhận **khoá** từ component chứ không phải câu — component giữ mã lỗi rồi dịch lại
+mỗi lần vẽ, nên câu đổi theo ngôn ngữ. Vì vậy cột "Verbatim copy" không áp dụng cho chúng: câu
+nằm ở `public/i18n/{vi,en}.json`, tra theo khoá đang giữ.
+
+> **🔄 SỬA 2026-09-06.** Mục này trước ghi *"both instances are hardcoded Vietnamese in the
+> template, there is no i18n layer"* và liệt đúng **2** chỗ dùng. Cả ba vế đều sai tại thời
+> điểm đọc: i18n đã chạy, chuỗi đã bọc, và số chỗ dùng là 6. Hai chỗ mới (`app.html`,
+> `quan-tri-nguoi-dung.page.html`) chưa bao giờ có trong bảng — nghĩa là bảng này đã thiếu
+> **trước cả** đợt i18n, chỉ không ai đếm lại.
+>
+> Bài học cho cột "Call site": nó là danh sách đếm tay, đúng loại `.claude/CLAUDE.md` §6 nói sẽ
+> mục ruỗng. Kiểm lại bằng lệnh, đừng tin bảng:
+>
+> ```bash
+> grep -rn 'class="notice' src/FE/src/app --include=*.html
+> ```
+
+
+Sources: `src/FE/src/styles.scss` (§ 5 `.notice`, `.notice > .pi`, `.notice > .icon-btn`, `.notice a`, `.notice.ok`, `.notice.warn`, `.notice.bad`), `src/FE/src/app/platform/trang-chu/pages/trang-chu/trang-chu.page.html:4-7`, `src/FE/src/app/platform/trang-chu/pages/trang-chu/trang-chu.page.scss` (confirms the page adds no local notice styling), `src/FE/src/app/platform/phan-quyen/pages/phan-quyen/phan-quyen.page.html:92-101` (the second instance, with the source comment recording when to remove it), `src/FE/src/app/platform/phan-quyen/pages/phan-quyen/phan-quyen.page.scss` (confirms the page adds no local notice styling either)
 
 ## Do / Don't
 
-- ✅ Keep the copy verbatim — it names the exact control (`Tất cả (mới nhất trong năm)`) the user must pick to regain editing, so it must not drift from the filter's real option label (`danh-muc-dti.page.html:31`).
-- ✅ Keep the banner and the hidden controls driven by the **same** signal; a banner explaining a restriction that is not actually applied is worse than none.
-- ✅ Use `Toast` for transient confirmations and `.form-error`/`.login-error` for validation — the notice is for persistent state only.
-- ❌ Don't add a dismiss control — the banner explains a condition the user must actively leave, so dismissing it would hide the reason the page is read-only while the page stays read-only.
-- ❌ Don't invent severity variants; only the informational blue treatment ships.
+- ✅ Match the severity to what the message actually is. The home screen's line is **information**, not a complaint — the template comment says so explicitly, and it is why it uses the default rather than `.warn`.
+- ✅ Lead with the matching glyph. The icon is what lets a reader classify the strip before reading it; a bare `.notice` with no `pi` child loses that and leaves an unbalanced gap.
+- ✅ Keep a banner and the behaviour it explains driven by the same signal — a banner describing a restriction that is not actually applied is worse than no banner.
+- ✅ Put a dismiss control in as a plain `.icon-btn`; `margin-left: auto` is already in the rule, so nothing needs positioning at the call site.
+- ❌ Don't use a notice for transient feedback — that is `Toast`'s job, and a notice does not disappear on its own.
+- ❌ Don't borrow `.login-error` for a page-level error. That block belongs to the auth screens; `.notice.bad` is the shipped answer now.
+- ❌ Don't hand-tune padding or radius per severity; the four variants deliberately differ only in fill and left rule.
 
 ## Normalize on redesign
-1. `border-radius: 12px` is hardcoded at `styles.scss:259` while every neighbouring rule uses `var(--radius-*)`. Point it at `--radius-table`.
-2. The banner has no `role="status"`/`aria-live`, so switching to a historical period silently changes the page to read-only for screen-reader users with no announcement.
-3. It carries no icon while the visually similar `.login-error` block leads with `pi pi-exclamation-circle` — two adjacent conventions for "a message box".
-4. The link styling in `.notice a` is dead code today; either give the banner a link to the live view (which would make the instruction actionable rather than descriptive) or drop the rule.
+1. **Three of the four severities have no shipped call site.** `.ok`, `.warn` and `.bad` exist in the library and the prototype but nothing renders them yet, so they are unproven in the running app. Both shipped instances are the default informational treatment.
+2. **No `role="status"` or `aria-live`.** A banner that appears in response to a state change is announced to nobody.
+3. **The dismiss button has no persistence.** There is no shipped "don't show again" mechanism, so a closable notice returns on the next navigation.
+4. **The `4px` left rule is a bare literal**, and it is a second accent-width value alongside `Toast`'s `5px` — two strips, two thicknesses, no token behind either.
+5. **Both shipped instances are rendered unconditionally**, which is the one pattern this component is least suited to: a permanent banner becomes furniture and stops being read. The permissions one is the sharper case — it explains that the matrix beneath it controls nothing, which is exactly the sentence a returning user stops seeing.
+6. **The two instances disagree on whether the glyph is announced.** The home screen's `<i class="pi pi-info-circle">` has no `aria-hidden`, the permissions one does. The icon font emits no text either way, so neither is harmful, but the contract should say one thing — `aria-hidden="true"` is the right one, since the sentence already carries the meaning.
+
+## Resolved in the 2026-08-29 redesign
+<!-- Items that used to sit in "Normalize on redesign" and were actually done. Kept, not deleted, so the history is not lost. -->
+1. **Only one severity existed — resolved 2026-08-29.** A page-level error had to borrow `.login-error`, a block that belongs to the auth screens. Four severities now share one structure.
+2. **Hardcoded `border-radius: 12px` — resolved 2026-08-29.** The rule now uses `rounded.md`; `Tokens/spacing.md` records `--radius-md` picking up `.notice` as a new consumer.
+3. **No icon — added 2026-08-29.** The banner previously carried no glyph while the visually similar `.login-error` led with `pi-exclamation-circle`. `> .pi` is now part of the contract, with a per-severity ink.
+4. **Nowhere to put a close button — added 2026-08-29.** The prototype's component library recorded this gap verbatim: dropping an `.icon-btn` in used to leave it stuck against the text because no child carried `margin-left: auto`. The rule now does.
+5. **Dead link styling — resolved 2026-08-29.** `.notice a` used to be styling nothing; it now follows the severity ink, and the prototype's four sample banners all carry an inline link.

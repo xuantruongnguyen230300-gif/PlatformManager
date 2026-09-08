@@ -2,8 +2,9 @@
 export interface ICurrentUserDto {
   id: string;
   userName: string;
-  // Nullable phía BE (`CurrentUserInfo.Email`) — khớp core-reviewer audit F3, xem
-  // doc/huong_dan/wiki-core/audit/2026-08-16-fe.md.
+  // Nullable phía BE (`CurrentUserInfo.Email`) — chốt sau một lượt core-reviewer (finding F3).
+  // Khu tài liệu audit đã xoá nên không còn đường dẫn để trỏ tới; ràng buộc thật nằm ở
+  // doc/contracts/auth.md.
   email: string | null;
   fullName: string;
   roles: string[];

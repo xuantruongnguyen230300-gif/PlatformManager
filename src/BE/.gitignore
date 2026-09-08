@@ -7,5 +7,18 @@ obj/
 *.user
 *.suo
 
-# User secrets / local overrides
-appsettings.*.local.json
+# Cấu hình theo môi trường + override cục bộ — CHỨA SECRET, KHÔNG BAO GIỜ commit.
+# Khuôn này phủ appsettings.Development.json / appsettings.Production.json / *.local.json.
+# `appsettings.json` (không có đoạn giữa) KHÔNG khớp khuôn ⇒ vẫn được commit, đúng chủ đích:
+# nó chỉ chứa mức log và AllowedHosts, không chứa bí mật nào.
+#
+# ⚠️ SỬA 2026-08-31: khuôn cũ `appsettings.*.local.json` KHÔNG khớp `appsettings.Development.json`
+# — file đang chứa chuỗi kết nối Postgres và đã bị commit từ trước. Sửa .gitignore KHÔNG gỡ file
+# đã được theo dõi: người dùng phải tự chạy `git rm --cached src/BE/PlatformManager.Api/appsettings.Development.json`
+# rồi commit (lệnh git ghi thuộc về người dùng, xem .claude/CLAUDE.md §1). Và vì chuỗi kết nối đó
+# đã nằm trong lịch sử git, coi như đã lộ — đổi mật khẩu Postgres nếu nó từng dùng ở đâu khác.
+appsettings.*.json
+
+# Dữ liệu runtime — KHÔNG BAO GIỜ commit (doc/huong_dan/quy-uoc/repo-artifact.md §1)
+App_Data/
+logs/

@@ -20,8 +20,12 @@ export class AuthService {
   private readonly menu = inject(MenuService);
   private readonly csrf = inject(CsrfService);
 
-  login(userName: string, password: string): Observable<ICurrentUser> {
-    const body: ILoginRequestDto = { userName, password };
+  /**
+   * `rememberMe` mặc định `false` — bên AN TOÀN của hai lựa chọn (cookie phiên). Nơi gọi nào quên
+   * truyền thì nhận hành vi ít rủi ro nhất chứ không phải cookie sống 14 ngày.
+   */
+  login(userName: string, password: string, rememberMe = false): Observable<ICurrentUser> {
+    const body: ILoginRequestDto = { userName, password, rememberMe };
     return this.http.post<IApiResult<ICurrentUserDto>>('/auth/login', body).pipe(
       map((res) => mapCurrentUserDtoToModel(unwrapData(res))),
       tap((user) => {

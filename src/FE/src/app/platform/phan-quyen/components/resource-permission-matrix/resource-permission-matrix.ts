@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
+import { TranslatePipe } from '@ngx-translate/core';
 import { IResourcePermissionRow } from '../../models/phan-quyen.model';
 
 /**
@@ -27,6 +28,7 @@ export const ALWAYS_ALLOWED_ROLE = 'SuperAdmin';
 @Component({
   selector: 'app-resource-permission-matrix',
   standalone: true,
+  imports: [TranslatePipe],
   templateUrl: './resource-permission-matrix.html',
   styleUrl: './resource-permission-matrix.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -60,8 +62,22 @@ export class ResourcePermissionMatrix {
     return this.loading() || this.isAlwaysAllowed(role);
   }
 
-  cellAriaLabel(row: IResourcePermissionRow, role: string): string {
-    const base = `${row.ResourceName} — ${role}`;
-    return this.isAlwaysAllowed(role) ? `${base} — luôn có quyền, không thay đổi được` : base;
+  /**
+   * KHOÁ DỊCH cho `aria-label` của ô tick — template dịch bằng `| translate` và tự truyền tham số
+   * (`resource`, `role`), xem `resource-permission-matrix.html`.
+   *
+   * Trả khoá chứ không trả câu vì component này nằm trong `components/`, tức DUMB: LUẬT G4 cấm
+   * inject service dữ liệu ở đây (doc/huong_dan/wiki-core/fe/trien-khai/05-gate.md — luật đã
+   * chốt, nhưng cổng TỰ ĐỘNG cho nó xếp lịch "Sau F4" và hôm nay CHƯA có, nên tuân thủ là việc
+   * của người viết code chứ không có máy canh).
+   *
+   * 🛑 HAI khoá TRỌN CÂU thay vì một câu gốc nối thêm một đuôi. Đây là chuỗi CHỈ trình đọc màn
+   * hình đọc, nên nó là chỗ dễ để lọt tiếng Việt nhất trong cả màn: không ai nhìn thấy nó sai khi
+   * thử app bằng mắt ở bản tiếng Anh.
+   */
+  cellAriaLabelKey(role: string): string {
+    return this.isAlwaysAllowed(role)
+      ? 'phan-quyen.grid.cellAriaLabelAlwaysAllowed'
+      : 'phan-quyen.grid.cellAriaLabel';
   }
 }

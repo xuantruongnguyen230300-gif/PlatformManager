@@ -1,4 +1,34 @@
+---
+kind: luat
+scope: core
+verified: 2026-09-06
+---
+
 # 9. Form & Validation
+
+> ### 🛑 ĐỌC TRƯỚC — repo này **KHÔNG dùng Reactive Forms** (đối chiếu 2026-09-06)
+>
+> Nhiều mẫu bên dưới viết bằng `FormGroup` / `Validators` / `AbstractControl` / `AsyncValidatorFn`
+> / `this.form.get(...)`. **Không file nào trong `src/FE/src` import `ReactiveFormsModule`,
+> `FormBuilder` hay `FormGroup`:**
+>
+> ```bash
+> grep -rn "ReactiveFormsModule\|FormBuilder\|FormGroup" src/FE/src --include=*.ts | grep -v spec
+> # hôm nay: 0 dòng
+> ```
+>
+> Mọi form đang chạy giữ giá trị bằng **`signal()`** và bind `(input)` trên thẻ `<input>` thuần —
+> xem `src/FE/src/app/platform/login/pages/login/login.page.ts:93` (`userName`/`password` là
+> `signal('')`) và `src/FE/src/app/platform/quan-tri-nguoi-dung/components/user-form-dialog/user-form-dialog.ts`.
+>
+> **Điều đó KHÔNG làm file này vô dụng** — các mục về validate 2 lớp, bind lỗi từ `fields`,
+> `dirty` + điều hướng, khoá nút lúc gửi đều là luật độc lập với cơ chế form. Nhưng đừng chép
+> nguyên khối `FormGroup` nào ở đây vào code: nó sẽ là **cơ chế thứ hai** trong một codebase
+> đang có đúng một, tức đúng thứ §5 `.claude/CLAUDE.md` cấm. Chưa có quyết định "đổi sang
+> Reactive Forms"; nếu cần đổi, chốt ở đây trước rồi mới viết code.
+>
+> 🔄 LẬT 2026-09-06: trước bản này file không có một dòng nào nói ra khoảng cách đó, nên nó đọc
+> như thể `FormGroup` là hiện trạng.
 
 ## Container — drawer/side-panel trước, modal sau
 
@@ -51,8 +81,12 @@ mà người dùng chưa gõ xong. Tệ hơn tần suất: network không đảm
 response — response của ký tự thứ 3 (đã cũ) có thể về **sau** response của
 ký tự thứ 7, đè kết quả mới bằng kết quả cũ nếu không huỷ request cũ.
 
+> 📐 **CHƯA THI CÔNG (đối chiếu 2026-09-06)** — chưa field nào validate qua API, và mẫu dưới
+> dùng `AsyncValidatorFn` của Reactive Forms (xem cảnh báo đầu file). Luật **300ms** thì áp bất
+> kể cơ chế: nó là con số đã chốt ở [13-performance.md](13-performance.md) §6.
+
 ```ts
-// vd validate email trùng lúc tạo user
+// vd validate email trùng lúc tạo user (Reactive Forms — chưa dùng trong repo này)
 export function uniqueEmailValidator(userService: UserService): AsyncValidatorFn {
   return (control: AbstractControl): Observable<ValidationErrors | null> =>
     timer(300).pipe(                                                // 300ms — cùng chuẩn debounce
@@ -79,27 +113,56 @@ export function uniqueEmailValidator(userService: UserService): AsyncValidatorFn
 
 ## Bind lỗi từ `fields` vào form
 
+Key từ BE là **PascalCase** (`MaxScore`, `Roles`) — cố ý khác phần còn lại của payload, xem
+[`../../quy-uoc/fe-api-client.md`](../../quy-uoc/fe-api-client.md) §Envelope.
+
+> ### 🔄 LẬT 2026-09-06 — mẫu cũ gọi một hàm KHÔNG tồn tại, và giải sai bài toán
+>
+> Nguyên văn cũ: `this.form.get(toCamelCase(key))?.setErrors({ server: messages[0] })`, kèm câu
+> *"cần 1 hàm `toCamelCase` dùng chung ở `core/`"*. Hai vấn đề:
+>
+> - **`toCamelCase` không tồn tại** ở bất cứ đâu trong `src/FE/src` — và nó cũng **không nên**
+>   tồn tại: cách làm thật **giữ nguyên PascalCase**, tra thẳng `fieldErrors()['Roles']`. Đổi
+>   casing chỉ thêm một phép biến đổi có thể sai giữa hai đầu đã khớp sẵn.
+> - Mẫu cũ **bỏ sót cạm bẫy thật.** `RuleForEach(x => x.Roles)` của FluentValidation phát
+>   `PropertyName` dạng `Roles[0]`, `Roles[1]`, và BE giữ nguyên chuỗi đó. Tra thẳng
+>   `fields['Roles']` sẽ **trượt, và lỗi biến mất im lặng** — người dùng thấy form từ chối mà
+>   không ô nào đỏ.
+>
+> Bản đang chạy — `groupServerFieldErrors`, `user-form-dialog.ts:59` — làm đúng hai việc, không
+> việc nào bỏ được:
+>
+> 1. **Cắt hậu tố chỉ số** `[\d+]` ở cuối khoá.
+> 2. **Gộp nhiều thông điệp về cùng một ô** thành một chuỗi — mỗi ô chỉ có một chỗ để hiện.
+
 ```ts
-private setFieldErrors(fields: Record<string, string[]>): void {
-  for (const [key, messages] of Object.entries(fields)) {
-    this.form.get(toCamelCase(key))?.setErrors({ server: messages[0] });
+// user-form-dialog.ts — giữ PascalCase, cắt chỉ số, gộp thông điệp
+function groupServerFieldErrors(fields: Record<string, string[]> | null): Record<string, string> {
+  if (!fields) return {};
+  const grouped: Record<string, string[]> = {};
+  for (const [rawKey, messages] of Object.entries(fields)) {
+    const key = rawKey.replace(/\[\d+\]$/, '');          // `Roles[0]` → `Roles`
+    grouped[key] = [...(grouped[key] ?? []), ...messages];
   }
+  return Object.fromEntries(Object.entries(grouped).map(([k, m]) => [k, m.join(' ')]));
 }
 ```
-
-Key từ BE là **PascalCase** (`MaxScore`) — form control Angular quy ước
-thường `camelCase` (`maxScore`) — cần 1 hàm `toCamelCase` dùng chung ở
-`core/`, không lặp lại logic map key ở từng form (đúng nguyên tắc "1 luật =
-1 nguồn").
 
 ## Message hiển thị
 
 Ưu tiên đọc thẳng `messages[0]` (đã là câu hoàn chỉnh do BE dịch qua
 `ErrorDescriptor.Resolve`) — **không** tự ráp lại "Trường X: " + message,
-vì `FieldError.Message` phía BE cố ý **không** chứa tên field (xem
-`be/trien-khai/03-p2-platform-application.md` §4.5) — label field FE tự lấy
+vì `FieldError.Message` phía BE cố ý **không** chứa tên field — label field FE tự lấy
 từ chính form (`<label>`), tránh 2 nơi cùng giữ tên field rồi lệch nhau khi
 đổi copy.
+
+🔄 LẬT 2026-09-06: câu trên trước đây neo bằng chứng vào `../../../tham-khao-ngoai/vnr-successor/03-p2-platform-application.md`
+§4.5. File đó khai `kind: tham-chieu` ở frontmatter — nó mô tả lộ trình xây dựng của **một dự án
+khác** (VNR.Successor), **không phải luật của repo này** (`.claude/CLAUDE.md` §9). Luật đang thi
+hành về `ErrorDescriptor`/`fields` nằm ở
+[`../../quy-uoc/be-cqrs-handler.md`](../../quy-uoc/be-cqrs-handler.md) và
+[`../../quy-uoc/be-api-controller.md`](../../quy-uoc/be-api-controller.md). Bản thân quy tắc FE
+ở đây không đổi.
 
 ## Form dirty + điều hướng đi — quy ước chung, không xử lý ca-by-ca
 
@@ -113,6 +176,41 @@ từ chính form (`<label>`), tránh 2 nơi cùng giữ tên field rồi lệch 
 > màn một khi phát hiện (đúng cách finding đó được tìm ra) không chặn được
 > màn **tiếp theo** mắc lỗi tương tự — cần quy ước áp cho mọi form có khả
 > năng mất dữ liệu, không phải sửa từng ca.
+
+> ### ✅ CÓ THẬT — thi công xong 2026-08-31
+>
+> ```bash
+> grep -rn "canDeactivate\|beforeunload" src/FE/src --include=*.ts | grep -v spec   # PASS khi khác rỗng
+> ```
+>
+> Đã thi công cả hai lớp, đối chiếu 2026-08-31:
+>
+> | Thành phần | Ở đâu |
+> |---|---|
+> | `IHasUnsavedChanges` + `unsavedChangesGuard` | `src/FE/src/app/core/guards/unsaved-changes.guard.ts:12,27` |
+> | `canDeactivate()` của component | `src/FE/src/app/platform/phan-quyen/pages/phan-quyen/phan-quyen.page.ts:199` |
+> | `@HostListener('window:beforeunload')` | `src/FE/src/app/platform/phan-quyen/pages/phan-quyen/phan-quyen.page.ts:231` |
+> | Khai trong route | `src/FE/src/app/platform/phan-quyen/phan-quyen.routes.ts:17` |
+>
+> Bốn phép nghiệm thu dưới đây đã có test tự động canh. Đừng chép số test vào đây
+> (`.claude/CLAUDE.md` §6) — chạy `npx ng test --watch=false --browsers=ChromeHeadless`, PASS khi
+> **0 failure**.
+>
+> 🔄 LẬT 2026-09-06: bản trước trỏ `@HostListener` vào `phan-quyen.page.ts:141`, một dòng nằm
+> giữa nhánh `error:` của lời gọi tải ma trận — không liên quan. Và nó chép *"bộ FE xanh
+> 235/235"*, đúng loại con số §6 cấm: nó chỉ đúng trong đúng ngày viết ra.
+>
+> Nghiệm thu:
+>
+> | # | Phép thử | PASS |
+> |---|---|---|
+> | 1 | Tick một ô ở màn Phân quyền rồi bấm một mục khác trên sidebar | Hiện hộp thoại xác nhận của app |
+> | 2 | Chọn "ở lại" | Vẫn ở màn cũ, **các ô vừa tick còn nguyên** |
+> | 3 | Tick một ô rồi đóng tab | Trình duyệt hiện hộp thoại cảnh báo của nó |
+> | 4 | **Không** sửa gì rồi rời trang | Đi thẳng, không hỏi |
+>
+> Phép thử 4 quan trọng ngang ba phép kia: một guard hỏi cả khi không có gì để mất sẽ bị
+> người dùng học cách bấm qua theo phản xạ, và lúc đó nó ngừng bảo vệ được gì.
 
 Hai lớp riêng biệt, **cần cả hai**, không lớp nào thay được lớp kia:
 
@@ -135,11 +233,18 @@ export const unsavedChangesGuard: CanDeactivateFn<IHasUnsavedChanges> = (compone
 // component form — mỗi feature tự quyết định "hỏi thế nào" (dùng lại
 // confirm-dialog đã có, xem §Container ở đầu file), guard chỉ hỏi "có cần hỏi không"
 export class PhanQuyenPage implements IHasUnsavedChanges {
-  private readonly confirmDialog = viewChild.required(ConfirmDialogComponent);
+  // Tên class là `ConfirmDialog`, không phải `ConfirmDialogComponent`.
+  private readonly leaveConfirm = viewChild.required(ConfirmDialog);
+  private leaveDecision: Subject<boolean> | null = null;
 
   canDeactivate(): Observable<boolean> {
-    return this.dirty() ? this.confirmDialog().open('Bạn có thay đổi chưa lưu. Rời khỏi trang?') : of(true);
+    if (!this.dirty()) return of(true);          // sạch thì đi thẳng, KHÔNG hỏi
+    const decision = new Subject<boolean>();
+    this.leaveDecision = decision;
+    this.leaveConfirm().open();                  // open() trả void — xem ghi chú dưới
+    return decision.asObservable();
   }
+  // Template nghe `(confirmed)` / `(cancelled)` rồi đẩy true/false vào `leaveDecision`.
 
   @HostListener('window:beforeunload', ['$event'])
   onBeforeUnload(event: BeforeUnloadEvent): void {
@@ -172,3 +277,50 @@ export class PhanQuyenPage implements IHasUnsavedChanges {
   `returnValue = ''` để trigger dialog, không cố ráp câu tiếng Việt vào đó.
 - Interface `IHasUnsavedChanges` đặt ở `core/` — mọi form áp dụng cùng 1
   guard, không viết lại logic `CanDeactivate` riêng từng feature.
+
+> ### ⚠️ Sửa 2026-08-31 — mẫu cũ mô tả một API không tồn tại
+>
+> Bản trước viết `confirmDialog().open('…')` như thể `open()` **nhận tham số và trả
+> `Observable<boolean>`**. Component dùng chung thật thì khác:
+> `open(): void`, tiêu đề/mô tả truyền qua `input()`, câu trả lời về qua **output**
+> `confirmed` / `cancelled`
+> (`src/FE/src/app/shared/components/confirm-dialog/confirm-dialog.ts:75,94`).
+>
+> Vì sao đáng sửa chứ không phải chi tiết vặt: người làm theo mẫu cũ sẽ thấy nó
+> **không biên dịch được**, và lối thoát dễ nhất lúc đó là dựng một dialog thứ hai
+> cho khớp mẫu — đúng thứ `COMPONENTS.md` tồn tại để ngăn. Cách bắc cầu bằng
+> `Subject<boolean>` ở trên giữ đúng component dùng chung.
+
+## Khoá form trong lúc đang gửi — ✅ CÓ THẬT (chốt 2026-08-31, đối chiếu lại 2026-09-06)
+
+Nút gửi phải **tắt trong suốt thời gian request đang bay**, và bật lại khi có kết quả.
+
+🔄 LẬT 2026-09-06: tiêu đề mục này còn mang nhãn 🚧 và đoạn ngay dưới mô tả *"Hiện trạng:
+`user-form-dialog.html:134` không có `[disabled]` nào"* — trong khi cuối mục đã ghi ✅ thi công
+xong. Một mục vừa nói chưa làm vừa nói đã làm thì người đọc tin vế nào cũng được. Đoạn hiện
+trạng cũ nay chuyển sang **thì quá khứ**:
+
+Trước 2026-08-31, nút gửi của dialog người dùng không có `[disabled]` và đường gửi không có cờ
+"đang gửi" — mạng chậm thì người dùng bấm lại.
+
+Thiệt hại **có giới hạn** nên mục này từng ở nhóm ưu tiên thấp: tên đăng nhập là duy nhất nên
+lần thứ hai bị BE từ chối. Nhưng người dùng nhận thông báo *"tên đăng nhập đã tồn tại"*
+ngay sau khi vừa tạo thành công chính tài khoản đó — một thông điệp đúng về mặt kỹ thuật
+và vô nghĩa với người đọc.
+
+Màn đăng nhập **đã làm đúng** việc này (`[disabled]="submitting()"`), nên đây là quy ước
+đã tồn tại trong code mà chưa được viết ra và chưa áp đều.
+
+> 📖 Trạng thái `:disabled` của ô nhập đã có sẵn trong lớp component dùng chung — đọc
+> [`../../../Design/Frontend/PlatformManager/Components/Input.md`](../../../Design/Frontend/PlatformManager/Components/Input.md)
+
+Nghiệm thu: bấm nút gửi hai lần thật nhanh ⇒ **đúng một** request rời khỏi client.
+
+> ✅ **CÓ THẬT — thi công xong 2026-08-31, đối chiếu lại 2026-09-06.**
+> `user-form-dialog.html:154` khai `[disabled]="saving()"`, và `onSubmit()` tự chặn khi đang gửi
+> (`user-form-dialog.ts:252`, `if (this.saving()) return;`) thay vì chỉ dựa vào thuộc tính
+> `disabled` của nút — vì `disabled` là **giao diện**, không phải bất biến của luồng: nút bị tắt
+> vẫn có thể bị kích bằng phím Enter ở một số đường. Nút Huỷ **không** bị khoá, có chủ đích.
+>
+> *(🔄 LẬT 2026-09-06: trích dẫn cũ là `:137`, một dòng `<div class="form-error">` thuộc khối lỗi
+> của ô `Roles` — không phải nút gửi.)*

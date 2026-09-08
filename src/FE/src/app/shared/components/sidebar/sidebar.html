@@ -1,18 +1,30 @@
-<aside class="sidebar" [class.collapsed]="state.collapsed()" [class.drawer-open]="state.mobileOpen()">
+<!-- `id="sidebar"` là ĐÍCH của `aria-controls="sidebar"` trên nút hamburger ở topbar. Thiếu id
+     này (tình trạng trước 2026-08-29) thì aria-controls trỏ vào hư không — trình đọc màn hình
+     bỏ qua, và mối liên hệ "nút này mở khối kia" biến mất. -->
+<aside
+  id="sidebar"
+  class="sidebar no-print"
+  [class.collapsed]="state.collapsed()"
+  [class.drawer-open]="state.mobileOpen()"
+>
   <div class="sidebar-brand">
-    <span class="brand-mark">PM</span>
-    <span class="brand-text">PlatformManager</span>
+    <!-- Chữ tắt + tên đầy đủ đến từ `CORE_BRANDING`, KHÔNG viết thẳng vào template: `shared/`
+         cũng là phần dùng lại cho sản phẩm khác, xem `sidebar.ts`. -->
+    <span class="brand-mark">{{ branding.shortName }}</span>
+    <span class="brand-text">{{ branding.name }}</span>
     <button
       type="button"
-      class="sidebar-toggle no-print"
-      [attr.aria-label]="state.collapsed() ? 'Mở rộng menu' : 'Thu gọn menu'"
+      class="icon-btn sidebar-toggle no-print"
+      [attr.aria-label]="
+        (state.collapsed() ? 'shared.sidebar.expand' : 'shared.sidebar.collapse') | translate
+      "
       [attr.aria-expanded]="!state.collapsed()"
       (click)="state.toggleCollapse()"
     >
       <i class="pi pi-angle-left"></i>
     </button>
   </div>
-  <nav aria-label="Main">
+  <nav [attr.aria-label]="'shared.sidebar.mainNav' | translate">
     <ul class="sidebar-nav">
       @for (item of items(); track item.Id) {
         <li

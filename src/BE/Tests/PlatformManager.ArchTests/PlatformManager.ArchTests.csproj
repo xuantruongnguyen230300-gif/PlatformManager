@@ -15,24 +15,39 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <!-- Dùng trực tiếp API MediatR/FluentValidation trong test (dựng mini pipeline) — cùng
-         version với PlatformManager.Core.Application.csproj/PlatformManager.Modules.DtiWeekly.Application.csproj, dù vốn đã có transitive qua ProjectReference. -->
+         version với PlatformManager.Core.Application.csproj, dù vốn đã có transitive qua
+         ProjectReference. -->
     <PackageReference Include="MediatR" Version="12.5.0" />
     <PackageReference Include="FluentValidation" Version="12.0.0" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.11" />
+    <!-- Microsoft.Extensions.DependencyInjection KHÔNG khai ở đây: từ 2026-09-01 project này có
+         FrameworkReference Microsoft.AspNetCore.App (xem ItemGroup cuối file), nên gói đó do
+         shared framework cung cấp — khai lại sinh NU1510 (WarningsAsErrors chưa bật cho nó,
+         nhưng mốc nghiệm thu của repo là 0 cảnh báo). -->
   </ItemGroup>
 
-  <!-- ArchTests là NGOẠI LỆ có chủ đích — tham chiếu ĐỦ CẢ 6 project (kể cả 2 Infrastructure)
+  <!-- ArchTests là NGOẠI LỆ có chủ đích — tham chiếu ĐỦ MỌI project (kể cả Infrastructure)
        để có thể reflection-kiểm tra ranh giới Core↔Modules ở MỌI tầng (kể cả tầng dễ vi phạm
-       nhất trong thực tế: Core.Infrastructure lỡ tay reference Modules.Infrastructure). Đây
+       nhất trong thực tế: Core.Infrastructure lỡ tay reference Modules.Infrastructure). Dựng
+       module nghiệp vụ mới thì thêm cả 3 project của nó vào ItemGroup dưới. Đây
        KHÔNG vi phạm luật "chỉ Api được biết Infrastructure" — luật đó áp cho project SẢN PHẨM,
        test project luôn được phép thấy toàn bộ để kiểm tra chéo. -->
   <ItemGroup>
     <ProjectReference Include="..\..\Core\PlatformManager.Core.Domain\PlatformManager.Core.Domain.csproj" />
     <ProjectReference Include="..\..\Core\PlatformManager.Core.Application\PlatformManager.Core.Application.csproj" />
     <ProjectReference Include="..\..\Core\PlatformManager.Core.Infrastructure\PlatformManager.Core.Infrastructure.csproj" />
-    <ProjectReference Include="..\..\Modules\DtiWeekly\PlatformManager.Modules.DtiWeekly.Domain\PlatformManager.Modules.DtiWeekly.Domain.csproj" />
-    <ProjectReference Include="..\..\Modules\DtiWeekly\PlatformManager.Modules.DtiWeekly.Application\PlatformManager.Modules.DtiWeekly.Application.csproj" />
-    <ProjectReference Include="..\..\Modules\DtiWeekly\PlatformManager.Modules.DtiWeekly.Infrastructure\PlatformManager.Modules.DtiWeekly.Infrastructure.csproj" />
+    <!-- Thêm 2026-09-01 cùng 4 ArchTest "sự TỒN TẠI / sự ĐƯỢC NỐI VÀO". Bắt buộc phải có, vì 2
+         thành phần mà chúng canh chỉ sống ở Api: 3 middleware trong Api/Common, và
+         CorsPolicyOptions — chính là Options đã gây sự cố 2026-08-31 (deploy xanh, app chặn sạch
+         người dùng). Không reference Api thì test bỏ sót đúng ca thúc đẩy nó ra đời.
+         Middleware là internal, nhưng Assembly.GetTypes() vẫn thấy — KHÔNG cần InternalsVisibleTo
+         (và vì thế ArchTests không cần Mvc.Testing như IntegrationTests). -->
+    <ProjectReference Include="..\..\PlatformManager.Api\PlatformManager.Api.csproj" />
+  </ItemGroup>
+
+  <!-- Kiểu của Api và của Core.Infrastructure (IdentityDbContext) chạm shared framework ASP.NET
+       Core — khai tường minh, cùng lý do đã ghi ở PlatformManager.Core.IntegrationTests.csproj. -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
 </Project>

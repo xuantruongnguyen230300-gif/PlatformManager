@@ -1,121 +1,391 @@
-# API Contract — Dashboard DTI Weekly (`modules/dashboard`)
+---
+kind: luat
+scope: du-an
+verified: 2026-09-06
+---
 
-> Owner FE: `src/FE/src/app/modules/dashboard/services/dashboard.service.ts` +
-> `src/FE/src/app/shared/services/period-options.service.ts`
-> Nguồn nghiệp vụ: `doc/ke-hoach-xay-lai-corebase.md` (mô tả hành vi cần port lại chính xác từ
-> prototype dashboard, đã xoá 2026-08-23), bản Contract Card cũ (đã xoá cùng đợt dọn `src/BE`, nội dung gốc
-> vẫn còn trong lịch sử git — dùng làm nền tham khảo route/shape, ĐÃ cập nhật lại theo envelope
-> mới). Dashboard **100% read-only**.
+# API Contract — Dashboard DTI (`modules/dashboard`)
+
+> ## 📐 ĐÍCH ĐẾN — CHƯA THI CÔNG
 >
-> **CASING**: xem cảnh báo ở `doc/contracts/meta-menu.md` — toàn bộ DTO dưới đây giả định camelCase
-> xuyên suốt (envelope + payload), CHƯA XÁC NHẬN với `backend-expert`. Đây là điểm **QUAN TRỌNG
-> NHẤT cần chốt trước khi implement thật** — nếu sai, toàn bộ mapper của cả `dashboard` lẫn
-> `danh-muc-dti` phải sửa lại.
+> **Không có dòng code nào của tính năng này tồn tại hôm nay (2026-09-05).** `src/FE/src/app/modules/dashboard/`
+> và module BE `DtiWeekly` gỡ 2026-08-29. Card này là **hợp đồng phải hiện thực**, không
+> phải mô tả thứ đang chạy.
 >
-> Trạng thái card: **DRAFT** — FE đã code service/mapper theo đúng shape dưới đây (án theo hành vi
-> gốc + route đã có tiền lệ ở bản Contract Card cũ), nhưng BE `src/BE` hiện chưa có
-> `Infrastructure`/`DashboardController` để implement/verify — chưa gọi thật lần nào ở đợt F0+F1
-> này.
+> **Đích đến kiến trúc: `PlatformManager.Business.*`** — không dựng lại `Modules.DtiWeekly.*`.
+> 📖 [`../kien-truc-core-module.md`](../kien-truc-core-module.md)
+>
+> **Casing đã CHỐT** (camelCase xuyên suốt, `null` ⇒ khoá vắng mặt, khoá `fields` giữ
+> PascalCase): file chủ là [`danh-muc-dti.md`](danh-muc-dti.md) §0 — **không mô tả lại ở
+> đây**. Cảnh báo *"CHƯA XÁC NHẬN với backend-expert"* của bản trước đã hết hiệu lực.
+>
+> **Luật nghiệp vụ** (công thức tổng hợp, quy tắc kỳ, quy tắc export): file chủ là
+> `spec/dashboard-dti/business-rules.md`.
 
-## CONTRACT DB-1 — Tổng hợp Dashboard theo Tuần/Tháng/"Tất cả trong năm"
+**Ngày viết lại: 2026-09-05.** Dashboard **100% đọc — không có hành động ghi nào**, kể cả nút
+"Xuất báo cáo" (nó chỉ tải file về, không tạo dữ liệu trên server).
 
-- Status: **DRAFT**
+---
+
+## 0. Ràng buộc lớn nhất của màn này — Dashboard chiếm ĐÚNG URL `/trang-chu`
+
+**Q18 (chốt 2026-09-05):** Dashboard **thay màn chào cũ tại chỗ**, giữ nguyên URL
+`/trang-chu`. `''` và `**` vẫn đổ về đó, `APP_CORE_ROUTES.home` **không đổi**, hàng menu
+seed **không đổi**. Đây là điểm khác bản sáng nay, vốn viết mơ hồ là "thay `/trang-chu`" —
+có thể đọc thành "đổi URL".
+
+Route đó là **bến an toàn của mọi fallback**. Guard giữ nguyên `authGuard` +
+`mustChangePasswordGuard`, **không** role guard.
+
+**Q21 (chốt 2026-09-05): mọi người đăng nhập đều xem được Dashboard, không cần quyền DTI.**
+Câu hỏi "ai được xem" **không còn để ngỏ**. Hợp đồng vì thế đơn giản hơn hẳn:
+
+| Ca | BE phải trả gì | KHÔNG được làm gì |
+| --- | --- | --- |
+| Chưa có dữ liệu nào trong năm đang xem | `IApiResult` **thành công**; `groups`/`trend`/`table` là **mảng rỗng**, các trường số của `kpi` vắng mặt | Không trả 404. "Chưa có dữ liệu" không phải lỗi |
+| **Đã có chỉ tiêu nhưng chưa ai nhập `Tiến độ %`** (Q24 — trạng thái ngay sau import) | `table` **có đủ dòng**, `kpi.overallProgress` và `groups[].progress` **vắng mặt**, `trend` **rỗng** | Không trả `0` thay cho "chưa có" — xem cảnh báo dưới |
+| Người gọi chưa đăng nhập | `401` qua `[Authorize]` fail-closed | — |
+
+> ⚠️ **Không còn ca "thiếu quyền xem".** Bản sáng nay khai một ca `403` cho người thiếu
+> quyền DTI và một mục "cần chốt" kèm theo. Q21 gỡ cả hai. FE **không** phải vẽ trạng thái
+> "không có quyền" cho màn này.
+>
+> Quyền **ghi** là chuyện riêng của màn Danh mục, và nay **cũng đã chốt** (Q27, 2026-09-05):
+> đúng **một** permission-key cho toàn bộ đường ghi DTI, áp cho **mọi kỳ** —
+> `spec/danh-muc-dti/business-rules.md` §6.5. Dashboard không chạm tới nó vì không có đường
+> ghi nào.
+
+⚠️ **Ca thứ hai là ca thường gặp nhất trong ngày đầu chạy thật**, không phải ca hiếm: Q24
+chốt `Tiến độ %` **để trống khi import**, mà thanh tiến độ nhóm và biểu đồ lại vẽ theo
+chính trường đó (Q11). Nên ngay sau khi nạp file 62 chỉ tiêu, dashboard **trống** cho tới
+khi có người nhập tay. Đây là hành vi **người dùng đã chấp nhận**, không phải lỗi — nhưng
+nó phải phân biệt được với "0%" (đã nhập và thật sự bằng 0). Đó là lý do các trường tổng
+hợp **vắng mặt** thay vì bằng `0`.
+
+> **Ô KPI nào có số, ô nào hiện `—` ở đúng thời điểm đó** — chốt T12 (2026-09-06), khai
+> **một chỗ**: `spec/dashboard-dti/business-rules.md` §1.6. Tóm tắt để không ai phải mở file
+> mới biết có mà đọc: `overallProgress` và `delta` **vắng mặt**; `up`/`flat`/`down` là `0`
+> (**không** phải 62 — xem lý do ở file chủ); `done` có **số thật** vì nó đếm theo `status`,
+> mà `status` đến thẳng từ cột `Trạng thái` của file import.
+
+Ràng buộc phía FE (ba trạng thái rỗng phải hiển thị tử tế) thuộc
+`spec/dashboard-dti/ui-spec.md` và
+📖 [`../huong_dan/quy-uoc/fe-routing-guard.md`](../huong_dan/quy-uoc/fe-routing-guard.md).
+
+> **Q32 (2026-09-05) — ca thứ hai có lối đi ra, và nó chạm hợp đồng ở đúng một điểm.** FE hiện
+> một dải `NoticeBanner` kèm nút dẫn sang màn Danh mục ở địa chỉ **`/danh-muc/dti`** (Q33), vì
+> nhập `Tiến độ %` là việc duy nhất làm được lúc đó. Copy và bố cục dải băng thuộc
+> `Screens/01-dashboard.md` + `spec/dashboard-dti/ui-spec.md` — card này chỉ chốt rằng BE
+> **không** cần trường mới nào cho việc đó: FE phân biệt được ca này bằng `table` có phần tử
+> **và** `kpi.overallProgress` vắng mặt.
+
+---
+
+## CONTRACT DB-1 — Tổng hợp Dashboard theo Tuần / Tháng / "Tất cả trong năm"
+
+- **Status: AGREED** (2026-09-05)
 - Route: `GET /api/dashboard`
 - Query params:
-  ```
-  mode: string        // "week" | "month" | "year" ("year" = "Tất cả" của 1 năm) — chữ thường
-  date: date?          // mode=week: ngày bất kỳ trong tuần muốn xem; mode=month: ngày bất kỳ trong tháng.
-                        // Bỏ trống = server tự dùng kỳ hiện tại (hôm nay) — FE dựa vào default này
-                        // cho trạng thái mặc định khi mới vào trang (xem dashboard.page.ts).
-  year: int?            // mode=year: năm cần tổng hợp (mặc định năm hiện tại nếu bỏ trống);
-                        // mode=week/month vẫn nên nhận year để BE build đúng Trend theo năm đang chọn
-  ```
-- Response: `IApiResult<IDashboardAggregateDto>`
-  ```
-  data: {
-    mode: "week"|"month"|"year",
-    periodLabel: string,        // vd "Tuần 33/2026 (10/08–16/08/2026)", "Tháng 8/2026", "Năm 2026"
-    kpi: {
-      overallProgress: number|null, delta: number|null, previousPeriodLabel: string|null,
-      up: int, flat: int, down: int, done: int, totalCriteria: int
-    },
-    groups: [ { groupId: guid, groupCode: string, groupName: string, progress: number|null } ],
-    trend: [ { label: string, value: number|null } ],
-      // mode=week: label="YYYY-Www" mọi tuần ISO CÓ dữ liệu trong `year`; mode=month|year:
-      // label="Th.{1..12}". CHỈ trả điểm CÓ dữ liệu — KHÔNG nội suy/không trả điểm null (FE
-      // `trend-chart` clamp [0,100] + không spanGaps, xem doc/huong_dan/wiki-core/fe/12-charting.md).
-    table: [
-      {
-        criteriaId: guid, code: string, name: string, groupCode: string, groupName: string,
-        maxScore: number, previousValue: number|null, currentValue: number|null, delta: number|null,
-        badge: "Hoàn thành"|"Không tăng"|"Đang thực hiện"|"Chưa có dữ liệu"|null,
-        note: string|null
-      }
-    ]
-  }
-  ```
-- **Khác bản Contract Card cũ (đã xoá)**: cũ ghi "Table row KHÔNG có field `note`" — bản DRAFT này
-  THÊM lại `note` vì prototype cũ (đã xoá 2026-08-23; cột "Ghi chú tuần" trong
-  bảng 62 chỉ tiêu) vẫn hiển thị ghi chú ngay trong bảng đọc-only — port lại đúng 1:1 theo yêu cầu
-  gốc của task lượt này. `backend-expert` xác nhận lại field này có sẵn trong dữ liệu tổng hợp hay
-  cần JOIN thêm.
-- `badge` tính RUNTIME phía BE (epsilon so sánh Delta = `0.001`, ngưỡng "Hoàn thành" =
-  `currentValue >= 99.999`) — FE chỉ hiển thị, không tự tính lại (xem
-  `modules/dashboard/components/status-badge/`).
-- Công thức: trung bình gia quyền theo `MaxScore`; Tháng/"Tất cả trong năm" = trung bình cộng các
-  kỳ-tuần CÓ dữ liệu, KHÔNG carry-forward (kỳ không có thao tác cho 1 chỉ tiêu bị loại khỏi mẫu
-  tính trung bình của chỉ tiêu đó).
 
-## CONTRACT DB-2 — "Xuất báo cáo" (HTML báo cáo nhanh)
+```
+mode:    string    // "week" | "month" | "year"  — chữ thường. "year" = "Tất cả" của 1 năm
+date:    date?     // mode=week: ngày bất kỳ TRONG tuần muốn xem
+                   // mode=month: ngày bất kỳ TRONG tháng muốn xem
+                   // bỏ trống = kỳ hiện tại (hôm nay)
+year:    int?      // mode=year: năm cần tổng hợp. mode=week/month: năm dùng để dựng `trend`
+                   // bỏ trống = năm hiện tại
 
-- Status: **DRAFT**
-- Route: `GET /api/dashboard/report`
-- Query params: giống hệt DB-1 (`mode`, `date`, `year`)
-- Response: `IApiResult<IReportDto>`
-  ```
-  data: { title: string, contentHtml: string }
-  ```
-- FE (`report-dialog`) bind `contentHtml` qua `DomSanitizer.bypassSecurityTrustHtml` rồi
-  `[innerHTML]` — BE tự tính sẵn HTML (tương đương `generateReport()`/`generateMonthlyReport()`/
-  `generateYearAggregateReport()` trong prototype cũ đã xoá), FE không tự dựng lại text.
+// ── Bộ lọc của BẢNG CHI TIẾT — cùng object với endpoint export (DB-4) ──
+search:  string?   // khớp Code HOẶC Name
+groupId: guid?
+status:  string?   // 1 trong 4 giá trị Trạng thái; giá trị lạ -> 400
+```
+
+- Response: `IApiResult<DashboardAggregateDto>`
+
+```
+mode:                "week" | "month" | "year"
+periodLabel:         string   // "Tuần 33/2026 (10/08 – 16/08/2026)"
+                              // "Tháng 8/2026 (01/08 – 31/08/2026)"  |  "Năm 2026"
+periodStart:         date     // mốc kỳ, GHI RÕ, không để FE tự tính (Q12)
+periodEnd:           date
+
+kpi: {
+  overallProgress:     number?   // % — bình quân gia quyền theo maxScore
+  delta:               number?   // điểm phần trăm so với kỳ liền trước
+  previousPeriodLabel: string?
+  up:                  int       // số chỉ tiêu tăng so với kỳ trước
+  flat:                int       // số chỉ tiêu không tăng
+  down:                int
+  done:                int       // số chỉ tiêu ở trạng thái "Hoàn thành"
+  totalCriteria:       int
+}
+
+groups: [ { groupId: guid, groupCode: string, groupName: string, progress: number? } ]
+
+trend:  [ { label: string, value: number? } ]
+
+table:  [ {
+  criteriaId:    guid
+  code:          string
+  name:          string
+  groupId:       guid
+  groupCode:     string
+  groupName:     string
+  maxScore:      number
+  selfScore:     number?
+  verifiedScore: number?
+  diff:          number?    // TÍNH = verifiedScore − selfScore (Q2 + Q25 — ĐẢO CHIỀU 2026-09-05)
+  status:        string?    // 1 trong 4 giá trị, người dùng chọn tay (Q4)
+  note:          string?
+} ]
+```
+
+### Bảng chi tiết: 9 cột, ĐỔI bộ cột (Q8)
+
+Cột hiển thị, đúng thứ tự đã duyệt: **Mã · Chỉ tiêu · Nhóm · Điểm tối đa · Tự đánh giá ·
+Thẩm định · Chênh lệch · Trạng thái · Minh chứng/Ghi chú**.
+
+> ⚠️ **Đã BỎ khỏi bản trước:** `previousValue`, `currentValue`, `delta` (3 cột
+> Tuần trước / Tuần này / Tăng-giảm) và trường `badge`. Xu hướng theo kỳ đã có ở biểu đồ
+> `trend` + hai ô KPI `up`/`flat`, nên không lặp lại trong bảng. `badge` biến mất vì bộ 4
+> trạng thái nay do **người dùng chọn tay** (Q4) — không còn nhãn nào để hệ thống tự tính.
+> Ánh xạ trạng thái → màu badge là việc của FE, khai ở `spec/dashboard-dti/business-rules.md`
+> §Trạng thái, không phải trường của API.
+
+### Ba luật về phạm vi tính toán — đọc kỹ, đây là chỗ dễ làm sai nhất
+
+1. **Bộ lọc `search`/`groupId`/`status` chỉ áp cho `table`.** `kpi`, `groups`, `trend` LUÔN
+   tính trên **toàn bộ** chỉ tiêu của kỳ. Lý do: nếu lọc một nhóm mà ô "Tiến độ chung" đổi
+   theo, người đọc sẽ tưởng tiến độ toàn xã thay đổi — một con số đúng về mặt phép tính
+   nhưng sai về mặt câu hỏi nó đang trả lời.
+2. **`trend` chỉ trả điểm CÓ dữ liệu** — không nội suy, không trả điểm `null` để lấp chỗ.
+   `mode=week` → `label = "YYYY-Www"` cho mọi tuần ISO có dữ liệu trong `year`;
+   `mode=month|year` → `label = "Th.1" … "Th.12"` — **chốt T7 (2026-09-05)**, không đổi sang
+   khoảng ngày; 12 nhãn khoảng-ngày không đủ chỗ trên trục.
+3. **Công thức** (bình quân gia quyền theo `maxScore`, epsilon so sánh, ngưỡng "hoàn
+   thành", cách gộp tháng/năm từ các kỳ tuần) nằm ở `spec/dashboard-dti/business-rules.md`
+   §Công thức. **BE tính, FE chỉ hiển thị** — FE tính lại là tạo nguồn sự thật thứ hai.
+
+---
+
+## CONTRACT DB-2 — GỠ 2026-09-05
+
+`GET /api/dashboard/report` (trả `{ title, contentHtml }` cho `report-dialog` bind qua
+`bypassSecurityTrustHtml`) **không còn trong phạm vi**. Nút "Xuất báo cáo" nay tải thẳng
+file `.xlsx`, không dialog, không xem trước (Q13) — thay bằng **DB-4** dưới đây.
+
+Giữ mục này lại thay vì xoá trắng vì hai lý do: người từng đọc bản trước cần biết route đó
+đã biến mất chứ không phải bị quên; và component `report-dialog` cùng khối CSS
+`app-report-dialog` **không cần port sang `src/FE`**.
+
+> 🔄 **SỬA 2026-09-06.** Vế thứ hai trước đây viết *"…trong prototype nay là **style chết**,
+> cần gỡ chứ không cần port lại"*, tức giao một việc dọn dẹp cho một thứ không tồn tại: không có
+> selector `report-dialog` nào trong `src/FE/src/styles.scss` (đối chiếu 2026-09-06), và
+> thư mục prototype HTML cũ đã bị xoá 2026-08-23 (`.claude/CLAUDE.md` §7 — nguồn giao diện duy
+> nhất nay là `doc/Design/`). Không có gì để gỡ — chỉ có thứ không được dựng lên.
+
+---
 
 ## CONTRACT DB-3 — Danh sách Năm/Kỳ có dữ liệu (dùng CHUNG với Danh mục DTI)
 
-- Status: **AGREED** (2026-08-16)
+- **Status: AGREED** (2026-08-16) — **giữ nguyên, không sửa ở lượt 2026-09-05.**
 - Route: `GET /api/dashboard/periods`
-- Query params: `year: int?` (nếu có, trả thêm `weeksInYear`/`monthsInYear` của đúng năm đó)
-- Response: `IApiResult<IPeriodOptionsDto>`
-  ```
-  data: {
-    years: int[],                 // mọi năm có dữ liệu, LUÔN kèm năm hiện tại dù chưa có dữ liệu
-    weeksInYear: [ { value: string, date: date, overallProgress: number|null } ],
-    monthsInYear: [ { value: string, date: date, overallProgress: number|null } ]
-  }
-  ```
-  `value` là giá trị cần truyền vào `period` của `GET /api/criteria` (xem
-  `doc/contracts/danh-muc-dti.md` CONTRACT DM-2) và `date`/`mode` của `GET /api/dashboard` — vd
-  `"2026-W33"` (tuần ISO), `"2026-08"` (tháng).
-- Owner FE thật sự: `shared/services/period-options.service.ts` — dùng chung bởi
-  `modules/dashboard` (`period-toolbar`, `history-list`) VÀ `modules/danh-muc-dti`
-  (dropdown năm/kỳ lọc grid) — đặt ở `shared/` theo đúng quy tắc "≥2 feature dùng thì không còn ở
-  `modules/<feature>/`" (`doc/huong_dan/quy-uoc/fe-architecture.md`).
-- `history-list` (Dashboard) KHÔNG có endpoint riêng — tái dùng `weeksInYear` của route này, tự
-  tính delta giữa các kỳ liền kề ở FE (không cần BE trả sẵn).
+- Query params: `year: int?` (nếu có, trả `weeksInYear`/`monthsInYear` của đúng năm đó)
+- Response: `IApiResult<PeriodOptionsDto>`
 
-> ✅ **Đã sửa (2026-08-16, backend-expert)** — `DashboardPeriodsDto` nay trả đúng
-> `{years, weeksInYear, monthsInYear}` với `weeksInYear`/`monthsInYear` là mảng object
-> `{value, date, overallProgress}` (khớp `IPeriodOptionsDto` phía FE, không phải mảng giá trị
-> thuần như trước). `overallProgress` mỗi tuần/tháng tính qua `PeriodAggregateCalculator.Compute`
-> (cùng công thức bình quân gia quyền theo `MaxScore` dùng cho DB-1). `years` LUÔN kèm năm hiện
-> tại dù chưa có dữ liệu. Build xanh — chưa gọi thử được response THÀNH CÔNG có data thật (cần
-> DB đã migrate), CONTRACT DB-3 chuyển **AGREED** (đứng riêng, không phụ thuộc trạng thái DRAFT
-> chung của DB-1/DB-2 trong file này).
+```
+years:        int[]     // mọi năm có dữ liệu, LUÔN kèm năm hiện tại dù chưa có dữ liệu
+weeksInYear:  [ { value: string, date: date, overallProgress: number? } ]
+monthsInYear: [ { value: string, date: date, overallProgress: number? } ]
+```
 
-## Trạng thái hiện tại phía FE
+- `value` chính là giá trị truyền vào `period` của `GET /api/criteria`
+  ([`danh-muc-dti.md`](danh-muc-dti.md) DM-2) và vào `date`/`mode` của DB-1 —
+  vd `"2026-W33"` (tuần ISO), `"2026-08"` (tháng).
+- `overallProgress` của mỗi kỳ tính bằng **cùng** công thức bình quân gia quyền theo
+  `maxScore` dùng cho DB-1 — một công thức, một chỗ cài.
+- `history-list` trên Dashboard **không có endpoint riêng**: tái dùng `weeksInYear`, tự tính
+  chênh lệch giữa các kỳ liền kề ở FE.
+- Owner FE: một service dùng chung ở `shared/` (≥2 feature dùng — 📖
+  [`../huong_dan/quy-uoc/fe-architecture.md`](../huong_dan/quy-uoc/fe-architecture.md)).
 
-3 endpoint trên đã có service/mapper hoàn chỉnh (`dashboard.service.ts`,
-`shared/services/period-options.service.ts`), UI đầy đủ (period-toolbar, kpi-summary, trend-chart
-qua `p-chart`, group-progress-list, criteria-table qua `p-table` với lọc/sắp xếp/phân trang
-CLIENT-SIDE, history-list, report-dialog) — `ng build` xanh. Chưa gọi được thật vì `src/BE` chưa có
-`DashboardController`. Khi `backend-expert` có endpoint thật: xác nhận lại casing (xem cảnh báo đầu
-file) bằng 1 lần gọi thật/Swagger trước khi chuyển card sang AGREED.
+> **Bổ sung 2026-09-05 — hiển thị, không phải đổi shape.** Q12 yêu cầu mọi chỗ hiện kỳ phải
+> ghi rõ **từ ngày đến ngày**. Shape trên **đủ dữ liệu** để FE dựng nhãn
+> `"Tuần 33 · 10/08 – 16/08 · 82,1%"` (khuôn chuỗi + luật khoảng trắng quanh dấu gạch:
+> `spec/dashboard-dti/business-rules.md` §6.2) mà không cần trường mới: `value` cho số tuần, `date`
+> cho mốc đầu kỳ, và tuần ISO thì kết thúc sau đúng 6 ngày. Không thêm trường vào card
+> `AGREED` khi dữ liệu đã đủ — thêm là phá một hợp đồng đã chốt để lấy thứ tính được.
+
+---
+
+## CONTRACT DB-4 — "Xuất báo cáo": tải thẳng file `.xlsx`
+
+- **Status: AGREED** (2026-09-05) — thay DB-2 đã gỡ.
+- Route: `GET /api/dashboard/export`
+- Query params: **đúng bộ của DB-1**, thêm không gì cả:
+
+```
+mode:    "week" | "month"     // KHÔNG hỗ trợ "year" — xem ghi chú bên dưới
+date:    date?
+year:    int?
+search:  string?
+groupId: guid?
+status:  string?
+```
+
+### Response — đây là endpoint DUY NHẤT của hệ thống không trả envelope
+
+- **Thành công**: `200`, thân là **bytes của file**, không bọc `IApiResult<T>`.
+  - `Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`
+  - `Content-Disposition: attachment; filename="bao-cao-dti_Tuan-33-2026.xlsx"; filename*=UTF-8''bao-cao-dti_Tuan-33-2026.xlsx`
+  - Mẫu tên file: `bao-cao-dti_Tuan-{tuần}-{năm}.xlsx` · `bao-cao-dti_Thang-{tháng}-{năm}.xlsx`
+    — chỉ ký tự ASCII, không dấu, không khoảng trắng. Trình duyệt và mọi hệ tệp mở được
+    mà không cần giải mã; đó là lý do có `filename` ASCII cạnh `filename*`.
+- **Lỗi**: **vẫn** là `IApiResult<T>` JSON như mọi endpoint khác (`400`/`403`/`429`/`500`).
+  FE phải kiểm `Content-Type` của response trước khi coi body là file — nhận JSON tức là lỗi.
+- **`mode=year` không hỗ trợ**: `400` + `DASHBOARD.EXPORT_MODE_UNSUPPORTED`. Bố cục file đã
+  duyệt có khối nhận dạng kỳ với `Từ ngày`/`Đến ngày` của **một** kỳ (Q14) — "cả năm" không
+  ánh xạ được vào khuôn đó mà không thiết kế lại file.
+- **`mode=month` xuất TRỌN tháng** (Q15), không phải một tuần nằm trong tháng.
+
+  > **Q37 (2026-09-06 — "chỉ nhập theo tuần") KHÔNG thu hẹp endpoint này.** Quyết định đó nói
+  > về đường **ghi** của màn Danh mục: không nhập liệu vào một kỳ tháng, vì mô hình lưu theo
+  > ngày không neo được một tháng vào đúng một tuần ISO. Xuất một tháng là phép **tổng hợp
+  > trên dữ liệu đã có**, không tạo bản ghi nào. `mode=month` giữ nguyên, kể cả khối
+  > `Gồm các tuần` của bố cục file. Đây là chỗ dễ "dọn nhầm" nhất khi đọc Q37 vội.
+- **Catalog mã lỗi — bắt buộc, cưỡng chế bằng máy.** `DASHBOARD.EXPORT_MODE_UNSUPPORTED`
+  phải khai thành `ErrorDescriptor` trong **`DashboardErrors.cs`** đặt ở
+  `Business.Application` (khuôn ở
+  [`../huong_dan/quy-uoc/be-cqrs-handler.md`](../huong_dan/quy-uoc/be-cqrs-handler.md)
+  § `ErrorDescriptor`). Không phải quy ước đặt tên cho đẹp: `ArchTests` nhận diện file
+  catalog **bằng đuôi `Errors.cs`** và bắt lỗi mã nào không khai trong đó — khai thiếu là
+  test đỏ, không phải cảnh báo. `MessageTemplate` dùng chỗ giữ **đặt tên** (`{Mode}`),
+  không phải `{0}`; khai `Retryable` tường minh.
+
+> **Vì sao được phép không bọc envelope, trong khi luật nói "mọi response đi qua
+> `IApiResult<T>`":** `HandleResult<T>` serialize `T` thành JSON
+> (`src/BE/PlatformManager.Api/Common/ApiControllerBase.cs:26`) — nhồi vài trăm KB bytes vào
+> `data` dưới dạng base64 làm file phình ~33% và buộc FE phải giải mã trong bộ nhớ trước khi
+> đưa cho người dùng lưu. Đây là ngoại lệ **có phạm vi hẹp và kiểm được**: chỉ áp cho nhánh
+> thành công của endpoint tải file; nhánh lỗi vẫn đi đúng đường chung. Luật gốc:
+> [`../huong_dan/wiki-core/be/15-import-export.md`](../huong_dan/wiki-core/be/15-import-export.md)
+> §3 — "dưới ngưỡng thì trả thẳng `FileStreamResult`".
+
+### Bố cục file — 1 sheet, khớp 2 file mẫu đã duyệt
+
+Đặc tả đầy đủ từng ô (nhãn dòng 2–10, 12 cột của header, dòng `TỔNG CỘNG`, định dạng số) ở
+`spec/dashboard-dti/business-rules.md` §Export. Card này chỉ giữ phần thuộc hợp đồng đường
+dây:
+
+- **Đúng 1 sheet.** Tên sheet: `Tuần 33-2026` / `Tháng 8-2026`.
+- **12 cột = 11 cột của file import + `Tiến độ %`** ⇒ export là **superset** của import, tức
+  file tải về nạp ngược lại được (round-trip). Đây là ràng buộc thiết kế, không phải trùng
+  hợp: hai bộ cột lệch nhau thì người dùng sửa file export rồi import lại sẽ mất dữ liệu.
+- **Dòng 10 `Bộ lọc đang áp` là bắt buộc** (chốt 2026-09-06), kể cả khi không lọc thì vẫn
+  ghi `Không lọc — đủ 62 chỉ tiêu`. Đây là phần thuộc hợp đồng vì nó là **bằng chứng đi theo
+  file**: export tôn trọng bộ lọc (Q23), mà file thì rời khỏi màn hình — người nhận nó qua
+  email không có cách nào biết nó được xuất lúc đang lọc gì.
+- **Chỉ `.xlsx`** — và đây là chỗ **THU HẸP so với Core**, không phải làm theo Core.
+
+  > ### ⚠️ Sửa 2026-09-05 — viện dẫn sai luật ở bản trước
+  >
+  > Bản sáng nay ghi *"Không CSV, không `.xls` — khớp `15-import-export.md` §3"*. Sai:
+  > §3 của file đó khai **"Định dạng export: XLSX + CSV. KHÔNG làm `.xls`."** Nghĩa là
+  > Core **cho** CSV; bỏ CSV không phải luật Core mà là **Q13 của người dùng** (nút tải
+  > thẳng một file, không dialog chọn định dạng).
+  >
+  > | | Core (`15-import-export.md` §3) | Màn này |
+  > | --- | --- | --- |
+  > | `.xlsx` | có | có |
+  > | `.csv` | **có** | **không** — Q13 thu hẹp |
+  > | `.xls` | không | không |
+  >
+  > Phân biệt này không phải bắt bẻ câu chữ. Viện dẫn luật Core cho một lựa chọn của sản
+  > phẩm nghĩa là người sau **không sửa được nó** khi người dùng đổi ý — họ sẽ tưởng đang
+  > phá một luật nền tảng. Bỏ CSV là quyết định của **màn hình này**, gỡ lúc nào cũng được.
+  >
+  > Hệ quả kèm theo: hai cái bẫy CSV + tiếng Việt của Core (§5 — BOM UTF-8 và dấu phân cách
+  > theo locale `vi-VN`) **chưa** phải xử lý cho đường này, và sẽ phải xử lý **ngay khi** ai
+  > đó thêm `format=csv` trở lại.
+
+### Đường đồng bộ, không job nền
+
+62 chỉ tiêu nằm **rất xa** ngưỡng cần job nền. Đi đường đồng bộ: không chạm đĩa, không tạo
+`ExportJob`, không cần retention. Ngưỡng chuyển sang job nền là **cấu hình**, không phải
+hằng số rải trong code (`15-import-export.md` §3).
+
+### Tôn trọng bộ lọc đang áp — ĐÃ CHỐT (Q23, 2026-09-05)
+
+Export dùng **cùng object bộ lọc** với `GET /api/dashboard`: đang lọc nhóm nào thì xuất
+nhóm đó. Không còn là mục "cần chốt".
+
+⚠️ **Rủi ro UX đã biết, ghi ra để FE xử lý chứ không phải để bỏ qua:** nút "Xuất báo cáo"
+nằm ở **thanh chọn kỳ trên cùng**, còn ba ô lọc nằm ở **thanh công cụ của bảng gần cuối
+trang**. Người dùng bấm Xuất khi đã cuộn lên đầu có thể không nhớ mình còn đang lọc một
+nhóm. Cách hiển thị (nhắc bộ lọc đang áp cạnh nút, hoặc trong tên file) thuộc
+`spec/dashboard-dti/ui-spec.md`.
+
+📖 Test nghiệm thu ràng buộc này (số dòng file = số phần tử `data.table`) khai **đúng một
+chỗ**: `spec/dashboard-dti/business-rules.md` §Export. Không chép ra đây.
+
+---
+
+## 1. Bảng đối chiếu nhanh — bản DRAFT cũ → bản này
+
+| Bản DRAFT cũ | Bản 2026-09-05 | Vì sao |
+| --- | --- | --- |
+| DB-2 `GET /api/dashboard/report` trả HTML | **gỡ**, thay bằng DB-4 tải `.xlsx` | Q13 |
+| `table[].previousValue`/`currentValue`/`delta` | thay bằng `selfScore`/`verifiedScore`/`diff` | Q8 |
+| `table[].badge` (BE tự tính, 4 nhãn cũ) | **gỡ** — còn `status` 4 giá trị người dùng chọn tay | Q4 |
+| `periodLabel: "Tháng 8/2026"` | `periodLabel` ghi rõ khoảng ngày + thêm `periodStart`/`periodEnd` | Q12 |
+| Không có tham số lọc | `search`/`groupId`/`status` áp cho `table` | Prototype đã duyệt + luật §4 export |
+| Casing "CHƯA XÁC NHẬN" | CHỐT — 📖 [`danh-muc-dti.md`](danh-muc-dti.md) §0 | Bằng chứng source |
+
+### Đổi thêm ở vòng sửa thứ ba (2026-09-05)
+
+| Bản trước | Bản này | Vì sao |
+| --- | --- | --- |
+| `table[].diff = selfScore − verifiedScore` | **`= verifiedScore − selfScore`** | **Q25** |
+| Trục X chế độ tháng "đang viết theo, chưa chốt" | **chốt** `Th.1 … Th.12` | T7 |
+| Chưa nói ô KPI nào có số ngay sau import | ô 1, 2 hiện `—`; ô 3, 4 hiện `0`; ô 5 có số thật — file chủ `spec/dashboard-dti/business-rules.md` §1.6 | **T12** (2026-09-06) |
+| — | `mode=month` của DB-4 **không** bị Q37 thu hẹp | Q37 (2026-09-06) |
+| §Cần chốt còn mục để ngỏ | **hết mục** — mọi mục đã có đáp án | Q21 · Q22 · Q23 · T7 · tên thư mục |
+
+---
+
+## 2. Cần chốt — hết mục, giữ bảng đóng mục
+
+**Card này không còn mục nào để ngỏ.** Bảng dưới giữ lại các mục đã đóng, để người từng đọc
+bản trước không đi tìm câu trả lời ở chỗ khác.
+
+| Mục cũ | Đóng bằng | Đáp án | Ghi ở |
+| --- | --- | --- | --- |
+| Ai được xem Dashboard | **Q21** | mọi người đăng nhập; không `[RequirePermission]` trên đường đọc | §0 |
+| Export có tôn trọng bộ lọc | **Q23** | **CÓ** | DB-4 §Tôn trọng bộ lọc |
+| Bộ lọc "Mức thay đổi" + sắp xếp "Tăng nhiều nhất" | **Q22** | **BỎ** cả ô lọc lẫn 2 tuỳ chọn sắp xếp. DB-1 **không** thêm `deltaBucket`/`sort`, `table[]` **không** thêm trường chênh lệch so với kỳ trước. Hai ô KPI `up`/`flat` vẫn giữ — chúng chỉ hiển thị | DB-1 |
+| Trục X biểu đồ chế độ Tháng | **T7** | giữ `Th.1 … Th.12` | DB-1, luật 2 |
+| Tên thư mục `spec/` | đã xong 2026-09-05 | `spec/dashboard-dti/` | [`danh-muc-dti.md`](danh-muc-dti.md) §4 |
+
+**Quyền GHI** không xuất hiện ở đây vì Dashboard **không có đường ghi nào** — nó đã chốt ở
+màn kia: `spec/danh-muc-dti/business-rules.md` §6.5 (một key, mọi kỳ).
+
+Hai câu hỏi **còn mở** của cả cụm DTI nằm ở `spec/danh-muc-dti/business-rules.md` §8. Một
+trong hai chạm card này: nếu chốt lưu kỳ đích thành một cột riêng thay vì suy từ
+`AssessmentDate`, thì `mode=week` của DB-1 phải nói rõ nó lọc theo cột nào.
+
+---
+
+## 3. Nghiệm thu — điều kiện chuyển card sang `IMPLEMENTED`
+
+1. Gọi thật DB-1 ở cả 3 `mode` trên DB có dữ liệu, dán shape response thật vào card.
+2. Gọi DB-1 khi **chưa có dữ liệu nào** — phải là `200` + mảng rỗng, **không** phải 404 (§0).
+3. Tải file DB-4 ở cả `mode=week` và `mode=month`, mở bằng Excel: đúng 1 sheet, đúng 12 cột,
+   có dòng `TỔNG CỘNG`, tiếng Việt không lỗi phông.
+4. Chạy **test ràng buộc bộ lọc** — đặc tả đầy đủ (điều kiện, bộ tham số, vì sao không
+   thương lượng được) khai **đúng một chỗ**: `spec/dashboard-dti/business-rules.md` §4.6.
+5. **Ca Q25 — dấu của `Chênh lệch`.** Trên dữ liệu gốc của BA, chỉ tiêu `1.1` phải ra
+   **`+2,96`** (không phải `−2,96`) và chỉ tiêu `1.4` phải ra **`−5,00`**; dòng `TỔNG CỘNG`
+   của cột đó phải ra **`−181,57`**. Tiêu đề cột 7 trong file `.xlsx` phải đọc được nguyên văn
+   `Chênh lệch (Thẩm định − Tự đánh giá)` — thiếu phần trong ngoặc là thiếu đúng thứ khiến
+   người đối chiếu với file gốc không hoảng.

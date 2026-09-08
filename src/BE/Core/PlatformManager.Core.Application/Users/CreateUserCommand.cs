@@ -39,16 +39,20 @@ public sealed class CreateUserHandler(IUserAdminService userAdminService, ICurre
             return Fail<Guid>(guardError);
 
         if (await userAdminService.UserNameExistsAsync(cmd.UserName, ct))
-            return Fail<Guid>(UserErrors.DuplicateUserName, cmd.UserName);
+            return Fail<Guid>(UserErrors.DuplicateUserName, ("UserName", cmd.UserName));
 
         if (!string.IsNullOrWhiteSpace(cmd.Email) && await userAdminService.EmailExistsAsync(cmd.Email, ct))
-            return Fail<Guid>(UserErrors.DuplicateEmail, cmd.Email);
+            return Fail<Guid>(UserErrors.DuplicateEmail, ("Email", cmd.Email));
 
         var outcome = await userAdminService.CreateAsync(
             cmd.UserName, cmd.Email, cmd.FullName, cmd.TempPassword, cmd.Roles, ct);
 
         if (!outcome.Succeeded || outcome.UserId is null)
-            return Fail<Guid>(UserErrors.CreateFailed, string.Join("; ", outcome.Errors));
+            // Từng mã Identity ra fieldErrors kèm đúng ô nhập (DuplicateUserName → UserName,
+            // PasswordTooShort → TempPassword…) thay vì nối chuỗi vào giữa câu — §11.2.
+            return Fail<Guid>(
+                UserErrors.CreateFailed,
+                IdentityFieldErrors.Build(outcome.Errors, IdentityFormFields.UserForm));
 
         return Ok(outcome.UserId.Value);
     }

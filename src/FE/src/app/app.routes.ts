@@ -1,13 +1,15 @@
 import { Routes } from '@angular/router';
 
-// Guard đặt TRONG route của từng feature (dashboard.routes.ts/danh-muc-dti.routes.ts/...), không
-// cấu hình rời rạc ở đây — đúng quy ước src/FE/.claude/docs/architecture.md §Routing.
+// Guard đặt TRONG route của từng feature (trang-chu.routes.ts/login.routes.ts/...), không
+// cấu hình rời rạc ở đây — đúng quy ước doc/huong_dan/quy-uoc/fe-routing-guard.md §2. File này
+// CHỈ `loadChildren`, không `loadComponent`, không import component nào: nó là bảng mục lục.
 //
 // `platform/` = màn hình Core dùng lại được cho mọi sản phẩm (đăng nhập, đổi mật khẩu, quản trị
-// người dùng, phân quyền); `modules/` = module NGHIỆP VỤ (dashboard, danh-muc-dti) — xem
-// doc/kien-truc-core-module.md.
+// người dùng, phân quyền); `modules/` = module NGHIỆP VỤ — xem doc/kien-truc-core-module.md.
+// Hiện KHÔNG có module nghiệp vụ nào (DtiWeekly gỡ 2026-08-29 để xây lại), nên `modules/` trống
+// và `/trang-chu` là trang đích mặc định.
 export const routes: Routes = [
-  { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
+  { path: '', pathMatch: 'full', redirectTo: 'trang-chu' },
   {
     path: 'dang-nhap',
     loadChildren: () => import('./platform/login/login.routes').then((m) => m.LOGIN_ROUTES),
@@ -17,13 +19,8 @@ export const routes: Routes = [
     loadChildren: () => import('./platform/doi-mat-khau/doi-mat-khau.routes').then((m) => m.DOI_MAT_KHAU_ROUTES),
   },
   {
-    path: 'dashboard',
-    loadChildren: () => import('./modules/dashboard/dashboard.routes').then((m) => m.DASHBOARD_ROUTES),
-  },
-  {
-    path: 'danh-muc/dti',
-    loadChildren: () =>
-      import('./modules/danh-muc-dti/danh-muc-dti.routes').then((m) => m.DANH_MUC_DTI_ROUTES),
+    path: 'trang-chu',
+    loadChildren: () => import('./platform/trang-chu/trang-chu.routes').then((m) => m.TRANG_CHU_ROUTES),
   },
   {
     path: 'quan-tri/nguoi-dung',
@@ -34,5 +31,5 @@ export const routes: Routes = [
     path: 'quan-tri/phan-quyen',
     loadChildren: () => import('./platform/phan-quyen/phan-quyen.routes').then((m) => m.PHAN_QUYEN_ROUTES),
   },
-  { path: '**', redirectTo: 'dashboard' },
+  { path: '**', redirectTo: 'trang-chu' },
 ];

@@ -2,6 +2,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { PermissionMatrix } from './permission-matrix';
 import { IPermissionRow } from '../../models/phan-quyen.model';
+import { provideTranslateService } from '@ngx-translate/core';
+import { useTranslationsInTest } from '../../../../core/i18n/i18n.testing';
 
 const ROLES = ['SuperAdmin', 'Admin', 'User'];
 
@@ -24,8 +26,11 @@ const ROWS: IPermissionRow[] = [
 describe('PermissionMatrix (PERM-1 — menu) — cột SuperAdmin KHÔNG bị khoá', () => {
   let fixture: ComponentFixture<PermissionMatrix>;
 
-  beforeEach(() => {
-    TestBed.configureTestingModule({ providers: [provideZonelessChangeDetection()] });
+  beforeEach(async () => {
+    TestBed.configureTestingModule({
+      providers: [provideZonelessChangeDetection(), provideTranslateService()],
+    });
+    await useTranslationsInTest();
     fixture = TestBed.createComponent(PermissionMatrix);
     fixture.componentRef.setInput('rows', ROWS);
     fixture.componentRef.setInput('roles', ROLES);

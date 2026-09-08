@@ -1,83 +1,126 @@
 ---
+kind: luat
+scope: du-an
+verified: 2026-09-06
 project: "PlatformManager"
 status: "draft"
-updated: "2026-08-22"
+updated: "2026-08-29"
 component: "Badge"
-sources: ["src/FE/src/styles.scss", "src/FE/src/app/modules/dashboard/components/status-badge/status-badge.ts", "src/FE/src/app/platform/quan-tri-nguoi-dung/components/user-grid-table/user-grid-table.html", "src/FE/src/app/modules/dashboard/components/period-toolbar/period-toolbar.html"]
+sources:
+  - "src/FE/src/styles.scss"
+  - "src/FE/src/app/platform/quan-tri-nguoi-dung/components/user-grid-table/user-grid-table.html"
+  - "src/FE/src/app/platform/trang-chu/pages/trang-chu/trang-chu.page.html"
 ---
 
 # Badge
-**Description:** Small pill-shaped status label. The base `.badge` class (`styles.scss:304-325`) supplies shape and type; a second class supplies the colour pair. **Five colour variants ship in three unrelated contexts** — the dashboard criteria status, the user-account status, and a period-mode chip — so the base class is genuinely shared while the variant sets are screen-local.
+**Description:** The small pill-shaped label (`.badge`, `src/FE/src/styles.scss` § 5). The base class supplies shape and type; a second class supplies the treatment. Since 2026-08-29 there is **one vocabulary**, split into two families that answer different questions:
 
-**Critical distinction (do not confuse):** the dashboard's `bdone`/`bwork`/`bstall` triad is a **computed** value — the backend derives it from progress and delta and returns it as `CriteriaBadge` text (`doc/contracts/dashboard.md`); `StatusBadge` only maps that text to a class and never recomputes it (`status-badge.ts:11-14,26`). It is a different concept from the DTI catalogue's persisted `Status` field, which the catalogue grid renders as **plain text, not a badge** (`criteria-grid-table.html:41`). See `spec/dashboard-dti-weekly/business-rules.md` §5.
+- **status** — `.ok` / `.warn` / `.bad` / `.neutral`: a filled pill in a semantic colour pair, saying *how something is going*
+- **identity** — `.outline`: a bordered pill with no semantic colour, saying *what something is* (a role name, a code, a classification label)
+
+The identity family absorbed the retired `.role-tag` class on 2026-08-29. Its argument was kept unchanged — a role name is an **identifier, not a status**, so a semantic fill sends the reader looking for a good/bad meaning that is not there — but it is now a variant of one component instead of a second chip primitive re-declaring its own size and radius in bare px.
+
+> **Citation policy.** Values cite `src/FE/src/styles.scss` plus the **selector name**, not a line number.
 
 ## Anatomy
-`display:inline-block`, single line of text, no icon element. Pill shape via `rounded.pill`, `spacing.badge-padding`, `typography.badge` (10px/750). The user-status variants prepend a literal `●` character **inside the label string** (`user-grid-table.html:42,44`) — it is text, not a styled dot (see `Icons.md` § Legacy Exceptions).
+`display: inline-block`, a single line of text, no icon element. Pill shape via `rounded.pill`, `typography.badge` (10px / 750), and the `3px 6px` padding literal catalogued in `Tokens/spacing.md` § Padding & gap literals bypassing the scale — there is no padding token at this size.
+
+`.outline` overrides part of that base rather than restating it: `background: transparent`, ink `colors.text`, a 1px `colors.line` border, radius `rounded.sm` **instead of** `rounded.pill`, and weight 700 instead of 750. Display, padding and font-size are inherited from `.badge` untouched — that inheritance is the point of it being a variant.
+
+The status-column call sites prepend a literal `●` character **inside the label string** — it is text, not a styled dot, and screen readers announce it. Recorded in `Icons.md` § Legacy Exceptions.
 
 ## Variants
 
+**Status family** — filled, semantic colour, describes an outcome.
+
 | Variant | Classes | Key values | When to use |
 | --- | --- | --- | --- |
-| Done | `badge bdone` | bg `colors.good-bg`, text `colors.good` (`styles.scss:311-314`) | Dashboard criteria status `Hoàn thành` |
-| Working | `badge bwork` | bg `colors.warn-bg`, text `colors.warn` (`styles.scss:316-319`) | Dashboard criteria status `Đang thực hiện` **and** `Chưa có dữ liệu` — two different BE values deliberately share one colour (`status-badge.ts:5-9`) |
-| Stalled | `badge bstall` | bg `colors.bad-bg`, text `colors.bad` (`styles.scss:321-324`) | Dashboard criteria status `Không tăng` |
-| Account active | `badge active` | bg `colors.good-bg`, text `colors.good` (`user-grid-table.scss:49-52`) | User grid, `!row.IsLocked` → label `● Đang hoạt động` |
-| Account locked | `badge locked` | bg `colors.bad-bg`, text `colors.bad` (`user-grid-table.scss:54-57`) | User grid, `row.IsLocked` → label `● Đã khoá` |
-| Period-mode chip | `badge bwork` | same values as Working | **Reuse outside the status context**: the dashboard toolbar tags "view all periods" mode with `Tất cả · {{ selectedYear() }}` (`period-toolbar.html:5-7`). Same class, no status meaning |
-| Null / no status | — (no badge rendered) | `<span class="muted">—</span>` | `StatusBadge` renders an em dash instead of an empty pill when `status()` is falsy (`status-badge.html:1-5`) |
+| Success | `badge ok` | fill `colors.good-bg`, ink `colors.good` | A positive, settled outcome. Shipped on the user grid: `● Đang hoạt động` when `!row.IsLocked` |
+| Warning | `badge warn` | fill `colors.warn-bg`, ink `colors.warn` | Work in progress, or an outcome that needs attention but is not a failure. **No shipped call site today** |
+| Danger | `badge bad` | fill `colors.bad-bg`, ink `colors.bad` | A blocked or negative outcome. Shipped on the user grid: `● Đã khoá` when `row.IsLocked` |
+| Neutral | `badge neutral` | fill `colors.surface-table-header`, ink `colors.muted` | A no-data or "nothing to report" state carrying no judgement. **No shipped call site today** — the home-screen roles cell it used to hold moved to `.outline` on 2026-08-29, because a role is an identifier rather than a state |
 
-`.active` / `.locked` are declared **only** in `user-grid-table.scss`, not globally — they exist on that one grid. `.bdone`/`.bwork`/`.bstall` are global. The two sets are visually identical pairs (`good-bg`/`good` and `bad-bg`/`bad`); only the class names differ.
+**Identity family** — bordered, no semantic colour, describes what a thing *is*.
+
+| Variant | Classes | Key values | When to use |
+| --- | --- | --- | --- |
+| Identifier | `badge outline` | `background: transparent`, ink `colors.text`, 1px `colors.line` border, `rounded.sm`, weight 700 | A name or code carrying no judgement. Shipped in two places, both rendering one chip per role string returned by the API: the user grid's "Vai trò" column and the home screen's roles row |
+
+The four status names all mean a **result**. There is no brand-coloured informational badge (a "New" / "Open" chip) — carried below as Normalize #1.
+
+`.delta` (`.up` / `.down` / `.flat`) sits beside `.badge` in the same section of the stylesheet but is a different component — signed change text, weight 850, `white-space: nowrap`, no pill. It has no shipped call site in the app today.
 
 ## States
 <!-- Exactly these five rows, in this order — treatments as rendered by the shipped CSS. -->
 
 | State | Treatment |
 | --- | --- |
-| default | per-variant bg/text; `rounded.pill`; `spacing.badge-padding` (3px 6px); `typography.badge` (10px/750); `display:inline-block` |
-| hover | **N/A** — a plain `<span>`, never wrapped in a control; no `:hover` rule for `.badge` in any stylesheet |
-| focus | **N/A** — not focusable, no `tabindex`, not a link or button |
-| active | **N/A** — not interactive |
-| disabled | **N/A** — not a form control |
+| default | Status family: per-variant fill and ink, `rounded.pill`. Identity family: transparent fill, `colors.text` ink, 1px `colors.line` border, `rounded.sm`, weight 700. Both families: the `3px 6px` padding literal, `typography.badge`, `display: inline-block` |
+| hover | **Not applicable** — a plain `<span>`, never wrapped in a control; no `:hover` rule for `.badge` exists in any stylesheet |
+| focus | **Not applicable** — not focusable, no `tabindex`, not a link or a button |
+| active | **Not applicable** — not interactive, and no `:active` rule is authored |
+| disabled | **Not applicable** — not a form control |
 
 ## Tokens Used
-- `colors.good`, `colors.good-bg`, `colors.warn`, `colors.warn-bg`, `colors.bad`, `colors.bad-bg`, `colors.muted`
-- `rounded.pill`
-- `spacing.badge-padding`
+- `colors.good`, `colors.good-bg`, `colors.warn`, `colors.warn-bg`, `colors.bad`, `colors.bad-bg`, `colors.surface-table-header`, `colors.muted` — status family
+- `colors.text`, `colors.line` — identity family
+- `rounded.pill` (status family), `rounded.sm` (identity family)
 - `typography.badge`
+- Un-tokenised: the `3px 6px` padding, recorded as a literal in `Tokens/spacing.md`
 
-`font-size:10px` and `font-weight:750` are written as literals at `styles.scss:308-309` — 10px sits **below** the type scale, whose smallest step is `--fs-xs` (11px), and 750 is a synthetic weight most static fonts will fake (see `Tokens/typography.md`).
+`font-size: 10px` and `font-weight: 750` are written as literals. 10px sits **below** the type scale, whose smallest step is `fontSize.fs-xs` (11px); 750 is not one of the loaded faces, so it resolves upward to 800 (`Tokens/typography.md`). `.outline`'s `font-weight: 700` **is** a loaded face and is the app's dominant emphasis weight, so the identity family is the only badge whose weight renders as authored.
 
 ## Reference markup
 
 ```html
-<!-- dashboard criteria status — class chosen by StatusBadge from the BE-computed label -->
-<span class="badge bdone">Hoàn thành</span>
-<span class="badge bwork">Đang thực hiện</span>
-<span class="badge bstall">Không tăng</span>
+<!-- user grid, status column — ● is part of the label text -->
+@if (row.IsLocked) {
+  <span class="badge bad">● Đã khoá</span>
+} @else {
+  <span class="badge ok">● Đang hoạt động</span>
+}
 
-<!-- user account status — screen-local variants, ● is part of the label text -->
-<span class="badge locked">● Đã khoá</span>
-<span class="badge active">● Đang hoạt động</span>
+<!-- user grid, roles column — the wrapper only spaces the chips, it does not restyle them -->
+<div class="role-cell">
+  @for (role of row.Roles; track role) {
+    <span class="badge outline">{{ role }}</span>
+  }
+</div>
 
-<!-- period-mode chip — bwork reused with no status meaning -->
-<span class="badge bwork">Tất cả · {{ selectedYear() }}</span>
+<!-- home screen, roles of the signed-in account -->
+@for (role of u.Roles; track role) {
+  <span class="badge outline">{{ role }}</span>
+} @empty {
+  <span class="muted">Chưa gán vai trò</span>
+}
 ```
 
-Sources: `src/FE/src/styles.scss:304-325` (base + the global triad), `src/FE/src/app/modules/dashboard/components/status-badge/status-badge.ts:4-9,26` (label → class map), `src/FE/src/app/modules/dashboard/components/status-badge/status-badge.html:1-5` (null branch), `src/FE/src/app/platform/quan-tri-nguoi-dung/components/user-grid-table/user-grid-table.html:40-46` + `user-grid-table.scss:47-57` (account variants), `src/FE/src/app/modules/dashboard/components/period-toolbar/period-toolbar.html:5-7` (mode chip)
+Sources: `src/FE/src/styles.scss` (§ 5 `.badge`, `.badge.ok`, `.badge.warn`, `.badge.bad`, `.badge.neutral`, `.badge.outline`, `.delta`), `src/FE/src/app/platform/quan-tri-nguoi-dung/components/user-grid-table/user-grid-table.html` (status column and roles column), `src/FE/src/app/platform/quan-tri-nguoi-dung/components/user-grid-table/user-grid-table.scss` (`.role-cell` — spacing only, no shape), `src/FE/src/app/platform/quan-tri-nguoi-dung/components/user-grid-table/user-grid-table.spec.ts` (the test pinning every role chip to `.badge.outline` and asserting zero `.role-tag` remain), `src/FE/src/app/platform/trang-chu/pages/trang-chu/trang-chu.page.html`
 
 ## Do / Don't
 
-- ✅ Treat every badge as read-only computed output — none of the five is clickable, focusable or editable anywhere in the app.
-- ✅ Let the backend own the dashboard status text; `StatusBadge` maps text → class and must not recompute the rule (`status-badge.ts:11-14`).
-- ✅ Render `—` rather than an empty pill when there is no status (`status-badge.html:3-5`).
-- ✅ Keep the dashboard triad visually distinct from the DTI catalogue's persisted `Status`, which ships as plain text in its own column (`criteria-grid-table.html:41`).
-- ❌ Don't add a badge for the catalogue's persisted `Status` — it deliberately renders unstyled today.
-- ❌ Don't assume `.bwork` means "in progress" — the same class also carries `Chưa có dữ liệu` and the period-mode chip.
-- ❌ Don't invent a `.badge.info`/`.badge.neutral` — only these five colour variants exist.
+- ✅ Choose the **family first**: is this label reporting a state, or naming a thing? Status → `ok`/`warn`/`bad`/`neutral`. Identity → `outline`. Only then pick within the family.
+- ✅ Treat every badge as read-only computed output — none is clickable, focusable or editable anywhere in the app.
+- ✅ Render a `.muted` fallback rather than an empty pill when there is no value; the home screen's roles cell does exactly that.
+- ✅ Use `.badge.outline` for a name or a label that carries no judgement — a role is an identifier, and giving it a semantic fill would compete with the real status column sitting beside it in the same row.
+- ✅ Let a wrapper own only **spacing** when several chips share one cell. `.role-cell` in the user grid is a flex row with `flex-wrap` and a gap and nothing else; the moment a wrapper starts setting padding or radius, the second chip primitive is back.
+- ❌ Don't re-introduce a screen-local badge class. Two vocabularies for one pill is what the 2026-08-29 pass removed; a third would put the app straight back.
+- ❌ Don't invent a fifth status colour. Four ship, and none of them means "informational" — see Normalize #1 before reaching for one.
+- ❌ Don't put a role name, a code or any other identifier into a status variant. That is the exact swap `.role-tag` was retired to prevent, and `user-grid-table.spec.ts` fails the build if the roles column stops using `.badge.outline`.
+- ❌ Don't put an icon element inside a badge; the shipped dot is a text character in the label.
 
 ## Normalize on redesign
-1. **Two class vocabularies for one visual pair.** `.bdone`/`.active` are the same `good-bg`/`good` pill and `.bstall`/`.locked` the same `bad-bg`/`bad` pill, declared in two files under four names. Converge on one semantic set (`badge-success`/`badge-danger`, matching the `DESIGN.md` `components` keys) and let screens choose by meaning.
-2. `.bwork` is overloaded across three meanings — criteria in progress, criteria with no data, and "viewing all periods". Give the mode chip its own neutral variant.
-3. `font-size:10px` is off the type scale (`--fs-xs` is 11px) and `font-weight:750` is synthetic — both are literals at `styles.scss:308-309`.
-4. The `●` in the account variants lives inside the label string, so the dot cannot be recoloured or hidden without editing copy, and screen readers announce it.
-5. ~~`badge-warning` (`warn` on `warn-bg`) measures 3.88:1, below WCAG AA's 4.5:1.~~ **RESOLVED 2026-08-22, during this pass.** `--warn` was darkened `#a8690a` → `#965e08` and `--bad` `#b83232` → `#a02b2b` in the live source, with the reason recorded inline at `styles.scss:40-41,44-45`: a 10px badge label does **not** qualify for the relaxed 3:1 large-text threshold, so the pair had to clear 4.5:1 outright. The change is mirrored consistently in `DESIGN.md`, `Tokens/colors.md`, `Tokens/tokens.json` and `platform-manager-preset.ts:64-65`. Nothing further to do here — the remaining badge items above are unaffected, since they concern type size and class naming, not colour.
+1. **No informational variant.** All four names describe a *result*. A brand-coloured chip for "New" or "Open" would need a fifth pair, and adding it by hand at a call site would restart the divergence this component just came out of.
+2. **`font-size: 10px` is off the type scale** (`fontSize.fs-xs` is 11px) and **`font-weight: 750` is not a loaded face**, so it silently renders at 800 — the same weight as everything already declared 800.
+3. **The `●` lives inside the label string**, so the dot cannot be recoloured or hidden without editing copy, and assistive tech reads it aloud.
+4. **The two families are told apart only by border-versus-fill.** `.badge.outline` and `.badge.neutral` are both "no judgement" chips at the same size, and nothing in the class names says which one means *identifier* and which means *no data*. `.badge.neutral` has no call site today; deleting it would remove the ambiguity at no cost.
+5. **`.outline` is the one badge whose radius leaves the pill shape.** It uses `rounded.sm` while the other four use `rounded.pill`, so the base class no longer guarantees a pill — a caller reading only `.badge` gets the wrong mental picture.
+
+## Resolved in the 2026-08-29 redesign
+<!-- Items that used to sit in "Normalize on redesign" and were actually done. Kept, not deleted, so the history is not lost. -->
+1. **Two class vocabularies for one visual pair — resolved 2026-08-29.** The global triad `.bdone` / `.bwork` / `.bstall` and the user-grid pair `.active` / `.locked` painted the same two pills under four names in two files. Both sets are gone; `.ok` / `.warn` / `.bad` / `.neutral` is the single vocabulary, and `user-grid-table.scss` records the swap where the local copy used to be.
+2. **`.bwork` was overloaded across three meanings — resolved 2026-08-29** with the class itself. The name no longer exists.
+3. **Badge contrast below AA — resolved 2026-08-28** (recorded here 2026-08-22, landed in the source six days later). `--warn` was darkened to `#965e08` and `--bad` to `#a02b2b`; a 10px label does not qualify for the relaxed 3:1 large-text threshold, so both pairs had to clear 4.5:1 outright. They now measure 4.66:1 and 5.69:1 (`Tokens/colors.md` § Contrast, as measured). The six-day gap between the doc claiming this and the code doing it is kept on the record deliberately: a completion label nobody re-checks is the most expensive kind of wrong.
+4. **A judgement-free variant was missing — added 2026-08-29.** `.badge.neutral` covers "no data yet", which previously borrowed a semantic colour.
+5. **`.badge` and `.role-tag` were two chip primitives at the same size — resolved 2026-08-29.** They disagreed on radius, padding and colour system, and `.role-tag` wrote all three as bare px. The class is gone, `Components/RoleTag.md` was deleted, and the identity job it existed for is `.badge.outline`. Its reasoning was kept, its class was not. Both call sites moved the same day — the user grid's roles column and the home screen's roles row — and a test pins them there.
+6. **The roles chip had briefly drifted onto a status colour — resolved 2026-08-29.** Between the `.role-tag` removal and the `.outline` variant landing, role names rendered as `.badge.neutral`, i.e. as a status pill in everything but intent. `.outline` restores the distinction the original `.role-tag` argument was about, which is why that argument survives above rather than being retired with the class.

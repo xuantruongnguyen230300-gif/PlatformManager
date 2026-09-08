@@ -1,4 +1,7 @@
 ---
+kind: luat
+scope: du-an
+verified: 2026-09-08
 project: "PlatformManager"
 status: "draft"
 updated: "2026-08-11"

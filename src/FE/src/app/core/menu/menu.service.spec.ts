@@ -2,10 +2,13 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
+import { provideTranslateService } from '@ngx-translate/core';
 import { MenuService } from './menu.service';
 import { CurrentUserService } from '../../core/auth/current-user.service';
 import { IApiResult } from '../../core/http/api-result.model';
 import { ICurrentUser } from '../../core/auth/current-user.model';
+import { ToastService } from '../toast/toast.service';
+import { useTranslationsInTest } from '../i18n/i18n.testing';
 import { IMenuItem, IMenuItemDto } from './menu-item.model';
 
 function dto(partial: Partial<IMenuItemDto> & Pick<IMenuItemDto, 'id' | 'code'>): IMenuItemDto {
@@ -53,14 +56,25 @@ describe('MenuService', () => {
   let service: MenuService;
   let currentUser: CurrentUserService;
   let httpMock: HttpTestingController;
+  let toast: ToastService;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     TestBed.configureTestingModule({
-      providers: [provideZonelessChangeDetection(), provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        provideZonelessChangeDetection(),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideTranslateService(),
+      ],
     });
     service = TestBed.inject(MenuService);
     currentUser = TestBed.inject(CurrentUserService);
     httpMock = TestBed.inject(HttpTestingController);
+    toast = TestBed.inject(ToastService);
+    // Bảng dịch THẬT, không stub: nhờ vậy assert lên câu tiếng Việt bên dưới cũng là phép kiểm
+    // "khoá `shared.menu.loadFailed` có mặt trong `public/i18n/vi.json`" — gõ sai khoá thì
+    // `translate.instant` trả về chính chuỗi khoá và test ĐỎ. Xem `core/i18n/i18n.testing.ts`.
+    await useTranslationsInTest();
   });
 
   afterEach(() => httpMock.verify());
@@ -180,17 +194,26 @@ describe('MenuService', () => {
     expect(service.menu().map((i) => i.Code)).toEqual(['dashboard', 'quan-tri']);
   });
 
-  it('KHÔNG cache lỗi — lần gọi sau vẫn thử lại thật', () => {
+  /**
+   * Lỗi HTTP: service KHÔNG toast — `httpErrorInterceptor` đã làm việc đó ở tầng trên (nó không
+   * có mặt trong `TestBed` này, đúng ranh giới đơn vị đang kiểm). Đây là vế "hiện ra ĐÚNG MỘT
+   * LẦN": bỏ điều kiện `instanceof HttpErrorResponse` trong service thì assert toast rỗng dưới
+   * đây ĐỎ.
+   */
+  it('lỗi HTTP → [] và KHÔNG toast lần hai (interceptor đã toast), lần gọi sau vẫn thử lại thật', () => {
     currentUser.setUser(user('u1'));
     let errored = false;
-    service.getMenu().subscribe({ error: () => (errored = true) });
+    const received: IMenuItem[][] = [];
+    service.getMenu().subscribe({ next: (items) => received.push(items), error: () => (errored = true) });
     httpMock.expectOne('/meta/menu').flush(null, { status: 500, statusText: 'Server Error' });
-    expect(errored).toBeTrue();
+    expect(errored).toBeFalse();
+    expect(received[0]).toEqual([]);
+    expect(toast.toasts()).toEqual([]);
     expect(service.menu()).toEqual([]);
 
-    const received = collect();
+    const retried = collect();
     flushMenu([dto({ id: 'm1', code: 'dashboard' })]);
-    expect(received[0].map((i) => i.Code)).toEqual(['dashboard']);
+    expect(retried[0].map((i) => i.Code)).toEqual(['dashboard']);
   });
 
   it('response phiên CŨ về MUỘN không ghi đè cache phiên mới (race, audit 2026-08-18 finding #2)', () => {
@@ -218,10 +241,39 @@ describe('MenuService', () => {
     expect(received[0].map((i) => i.Code)).toEqual(['menu-cua-B']);
   });
 
-  it('data null (envelope rỗng) → menu rỗng, không ném lỗi', () => {
+  /**
+   * Đổi 2026-09-08, cùng lượt bỏ toán tử `??` kèm mảng rỗng dựng sẵn khỏi `menu.service.ts`.
+   * Test cũ tên là *"data null (envelope rỗng) →
+   * menu rỗng, không ném lỗi"* và khoá đúng hành vi nay đã bỏ: nó coi envelope thiếu `data` là
+   * một câu trả lời **hợp lệ**, không phân biệt được với một tài khoản không được cấp menu nào.
+   *
+   * Hành vi mới: envelope thiếu `data` LÀ LỖI (`unwrapData` ném), lỗi hiện ra đúng một lần bằng
+   * toast, rồi service trả `[]` để sidebar vẫn dựng được. Ba assert dưới đây đo đủ ba vế đó —
+   * bỏ vế toast thì test này lại xanh cho cả bản `?? []` cũ, tức không đo gì cả.
+   */
+  it('envelope thiếu `data` là LỖI → toast 1 lần, nơi gọi vẫn nhận [] (không lan lỗi)', () => {
     currentUser.setUser(user('u1'));
-    const received = collect();
+    const received: IMenuItem[][] = [];
+    let errored = false;
+    service.getMenu().subscribe({ next: (items) => received.push(items), error: () => (errored = true) });
+
     httpMock.expectOne('/meta/menu').flush({ ...ok([]), data: null });
-    expect(received[0]).toEqual([]);
+
+    expect(errored).withContext('lỗi KHÔNG được lan tới nơi gọi').toBeFalse();
+    expect(received[0]).withContext('nơi gọi vẫn nhận menu rỗng để dựng sidebar').toEqual([]);
+    expect(toast.toasts().map((t) => t.Text))
+      .withContext('lỗi phải HIỆN RA, đúng một lần')
+      .toEqual(['Không tải được menu điều hướng. Tải lại trang để thử lại.']);
+  });
+
+  it('envelope hỏng KHÔNG được cache — lần gọi sau vẫn thử lại thật', () => {
+    currentUser.setUser(user('u1'));
+    service.getMenu().subscribe();
+    httpMock.expectOne('/meta/menu').flush({ ...ok([]), data: null });
+    expect(service.menu()).toEqual([]);
+
+    const received = collect();
+    flushMenu([dto({ id: 'm1', code: 'dashboard' })]);
+    expect(received[0].map((i) => i.Code)).toEqual(['dashboard']);
   });
 });

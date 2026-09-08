@@ -2,7 +2,7 @@ namespace PlatformManager.Core.Application.Common.Results;
 
 /// <summary>
 /// Nguồn DUY NHẤT map ErrorCode → ApiResultStatus — Status không bao giờ gán tay ở
-/// nơi khác (xem .claude/rules/api-controller.md §Envelope response).
+/// nơi khác (xem doc/huong_dan/quy-uoc/be-api-controller.md §Envelope response).
 /// </summary>
 public static class ApiErrorIds
 {

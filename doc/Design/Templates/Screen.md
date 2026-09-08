@@ -1,22 +1,25 @@
 ---
+kind: luat
+scope: core
+verified: 2026-09-06
 project: "<project>"
 status: "draft"
 updated: "YYYY-MM-DD"
 flow: "<flow name, e.g. Dashboard Overview>"
 screens: ["<Screen name>"]
-source_routes: ["<#anchor or /route>"]
+source_routes: ["</route>"]
 ---
 
 # <Flow> — Screens
 
 <!-- Flow overview: 1-3 sentences on what the flow does, who reaches it, and how its screens chain together. Sections 1-6 of every screen record the app AS-SHIPPED (real copy, real assets, quirks); deviations go ONLY in "Normalize on redesign". -->
 
-> **Shell:** <dashboard | auth — see DESIGN.md → Layout>
-> **Sources:** `<src/FE/src/app/modules/<feature>/>`
+> **Shell:** <app shell | no app shell — see DESIGN.md → Layout>
+> **Sources:** `<src/FE/src/app/<layer>/<feature>/>` <!-- `<layer>` = `platform/` for Core screens, `modules/` for business screens — see doc/kien-truc-core-module.md -->
 
 ---
 
-## <Screen name> (`#anchor` or `/route`)
+## <Screen name> (`/route`)
 
 <!-- Repeat this whole block once per entry in `screens`. The seven H3 sections are mandatory, in this exact order. -->
 
@@ -24,18 +27,23 @@ source_routes: ["<#anchor or /route>"]
 
 <!-- Region tree + structural measurements (widths, heights, paddings). Compose ONLY component names present in COMPONENTS.md — never invent one here. -->
 
-- Topbar (sticky, logo + actions)
-  - Button × 3 (secondary, primary)
-- KPI grid (5 columns)
-  - Card × 5
+- App shell (skip link → sidebar → sticky topbar → `main`)
+  - Card
+    - Toolbar (search + filter panel + right-pinned actions)
+    - DataTable
 
 ### Copy
 
-<!-- Verbatim shipped strings — typos and mixed languages included — with localization key and file:line source. -->
+<!-- Verbatim shipped strings — typos and mixed languages included — with localization key and source file.
+     ⚠️ Fill "Localization key" against the app, not from memory: a project with an i18n runtime has
+     NO user-facing sentence left in its templates, and writing "— (hardcoded)" for one is a single wrong
+     cell that every prompt pack downstream inherits. Check with `ls src/FE/public/i18n/` and
+     `bash scripts/fe-gate.sh` (G12). Cite the file, not `file:line` — a line number rots silently and
+     `check-docs.sh` §4 cannot tell a rotted one from a good one. -->
 
 | Element | Verbatim copy | Localization key | Source |
 | --- | --- | --- | --- |
-| Title | `DTI Weekly` | — (hardcoded) | `dashboard.html:63` |
+| Title | `<rendered text>` | `<feature>.routeTitle` | `<...>/<name>.html` |
 
 ### States
 
@@ -55,17 +63,18 @@ source_routes: ["<#anchor or /route>"]
 
 | Action | Icon | Placement |
 | --- | --- | --- |
-| Save week | — (text button) | topbar |
+| <action> | `pi pi-<name>` (or `—` if the control is text-only) | <region> |
 
 ### Screenshots
 
 <!-- Refs into Assets/Screenshots/<this-file-stem>/, or write: pending — see UiInventory, Screenshot Manifest.
-     Naming: <view>.png = desktop-1440 default state; suffixes --<state> and --<viewport>, e.g. dashboard--error.png, dashboard--mobile-390.png. -->
+     Naming: <view>[--<state>][--<viewport>].png; the desktop-1440 default is written out, e.g.
+     sign-in--desktop-1440.png, sign-in--error--desktop-1440.png, sign-in--mobile-390.png. -->
 
-- `Assets/Screenshots/<flow-stem>/dashboard.png`
+- `Assets/Screenshots/<flow-stem>/<view>--desktop-1440.png`
 
 ### Normalize on redesign
 
-<!-- Screen-local quirks ONLY here — sections 1-6 stay as-shipped. Library-wide issues go to COMPONENTS.md → Known inconsistencies. -->
+<!-- Screen-local quirks ONLY here — sections 1-6 stay as-shipped. A quirk that spans components belongs in the component's own spec (`Components/<Name>.md` → Normalize on redesign), not here. -->
 
 - <quirk as shipped> → <what a redesign should do instead>

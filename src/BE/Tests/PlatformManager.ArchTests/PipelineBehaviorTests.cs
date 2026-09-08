@@ -10,19 +10,28 @@ using Xunit;
 namespace PlatformManager.ArchTests;
 
 /// <summary>
-/// Test kiến trúc quan trọng nhất của P2 (xem
-/// doc/huong_dan/wiki-core/be/trien-khai/03-p2-platform-application.md §9) — không phải
+/// Test kiến trúc quan trọng nhất của tầng Application — thứ tự pipeline behavior và hành vi
+/// của từng behavior; hợp đồng ở doc/huong_dan/wiki-core/be/tra-cuu-file-class.md §2.2, mục đó
+/// trỏ ngược lại chính test này. Không phải
 /// ArchTest reflection thuần, mà chạy THẬT qua MediatR với 2 command/handler giả lập
 /// (pattern "PingCommand") để verify hành vi 2 pipeline behavior, KHÔNG chỉ verify chúng tồn tại.
 /// </summary>
 public class PipelineBehaviorTests
 {
+    /// <summary>
+    /// Lỗi giả lập của RIÊNG test này. Khai thành <c>DomainError</c> vì <c>DomainException</c>
+    /// không còn nhận chuỗi mã tự do (2026-09-03) — và <c>private</c> nên
+    /// <c>ErrorCatalogTests</c> (chỉ soi field <c>public static readonly</c> của assembly SẢN PHẨM)
+    /// không nhặt mã test này vào rổ hợp đồng với FE.
+    /// </summary>
+    private static readonly DomainError TestDomainError = new("TEST.DOMAIN_ERROR", "Lỗi domain giả lập cho test.");
+
     public sealed record ThrowDomainExceptionCommand : ICommand<string>;
 
     public sealed class ThrowDomainExceptionHandler : IRequestHandler<ThrowDomainExceptionCommand, IApiResult<string>>
     {
         public Task<IApiResult<string>> Handle(ThrowDomainExceptionCommand request, CancellationToken ct)
-            => throw new DomainException("TEST.DOMAIN_ERROR", "Lỗi domain giả lập cho test.");
+            => throw new DomainException(TestDomainError);
     }
 
     public sealed record RequireNonEmptyCommand(string Value) : ICommand<string>;

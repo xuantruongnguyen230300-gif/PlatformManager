@@ -40,8 +40,9 @@ trong `.claude/agents/core-reviewer.md`.
    core" trong `.claude/agents/backend-expert.md`) — skill này dùng khi
    người dùng muốn kích hoạt review độc lập, không qua 2 agent kia.
 4. Chuyển kết quả/báo cáo của subagent lại cho người dùng — không tự ý làm
-   lại hay tóm tắt sai lệch những gì subagent đã báo cáo (đường dẫn file
-   report, số finding theo mức, agent nào cần xử lý).
+   lại hay tóm tắt sai lệch những gì subagent đã báo cáo (finding theo mức,
+   agent nào cần xử lý). `core-reviewer` **không ghi file report** — đừng đi
+   tìm đường dẫn file.
 
 ## Guardrails
 

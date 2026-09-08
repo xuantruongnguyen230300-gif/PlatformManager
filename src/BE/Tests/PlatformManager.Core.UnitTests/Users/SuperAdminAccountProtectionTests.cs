@@ -85,6 +85,34 @@ public class SuperAdminAccountProtectionTests
         await service.Received(1).LockAsync(OtherId, Arg.Any<CancellationToken>());
     }
 
+    // ---------- Câu chữ message phải khớp CARD (finding D-5, 2026-08-29) ----------
+
+    /// <summary>
+    /// <c>doc/contracts/users.md</c> §"Bảo vệ tài khoản quản trị" chốt rằng <b>FE hiển thị thẳng
+    /// <c>message</c> là đủ, không map lại theo <c>businessCode</c></b>. Với hợp đồng đó, câu chữ
+    /// BE trả về CHÍNH LÀ giao diện người dùng nhìn thấy — nên nó phải khớp bảng trong card, kể
+    /// cả phần "lối ra" (hãy nhờ một SuperAdmin khác / hãy đăng xuất). Trước bản này code trả bản
+    /// cụt hơn, chỉ nói "không được" mà không nói phải làm gì tiếp.
+    ///
+    /// <para>So khớp NGUYÊN VĂN là có chủ đích: đây là hai nguồn (card + code) buộc phải trùng,
+    /// và cách duy nhất để một bên trôi mà bên kia biết là có test đọc cả hai.</para>
+    /// </summary>
+    [Fact(DisplayName = "3 message của guard khớp NGUYÊN VĂN bảng trong doc/contracts/users.md")]
+    public void GuardMessages_MatchContractCardVerbatim()
+    {
+        Assert.Equal(
+            "Bạn không thể tự gỡ vai trò SuperAdmin của chính mình. Hãy nhờ một SuperAdmin khác thực hiện.",
+            UserErrors.SelfSuperAdminRemovalForbidden.MessageTemplate);
+
+        Assert.Equal(
+            "Chỉ SuperAdmin mới được khoá tài khoản có vai trò SuperAdmin.",
+            UserErrors.SuperAdminLockForbidden.MessageTemplate);
+
+        Assert.Equal(
+            "Bạn không thể tự khoá tài khoản của chính mình. Nếu muốn kết thúc phiên làm việc, hãy đăng xuất.",
+            UserErrors.SelfLockForbidden.MessageTemplate);
+    }
+
     // ---------- Luật 4: tự khoá chính mình ----------
 
     [Fact(DisplayName = "SuperAdmin tự khoá chính mình → 403 và LockAsync KHÔNG hề được gọi")]
@@ -142,7 +170,7 @@ public class SuperAdminAccountProtectionTests
         var service = Substitute.For<IUserAdminService>();
         service.GetByIdAsync(CallerId, Arg.Any<CancellationToken>())
             .Returns(UserWith(CallerId, Roles.SuperAdmin, Roles.Admin));
-        service.UpdateAsync(default, default, default!, default!, default).ReturnsForAnyArgs(true);
+        service.UpdateAsync(default, default, default!, default!, default).ReturnsForAnyArgs(UpdateUserOutcome.Success());
         var handler = new UpdateUserHandler(service, Caller(Roles.SuperAdmin));
 
         var result = await handler.Handle(
@@ -161,7 +189,7 @@ public class SuperAdminAccountProtectionTests
         var service = Substitute.For<IUserAdminService>();
         service.GetByIdAsync(OtherId, Arg.Any<CancellationToken>())
             .Returns(UserWith(OtherId, Roles.SuperAdmin, Roles.Admin));
-        service.UpdateAsync(default, default, default!, default!, default).ReturnsForAnyArgs(true);
+        service.UpdateAsync(default, default, default!, default!, default).ReturnsForAnyArgs(UpdateUserOutcome.Success());
         var handler = new UpdateUserHandler(service, Caller(Roles.SuperAdmin));
 
         var result = await handler.Handle(
@@ -178,7 +206,7 @@ public class SuperAdminAccountProtectionTests
         var service = Substitute.For<IUserAdminService>();
         service.GetByIdAsync(CallerId, Arg.Any<CancellationToken>())
             .Returns(UserWith(CallerId, Roles.Admin));
-        service.UpdateAsync(default, default, default!, default!, default).ReturnsForAnyArgs(true);
+        service.UpdateAsync(default, default, default!, default!, default).ReturnsForAnyArgs(UpdateUserOutcome.Success());
         var handler = new UpdateUserHandler(service, Caller(Roles.Admin));
 
         var result = await handler.Handle(

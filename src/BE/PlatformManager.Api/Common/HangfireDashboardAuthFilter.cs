@@ -5,7 +5,7 @@ namespace PlatformManager.Api.Common;
 
 /// <summary>
 /// Hangfire Dashboard ("/hangfire") KHÔNG có auth mặc định — để mở nguyên là lộ toàn bộ
-/// job/data (kể cả nội dung ImportJob đang chạy) ra ngoài. Chỉ Roles.SuperAdmin được xem, cùng
+/// job/data (kể cả nội dung job đang chạy) ra ngoài. Chỉ Roles.SuperAdmin được xem, cùng
 /// mẫu PermissionsController. Bắt buộc, không phải tuỳ chọn — xem
 /// doc/huong_dan/wiki-core/be/07-observability.md §"Hangfire Dashboard".
 /// </summary>

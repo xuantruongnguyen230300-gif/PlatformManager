@@ -1,19 +1,84 @@
+---
+kind: luat
+scope: core
+verified: 2026-09-08
+---
+
 # Architecture — src/FE
 
 > Xem trước **`doc/kien-truc-core-module.md`** (root repo) để hiểu lý do và
 > nguồn tham khảo thực tế đằng sau ranh giới `platform/` ↔ `modules/` dưới
 > đây — file này chỉ nêu quy tắc thực thi, không lặp lại phần lý luận.
 
+## Cây thư mục cấp `src/FE/` — cái gì ở ngoài `src/app/`
+
+Bốn chỗ ngoài `src/app/`, mỗi chỗ một vai. Đừng tạo thư mục thứ năm khi chưa
+đọc bảng này:
+
+```
+src/FE/
+├── public/            # tài sản tĩnh phục vụ nguyên trạng, copy thẳng vào bundle
+│   │                  # (angular.json khai "input": "public"). Ra thẳng GỐC SITE, không
+│   │                  # nằm sau apiBaseUrl — nên phải fetch bằng HttpBackend, xem
+│   │                  # ../wiki-core/fe/02-http-envelope.md §"Tài nguyên tĩnh".
+│   ├── favicon.ico
+│   ├── fonts/         # woff2 tự host (không gọi Google Fonts lúc chạy)
+│   └── i18n/          # bảng dịch vi.json / en.json — nạp lúc chạy
+├── src/
+│   ├── environments/  # cấu hình COMPILE-TIME theo môi trường — apiBaseUrl, production
+│   ├── styles.scss    # token global :root + style toàn cục
+│   ├── index.html
+│   ├── main.ts
+│   └── app/           # xem mục dưới
+└── angular.json / package.json / tsconfig*.json / eslint.config.js
+```
+
+**`public/` vs `environments/` — chọn theo thời điểm cần giá trị:**
+
+| | `src/environments/*.ts` | `public/*.json` |
+| --- | --- | --- |
+| Giá trị chốt lúc | **build** | **runtime**, fetch lúc khởi động |
+| Đổi giá trị cần | build lại | không, chỉ thay file |
+| Đang dùng hôm nay | ✅ cơ chế **duy nhất** cấp *cấu hình* — `apiBaseUrl` cho interceptor | ⚠️ đã có file JSON nạp lúc chạy (`public/i18n/{vi,en}.json`) nhưng **chưa** file nào giữ *cấu hình* |
+
+🔄 LẬT 2026-09-06 — ô bên phải trước đây ghi *"❌ chưa có file nào"*. Sai từ 2026-09-05: đợt
+i18n runtime đã đặt `src/FE/public/i18n/vi.json` và `en.json`, và chúng được **fetch lúc chạy**
+đúng như cột này mô tả. Điều còn đúng — và là điều mục này thật sự muốn nói — là **chưa có file
+`public/` nào giữ *cấu hình*** (`apiBaseUrl`, feature flag). Ranh giới đó mới là thứ đừng phá.
+
+Chỉ đổi sang cơ chế runtime khi chạm ngưỡng ghi ở
+[`../wiki-core/fe/01-core-components.md`](../wiki-core/fe/01-core-components.md)
+§"#17 — Runtime environment config" — **không** dựng cả hai song song, vì hai
+nguồn cấu hình cho cùng một giá trị là cách chắc chắn nhất để chúng lệch nhau.
+
+> **FE không có "dữ liệu runtime" theo nghĩa của BE.** Trình duyệt không ghi
+> file lên đĩa server, nên mọi thứ trong `src/FE/` đều là **tài sản của source**
+> và đều vào git. File người dùng upload đi thẳng lên API, không nằm lại ở FE —
+> quy tắc lưu trữ phía server ở
+> [`../wiki-core/be/14-file-storage.md`](../wiki-core/be/14-file-storage.md).
+
 ## Tầng app
 
 ```
 src/app/
 ├── core/       # singleton toàn app: auth, guard, interceptor, HTTP client dùng chung
-├── shared/     # dumb UI component tái dùng > 1 feature (button, badge, card...)
+├── shared/     # thứ dùng chung KHÔNG phải singleton hạ tầng — xem §Bên trong `shared/`
 ├── platform/   # màn hình "Core" (đăng nhập, đổi mật khẩu, quản trị người dùng, phân quyền)
 │               # — dùng lại được cho mọi sản phẩm dựng trên nền tảng này, KHÔNG phải nghiệp vụ
-└── modules/    # module NGHIỆP VỤ (dashboard, danh-muc-dti...) — lazy-loaded, mỗi module 1 domain
+└── modules/    # module NGHIỆP VỤ — lazy-loaded, mỗi module 1 domain.
+                # 📐 CHƯA TỒN TẠI hôm nay (đối chiếu 2026-09-06), xem ghi chú ngay dưới.
 ```
+
+> **`modules/` là chỗ đã dành sẵn, không phải thư mục đang có.** Đối chiếu 2026-09-06:
+> `src/FE/src/app/modules/` **không tồn tại** — hai module nghiệp vụ (`dashboard`,
+> `danh-muc-dti`) đã gỡ 2026-08-29 để xây lại. Hệ quả kéo theo, cả hai đều **có chủ đích**:
+> hằng `BUSINESS_MODULES` trong `src/FE/eslint.config.js` để rỗng nên **gate G8 hiện là
+> no-op**, và `app.routes.ts` không có route nghiệp vụ nào. Luật ranh giới bên dưới vẫn giữ
+> nguyên — nó có hiệu lực trở lại ngay khi module nghiệp vụ đầu tiên ra đời.
+>
+> ```bash
+> ls src/FE/src/app        # hôm nay: core  platform  shared  (+ file cấp app)
+> ```
 
 `core/` và `shared/` là **cross-cutting** — không đặt logic riêng của một
 feature vào đây. Nếu một service/component chỉ dùng bởi đúng 1 feature, nó
@@ -34,10 +99,133 @@ trong `modules/<A>/` không được import trực tiếp nội bộ
 `shared/`, `platform/`. Cần dùng chung logic giữa 2 module nghiệp vụ → đưa
 lên `shared/`/`core/` nếu thật sự generic, không import chéo.
 
-## Cấu trúc một feature
+## Bên trong `shared/` — không chỉ có `components/`
+
+Danh sách thật đọc từ đĩa, **không** đếm theo bản chép dưới đây
+([`.claude/CLAUDE.md`](../../../.claude/CLAUDE.md) §6):
+
+```bash
+ls src/FE/src/app/shared
+# PASS = mọi tên in ra đều có một dòng mô tả trách nhiệm trong khối bên dưới, và ngược lại
+```
+
+Khối dưới giữ **trách nhiệm** của từng thư mục — đó là phần không đếm được bằng lệnh, và là
+lý do mục này tồn tại:
 
 ```
-modules/<feature>/
+shared/
+├── components/   # dumb UI component tái dùng > 1 feature
+├── directives/   # directive dùng chung, cũng dumb
+├── models/       # kiểu dùng chung giữa nhiều feature (KHÔNG phải DTO — xem fe-api-client.md)
+└── services/     # service TRẠNG THÁI UI, không phải hạ tầng và không gọi HTTP
+```
+
+> 🔄 **SỬA 2026-09-08 (cùng ngày, lần thứ hai).** Tiêu đề mục này vừa được viết là *"ba thư
+> mục, không phải một"* trong khi khối ngay dưới nó liệt **bốn** — một con số chép tay sai
+> ngay từ dòng đầu tiên nó tồn tại. Đã thay bằng lệnh + tiêu chí PASS, đúng khuôn §6: số
+> lượng là thứ đếm được bằng máy nên không được viết tay vào tài liệu.
+
+> 🔄 **LẬT 2026-09-08.** Bản trước mô tả `shared/` **chỉ gồm component**
+> (*"dumb UI component tái dùng > 1 feature (button, badge, card…)"*), và hệ quả là hai thư mục
+> có thật không có ô nào trong tài liệu: `shared/directives/` và `shared/services/`. Cụ thể,
+> `shared/directives/autofocus.directive.ts` xuất hiện **0 lần** trong toàn bộ `doc/` — người
+> cần một directive dùng chung không có cách nào biết chỗ đặt, nên sẽ đặt vào `components/`
+> hoặc dựng bản thứ hai trong feature của mình.
+
+**Ranh giới `shared/services/` ↔ `core/`** — đây là chỗ dễ đặt nhầm nhất, và nhầm thì gãy gate
+G9 (`core/` không được import ngược lên `shared/`):
+
+| Câu hỏi | `core/` | `shared/services/` |
+|---|---|---|
+| Có gọi HTTP / giữ phiên / cấu hình app không? | **Có** | Không bao giờ |
+| Có tồn tại khi không có giao diện nào không? | Có | Không — nó phục vụ đúng một nhu cầu UI |
+| Ví dụ đang chạy | `core/toast/toast.service.ts`, `core/auth/*` | `shared/services/sidebar-state.service.ts` (mở/thu gọn menu) |
+
+Phép thử: *"bỏ hết màn hình đi thì service này còn nghĩa gì không?"* Còn → `core/`. Không →
+`shared/services/`.
+
+## Seam cấu hình cấp app — `core/` giữ CƠ CHẾ, app cấp DỮ LIỆU
+
+`core/` và `shared/` là CoreBase, dùng lại cho sản phẩm thứ hai
+([`../../kien-truc-core-module.md`](../../kien-truc-core-module.md)). Vì vậy **mọi dữ liệu
+riêng của dự án này** — đường dẫn, tên sản phẩm, bảng màu, danh sách ngôn ngữ — phải đi vào
+`core/` qua một **seam**, không được khai cứng bên trong nó.
+
+Bảng dưới là **mục lục** các seam đang có; mỗi seam có một file chủ giữ chi tiết, không chép
+lại ở đây (`.claude/CLAUDE.md` §5):
+
+| Seam | Cấp gì cho `core/` | File chủ |
+|---|---|---|
+| `CORE_ROUTES` | 3 đường dẫn mà guard chuyển hướng tới | [`fe-routing-guard.md`](fe-routing-guard.md) §10 |
+| `CORE_BRANDING` | Tên sản phẩm (`name`) + chữ tắt (`shortName`) | **mục này** |
+| `CORE_I18N` | Danh sách ngôn ngữ + ngôn ngữ mặc định | [`../wiki-core/fe/08-i18n.md`](../wiki-core/fe/08-i18n.md) §Khuôn CoreBase |
+| `createCorePreset(palette)` | Bảng màu cho ramp PrimeNG — **tham số hàm, không phải token** | [`../wiki-core/fe/04-design-token-system.md`](../wiki-core/fe/04-design-token-system.md) |
+
+Nhật ký quyết định của cả bốn (vì sao tách, những gì đã sót, phép thử đã chạy) ở
+[`../../kien-truc-core-module.md`](../../kien-truc-core-module.md) §"Core giữ CƠ CHẾ, dự án
+cung cấp DỮ LIỆU" — đó là **lịch sử**, mục này là **luật đang áp**.
+
+### `CORE_BRANDING` — tên sản phẩm
+
+✅ **CÓ THẬT (đối chiếu 2026-09-08)** — `src/FE/src/app/core/config/core-branding.ts`, wire ở
+`src/FE/src/app/app.config.ts` (`APP_BRANDING` + `provideCoreBranding`).
+
+```ts
+// core/config/core-branding.ts — hợp đồng, KHÔNG có giá trị mặc định
+export interface ICoreBranding {
+  readonly name: string;       // tên đầy đủ: hậu tố <title>, dòng chữ ở sidebar
+  readonly shortName: string;  // chữ tắt trong ô vuông .brand-mark
+}
+
+export const CORE_BRANDING = new InjectionToken<ICoreBranding>('CORE_BRANDING');
+
+export function provideCoreBranding(branding: ICoreBranding): EnvironmentProviders {
+  return makeEnvironmentProviders([{ provide: CORE_BRANDING, useValue: branding }]);
+}
+```
+
+Ba ràng buộc, mỗi cái chặn một lỗi im lặng:
+
+1. **Token cố ý KHÔNG có `factory` mặc định**, cùng khuôn `CORE_ROUTES`. Một tên mặc định biến
+   "app quên khai" thành một giao diện mang tên sản phẩm **khác** — sai ở chỗ dễ thấy nhất
+   (tiêu đề tab, góc trên bên trái) mà không lỗi nào, không test nào bắt. Thiếu provider thì
+   Angular ném `NG0201` ngay lần dựng đầu.
+2. **`name` phải khớp `<title>` tĩnh trong `src/FE/src/index.html`.** Chuỗi đó là thứ hiện ra
+   trong lúc app chưa bootstrap xong; lệch nhau thì tên tab nhấp nháy đổi khi trang tải xong.
+3. **`shortName` giữ 2 ký tự.** Ô vuông `.brand-mark` rộng 26px ở sidebar; dài hơn sẽ tràn và
+   không có gì báo.
+
+**Vì sao tách khỏi `core/`/`shared/`:** trước 2026-09-02 tên sản phẩm khai cứng ở
+`core/title/page-title.strategy.ts` và trong template của `shared/components/{sidebar,auth-card}/`,
+nên dựng sản phẩm thứ hai là phải mở **ba file của nền tảng** ra sửa — đúng thứ mà định nghĩa
+"CoreBase xong" loại trừ.
+
+**Kiểm bằng lệnh** — `core/` và `shared/` không được biết tên sản phẩm này:
+
+```bash
+grep -rn "PlatformManager" src/FE/src/app/core src/FE/src/app/shared --include=*.ts --include=*.html   | grep -v spec | grep -vE "doc/|src/BE/"
+```
+
+PASS = không in ra dòng nào. (`*.spec.ts` loại trừ có chủ đích: test **cố ý** cấp một tên khác
+tên thật — dùng đúng tên thật thì test vẫn xanh cả khi có người khai cứng lại chuỗi vào `core/`.)
+
+### Khi cần seam thứ năm
+
+Tự hỏi: *"giá trị này có đổi khi dựng sản phẩm khác trên cùng nền tảng không?"* Có → nó là **dữ
+liệu của dự án**, phải đi qua seam. Không → để trong `core/`.
+
+Khuôn bắt buộc, không phát minh khuôn thứ hai: `interface` + `InjectionToken` **không có mặc
+định** + hàm `provideX()` trả `EnvironmentProviders`, tất cả trong `core/`; giá trị khai ở
+`app.config.ts`. Ngoại lệ duy nhất là thứ phải dựng **trước khi injector tồn tại** (bảng màu, vì
+`providePrimeNG` chạy lúc tạo object cấu hình) — cái đó là **tham số hàm**, và quên truyền là lỗi
+biên dịch, sớm hơn cả `NG0201`.
+
+## Cấu trúc một feature
+
+Áp cho **cả** `platform/<feature>/` lẫn `modules/<feature>/` — cấu trúc con giống hệt nhau.
+
+```
+<platform|modules>/<feature>/
 ├── <feature>.routes.ts             # lazy routes riêng của feature
 ├── pages/<feature>/                # SMART — route target
 ├── components/<x>/                 # DUMB — chỉ input()/output()
@@ -45,6 +233,56 @@ modules/<feature>/
 ├── models/<feature>.model.ts       # interface/type
 └── state/ (tuỳ chọn)                # signal store khi state đủ phức tạp
 ```
+
+Feature đầy đủ nhất đang chạy để soi khi phân vân:
+`src/FE/src/app/platform/quan-tri-nguoi-dung/` — có đủ `routes.ts`, `pages/`, `components/`,
+`services/` (service + mapper tách file), `models/`, và **không** có `state/` (đúng ngưỡng ở
+mục dưới). 🔄 LẬT 2026-09-06: khối trên trước đây gắn nhãn `modules/<feature>/`, tức trỏ vào
+tầng duy nhất **không có** ví dụ nào để mở ra xem.
+
+## Thêm một module nghiệp vụ mới — thứ tự thao tác phía FE
+
+📐 **ĐÍCH ĐẾN — CHƯA THI CÔNG** (viết 2026-09-08). `src/FE/src/app/modules/` **chưa tồn tại**,
+nên chưa module nào đi qua các bước dưới. Mỗi bước chỉ mô tả cơ chế **đã có thật hôm nay** và
+nêu đích danh file phải sửa; không bước nào là dự kiến.
+
+> Chọn tầng trước đã: câu hỏi *"màn này có ý nghĩa với MỌI sản phẩm dựng trên nền tảng, hay chỉ
+> riêng domain nghiệp vụ hiện tại?"* ở đầu file quyết định `platform/` hay `modules/`. Các bước
+> dưới đây dành cho vế **`modules/`**; màn `platform/` bỏ qua bước 3.
+
+| # | Việc | Sửa file nào |
+|---|---|---|
+| 1 | Dựng cây feature theo §"Cấu trúc một feature" | `src/FE/src/app/modules/<ten>/…` (mới) |
+| 2 | Đăng ký route lazy `loadChildren` | `src/FE/src/app/app.routes.ts` |
+| 3 | **Bật lại cổng G8** — thêm `'<ten>'` vào `BUSINESS_MODULES` | `src/FE/eslint.config.js` |
+| 4 | Bọc chuỗi hiển thị theo khuôn `<màn>.<nhóm>.<tên>` | `src/FE/public/i18n/{vi,en}.json` |
+| 5 | Chạy đủ cổng | — |
+
+**Không bước nào sửa `core/`.** Đó là phép thử của bốn seam ở §Seam cấu hình cấp app: nếu thêm
+một module buộc phải mở `core/` ra sửa, seam đó thiếu — dừng lại và bổ sung seam theo khuôn ở
+§"Khi cần seam thứ năm", đừng khai cứng vào `core/`.
+
+**Bước 3 là bước dễ mất nhất, và mất thì không ai biết.** `BUSINESS_MODULES` đang rỗng nên G8 là
+**no-op** (lý do đầy đủ ghi tại chỗ khai trong `eslint.config.js`, và ở
+[`../wiki-core/fe/trien-khai/05-gate.md`](../wiki-core/fe/trien-khai/05-gate.md) dòng G8). Quên
+bước này thì `ng lint` vẫn xanh, chỉ là **xanh vì không kiểm gì cả** — đúng lúc luật cấm import
+chéo bắt đầu có ý nghĩa thì máy cưỡng chế nó lại không chạy. Ràng buộc kèm theo: cổng chỉ có
+hiệu lực khi có **từ hai** module trở lên, nhưng phải thêm tên **ngay từ module đầu tiên**, vì
+module thứ hai sẽ do người khác thêm vào một ngày khác.
+
+**Hai thứ KHÔNG làm ở FE:**
+
+- **Mục menu.** Menu đến từ BE (`GET /api/meta/menu`, `core/menu/menu.service.ts`) và dữ liệu
+  của nó do seeder bên BE cấp — mỗi module nghiệp vụ tự có seeder riêng, không khai qua seam
+  menu của Core (`src/BE/Core/PlatformManager.Core.Application/Menu/ICoreMenuSeedSource.cs`).
+  Đừng dựng một danh sách menu thứ hai trong FE.
+- **Quyền truy cập.** Ma trận role × menu là dữ liệu, không phải code FE — xem
+  [`../../contracts/permissions.md`](../../contracts/permissions.md).
+
+**Bước 4, giới hạn phải biết trước:** cơ chế nạp **nhiều nguồn** bảng dịch đã có sẵn
+(`CORE_I18N.resources` là một mảng tiền tố, `app.config.ts`), nhưng **file dịch riêng cho nhóm
+khoá dự án thì 📐 chưa thi công** — hôm nay `vi.json`/`en.json` chứa toàn khoá Core. Chi tiết và
+lý do ở [`../wiki-core/fe/08-i18n.md`](../wiki-core/fe/08-i18n.md) §"Khoá nằm ở file nào".
 
 ## Bảng trách nhiệm — quy tắc cứng
 
@@ -96,6 +334,15 @@ sự cần store — không cài trước khi có nhu cầu.
 ## Chốt chặn chống god component
 
 - Soft cap **~300–400 dòng/component**. Vượt → tách `components/` con.
+
+  ⚠️ **Đang có vi phạm (đối chiếu 2026-09-06)** — đếm bằng lệnh, đừng chép danh sách vào đây
+  (`.claude/CLAUDE.md` §6):
+
+  ```bash
+  find src/FE/src/app -name '*.ts' -not -name '*.spec.ts' \
+    -exec awk 'END { if (NR > 400) print FILENAME ": " NR }' {} \;
+  # PASS khi không in dòng nào
+  ```
 - Không bao giờ để bản `-v2` song song một component/service. Sửa tại chỗ;
   lịch sử nằm trong git.
 - Component dumb chỉ nhận `input()`/phát `output()` — không tự inject

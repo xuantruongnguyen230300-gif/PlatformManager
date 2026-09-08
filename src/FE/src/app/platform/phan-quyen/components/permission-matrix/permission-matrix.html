@@ -1,8 +1,10 @@
-<div class="tablewrap">
+<!-- `.tablewrap.scroll`: bảng thuần (không phải p-table) nên vùng cuộn chính là khung này,
+     và `th` đã `position: sticky` ở lớp dùng chung nên tiêu đề cột đứng yên khi cuộn. -->
+<div class="tablewrap scroll">
   <table>
     <thead>
       <tr>
-        <th style="width:40%">Màn hình</th>
+        <th style="width:40%">{{ 'phan-quyen.grid.screen' | translate }}</th>
         @for (role of roles(); track role) {
           <th class="num">{{ role }}</th>
         }
@@ -21,6 +23,7 @@
             <td class="num">
               <input
                 type="checkbox"
+                class="check"
                 [checked]="isChecked(row, role)"
                 [disabled]="loading()"
                 (change)="permissionToggle.emit({ SysMenuId: row.SysMenuId, Role: role })"
@@ -31,7 +34,9 @@
         </tr>
       } @empty {
         <tr>
-          <td [attr.colspan]="roles().length + 1" class="muted">Chưa có mục menu nào.</td>
+          <td [attr.colspan]="roles().length + 1" class="muted">
+            {{ 'phan-quyen.grid.emptyMenu' | translate }}
+          </td>
         </tr>
       }
     </tbody>

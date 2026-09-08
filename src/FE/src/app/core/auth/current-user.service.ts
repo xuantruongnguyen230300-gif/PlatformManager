@@ -24,8 +24,13 @@ export class CurrentUserService {
   readonly mustChangePassword = computed(() => this.user()?.MustChangePassword ?? false);
   readonly fullName = computed(() => this.user()?.FullName ?? '');
 
-  hasRole(role: string): boolean {
-    return this.user()?.Roles.includes(role) ?? false;
+  /**
+   * Đúng khi user giữ ÍT NHẤT MỘT trong các role truyền vào — hình dạng mà `roleGuard`
+   * (core/auth/role.guard.ts) cần, xem doc/huong_dan/quy-uoc/fe-routing-guard.md §5.
+   */
+  hasAnyRole(...roles: string[]): boolean {
+    const userRoles = this.user()?.Roles;
+    return userRoles ? roles.some((role) => userRoles.includes(role)) : false;
   }
 
   /**

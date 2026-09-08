@@ -1,11 +1,33 @@
+---
+kind: luat
+scope: core
+verified: 2026-09-06
+---
+
 # 10. Dữ liệu tích luỹ theo thời gian — Soft-delete không phải là archival
 
-Soft-delete ([01-core-components.md](01-core-components.md), #1) giải quyết "ẩn khỏi người dùng ngay lập tức", nhưng **không** giải quyết "dữ liệu phình to mãi mãi" — mọi bản ghi `IsDelete=true` vẫn nằm nguyên trong bảng, vẫn tốn dung lượng, vẫn ảnh hưởng tốc độ query (dù có global filter). Hệ thống chạy nhiều năm cần 1 chính sách dọn dẹp:
+> **Phạm vi: dòng dữ liệu trong DB.** File nằm trên đĩa (file người dùng upload,
+> file export sinh ra) có vòng đời và cơ chế dọn **khác hẳn** — không transaction,
+> không soft-delete, không đi qua backup của DB. Quy tắc cho chúng ở
+> [14-file-storage.md](14-file-storage.md) §6.
+
+Soft-delete ([01-core-components.md](01-core-components.md), #1) giải quyết "ẩn khỏi người dùng ngay lập tức", nhưng **không** giải quyết "dữ liệu phình to mãi mãi" — mọi bản ghi `IsDeleted=true` vẫn nằm nguyên trong bảng, vẫn tốn dung lượng, vẫn ảnh hưởng tốc độ query (dù có global filter). Hệ thống chạy nhiều năm cần 1 chính sách dọn dẹp:
 
 - Tối thiểu: 1 job định kỳ hard-delete các bản ghi đã soft-delete quá lâu (ví dụ >2 năm, tuỳ yêu cầu lưu trữ pháp lý).
 - Nếu dữ liệu lịch sử vẫn cần giữ lại để tra cứu nhưng không cần truy vấn nhanh: chuyển sang bảng/schema "archive" riêng, không nằm chung bảng đang hoạt động hàng ngày.
 
 **Không cần làm ngay** — chỉ cần **quyết định trước chính sách** (giữ bao lâu, ai duyệt xoá thật) trước khi dữ liệu tích luỹ đủ lớn để việc dọn dẹp trở thành 1 dự án riêng tốn kém.
+
+> **Ngưỡng chưa tới (đối chiếu 2026-09-06), và lý do đáng nói:** bảng duy nhất trong repo
+> **đang tăng theo số lần dùng** là hai bảng ma trận phân quyền, vì `ReplaceAllAsync` xoá mềm
+> rồi chèn một thế hệ đầy đủ mỗi lần lưu
+> ([`../../quy-uoc/be-entity-domain.md`](../../quy-uoc/be-entity-domain.md) §"Hai cái giá đã
+> cân"). Job dọn định kỳ cho chúng đã được **cân nhắc và cố ý loại** — nó xoá đúng thứ vừa
+> quyết giữ lại. Đừng đọc mục này rồi đi thêm job dọn cho hai bảng đó.
+>
+> *(Sửa 2026-09-06: bản trước lấy `CriteriaAssessment` — "3.200 dòng/năm" — làm ví dụ bảng
+> đang phình. Entity đó đã xoá cùng module DtiWeekly 2026-08-29, và số đo kèm theo ở
+> `11-performance-caching.md` §6.1 nói về một bảng khi đó **rỗng**.)*
 
 ## Ngưỡng hard-delete cụ thể — và cái bẫy tham chiếu FK khi xoá `AppUser`
 
@@ -66,13 +88,29 @@ public async Task<Result> Handle(AnonymizeUserCommand cmd, CancellationToken ct)
     user.FullName = $"Người dùng đã xoá ({user.Id.ToString()[..8]})";
     user.Email = null;
     user.PhoneNumber = null;
-    user.IsDelete = true;                                  // vẫn đi qua soft-delete có sẵn
-    await _userManager.UpdateAsync(user);
-    await _userManager.UpdateSecurityStampAsync(user);      // huỷ mọi phiên còn sống — xem 02-identity-auth.md
+    // AppUser KHÔNG có cột IsDeleted (xem cảnh báo dưới) — "vô hiệu hoá" đi bằng lockout:
+    await _userManager.SetLockoutEnabledAsync(user, true);
+    await _userManager.SetLockoutEndDateAsync(user, DateTimeOffset.MaxValue);
+
+    await _userManager.UpdateSecurityStampAsync(user);      // TRƯỚC — huỷ mọi phiên còn sống
+    await _userManager.UpdateAsync(user);                   // xem 02-identity-auth.md §Thứ tự
 
     return Result.Success();
 }
 ```
+
+> **🔄 LẬT 2026-09-06 — hai lỗi trong đoạn mẫu cũ.**
+> 1. `user.IsDeleted = true; // vẫn đi qua soft-delete có sẵn` — **`AppUser` không có cột
+>    `IsDeleted`**. Nó kế thừa `IdentityUser<Guid>` chứ không phải `BaseEntity`
+>    (`src/BE/Core/PlatformManager.Core.Infrastructure/Identity/AppUser.cs:11`), nên nó nằm
+>    ngoài global query filter soft-delete lẫn `AuditInterceptor`. Câu đó vừa **không biên
+>    dịch được**, vừa dạy sai một điều quan trọng: *tài khoản không có soft-delete*, đường vô
+>    hiệu hoá duy nhất là lockout.
+> 2. Thứ tự `UpdateAsync` rồi `UpdateSecurityStampAsync` ngược với luật đã chốt ở
+>    [`02-identity-auth.md`](02-identity-auth.md) §"Thứ tự: con dấu TRƯỚC, quyền/khoá SAU" —
+>    hỏng giữa chừng theo thứ tự cũ để lại một tài khoản đã bị gỡ danh tính mà **phiên vẫn
+>    sống**. Cả cụm nên nằm trong một transaction, đúng khuôn `UserAdminService.LockAsync`
+>    (`UserAdminService.cs:315-336`).
 
 - **`Id` giữ nguyên** — mọi FK trỏ tới `AppUser` (bản ghi đánh giá do người
   này thực hiện, role đã gán...) vẫn hợp lệ, chỉ có tên/email hiển thị đổi
@@ -100,10 +138,8 @@ public async Task<Result> Handle(AnonymizeUserCommand cmd, CancellationToken ct)
 **Khi nào cần — bằng chứng, không phải lịch cố định.** Cùng nguyên tắc "đo
 trước khi tối ưu" ở [11-performance-caching.md](11-performance-caching.md)
 §5: archival chỉ đáng làm khi có bằng chứng cụ thể, ví dụ `EXPLAIN ANALYZE`
-cho thấy query trên bảng hoạt động hàng ngày (`CriteriaAssessment` — đang
-tăng khoảng 3.200 dòng/năm theo số đo ở
-[11-performance-caching.md](11-performance-caching.md) §6.1) bắt đầu seq
-scan vì phần lớn dòng là dữ liệu cũ không ai còn truy vấn. **Không** archival
+cho thấy query trên một bảng hoạt động hàng ngày bắt đầu seq scan vì phần lớn dòng là dữ
+liệu cũ không ai còn truy vấn. **Không** archival
 theo lịch cố định ("cứ 2 năm chuyển 1 lần") khi chưa có số đo — đó là tối ưu
 theo cảm tính, đúng thứ §5 của file performance đang cố tránh.
 

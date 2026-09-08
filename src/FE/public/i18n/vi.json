@@ -1,0 +1,303 @@
+{
+  "AUTH": {
+    "CHANGE_PASSWORD_FAILED": "Đổi mật khẩu thất bại.",
+    "CSRF_REJECTED": "Yêu cầu bị từ chối — thiếu hoặc sai token chống giả mạo (CSRF).",
+    "FORBIDDEN": "Không có quyền truy cập.",
+    "INVALID_CREDENTIALS": "Tên đăng nhập hoặc mật khẩu không đúng.",
+    "LOCKED_OUT": "Tài khoản đã bị khoá — liên hệ quản trị viên.",
+    "NOT_AUTHENTICATED": "Chưa đăng nhập.",
+    "ORIGIN_REJECTED": "Yêu cầu bị từ chối: nguồn gửi (Origin) không được phép."
+  },
+  "PERMISSION": {
+    "VERSION_CONFLICT": "Ma trận phân quyền đã được người khác thay đổi kể từ lúc bạn mở màn hình. Hãy tải lại trang rồi thực hiện lại thay đổi — thay đổi vừa rồi CHƯA được lưu."
+  },
+  "RATE_LIMIT": {
+    "TOO_MANY_REQUESTS": "Bạn đã gửi quá nhiều yêu cầu — vui lòng thử lại sau."
+  },
+  "ROLE_PERMISSION": {
+    "RESOURCE_KEY_REQUIRED": "ResourceKey không được để trống.",
+    "ROLE_REQUIRED": "RoleId không được để trống."
+  },
+  "ROUTE": {
+    "METHOD_NOT_ALLOWED": "Phương thức HTTP không được hỗ trợ cho tài nguyên này.",
+    "NOT_FOUND": "Không tìm thấy tài nguyên được yêu cầu."
+  },
+  "SYSTEM": {
+    "UNEXPECTED": "Đã có lỗi xảy ra."
+  },
+  "SYS_MENU": {
+    "CODE_REQUIRED": "Mã menu không được để trống.",
+    "NAME_REQUIRED": "Tên menu không được để trống."
+  },
+  "SYS_MENU_ROLE": {
+    "MENU_REQUIRED": "SysMenuId không được để trống.",
+    "ROLE_REQUIRED": "RoleId không được để trống."
+  },
+  "USER": {
+    "CREATE_FAILED": "Tạo người dùng thất bại.",
+    "DUPLICATE_EMAIL": "Email '{{Email}}' đã được sử dụng.",
+    "DUPLICATE_USERNAME": "Tên đăng nhập '{{UserName}}' đã tồn tại.",
+    "LOCK_FAILED": "Khoá tài khoản không thành công. Vui lòng thử lại; nếu vẫn lỗi, kiểm tra lại trạng thái tài khoản trước khi coi là đã khoá.",
+    "NOT_FOUND": "Không tìm thấy người dùng.",
+    "SELF_LOCK_FORBIDDEN": "Bạn không thể tự khoá tài khoản của chính mình. Nếu muốn kết thúc phiên làm việc, hãy đăng xuất.",
+    "SELF_SUPERADMIN_REMOVAL_FORBIDDEN": "Bạn không thể tự gỡ vai trò SuperAdmin của chính mình. Hãy nhờ một SuperAdmin khác thực hiện.",
+    "SUPERADMIN_LOCK_FORBIDDEN": "Chỉ SuperAdmin mới được khoá tài khoản có vai trò SuperAdmin.",
+    "SUPERADMIN_ROLE_CHANGE_FORBIDDEN": "Chỉ SuperAdmin mới có thể thêm hoặc gỡ quyền SuperAdmin của người dùng khác.",
+    "UNLOCK_FAILED": "Mở khoá tài khoản không thành công. Vui lòng thử lại.",
+    "UPDATE_FAILED": "Cập nhật người dùng thất bại.",
+    "VERSION_CONFLICT": "Người dùng này vừa được người khác cập nhật. Hãy tải lại danh sách rồi thực hiện lại — thay đổi vừa rồi CHƯA được lưu."
+  },
+  "VALIDATION": {
+    "DuplicateEmail": "Email này đã được sử dụng.",
+    "DuplicateRoleName": "Vai trò này đã tồn tại.",
+    "DuplicateUserName": "Tên đăng nhập này đã tồn tại.",
+    "FAILED": "Dữ liệu không hợp lệ.",
+    "InvalidEmail": "Email không đúng định dạng.",
+    "InvalidRoleName": "Tên vai trò không hợp lệ.",
+    "InvalidUserName": "Tên đăng nhập chứa ký tự không được phép.",
+    "NotEmptyValidator": "Vui lòng nhập {{PropertyName}}.",
+    "PasswordMismatch": "Mật khẩu hiện tại không đúng.",
+    "PasswordRequiresDigit": "Mật khẩu phải có ít nhất một chữ số.",
+    "PasswordRequiresLower": "Mật khẩu phải có ít nhất một chữ thường (a–z).",
+    "PasswordRequiresNonAlphanumeric": "Mật khẩu phải có ít nhất một ký tự đặc biệt.",
+    "PasswordRequiresUniqueChars": "Mật khẩu phải dùng nhiều ký tự khác nhau hơn.",
+    "PasswordRequiresUpper": "Mật khẩu phải có ít nhất một chữ hoa (A–Z).",
+    "PasswordTooShort": "Mật khẩu chưa đủ dài.",
+    "UserAlreadyInRole": "Người dùng đã có vai trò này.",
+    "UserNotInRole": "Người dùng không có vai trò này."
+  },
+  "doi-mat-khau": {
+    "routeTitle": "Đổi mật khẩu",
+    "error": {
+      "changeFailed": "Đổi mật khẩu thất bại — thử lại sau.",
+      "confirmPasswordMismatch": "Xác nhận mật khẩu mới không khớp.",
+      "confirmPasswordRequired": "Vui lòng nhập lại mật khẩu mới.",
+      "currentPasswordRequired": "Vui lòng nhập mật khẩu hiện tại.",
+      "newPasswordRequired": "Vui lòng nhập mật khẩu mới.",
+      "newPasswordTooShort": "Mật khẩu mới chưa đủ dài."
+    },
+    "field": {
+      "confirmPassword": "Xác nhận mật khẩu mới",
+      "confirmPasswordPlaceholder": "Nhập lại mật khẩu mới",
+      "currentPassword": "Mật khẩu hiện tại",
+      "currentPasswordPlaceholder": "Nhập mật khẩu hiện tại",
+      "newPassword": "Mật khẩu mới",
+      "newPasswordPlaceholder": "Nhập mật khẩu mới"
+    },
+    "hint": {
+      "forcedSubtitle": "Bạn cần đổi mật khẩu trước khi tiếp tục sử dụng hệ thống.",
+      "subtitle": "Đổi mật khẩu tài khoản của bạn."
+    }
+  },
+  "login": {
+    "routeTitle": "Đăng nhập",
+    "subtitle": "Đăng nhập để tiếp tục",
+    "action": {
+      "hidePassword": "Ẩn mật khẩu",
+      "showPassword": "Hiện mật khẩu",
+      "submit": "Đăng nhập",
+      "submitting": "Đang đăng nhập…"
+    },
+    "error": {
+      "failed": "Đăng nhập thất bại — thử lại sau.",
+      "missingCredentials": "Vui lòng nhập đầy đủ tài khoản và mật khẩu."
+    },
+    "field": {
+      "password": "Mật khẩu",
+      "passwordPlaceholder": "Nhập mật khẩu",
+      "rememberMe": "Ghi nhớ đăng nhập",
+      "userNamePlaceholder": "vd nguyen.van.a"
+    },
+    "hint": {
+      "forgotPassword": "Quên mật khẩu? Liên hệ quản trị viên để được đặt lại."
+    }
+  },
+  "phan-quyen": {
+    "menuSectionLabel": "Phân quyền theo màn hình",
+    "menuTitle": "Phân quyền màn hình",
+    "resourceTitle": "Phân quyền theo tài nguyên",
+    "routeTitle": "Phân quyền",
+    "action": {
+      "save": "Lưu thay đổi",
+      "tabGroupLabel": "Chọn loại phân quyền",
+      "tabMenu": "Theo màn hình",
+      "tabResource": "Theo tài nguyên"
+    },
+    "dialog": {
+      "leaveCancel": "Ở lại",
+      "leaveConfirm": "Rời khỏi trang",
+      "leaveDescription": "Bạn có thay đổi phân quyền chưa lưu. Rời khỏi trang bây giờ sẽ bỏ toàn bộ thay đổi đó.",
+      "leaveTitle": "Rời khỏi trang?"
+    },
+    "error": {
+      "noVersion": "Chưa đọc được phiên bản ma trận (lần tải gần nhất hỏng) nên không thể lưu an toàn. Hãy tải lại rồi thực hiện lại thay đổi.",
+      "versionConflict": "Có người vừa đổi phân quyền, nên thay đổi của bạn CHƯA được lưu. Tải lại để xem bản mới nhất rồi tick lại — thao tác tải lại sẽ bỏ những gì bạn vừa chọn."
+    },
+    "grid": {
+      "alwaysAllowedTag": "luôn có toàn quyền",
+      "cellAriaLabel": "{{resource}} — {{role}}",
+      "cellAriaLabelAlwaysAllowed": "{{resource}} — {{role}} — luôn có quyền, không thay đổi được",
+      "emptyMenu": "Chưa có mục menu nào.",
+      "emptyResource": "Chưa có tài nguyên nào.",
+      "resource": "Tài nguyên",
+      "screen": "Màn hình"
+    },
+    "hint": {
+      "alwaysAllowedBody": "luôn được tick và không sửa được ở đây: role này mặc định có mọi quyền với mọi tài nguyên, nên bỏ tick cũng không thu hồi được gì. Muốn một người không còn toàn quyền, vào \"Quản trị hệ thống → Người dùng\" và gỡ role",
+      "alwaysAllowedLead": "Cột",
+      "alwaysAllowedTail": "khỏi tài khoản của họ.",
+      "menuMatrix": "Tick chọn role được thấy màn hình tương ứng. Mục không tick role nào = mở cho mọi user đã đăng nhập.",
+      "noEnforcement": "Hiện chưa có API nghiệp vụ nào áp dụng các quyền này, nên thay đổi ở đây được lưu lại nhưng chưa chặn hay mở thêm thao tác nào cho người dùng.",
+      "nothingToSave": "Chưa có thay đổi nào để lưu",
+      "resourceEmphasis": "không tick role nào = từ chối tất cả",
+      "resourceLead": "Tick chọn role được thực hiện hành động tương ứng. Khác hẳn tab \"Theo màn hình\": ở đây",
+      "resourceTail": ", chứ không phải mở cho mọi người.",
+      "unsaved": "chưa lưu"
+    },
+    "toast": {
+      "savedMenu": "Đã lưu thay đổi phân quyền.",
+      "savedResource": "Đã lưu phân quyền theo tài nguyên."
+    }
+  },
+  "quan-tri-nguoi-dung": {
+    "routeTitle": "Người dùng hệ thống",
+    "title": "Danh sách người dùng",
+    "action": {
+      "create": "Thêm người dùng",
+      "edit": "Sửa",
+      "retry": "Thử lại",
+      "save": "Lưu"
+    },
+    "dialog": {
+      "createTitle": "Thêm người dùng",
+      "editTitle": "Sửa người dùng",
+      "lockConfirm": "Khoá tài khoản",
+      "lockDescription": "Tài khoản này sẽ không đăng nhập lại được kể từ bây giờ. Phiên đang đăng nhập của người dùng này bị chấm dứt trong vòng 30 phút, KHÔNG phải ngay lập tức. Mở khoá lại được bất cứ lúc nào.",
+      "lockDescriptionNamed": "“{{name}}” sẽ không đăng nhập lại được kể từ bây giờ. Phiên đang đăng nhập của người dùng này bị chấm dứt trong vòng 30 phút, KHÔNG phải ngay lập tức. Mở khoá lại được bất cứ lúc nào.",
+      "lockTitle": "Khoá tài khoản này?",
+      "preservedRoles": "Vai trò hệ thống {{roles}} được giữ nguyên, không thay đổi khi lưu."
+    },
+    "error": {
+      "createFailed": "Không tạo được người dùng — thử lại sau.",
+      "emailRequired": "Email bắt buộc.",
+      "fullNameRequired": "Họ tên bắt buộc.",
+      "loadFailed": "Không tải được danh sách người dùng. Kiểm tra kết nối rồi thử lại.",
+      "rolesRequired": "Chọn ít nhất 1 vai trò.",
+      "tempPasswordTooShort": "Mật khẩu tạm chưa đủ dài.",
+      "updateFailed": "Không cập nhật được người dùng — thử lại sau.",
+      "updateNotSaved": "Chưa lưu được thay đổi — mở lại danh sách để kiểm tra trước khi coi là đã sửa.",
+      "userNameRequired": "Tên đăng nhập bắt buộc."
+    },
+    "field": {
+      "emailPlaceholder": "ten@congty.vn",
+      "fullName": "Họ tên",
+      "fullNamePlaceholder": "Nguyễn Văn A",
+      "tempPassword": "Mật khẩu tạm",
+      "tempPasswordPlaceholder": "vd TempPass@123",
+      "userNamePlaceholder": "vd nguyen.van.a"
+    },
+    "filter": {
+      "allRoles": "Tất cả vai trò",
+      "allStatuses": "Tất cả trạng thái",
+      "chipRole": "Vai trò: {{value}}",
+      "chipStatus": "Trạng thái: {{value}}",
+      "searchAriaLabel": "Tìm theo tên hoặc email",
+      "searchPlaceholder": "Tìm theo tên hoặc email..."
+    },
+    "grid": {
+      "actions": "Hành động",
+      "active": "Đang hoạt động",
+      "dateCreate": "Ngày tạo",
+      "empty": "Không có người dùng nào khớp bộ lọc.",
+      "lockTitle": "Khoá tài khoản",
+      "locked": "Đã khoá",
+      "selfLockTitle": "Không thể tự khoá tài khoản của chính mình — dùng Đăng xuất",
+      "status": "Trạng thái",
+      "totalCount": "{{count}} người dùng",
+      "unlockTitle": "Mở khoá tài khoản",
+      "user": "Người dùng"
+    },
+    "toast": {
+      "created": "Đã thêm người dùng.",
+      "lockFailed": "Chưa khoá được tài khoản. Kiểm tra lại trạng thái tài khoản trước khi coi là đã khoá.",
+      "locked": "Đã khoá tài khoản. Phiên đang đăng nhập của người dùng này sẽ bị chấm dứt trong vòng 30 phút.",
+      "unlockFailed": "Chưa mở khoá được tài khoản. Kiểm tra lại trạng thái tài khoản rồi thử lại.",
+      "unlocked": "Đã mở khoá tài khoản.",
+      "updated": "Đã cập nhật người dùng."
+    }
+  },
+  "shared": {
+    "action": {
+      "cancel": "Huỷ",
+      "changePassword": "Đổi mật khẩu",
+      "close": "Đóng",
+      "confirm": "Đồng ý",
+      "reload": "Tải lại",
+      "saving": "Đang lưu…"
+    },
+    "app": {
+      "newVersion": "Đã có phiên bản mới, tải lại để tiếp tục.",
+      "skipToContent": "Bỏ qua điều hướng, tới nội dung chính"
+    },
+    "field": {
+      "email": "Email",
+      "role": "Vai trò",
+      "userName": "Tên đăng nhập"
+    },
+    "grid": {
+      "empty": "Không có dữ liệu."
+    },
+    "httpError": {
+      "endedText": "Vui lòng đăng nhập lại để tiếp tục.",
+      "endedTitle": "Phiên đăng nhập đã kết thúc",
+      "forbidden": "Bạn không có quyền thực hiện thao tác này.",
+      "forbiddenTitle": "Không đủ quyền",
+      "notFound": "Không tìm thấy dữ liệu yêu cầu.",
+      "notFoundTitle": "Không tìm thấy",
+      "offline": "Không thể kết nối tới máy chủ. Kiểm tra kết nối mạng.",
+      "offlineTitle": "Mất kết nối",
+      "tooMany": "Bạn đã gửi quá nhiều yêu cầu — vui lòng chờ một lát rồi thử lại.",
+      "tooManyTitle": "Quá nhiều yêu cầu",
+      "unauthenticated": "Bạn cần đăng nhập để tiếp tục.",
+      "unauthenticatedTitle": "Chưa đăng nhập",
+      "unexpected": "Đã có lỗi xảy ra. Vui lòng thử lại.",
+      "unexpectedTitle": "Lỗi hệ thống"
+    },
+    "languageSwitcher": {
+      "label": "Ngôn ngữ"
+    },
+    "menu": {
+      "loadFailed": "Không tải được menu điều hướng. Tải lại trang để thử lại."
+    },
+    "sidebar": {
+      "collapse": "Thu gọn menu",
+      "expand": "Mở rộng menu",
+      "mainNav": "Điều hướng chính"
+    },
+    "toast": {
+      "dismiss": "Đóng thông báo"
+    },
+    "toolbar": {
+      "applyFilter": "Áp dụng",
+      "clearFilter": "Xoá lọc",
+      "filter": "Lọc",
+      "removeFilter": "Bỏ lọc {{label}}",
+      "searchAriaLabel": "Tìm kiếm",
+      "searchPlaceholder": "Tìm kiếm…"
+    },
+    "topbar": {
+      "logout": "Đăng xuất",
+      "openMenu": "Mở menu điều hướng"
+    }
+  },
+  "trang-chu": {
+    "greeting": "Xin chào",
+    "greetingNamed": "Xin chào, {{name}}",
+    "routeTitle": "Trang chủ",
+    "hint": {
+      "intro": "Đây là trang chủ của {{name}}. Danh sách chức năng ở menu bên trái do máy chủ cấp theo quyền của tài khoản, nên hai người dùng khác vai trò sẽ thấy hai menu khác nhau.",
+      "noModules": "Chưa có module nghiệp vụ nào được cài đặt. Dùng menu bên trái để vào các chức năng quản trị hệ thống.",
+      "noRoles": "Chưa gán vai trò"
+    }
+  }
+}

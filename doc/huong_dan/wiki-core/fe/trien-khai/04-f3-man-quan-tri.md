@@ -1,3 +1,9 @@
+---
+kind: luat
+scope: core
+verified: 2026-09-06
+---
+
 # F3 — Hai màn quản trị Core
 
 > **Định nghĩa hoàn thành:** `/quan-tri/nguoi-dung` chạy đủ tạo / sửa / khoá /
@@ -5,8 +11,13 @@
 > lưu được ma trận quyền; tài khoản chỉ có role `Admin` bị **chặn** khỏi màn
 > phân quyền; mọi lỗi validation từ BE bind đúng vào từng ô nhập.
 
-Đây là hai màn Core cuối cùng. Xong F3 là `platform/` đủ 4 màn và nền tảng
+Đây là hai màn Core cuối cùng. Xong F3 là `platform/` đủ bộ màn Core và nền tảng
 dùng lại được cho sản phẩm khác.
+
+> 🔄 **LẬT 2026-09-06** — bản trước ghi *"`platform/` đủ **4** màn"*. Đếm bằng lệnh thay vì chép
+> số (`.claude/CLAUDE.md` §6): `ls src/FE/src/app/platform/` cho **5** thư mục — `login`,
+> `doi-mat-khau`, `trang-chu`, `quan-tri-nguoi-dung`, `phan-quyen`. `trang-chu/` là trang đích
+> mặc định sau đăng nhập, cũng là màn Core, và nó không có trong con số 4.
 
 ## Phạm vi
 
@@ -53,7 +64,8 @@ một field không tồn tại rồi phân trang lặng lẽ hỏng.
 ## Kiểm chứng
 
 - [ ] Đăng nhập bằng tài khoản chỉ có `Admin` → gõ `/quan-tri/phan-quyen` →
-      bị đưa về `/dashboard`, **không** thấy nội dung màn dù chớp nhoáng
+      bị đưa về `/trang-chu` (đích của `roleGuard` khi thiếu quyền, xem
+      `../../../quy-uoc/fe-routing-guard.md` §5), **không** thấy nội dung màn dù chớp nhoáng
 - [ ] Tạo user với dữ liệu sai → lỗi hiện **trên từng ô**, không chỉ toast chung
       (key `fields` là PascalCase, xem `../02-http-envelope.md`)
 - [ ] Phân trang sang trang 2 rồi tìm kiếm → về trang 1, không giữ `page` cũ

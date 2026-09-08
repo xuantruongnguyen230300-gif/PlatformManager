@@ -1,6 +1,10 @@
-<app-auth-card title="PlatformManager" subtitle="Đăng nhập để tiếp tục">
+<app-auth-card [title]="branding.name" [subtitle]="'login.subtitle' | translate">
+  <!-- `role="alert"` (Screens/05-auth.md §Normalize on redesign, quyết định 2026-08-31 mục 10):
+       khối này xuất hiện qua `@if` SAU khi người dùng bấm Đăng nhập, nên không có vùng sống thì
+       người dùng trình đọc màn hình không được báo là đăng nhập hỏng — họ chỉ nghe im lặng.
+       `alert` chứ không `status`: đây là lỗi chặn việc đang làm, được phép cắt ngang. -->
   @if (errorMessage()) {
-    <div class="login-error show">
+    <div class="login-error show" role="alert">
       <i class="pi pi-exclamation-circle"></i>
       <span>{{ errorMessage() }}</span>
     </div>
@@ -8,13 +12,22 @@
 
   <form (submit)="$event.preventDefault(); onSubmit()">
     <div class="field">
-      <label for="userName">Email</label>
-      <div class="field-input">
-        <i class="pi pi-envelope"></i>
+      <!-- Nhãn/gợi ý/icon nói ĐÚNG thứ ô này chứa: TÊN ĐĂNG NHẬP, không phải email (quyết định
+           2026-08-31 mục 6). Tài khoản thật có dạng `SuperAdmin`, `nguyen.van.a` — gắn nhãn
+           "Email" lên đó là bảo người dùng gõ sai thứ. API KHÔNG đổi: `POST /api/auth/login` vốn
+           nhận `userName`.
+
+           Khoá `shared.field.userName` là khoá ĐÃ THĂNG: nhãn này dùng ở cả `login`,
+           `quan-tri-nguoi-dung` và `trang-chu` (doc/huong_dan/wiki-core/fe/08-i18n.md §Khuôn khoá
+           dịch §4, đo 2026-09-04). Nhãn "Mật khẩu" ngay dưới thì KHÔNG thăng dù nghe rất "dùng
+           chung" — nó chỉ có ở màn này, và quyết định đến từ phép đo chứ không từ trực giác. -->
+      <label for="userName">{{ 'shared.field.userName' | translate }}</label>
+      <div class="input-icon">
+        <i class="pi pi-user"></i>
         <input
           id="userName"
           type="text"
-          placeholder="ten@congty.vn"
+          [placeholder]="'login.field.userNamePlaceholder' | translate"
           autocomplete="username"
           required
           [value]="userName()"
@@ -24,13 +37,13 @@
     </div>
 
     <div class="field">
-      <label for="password">Mật khẩu</label>
-      <div class="field-input">
+      <label for="password">{{ 'login.field.password' | translate }}</label>
+      <div class="input-icon">
         <i class="pi pi-lock"></i>
         <input
           id="password"
           [type]="showPassword() ? 'text' : 'password'"
-          placeholder="Nhập mật khẩu"
+          [placeholder]="'login.field.passwordPlaceholder' | translate"
           autocomplete="current-password"
           required
           [value]="password()"
@@ -38,9 +51,11 @@
         />
         <button
           type="button"
-          class="toggle-visibility"
+          class="icon-btn"
           (click)="togglePasswordVisibility()"
-          [attr.aria-label]="showPassword() ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'"
+          [attr.aria-label]="
+            (showPassword() ? 'login.action.hidePassword' : 'login.action.showPassword') | translate
+          "
         >
           <i class="pi" [class.pi-eye]="!showPassword()" [class.pi-eye-slash]="showPassword()"></i>
         </button>
@@ -48,12 +63,38 @@
     </div>
 
     <div class="field-row">
-      <label><input type="checkbox" /> Ghi nhớ đăng nhập</label>
-      <a href="javascript:void(0)">Quên mật khẩu?</a>
+      <!-- Ô tick NỐI THẬT vào request (quyết định 2026-08-31 mục 4): `rememberMe` đi trong body
+           `POST /api/auth/login` (doc/contracts/auth.md). MẶC ĐỊNH KHÔNG TÍCH — không tích ⇒ cookie
+           phiên, chết khi đóng trình duyệt; tích ⇒ cookie 14 ngày trượt. Bản trước ô này KHÔNG có
+           binding nào: nó hứa một lựa chọn không tồn tại, và giá trị ngầm lại là bên KÉM an toàn
+           (mọi lần đăng nhập đều nhận cookie sống qua lần đóng trình duyệt). -->
+      <label>
+        <input
+          type="checkbox"
+          class="check"
+          [checked]="rememberMe()"
+          (change)="onRememberMeChange($event)"
+        />
+        {{ 'login.field.rememberMe' | translate }}
+      </label>
     </div>
 
+    <!-- CHỮ, không phải link (quyết định 2026-08-31 mục 5). Bản trước là `href="javascript:void(0)"`
+         không handler, không route, và cũng không có endpoint tự đặt lại mật khẩu nào — một link
+         trông bấm được nhưng không đi đâu. Đường có thật là quản trị viên đặt lại hộ qua
+         `PUT /api/users/{id}`, nên câu này mô tả đúng thứ người dùng làm được. -->
+    <div class="login-hint muted">{{ 'login.hint.forgotPassword' | translate }}</div>
+
     <button type="submit" class="btn primary btn-block" [disabled]="submitting()">
-      <i class="pi pi-sign-in"></i> {{ submitting() ? 'Đang đăng nhập…' : 'Đăng nhập' }}
+      <i class="pi pi-sign-in"></i>
+      {{ (submitting() ? 'login.action.submitting' : 'login.action.submit') | translate }}
     </button>
   </form>
+
+  <!-- Nút đổi ngôn ngữ ĐẶT Ở ĐÂY vì màn đăng nhập là màn hình DUY NHẤT người chưa đăng nhập thấy
+       được, và nó không có app shell (không sidebar, không topbar —
+       doc/Design/Frontend/PlatformManager/Screens/05-auth.md §Layout Blueprint). Không có nút ở đây
+       thì người dùng chỉ đọc được tiếng Việt sẽ không có chỗ nào để đổi trước khi đăng nhập.
+       Lựa chọn được nhớ ở `localStorage` nên nó theo người dùng sang các màn sau. -->
+  <app-language-switcher class="login-language" />
 </app-auth-card>

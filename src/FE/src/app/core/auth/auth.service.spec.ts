@@ -2,6 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
+import { provideTranslateService } from '@ngx-translate/core';
 import { of } from 'rxjs';
 import { AuthService } from './auth.service';
 import { CurrentUserService } from './current-user.service';
@@ -45,7 +46,15 @@ describe('AuthService — xoá cache theo phiên', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [provideZonelessChangeDetection(), provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        provideZonelessChangeDetection(),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        // `AuthService` → `MenuService` → `TranslateService` (câu báo "không tải được menu",
+        // thêm 2026-09-08). Không cần nạp bảng dịch: spec này không đọc câu nào, chỉ cần DI
+        // phân giải được.
+        provideTranslateService(),
+      ],
     });
     auth = TestBed.inject(AuthService);
     currentUser = TestBed.inject(CurrentUserService);

@@ -1,3 +1,9 @@
+---
+kind: luat
+scope: core
+verified: 2026-09-06
+---
+
 # 4. Kiểm thử là 1 phần của kiến trúc, không phải việc làm sau cùng
 
 > Cùng nguyên tắc Nhóm A/B như [01-core-components.md](01-core-components.md):
@@ -26,9 +32,57 @@ Với hệ thống mới bắt đầu nhỏ, không cần cả bộ ArchTest ph�
 
 | Project | Tầng | Cần Docker? |
 | --- | --- | --- |
-| `Tests/PlatformManager.ArchTests` | ArchTest — quy tắc kiến trúc, IL-scan thuần | Không |
+| `Tests/PlatformManager.ArchTests` | ArchTest — quy tắc kiến trúc. **Ba nguồn**, không chỉ IL-scan: reflection, `ServiceCollection` thật (không `BuildServiceProvider`), và **đọc mã nguồn dạng văn bản** | Không |
+
+> ### 🚧 Mở rộng 2026-09-01 — ArchTest không còn thuần IL-scan
+>
+> Bốn test mới canh **sự tồn tại và sự được-nối-vào**, thứ mà IL-scan không thấy: mọi
+> `*Middleware` phải được nối vào pipeline · mọi `AbstractValidator<T>` phải nằm trong assembly
+> được quét · mọi `*Options` có `[Required]` phải được `ValidateOnStart()` · mọi
+> `IPipelineBehavior<,>` phải đăng ký **đúng một lần**.
+>
+> **Vì sao hai trong bốn test phải đọc mã nguồn dạng văn bản** — đây là đánh đổi có lý do đo được,
+> không phải lười:
+>
+> | Cản trở | Vì sao IL/DI không thay được |
+> |---|---|
+> | Pipeline ASP.NET Core sau khi build là chuỗi delegate **đóng** | Không liệt kê được middleware đã nối, kể cả khi host boot thành công |
+> | `Program.cs` dùng top-level statements | Không hàm nào gọi lại được, mà đăng ký CORS **chỉ** sống ở đó |
+> | Cả hai `ValidateOnStart()` trong repo đều nằm trong nhánh `if` | Dựng `ServiceCollection` một lần chỉ chạy **một** nhánh ⇒ báo thiếu oan cho nhánh kia |
+>
+> Giá phải trả, ghi rõ để không ai ngạc nhiên: **giòn khi đổi khuôn gọi**. Bộ dò cắt chú thích
+> trước khi soi — bắt buộc, vì repo nhắc tên middleware và chữ `ValidateOnStart` trong văn xuôi ở
+> rất nhiều chỗ, và một bộ dò cả tin sẽ cho qua mọi thứ.
+>
+> Project nay reference `PlatformManager.Api`: ba middleware và `CorsPolicyOptions` **chỉ sống ở
+> đó**, không reference thì test bỏ sót đúng ca đã thúc đẩy nó ra đời.
+>
+> **Mỗi test đều có ca đối chứng chứng minh nó biết nói KHÔNG** (6 ca), và đã chạy phép thử đột
+> biến ngày 2026-09-01: cố ý phá 6 chỗ, cả 6 đều đỏ đúng chỗ, khôi phục xác minh bằng `md5sum`.
+> Đây là thứ lượt audit trước **không** làm được, và là khác biệt giữa "test có tồn tại" với
+> "test bảo vệ được gì".
+>
+> **Giới hạn đã biết:** test 3 khẳng định *tồn tại một đường code có `ValidateOnStart`*, KHÔNG
+> khẳng định *đường đó chạy ở mọi môi trường*. `SmtpOptions` là ví dụ sống — nó có
+> `ValidateOnStart()` trong `AddNotificationInfrastructure()`, nhưng **không dòng nào gọi hàm đó**
+> (cố ý). Việc canh "nhánh nào chạy ở môi trường nào" thuộc `Production/ProductionHostTests.cs`,
+> tầng khác.
 | `Tests/PlatformManager.Core.UnitTests` | Unit — luồng quyết định, phụ thuộc thay bằng NSubstitute | Không |
 | `Tests/PlatformManager.Core.IntegrationTests` | Integration — Postgres THẬT qua Testcontainers | **Có** |
+
+> ✅ **Cả 3 project đã nằm trong `PlatformManager.slnx`** (xác minh lại 2026-09-06).
+> Kiểm bằng lệnh, đừng đếm tay:
+>
+> ```bash
+> grep -c '<Project Path=' src/BE/PlatformManager.slnx
+> find src/BE -name '*.csproj' | wc -l
+> ```
+>
+> PASS: hai số **bằng nhau**.
+>
+> Trước đó hai project test **không** được khai, nên `dotnet test` trên solution
+> bỏ qua chúng **trong im lặng** — gate xanh mà không chạy gì, đúng loại lỗi
+> `tieu-chi-review.md` §5 sinh ra để bắt.
 
 ### Yêu cầu môi trường
 
@@ -47,25 +101,132 @@ dotnet test Tests/PlatformManager.Core.UnitTests
 
 **Repo KHÔNG có CI** (`.github/` đã xoá 2026-08-21, có chủ đích) ⇒ integration
 test chạy **trên máy dev**, và **Docker Desktop phải đang bật** — Testcontainers
-cần nó để dựng Postgres. Không bật thì 18+ test đỏ hàng loạt với cùng một
-exception từ `PostgresFixture`; đó là lỗi **hạ tầng**, không phải lỗi code.
+cần nó để dựng Postgres. Không bật thì **toàn bộ** `PlatformManager.Core.IntegrationTests`
+đỏ hàng loạt với cùng một exception từ `PostgresFixture`; đó là lỗi **hạ tầng**, không phải
+lỗi code — dấu hiệu nhận ra: mọi test đỏ cùng một stack trace, và hai project kia vẫn xanh.
 
 `PostgresFixture` cố ý **fail chứ không skip** khi thiếu Docker — skip im lặng
 là xanh giả, và bộ test này tồn tại chính để bắt những thứ chỉ lộ ra khi chạy
 thật.
 
+### ✅ CÓ THẬT — một nhóm test chạy ở cấu hình `Production` (thi công xong 2026-09-01)
+
+#### Vì sao cần nhóm test riêng — bối cảnh, mô tả trạng thái TRƯỚC 2026-09-01
+
+`src/BE/Tests/PlatformManager.Core.IntegrationTests/IntegrationTestHostEnvironment.cs:47`
+ghim **mặc định** mọi test về `Development`. Lý do ban đầu hợp lý: `Development` từng là điều
+kiện để `CoreSeeder` chạy, không có dữ liệu seed thì không test được gì. (Lý do đó nay đã hết
+— comment ở `:41` ghi rõ *"KHÔNG còn là điều kiện để CoreSeeder chạy (sửa 2026-09-01)"*.)
+
+Hệ quả **khi đó**: mọi nhánh `if (app.Environment.IsDevelopment())` chỉ chạy theo **một**
+chiều, tức bốn lỗi dưới đây không test nào thấy được:
+
+> *(🔄 LẬT 2026-09-06: tiêu đề cũ *"Bộ test hiện tại không thể bắt loại lỗi nào"* viết ở
+> **thì hiện tại** cho một trạng thái đã được vá cuối chính mục này — người đọc lướt kết
+> luận bộ test đang mù bốn lỗi triển khai, ngược hẳn sự thật. Và citation `:41` trỏ vào một
+> **dòng chú thích** nói điều ngược lại với câu nó chống lưng; dòng ghim thật là `:47`.)*
+
+| Lỗi | Test bắt được? |
+|---|---|
+| Thiếu `UseForwardedHeaders` | Không — test không có proxy |
+| Allowlist CORS rỗng ở Production | Không — test chạy ở môi trường allowlist có giá trị |
+| Seeder không chạy ở Production | Không — test chạy đúng môi trường seeder có chạy |
+| Swagger lộ ra ở Production | Không |
+
+Bốn lỗi đủ để hỏng hoàn toàn lần triển khai đầu, và bộ test **không thể** thấy chúng
+theo đúng cấu tạo — không phải vì viết thiếu test.
+
+Đây cùng một họ với luật *"thà đỏ và biết vì sao"* ở mục §Yêu cầu môi trường trên: một
+bộ test xanh trong khi phần quan trọng nhất chưa hề chạy là **xanh giả**. Khác biệt duy
+nhất là ở đây thứ không chạy là một *môi trường*, không phải một *test*.
+
+#### Nút thắt đã được gỡ ở nơi khác
+
+Lý do ghim `Development` là để seeder chạy. Quyết định 2026-08-30 chuyển seeder **ra khỏi
+đường khởi động** thành một lệnh riêng
+([`13-core-data-migration.md`](13-core-data-migration.md) §"Quyết định người dùng 2026-08-30"),
+nên sau thay đổi đó test gọi seeder trực tiếp và **không còn lý do ghim môi trường**.
+
+Thứ tự thi công vì vậy là bắt buộc: seeder trước, test Production sau.
+
+#### Chốt
+
+**Một class test riêng, khởi động host ở `Production`, canh vài điều bất biến.** Không
+chạy toàn bộ bộ test ở hai môi trường — phần lớn test không quan tâm tới môi trường, gấp
+đôi thời gian chạy để mua thêm rất ít.
+
+| # | Bất biến cần canh | Bắt được lỗi nào |
+|---|---|---|
+| 1 | Swagger **không** được map | Lộ mô tả API ra Internet |
+| 2 | Seeder **không** chạy lúc khởi động | Ghi dữ liệu ngoài ý muốn trên DB thật |
+| 3 | Thiếu `Cors:AllowedOrigins` ⇒ host **không** boot được | Deploy xanh nhưng app chặn sạch người dùng |
+| 4 | `X-Forwarded-Proto` từ loopback được tôn trọng; từ nguồn khác thì **không** | `KnownProxies` khai sai ⇒ rate limit bị vô hiệu hoá |
+
+Bất biến 4 là bất biến khó nhất và đáng nhất: nó là thứ duy nhất phân biệt *"đã cấu hình
+`UseForwardedHeaders`"* với *"đã cấu hình đúng"* — và cấu hình sai ở đây tệ hơn không cấu
+hình gì cả.
+
+#### Đã thi công — đối chiếu 2026-09-01
+
+| | Kết quả |
+|---|---|
+| File | `src/BE/Tests/PlatformManager.Core.IntegrationTests/Production/ProductionHostFactory.cs` + `ProductionHostTests.cs` |
+| Số bất biến được canh | **4/4** |
+| Bộ integration test | Toàn bộ xanh tại thời điểm thi công (2026-09-01). Đếm lại bằng `dotnet test src/BE/Tests/PlatformManager.Core.IntegrationTests` — cần Docker; con số cũ (84) đã gỡ 2026-09-06 theo `.claude/CLAUDE.md` §6 |
+| Cô lập môi trường | Qua `builder.UseEnvironment(...)`, **không** đặt biến môi trường mức tiến trình. Kiểm: `grep -rln "SetEnvironmentVariable" src/BE/Tests --include=*.cs` — PASS khi ra **đúng một file** (`IntegrationTestHostEnvironment.cs`), và trong đó dòng đặt `ASPNETCORE_ENVIRONMENT` (`:47`) đặt `Development` |
+
+> *(🔄 LẬT 2026-09-06: tiêu chí cũ ghi *"chỉ một chỗ"* với lệnh `grep -rn` — lệnh đó hôm nay
+> in **4 dòng** (chuỗi kết nối, môi trường, 2 mật khẩu bootstrap), tất cả trong cùng một
+> file. Người chạy thấy 4 dòng sẽ kết luận là đã hỏng. Đổi sang `grep -rln` (đếm **file**),
+> đúng thứ tiêu chí muốn nói.)*
+
+**Hai lỗi "test xanh mà không đo gì" đã vá trong chính lượt này**, đáng ghi vì chúng là khuôn lỗi
+nguy hiểm nhất của kiểm thử:
+
+1. Bất biến 2 đếm dữ liệu trên database trống **qua kết nối riêng, không đi qua host**. Nếu lệnh
+   ghi đè chuỗi kết nối không ăn (host vẫn nói chuyện với DB đã seed) thì cả hai lần đếm vẫn ra 0
+   và test vẫn xanh — *"host không ghi vào database mà host chưa từng mở"* là khẳng định rỗng.
+   Đã thêm assert hỏi **chính host** đang mở database nào.
+2. Câu đếm nhắm sai bảng sẽ trả 0 ở **mọi** database ⇒ xanh vĩnh viễn kể cả khi seeder có chạy.
+   Đã thêm đối chứng dương: cùng câu đếm đó trên DB **đã seed** phải `> 0` trước khi tin số 0.
+
+> ⚠️ **Giới hạn đã biết:** tính không-rỗng của bất biến 1, 3, 4 là lập luận **theo cấu tạo** (mỗi
+> test có cặp đối chứng hai chiều trong cùng một test), **không** phải bằng chứng thực nghiệm —
+> phép thử đột biến đòi sửa code sản phẩm nên không chạy được trong lượt audit.
+
 ### Schema cho integration test lấy từ file `.sql` của repo, KHÔNG từ `EnsureCreated()`
 
-`PostgresFixture` dựng schema bằng `dotnet ef database update` rồi chạy `doc/cau-truc-database.sql` (nguồn cũ `doc/ERD/` đã xoá 2026-08-23) — trước là `0003 → 0004_* → 0005_*` vào
-container. Như vậy test kiểm luôn **tính đúng của chính file `.sql` mà người dùng
+`PostgresFixture` dựng schema bằng cách chạy **lần lượt các file delta `.sql`**
+trong `src/BE/Core/PlatformManager.Core.Infrastructure/Persistence/Migrations/sql/`
+vào container — **không** dùng `dotnet ef database update`, và **không** đọc
+`doc/cau-truc-database.sql`.
+
+> Sửa 2026-08-27: bản trước mô tả cơ chế `dotnet ef database update` + đọc file
+> trong `doc/`. Trỏ fixture vào thư mục tài liệu chính là **bug đã làm chết toàn
+> bộ integration test**, sửa 2026-08-24 — chính XML-doc của `PostgresFixture.cs`
+> ghi lại việc đó. Tài liệu vẫn dạy lại cách làm hỏng. Như vậy test kiểm luôn **tính đúng của chính file `.sql` mà người dùng
 chạy tay lên DB thật**. Dựng schema từ model EF (`EnsureCreated()`) sẽ test trên
 một schema **khác** schema production — mà đợt tối ưu 2026-08-18 (thêm index
 `IX_RolePermissions_ResourceKey_RoleId`) cho thấy khác biệt schema đúng là thứ
 đáng quan tâm.
 
-⚠️ Thêm file migration mới (`0006_*.sql`...) → **phải** thêm tên vào
-`PostgresFixture.MigrationScripts`, nếu không schema test sẽ lệch schema thật —
-đúng cái điều thiết kế này muốn tránh.
+⚠️ Thêm file `.sql` mới → **phải** thêm tên vào `PostgresFixture.MigrationScripts`
+(`src/BE/Tests/PlatformManager.Core.IntegrationTests/PostgresFixture.cs:46`), nếu không
+schema test sẽ lệch schema thật — đúng cái điều thiết kế này muốn tránh.
+
+Đếm bằng lệnh, đừng chép danh sách (§6):
+
+```bash
+ls src/BE/Core/PlatformManager.Core.Infrastructure/Persistence/Migrations/sql/
+```
+
+PASS: mọi file liệt kê ở đó đều có tên trong `MigrationScripts`. Hôm nay
+(đối chiếu 2026-09-06) đúng **một** file — `0001_initial_baseline.sql` — vì lịch sử migration
+đã được baseline lại 2026-08-31.
+
+> *(Sửa 2026-09-06: bản trước lấy `0007_*.sql` làm ví dụ số hiệu tiếp theo; sau đợt baseline
+> thì số tiếp theo là `0002`. Một ví dụ số hiệu sai không phá gì, nhưng nó là dấu hiệu đoạn
+> văn chưa được đọc lại sau đợt baseline.)*
 
 ### Kiểm thử phân quyền — chia đôi có chủ đích
 
@@ -224,7 +385,7 @@ phải "máy hôm nay chậm".
 ## Snapshot/golden-file test cho envelope response — bắt shape đổi ngoài ý muốn
 
 > Bổ sung 2026-08-24, đối chiếu thực hành ngành:
-> [`07-p6-archtests-gate.md`](trien-khai/07-p6-archtests-gate.md) Nhóm A đã có
+> [`07-p6-archtests-gate.md`](../../../tham-khao-ngoai/vnr-successor/07-p6-archtests-gate.md) Nhóm A đã có
 > `ApiResultSerializationContractTests` (F1 gate) — nhưng gate đó kiểm
 > `ApiResult<T>` serialize **giống nhau giữa 2 serializer** (STJ vs
 > Newtonsoft), KHÔNG kiểm **shape đó có đổi so với hôm qua hay không**. Hai
@@ -278,7 +439,7 @@ public async Task ApiResult_Success_Shape_KhongDoiSoVoiGolden()
 ## Chính sách xử lý test không ổn định (flaky) — có luật rõ, không "chạy lại cho qua"
 
 > Bổ sung 2026-08-24, đối chiếu thực hành ngành: file này (và
-> [`07-p6-archtests-gate.md`](trien-khai/07-p6-archtests-gate.md)) chưa nói
+> [`07-p6-archtests-gate.md`](../../../tham-khao-ngoai/vnr-successor/07-p6-archtests-gate.md)) chưa nói
 > phải làm gì khi 1 test **thỉnh thoảng đỏ** — khác test luôn đỏ vì bug thật
 > (dễ xử lý). Đây là nợ kỹ thuật tốn thời gian nhất ở team tầm trung nếu không
 > có chính sách rõ: mỗi lần đỏ ngẫu nhiên, người gặp phải tốn 10-20 phút nghi

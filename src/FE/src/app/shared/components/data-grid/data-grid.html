@@ -1,0 +1,40 @@
+<!-- `.tablewrap` KHÔNG kèm `.scroll` — cố ý, không phải bỏ sót: `p-table` tự bọc bảng trong
+     `.p-datatable-table-container` mang `overflow` riêng và render phân trang NGOÀI container đó.
+     Thêm `.scroll` ở đây sẽ (1) làm `thead` position:sticky mất scrollport thật nên tiêu đề cột
+     trôi mất khi cuộn, và (2) nhốt phân trang vào trong vùng cuộn.
+     Lý do đầy đủ: doc/Design/Frontend/PlatformManager/Components/Table.md § `.scroll`. -->
+<div class="tablewrap" [style.--data-grid-min-width]="minWidth()">
+  <p-table
+    [value]="rows()"
+    [loading]="loading()"
+    [lazy]="true"
+    [lazyLoadOnInit]="false"
+    [paginator]="true"
+    [rows]="pageSize()"
+    [first]="firstIndex"
+    [totalRecords]="totalCount()"
+    [rowsPerPageOptions]="rowsPerPageOptions()"
+    [scrollable]="true"
+    [dataKey]="dataKey()"
+    scrollHeight="flex"
+    (onLazyLoad)="onLazyLoad($event)"
+  >
+    <ng-template #header>
+      <ng-container *ngTemplateOutlet="headerTemplate()" />
+    </ng-template>
+
+    <ng-template #body let-row>
+      <ng-container *ngTemplateOutlet="bodyTemplate(); context: { $implicit: row }" />
+    </ng-template>
+
+    <ng-template #emptymessage>
+      @if (emptyTemplate(); as custom) {
+        <ng-container *ngTemplateOutlet="custom" />
+      } @else {
+        <tr>
+          <td class="grid-empty muted">{{ 'shared.grid.empty' | translate }}</td>
+        </tr>
+      }
+    </ng-template>
+  </p-table>
+</div>

@@ -3,6 +3,8 @@ import { provideZonelessChangeDetection } from '@angular/core';
 import { PermissionMatrix } from './permission-matrix';
 import { IPermissionMatrixDto } from '../../models/phan-quyen.model';
 import { mapPermissionMatrixDtoToModel } from '../../services/phan-quyen.mapper';
+import { provideTranslateService } from '@ngx-translate/core';
+import { useTranslationsInTest } from '../../../../core/i18n/i18n.testing';
 
 /**
  * PAYLOAD THẬT của `GET /api/admin/permissions`, giữ nguyên dạng chuỗi JSON và `JSON.parse` thay vì
@@ -58,8 +60,11 @@ describe('PermissionMatrix (PERM-1) — payload BE thật, menu gốc KHÔNG có
   describe('ma trận dựng từ payload đó', () => {
     let fixture: ComponentFixture<PermissionMatrix>;
 
-    beforeEach(() => {
-      TestBed.configureTestingModule({ providers: [provideZonelessChangeDetection()] });
+    beforeEach(async () => {
+      TestBed.configureTestingModule({
+        providers: [provideZonelessChangeDetection(), provideTranslateService()],
+      });
+      await useTranslationsInTest();
       const matrix = mapPermissionMatrixDtoToModel(parseWirePayload());
 
       fixture = TestBed.createComponent(PermissionMatrix);

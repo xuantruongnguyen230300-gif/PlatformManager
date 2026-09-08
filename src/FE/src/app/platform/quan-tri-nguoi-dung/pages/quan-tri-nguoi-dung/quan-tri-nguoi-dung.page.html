@@ -1,33 +1,115 @@
 <div class="card">
   <div class="title">
-    <h2>Danh sách người dùng</h2>
-    <button type="button" class="btn primary" (click)="openCreateForm()">+ Thêm người dùng</button>
+    <h2>{{ 'quan-tri-nguoi-dung.title' | translate }}</h2>
+    <!-- Nút "+ Thêm người dùng" đã chuyển xuống nhóm hành động của thanh công cụ: mọi thứ TÁC ĐỘNG
+         lên danh sách (tìm, lọc, thêm) nằm chung một mặt nền, còn .title chỉ còn tên khối + số lượng.
+
+         `aria-live="polite"`: sau khi lọc/tìm, người dùng bàn phím và trình đọc màn hình không
+         "thấy" bảng ngắn lại — số dòng là bằng chứng DUY NHẤT rằng bộ lọc đã chạy. Không có vùng
+         sống này, thao tác lọc im lặng hoàn toàn với họ (WCAG 2.2 AA — xem
+         doc/huong_dan/wiki-core/fe/15-accessibility.md §1). `polite` chứ không `assertive`: đây là
+         xác nhận kết quả, không phải cảnh báo, không được cắt ngang câu đang đọc dở. -->
+    <span class="muted" aria-live="polite">
+      {{ 'quan-tri-nguoi-dung.grid.totalCount' | translate: { count: totalCount() } }}
+    </span>
   </div>
 
-  <div class="filters">
-    <div class="search">
-      <i class="pi pi-search"></i>
-      <input type="text" placeholder="Tìm theo tên hoặc email..." [value]="searchInput()" (input)="onSearchInputEvent($event)" />
+  <!-- `<app-toolbar>` (shared) thay cho khối `.toolbar` chép tay: bản chép đã trôi khỏi component
+       (ký tự "×" thay icon `pi-times`, aria-label khác chữ) và thiếu hẳn hai hành vi mà `<details>`
+       gốc không tự có — đóng panel khi bấm ra ngoài và khi gõ Escape. -->
+  <app-toolbar
+    [searchValue]="searchInput()"
+    (searchValueChange)="onSearchValueChange($event)"
+    [searchPlaceholder]="'quan-tri-nguoi-dung.filter.searchPlaceholder' | translate"
+    [searchAriaLabel]="'quan-tri-nguoi-dung.filter.searchAriaLabel' | translate"
+    [hasFilter]="true"
+    [filterCount]="activeFilterCount()"
+    [chips]="filterChips()"
+    (filterApply)="onApplyFilters()"
+    (filterClear)="onClearFilters()"
+    (chipRemove)="onRemoveFilter($event)"
+  >
+    <div filter class="form-row">
+      <label for="userFilterRole">{{ 'shared.field.role' | translate }}</label>
+      <!-- Danh sách role để LỌC gồm cả SuperAdmin — khác ASSIGNABLE_ROLES (chỉ Admin/User) vì
+           lọc là ĐỌC, không phải cấp quyền: vẫn phải tìm được tài khoản SuperAdmin.
+           Cố ý viết tĩnh trong template: <select [value]> được gán TRƯỚC khi khối @for kịp
+           dựng <option>, nên option động sẽ làm giá trị đang chọn bị rơi ở lần render đầu. -->
+      <select id="userFilterRole" [value]="roleDraft()" (change)="onRoleDraftChange($event)">
+        <option value="">{{ 'quan-tri-nguoi-dung.filter.allRoles' | translate }}</option>
+        <option value="SuperAdmin">SuperAdmin</option>
+        <option value="Admin">Admin</option>
+        <option value="User">User</option>
+      </select>
     </div>
-  </div>
 
-  <app-user-grid-table
-    [rows]="rows()"
-    [loading]="loading()"
-    [totalCount]="totalCount()"
-    [page]="page()"
-    [pageSize]="pageSize()"
-    [currentUserId]="currentUserId()"
-    (editRow)="openEditForm($event)"
-    (toggleLock)="onToggleLock($event)"
-    (pageChange)="onGridPageChange($event)"
-  />
+    <div filter class="form-row">
+      <label for="userFilterStatus">{{ 'quan-tri-nguoi-dung.grid.status' | translate }}</label>
+      <select id="userFilterStatus" [value]="statusDraft()" (change)="onStatusDraftChange($event)">
+        <option value="">{{ 'quan-tri-nguoi-dung.filter.allStatuses' | translate }}</option>
+        <option value="active">{{ 'quan-tri-nguoi-dung.grid.active' | translate }}</option>
+        <option value="locked">{{ 'quan-tri-nguoi-dung.grid.locked' | translate }}</option>
+      </select>
+    </div>
+
+    <button actions type="button" class="btn primary" (click)="openCreateForm()">
+      + {{ 'quan-tri-nguoi-dung.action.create' | translate }}
+    </button>
+  </app-toolbar>
+
+  <!-- BA trạng thái, ba hình dạng khác hẳn nhau (fe/11-grid-and-metadata.md §"Ba trạng thái của
+       lưới", chốt 2026-08-31):
+         đang tải        → overlay của `p-table` (bên trong `<app-user-grid-table>`)
+         không có kết quả → dòng "Không có người dùng nào khớp bộ lọc." trong lòng bảng
+         TẢI HỎNG        → khối `.notice.bad` này, và BẢNG BIẾN MẤT
+       Bảng phải biến mất chứ không chỉ trống: giữ nó lại là để dữ liệu của bộ lọc TRƯỚC nằm trên
+       màn hình như thể đó là kết quả của bộ lọc vừa chọn. Thanh công cụ vẫn còn để người dùng đổi
+       bộ lọc hoặc bấm "Thử lại" ngay tại chỗ. -->
+  @if (loadError(); as messageKey) {
+    <div class="notice bad" role="alert">
+      <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
+      <span>{{ messageKey | translate }}</span>
+      <button type="button" class="btn" (click)="reload()">
+        <i class="pi pi-refresh" aria-hidden="true"></i>
+        {{ 'quan-tri-nguoi-dung.action.retry' | translate }}
+      </button>
+    </div>
+  } @else {
+    <app-user-grid-table
+      class="grid-host"
+      [localeId]="localeId()"
+      [rows]="rows()"
+      [loading]="loading()"
+      [totalCount]="totalCount()"
+      [page]="page()"
+      [pageSize]="pageSize()"
+      [currentUserId]="currentUserId()"
+      (editRow)="openEditForm($event)"
+      (toggleLock)="onToggleLock($event)"
+      (pageChange)="onGridPageChange($event)"
+    />
+  }
 </div>
 
 <app-user-form-dialog
   [open]="formOpen()"
   [editing]="formEditing()"
   [serverError]="formServerError()"
+  [serverFieldErrors]="formServerFieldErrors()"
+  [saving]="formSaving()"
   (saved)="onFormSaved($event)"
   (closed)="onFormClosed()"
+/>
+
+<!-- Chỉ hỏi cho hành động KHOÁ (xem `onToggleLock`). `warn` chứ không `bad`: đây không phải xoá,
+     mở khoá lại được — icon thùng rác sẽ nói sai về mức độ. Nút xác nhận vẫn mang `.danger` vì nó
+     cắt đường vào hệ thống của một người. -->
+<app-confirm-dialog
+  severity="warn"
+  [title]="'quan-tri-nguoi-dung.dialog.lockTitle' | translate"
+  [description]="lockConfirmDescription()"
+  [confirmLabel]="'quan-tri-nguoi-dung.dialog.lockConfirm' | translate"
+  [confirmDanger]="true"
+  (confirmed)="onLockConfirmed()"
+  (cancelled)="onLockCancelled()"
 />

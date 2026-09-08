@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
+import { TranslatePipe } from '@ngx-translate/core';
 import { IPermissionRow } from '../../models/phan-quyen.model';
 
 interface IPermissionDisplayRow extends IPermissionRow {
@@ -33,6 +34,7 @@ function toDisplayOrder(rows: IPermissionRow[]): IPermissionDisplayRow[] {
 @Component({
   selector: 'app-permission-matrix',
   standalone: true,
+  imports: [TranslatePipe],
   templateUrl: './permission-matrix.html',
   styleUrl: './permission-matrix.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

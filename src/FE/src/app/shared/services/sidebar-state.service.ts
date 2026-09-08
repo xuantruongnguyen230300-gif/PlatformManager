@@ -1,14 +1,34 @@
 import { Injectable, PLATFORM_ID, inject, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 
-const COLLAPSED_STORAGE_KEY = 'platform_manager_sidebar_collapsed_v1';
+/**
+ * Khoá `localStorage` giữ trạng thái thu gọn sidebar.
+ *
+ * 🛑 Tên khoá TRUNG TÍNH có chủ đích. Bản trước có dạng `<ten_san_pham>_sidebar_collapsed_v1`,
+ * tức tên sản phẩm nằm ngay trong một tầng (`shared/`) vốn là CoreBase dùng lại cho sản phẩm
+ * khác (doc/kien-truc-core-module.md). Nó sống sót qua lượt tách 2026-09-02 nhờ viết snake_case
+ * chữ thường: phép kiểm hôm đó tìm tên sản phẩm viết liền kiểu Pascal, nên khoá này không khớp
+ * mẫu nào. Phép kiểm nay bắt cả hai cách viết — xem lệnh grep ở doc/kien-truc-core-module.md.
+ *
+ * Hệ quả đã biết của việc đổi khoá (2026-09-03): người dùng đang có sidebar thu gọn sẽ thấy nó
+ * MỞ lại đúng một lần, vì giá trị cũ nằm dưới khoá cũ và không ai đọc nữa. Đây là hành vi đã
+ * lường trước, KHÔNG phải lỗi — không viết code di trú cho một cờ boolean mà người dùng bấm lại
+ * mất một giây. Khoá cũ tự biến mất khi trình duyệt dọn storage.
+ *
+ * Hậu tố `.v1` giữ nguyên vai trò cũ: đổi Ý NGHĨA của giá trị (vd sang enum 3 trạng thái) thì
+ * tăng lên `.v2` thay vì đọc nhầm dữ liệu cũ theo luật mới.
+ */
+const COLLAPSED_STORAGE_KEY = 'core.sidebar.collapsed.v1';
 
 /**
  * State hạ tầng UI singleton cho shell (sidebar + topbar) — ngoại lệ "app-shell" đã ghi nhận
  * (doc/huong_dan/wiki-core/fe/05-component-library.md), cho phép cả `Sidebar` lẫn `Topbar`
  * (2 component anh em, không cha-con) cùng đọc/ghi qua đúng 1 service thay vì nhét state vào
- * `App` rồi truyền input()/output() qua nhiều tầng. Xem hành vi gốc ở
- * spec/sidebar-menu/ui-spec.md §2.2 (collapse desktop) và §3 (drawer mobile).
+ * `App` rồi truyền input()/output() qua nhiều tầng. Xem hành vi ở
+ * doc/Design/Frontend/PlatformManager/Components/Sidebar.md §Variants — dòng `Collapsed rail`
+ * (thu gọn trên desktop, kèm khoá localStorage `core.sidebar.collapsed.v1`) và hai dòng
+ * `Off-canvas drawer` (tablet ≤980px, mobile ≤560px).
+ * Sửa 2026-09-08: trước trỏ §2.2/§3 của một ui-spec sidebar-menu nay đã bị xoá.
  */
 @Injectable({ providedIn: 'root' })
 export class SidebarStateService {

@@ -22,7 +22,10 @@ namespace PlatformManager.Core.UnitTests.Permissions;
 /// </summary>
 public class RequirePermissionFilterTests
 {
-    private const string Key = ResourceKeys.Criteria;
+    // Khoá bất kỳ: filter chỉ so khoá của attribute với dữ liệu IPermissionChecker trả về, nó
+    // KHÔNG tra danh mục (ICoreResourceKeySource) — buộc test dùng khoá thật của host sẽ ngụ ý một
+    // ràng buộc không tồn tại.
+    private const string Key = "unittest.manage";
 
     private static AuthorizationFilterContext BuildContext(string[] roles, bool withAttribute = true)
     {

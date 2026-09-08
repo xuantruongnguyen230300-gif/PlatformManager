@@ -38,8 +38,8 @@ di chuyển hoặc đặt tên khác. Vì vậy **KHÔNG hardcode `doc/Design/`*
 > Mọi `{DESIGN_ROOT}/...` bên dưới là **placeholder** — thay bằng đường dẫn thật đã resolve. Nếu skill
 > chạy với cwd = Design root thì `{DESIGN_ROOT}` = `.`.
 >
-> Chưa có `{FE_ROOT}`/`{BE_ROOT}` cố định — `src/FE/` và `src/BE/` hiện đang rỗng (chưa chọn stack).
-> Live source của từng project lấy từ chính `source_paths` trong `README.md` của project đó.
+> Live source của từng project lấy từ chính `source_paths` trong `README.md` của project đó, không giả
+> định theo một framework marker cụ thể.
 
 ## Các bước thực hiện
 
@@ -58,9 +58,9 @@ Token luôn lấy từ live source, không bao giờ dựa vào trí nhớ hay s
 
 | Stack | Token thật nằm ở đâu |
 | --- | --- |
-| **PlatformManager** (Angular 20 + PrimeNG, từ 2026-08-22) | **Nguồn chân lý:** khối `:root { ... }` trong **`src/FE/src/styles.scss`** — gồm 3 thang `--sp-*` (spacing), `--fs-*` (font-size), `--radius-*`, cùng màu ngữ nghĩa `--bg`, `--card`, `--surface-2`, `--text`, `--muted`, `--line`, `--border-strong`, `--brand`, `--good`/`--warn`/`--bad` kèm cặp `-bg`, `--tonal-bg`, `--tonal-ink`, `--on-primary`, `--sidebar-w`, `--container-max-width`. **KHÔNG có** Style Dictionary, không file `*token*`, không pipeline sinh token — đừng đi tìm. Cùng file chứa global class dùng token qua `var(--…)` (`.card`, `.btn` + variant, `.badge`, `.action-btn`, `.field`, `.filters`, `.tablewrap`) — coi là global style thật. Đối chiếu thêm `src/FE/src/app/core/theme/platform-manager-preset.ts` (map token vào PrimeNG) và SCSS scoped của component để bắt token dùng-mà-chưa-khai. Chart: `modules/dashboard/components/trend-chart/` đọc custom property qua `readCssVar()` — **kiểm rồi hãy ghi**, đừng mặc định "None". |
+| **PlatformManager** | **Nguồn token: `doc/Design/Frontend/PlatformManager/Tokens/`**, code đuổi theo — chiều đã chốt, đọc `doc/huong_dan/wiki-core/fe/04-design-token-system.md` §Chiều. Khi trích từ live source: **phải đọc đủ MỌI nơi khai màu**, không chỉ một — danh sách nơi khai và bẫy "sửa một nơi quên nơi kia" nằm ở `doc/huong_dan/wiki-core/fe/04-design-token-system.md` §"Mọi nơi khai màu phải khớp nhau" + `doc/Design/CLAUDE.md` Core Principle 4; **đừng dựng lại danh sách đó ở đây** — bản chép sẽ thiếu một file ngay lần code thêm nơi khai thứ tư. Cộng SCSS scoped của component để bắt token dùng-mà-chưa-khai. Tên token/global class **đọc từ nguồn rồi ghi**, đừng chép từ đây hay từ lượt trước. **KHÔNG có** Style Dictionary hay pipeline sinh token — đừng đi tìm. Chart: kiểm `src/FE/package.json` và grep `chart` trong `src/FE/src/app` rồi hãy ghi, đừng mặc định `None`. |
 
-- Trích xuất thêm bảng màu chart ở nơi app thực sự có chart; PlatformManager hiện không có thư viện chart nào — ghi `None — app has no charts` trong `Tokens/colors.md`.
+- Trích xuất thêm bảng màu chart từ nơi app vẽ chart. Đừng mặc định `None` — kiểm `src/FE/package.json` và grep `chart` trong `src/FE/src/app` trước, và đối chiếu `Tokens/colors.md` hiện có.
 - Nếu có truyền `[category]`, chỉ extract đúng category đó; giữ nguyên các file còn lại.
 
 ### 4. Ghi artifact & lint

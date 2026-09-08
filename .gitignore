@@ -1,0 +1,36 @@
+# Bản prototype giao diện dùng để sửa tay tại chỗ. KHÔNG phải nguồn chính thức —
+# nguồn nằm ở doc/Design/Frontend/PlatformManager/Prototypes/ và được theo dõi bởi git.
+# Giữ ngoài repo để không tạo nguồn giao diện thứ hai (.claude/CLAUDE.md §5, §7).
+/Prototype/
+
+# ── Loại trừ có chủ đích, chốt 2026-09-08 ────────────────────────────────────
+# Bốn mục dưới đây KHÔNG phải rác build (rác build đã được .gitignore của từng
+# khu lo: src/BE/.gitignore, src/FE/.gitignore). Chúng là file thật, chạy được,
+# nhưng cố ý không thuộc repo. Ghi lý do ở đây để lần sau không ai "dọn dẹp"
+# bằng cách thêm chúng vào.
+
+# Dữ liệu DTI thật của một địa phương (mã, chỉ tiêu, điểm tự đánh giá, điểm thẩm
+# định). Đưa vào git là đưa dữ liệu tổ chức thật vào lịch sử repo — xoá sau
+# không gỡ được khỏi history. Cần mẫu để phát triển thì dựng file ẩn danh.
+/spec/DTI_CanGiuoc_2026-08-11.csv
+
+# Ứng dụng HTML một file, cùng mục đích với /Prototype/ ở trên: bản dựng để đối
+# chiếu tay, không phải nguồn. Nguồn giao diện là doc/Design/ (§7).
+/spec/DTI_Weekly_App_STANDALONE.html
+
+# Script thao tác DB thủ công trên máy lập trình viên. Đường dựng DB chính thức
+# là doc/db-khoi-tao.sql + `dotnet run --project src/BE/PlatformManager.Api -- --seed`
+# (xem doc/contracts/auth.md). Riêng db-go-module-dti.sql thuộc module DTI đã gỡ.
+/scripts/db-apply.sql
+/scripts/db-go-module-dti.sql
+
+# 🛑 HAI FILE DƯỚI ĐÂY CỐ Ý *KHÔNG* BỊ LOẠI — đừng thêm vào danh sách trên:
+#   scripts/fe-gate.sh                  — là cổng FE (.claude/CLAUDE.md §8)
+#   scripts/seed-role-permissions.sql   — hạng mục đã chốt 2026-08-27 và đã giao
+#     2026-08-30, được 6 chỗ trong doc viện dẫn, trong đó
+#     doc/huong_dan/wiki-core/be/13-core-data-migration.md dùng chính sự tồn tại
+#     của nó làm tiêu chí PASS. Loại nó ra là làm tiêu chí đó sai với mọi người
+#     clone repo. (Cân nhắc và giữ lại 2026-09-08.)
+
+# Cấu hình triển khai cục bộ, chưa phải bản dùng chung cho môi trường thật.
+/nginx.conf

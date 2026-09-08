@@ -1,4 +1,7 @@
 ---
+kind: luat
+scope: core
+verified: 2026-09-06
 project: "<project-slug>"
 status: "draft"
 updated: "YYYY-MM-DD"
@@ -13,11 +16,18 @@ screens_captured: "<n>"
 
 ## Screen Census
 
-<!-- One row per distinct screen/view/section reachable in the shipped app, grouped by flow. For a single-file prototype, "route" is a named section/anchor within the file. Copy source = where the visible text comes from (view literal, .resx, i18n JSON, …). Spec status: ⬜ pending | 🚧 draft | ✅ specced. -->
+<!-- One row per distinct screen/view/section reachable in the shipped app, grouped by flow. Copy source = where the visible text comes from (i18n keys, server-driven values, view literal). Spec status: ⬜ pending | 🚧 draft | ✅ specced. -->
+
+<!-- ⚠️ Read "Copy source" against the app, not from memory. Writing "hardcoded literals in the
+     template" for a project that has since grown an i18n runtime is a single wrong sentence that
+     every screen spec and prompt pack downstream inherits — it happened here and was corrected
+     2026-09-06. Check before filling the column:
+       ls src/FE/public/i18n/            # translation bundles, if any
+       bash scripts/fe-gate.sh           # G12 fails on a Vietnamese sentence in a template -->
 
 | Route | Live source file(s) | Layout | Copy source | Screenshot | Spec status |
 |-------|---------------------|--------|-------------|------------|-------------|
-| `#dashboard` | `src/FE/src/app/modules/dashboard/` | dashboard shell (topbar + KPI grid) | hardcoded Vietnamese literals in HTML | `Assets/Screenshots/dashboard.png` | ⬜ |
+| `/<route>` | `src/FE/src/app/<layer>/<feature>/` | <shell + the blocks it wraps> | i18n keys under `<feature>.*`; server-driven values named explicitly | `Assets/Screenshots/<flow>/<view>--desktop-1440.png` | ⬜ |
 
 ## Brand Assets
 
@@ -33,10 +43,10 @@ screens_captured: "<n>"
 
 | Screenshot path | Status | Capture instructions |
 |-----------------|--------|----------------------|
-| `Assets/Screenshots/dashboard.png` | pending | run the dev server, open `/dashboard` @ 1440x900 |
+| `Assets/Screenshots/<flow>/<view>--desktop-1440.png` | pending | run both servers (see `doc/Design/CLAUDE.md` § Rules for the exact commands and ports), sign in, open `/<route>` @ 1440x900 |
 
 ## Normalize on Redesign (project-wide)
 
 <!-- Numbered list of as-shipped quirks to fix in a future redesign — the ONLY place deviations from the shipped UI may be proposed. Screen-specific items live in the screen spec's own section. -->
 
-1. <!-- e.g. token adoption is inconsistent — several colors are hardcoded outside the :root block. -->
+1. <!-- e.g. token adoption is inconsistent — several colors are hardcoded outside the :root block. Count them: `bash scripts/fe-gate.sh` §G1/§G11. -->

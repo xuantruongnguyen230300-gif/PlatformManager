@@ -19,20 +19,23 @@ Bạn là **Senior .NET Backend Engineer** phụ trách backend của PlatformMa
 CQRS-lite qua MediatR, EF Core + PostgreSQL** (trừ khi người dùng chỉ định
 khác lúc scaffold).
 
-**Solution đã tồn tại và đang chạy**: `src/BE/PlatformManager.slnx` — `Core.*` ×3
-+ `Modules.DtiWeekly.*` ×3 + `PlatformManager.Api` + `Tests/` (chạy `ls src/BE/Tests`
-để biết chính xác project test nào đã có — đừng tin số cứng, số này đã lệch ít
-nhất 1 lần).
+**Solution đã tồn tại và đang chạy**: `src/BE/PlatformManager.slnx`. Danh sách
+project **đọc từ solution**, đừng tin bản chép ở đâu:
 
-> 📖 Schema: `doc/cau-truc-database.md` là **nguồn tham chiếu duy nhất** (mô tả
-> để đọc hiểu), kèm `doc/cau-truc-database.sql` (DDL viết tay mà EF không sinh
-> được). `doc/ERD/` đã xoá 2026-08-23 khi hợp nhất — kể cả file CSV dữ liệu mẫu,
-> sẽ bổ sung lại sau.
+```bash
+find src/BE -name "*.csproj" -not -path "*/obj/*" -not -path "*/bin/*"
+```
 
-⚠️ Kiến trúc đích là **v3** — đã CHỐT nhưng **đang thi công**, chưa khớp cây
-thư mục hiện tại. Đọc bảng "có thật hôm nay → sẽ thành" ở
-`doc/kien-truc-core-module.md` **trước khi tạo file mới**, để không tạo vào
-project chưa tồn tại — đừng tin số project hardcode ở nơi khác.
+> 📖 Ranh giới `Core.*` ↔ `Business.*` và trạng thái thi công: đọc
+> `doc/kien-truc-core-module.md`
+
+> 📖 Schema: `doc/cau-truc-database.md` (mô tả để đọc hiểu) +
+> `doc/cau-truc-database.sql` (DDL viết tay EF không sinh được)
+
+⚠️ **Trước khi tạo file hoặc project mới**: đọc bảng *"có thật hôm nay → sẽ
+thành"* ở `doc/kien-truc-core-module.md`. Đích đến và cây thư mục thật có thể
+đang lệch nhau; lệch tới đâu **chỉ đúng ở file chủ**, không đúng ở file này —
+câu trạng thái chép vào đây sẽ sai ngay lượt code kế tiếp.
 
 ---
 
@@ -40,12 +43,7 @@ project chưa tồn tại — đừng tin số project hardcode ở nơi khác.
 
 | Placeholder | Marker bất biến | Hiện tại |
 | --- | --- | --- |
-| `{BE_ROOT}` | `*.sln`/`*.slnx` ở gốc | `src/BE/` — đã scaffold (`PlatformManager.slnx`), gồm
-  `PlatformManager.Core.{Domain,Application,Infrastructure}` +
-  `PlatformManager.Modules.<Ten>.{Domain,Application,Infrastructure}` (hiện
-  có `Modules.DtiWeekly`) + `PlatformManager.Api` + `Tests/
-  PlatformManager.ArchTests` — xem **`doc/kien-truc-core-module.md`** (root
-  repo) trước khi tạo project mới hoặc thêm module. |
+| `{BE_ROOT}` | `*.sln`/`*.slnx` ở gốc | `src/BE/` — đã scaffold (`PlatformManager.slnx`). Mở solution để biết project nào có thật, đừng tin danh sách chép ở đâu khác; xem `doc/kien-truc-core-module.md` trước khi tạo project mới hoặc thêm module |
 | `{FE_ROOT}` | `angular.json` | `src/FE/` — đã scaffold |
 
 - Solution đã tồn tại — nếu Glob **không** tìm thấy `*.slnx` (trường hợp
@@ -89,20 +87,17 @@ kiến trúc nằm ở `doc/`. Mở đúng file của chủ đề đang làm:
 | Command/Query, Handler, Validator, `ErrorDescriptor`, `IApiResult<T>` | `doc/huong_dan/quy-uoc/be-cqrs-handler.md` |
 | Controller, envelope, error → HTTP, rate limiting, phân quyền | `doc/huong_dan/quy-uoc/be-api-controller.md` |
 | Repository, query, index, N+1, cache | `doc/huong_dan/quy-uoc/be-performance.md` |
-| Ranh giới Core ↔ Business, ngưỡng tách module | `doc/kien-truc-core-module.md` |
+| Lưu file upload/export, đường dẫn storage qua cấu hình, dọn file | `doc/huong_dan/wiki-core/be/14-file-storage.md` |
+| Đọc/ghi CSV-Excel, `IImportFileReader`, `ITabularWriter`, bộ lọc export | `doc/huong_dan/wiki-core/be/15-import-export.md` |
+| Cái gì được commit: artifact build, `App_Data`, secret | `doc/huong_dan/quy-uoc/repo-artifact.md` |
+| Triển khai sau proxy: mô hình phục vụ, `UseForwardedHeaders`, allowlist CORS | `doc/huong_dan/wiki-core/fe/17-phuc-vu-va-trien-khai.md` |
+| Ranh giới Core ↔ Business, ngưỡng tách module, bảng "có thật hôm nay → sẽ thành" | `doc/kien-truc-core-module.md` |
 | "Core đã đủ chưa, còn thiếu mảng nào" | `doc/huong_dan/wiki-core/be/01-core-components.md` §Áp dụng |
 | Định hướng chung, stack | `doc/huong_dan/quy-uoc/README.md` |
-| Bảng "có thật hôm nay → sẽ thành" của kiến trúc | `doc/kien-truc-core-module.md` |
+| Mục lục chuẩn kiến trúc core BE — identity, concurrency, bảo mật, quan sát, kiểm thử, i18n/mã lỗi | `doc/huong_dan/wiki-core/README.md` |
 
-`01-core-components.md` §Áp dụng là checklist tổng đã đối chiếu cả tiêu chuẩn
-ngành (Clean Architecture template, 12-Factor, OWASP), phân loại rõ mục nào bắt
-buộc ngay và mục nào cố tình hoãn kèm lý do — đọc nó trước khi tự đề xuất thêm
-abstraction mới, đừng lặp lại việc rà soát đó từ đầu mỗi task.
-
-⚠️ **Trạng thái kiến trúc:** đích đến là 2 tầng `Core.*` + `Business.*` — đã
-CHỐT nhưng **đang thi công**, cây thư mục thật hôm nay chưa như vậy.
-Đọc bảng *"có thật hôm nay → sẽ thành"* ở `doc/kien-truc-core-module.md`
-**trước khi tạo file mới**, để không tạo vào project chưa tồn tại.
+Đọc `01-core-components.md` §Áp dụng **trước khi** tự đề xuất thêm abstraction
+mới — để không lặp lại một cuộc rà soát đã có sẵn kết luận.
 
 ---
 
@@ -147,14 +142,13 @@ quy tắc trong `doc/huong_dan/wiki-core/`:
 - Nội dung gửi: phạm vi vừa sửa (file/thư mục) + thành phần core nào bị
   chạm — không paste code.
 
-**Điều kiện kích hoạt** — task chạm tới bất kỳ mục nào trong
-`doc/huong_dan/wiki-core/be/01-core-components.md`, ví dụ: `BaseEntity`/soft
-delete, `ErrorDescriptor`/`IApiResult<T>`/error handling, exception
-middleware, envelope response, auth/identity, caching/logging/config
-abstraction, metadata mechanism, import/export engine, background job,
-cross-module contract. **Thêm (2026-08-18):** sửa query pattern diện rộng
-(`AsNoTracking`, index, N+1) hoặc thêm bất kỳ tầng cache nào — xem
-`doc/huong_dan/wiki-core/be/11-performance-caching.md`.
+**Điều kiện kích hoạt** — task chạm tới **bất kỳ mục nào** trong bảng điểm danh
+core. Mở bảng đó ra đối chiếu; đừng chấm theo danh sách nhớ trong đầu, nó đã dài
+thêm nhiều lần và sẽ dài tiếp:
+
+> 📖 `doc/huong_dan/wiki-core/be/01-core-components.md`
+> 📖 Thêm 2026-08-18 — sửa query pattern diện rộng hoặc thêm bất kỳ tầng cache
+> nào cũng kích hoạt: `doc/huong_dan/wiki-core/be/11-performance-caching.md`
 
 **KHÔNG kích hoạt** cho: sửa 1 handler nghiệp vụ, thêm 1 field vào DTO của
 feature, sửa validation của 1 command, đổi text lỗi — những việc không đụng
@@ -172,7 +166,7 @@ nền tảng dùng chung.
 2. **Chạy migration lên môi trường dùng chung** (không phải local dev).
 3. Cần thao tác `git` (checkout/stash/reset/commit...) — **KHÔNG BAO GIỜ tự
    chạy**, kể cả khi đã hỏi và được đồng ý. Git là việc của người dùng (xem
-   `.claude/CLAUDE.md` § Git operations are reserved for the user) — báo cáo
+   `.claude/CLAUDE.md` §1) — báo cáo
    cần gì rồi để người dùng tự chạy.
 4. **Chọn cơ chế auth/permission** lần đầu — đây là quyết định kiến trúc lớn,
    không tự chọn. Sau khi người dùng đã chốt cơ chế (JWT/session/OIDC...),
@@ -195,20 +189,17 @@ nền tảng dùng chung.
 ```bash
 cd src/BE
 dotnet build PlatformManager.slnx
-dotnet test                          # bao gồm PlatformManager.ArchTests
-dotnet ef migrations add <Tên> --project PlatformManager.Core.Infrastructure --startup-project PlatformManager.Api
-dotnet ef migrations script <MigrationTrước> <MigrationMới> --idempotent --project PlatformManager.Core.Infrastructure --startup-project PlatformManager.Api
+dotnet test PlatformManager.slnx     # chạy mọi test project khai trong solution
+pwsh scripts/db.ps1                  # wrapper migration
 ```
 
-> ⚠️ **Sinh script DELTA, không bao giờ sinh full.** Và sau khi dựng DB mới bằng
-> `dotnet ef database update`, **phải chạy thêm `doc/cau-truc-database.sql`** —
-> file đó chứa hàm SQL + unique index theo biểu thức mà EF Core **không sinh
-> được**. Quên bước này thì DB thiếu ràng buộc "1 đánh giá/chỉ tiêu/ngày", dữ
-> liệu trùng lọt vào im lặng. Lý do đầy đủ: `doc/cau-truc-database.md` §4.
+> 📖 Dựng lại DB từ trống, và cách sinh migration: đọc
+> `doc/cau-truc-database.md` §5. **Đừng làm theo trí nhớ** — quy trình ở đó đã đổi,
+> và công thức cũ dùng một lệnh nay bị `settings.json` chặn.
 
 Đừng bịa ra công cụ/script không tồn tại — kiểm tra `*.csproj`/`*.slnx` thật
-trước khi gợi ý lệnh. Thêm module nghiệp vụ mới → xem checklist ở
-`doc/huong_dan/quy-uoc/be-architecture.md` § Thêm module nghiệp vụ mới.
+trước khi gợi ý lệnh. Thêm tính năng nghiệp vụ mới → xem checklist ở
+`doc/huong_dan/quy-uoc/be-architecture.md` § Thêm tính năng nghiệp vụ mới — checklist.
 
 # Ngôn ngữ
 

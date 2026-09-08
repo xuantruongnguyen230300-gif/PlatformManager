@@ -1,0 +1,61 @@
+@if (showSearch()) {
+  <div class="input-icon search">
+    <i class="pi pi-search"></i>
+    <input
+      type="search"
+      [placeholder]="searchPlaceholder() || ('shared.toolbar.searchPlaceholder' | translate)"
+      [attr.aria-label]="searchAriaLabel() || ('shared.toolbar.searchAriaLabel' | translate)"
+      [disabled]="searchDisabled()"
+      [value]="searchValue()"
+      (input)="onSearchInput($event)"
+    />
+  </div>
+}
+
+@if (hasFilter()) {
+  <details #filterEl class="filter">
+    <summary class="btn">
+      <i class="pi pi-filter"></i> {{ 'shared.toolbar.filter' | translate }}
+      @if (filterCount() > 0) {
+        <span class="filter-count">{{ filterCount() }}</span>
+      }
+    </summary>
+    <div class="filter-panel">
+      <ng-content select="[filter]" />
+      <div class="filter-foot">
+        <button type="button" class="btn" (click)="onFilterClear()">
+          {{ filterClearLabel() || ('shared.toolbar.clearFilter' | translate) }}
+        </button>
+        <button type="button" class="btn primary" (click)="onFilterApply()">
+          {{ filterApplyLabel() || ('shared.toolbar.applyFilter' | translate) }}
+        </button>
+      </div>
+    </div>
+  </details>
+}
+
+@if (showSeparator()) {
+  <div class="toolbar-sep"></div>
+}
+
+@if (chips().length > 0) {
+  <div class="filter-chips">
+    @for (chip of chips(); track chip.Key) {
+      <span class="filter-chip">
+        {{ chip.Label }}
+        <button
+          type="button"
+          class="icon-btn"
+          [attr.aria-label]="'shared.toolbar.removeFilter' | translate: { label: chip.Label }"
+          (click)="onChipRemove(chip.Key)"
+        >
+          <i class="pi pi-times"></i>
+        </button>
+      </span>
+    }
+  </div>
+}
+
+<div class="toolbar-actions">
+  <ng-content select="[actions]" />
+</div>

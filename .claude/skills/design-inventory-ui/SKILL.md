@@ -38,8 +38,8 @@ di chuyển hoặc đặt tên khác. Vì vậy **KHÔNG hardcode `doc/Design/`*
 > Mọi `{DESIGN_ROOT}/...` bên dưới là **placeholder** — thay bằng đường dẫn thật đã resolve. Nếu skill
 > chạy với cwd = Design root thì `{DESIGN_ROOT}` = `.`.
 >
-> Chưa có `{FE_ROOT}`/`{BE_ROOT}` cố định — `src/FE/` và `src/BE/` hiện đang rỗng (chưa chọn stack).
-> Live source của từng project lấy từ chính `source_paths` trong `README.md` của project đó.
+> Live source của từng project lấy từ chính `source_paths` trong `README.md` của project đó, không giả
+> định theo một framework marker cụ thể.
 
 ## Các bước thực hiện
 
@@ -58,12 +58,12 @@ di chuyển hoặc đặt tên khác. Vì vậy **KHÔNG hardcode `doc/Design/`*
 
 - **Route & view** — route/page/section theo từng stack. **PlatformManager (từ 2026-08-22):** `src/FE/` là app **Angular 20** với router thật — census theo đúng route lazy khai ở `src/FE/src/app/app.routes.ts` (bảng đầy đủ: `doc/huong_dan/quy-uoc/fe-routing-guard.md` §1 — đọc file routes/bảng đó thay vì tin số cứng ở đây). Dialog trong trang (`<dialog>`, tab) **không** phải route riêng — ghi chú chúng trong cột Layout của chính route chứa nó.
 - **Layout & shell** — layout dùng chung, master page, app shell (với PlatformManager: cấu trúc `.topbar` / `main` / `.layout` trong cùng file).
-- **Nguồn copy** — nguồn localization. **PlatformManager:** chưa có framework i18n nào — toàn bộ copy là tiếng Việt hardcode trực tiếp trong `.html`; đọc template để lấy copy verbatim.
+- **Nguồn copy** — nguồn localization. Đọc template để lấy copy verbatim. Trạng thái i18n đổi theo thời gian: tra `doc/huong_dan/wiki-core/fe/08-i18n.md` trước khi ghi cột localization key, đừng chép lại câu cũ.
 - **Brand asset** — mọi ảnh mà UI tham chiếu; copy các ảnh brand được tham chiếu vào `Assets/Brand/` **giữ nguyên tên file gốc** và ghi một dòng manifest cho từng ảnh. PlatformManager hiện không tham chiếu ảnh brand nào — ghi rõ "None yet" nếu đúng vậy, đừng bịa ra.
 
 ### 4. Screenshot
 
-- Probe target: **PlatformManager cần CẢ HAI server** — API `dotnet run --project src/BE/PlatformManager.Api` (→ `:5027`) và FE `npm start` trong `src/FE` (→ `:4200`); phần lớn màn cần đăng nhập mới tới được. Dùng chrome-devtools MCP `navigate_page` tới dev URL rồi `take_screenshot`. Chụp vào `Assets/Screenshots/<flow-stem>/`, đặt tên `<view>[--state][--viewport].png` (viewport mặc định = `desktop-1440`).
+- Probe target: **PlatformManager cần CẢ HAI server** — công thức khởi chạy đầy đủ (URL, dải port được CORS cho phép, cách dựng DB mới) ở `doc/Design/CLAUDE.md` § Rules; đừng chép port cứng vào đây. Phần lớn màn cần đăng nhập mới tới được. Dùng chrome-devtools MCP `navigate_page` tới dev URL rồi `take_screenshot`. Chụp vào `Assets/Screenshots/<flow-stem>/`, đặt tên `<view>[--state][--viewport].png` (viewport mặc định = `desktop-1440`).
 - **Chính sách số lượng ảnh (chốt 2026-08-22):** mặc định chụp **1 ảnh desktop cho MỖI màn** — đủ trả lời "màn này trông ra sao" với chi phí thấp. Biến thể trạng thái/viewport chỉ chụp khi có người thật sự cần ca đó; số còn lại ghi `pending` kèm hướng dẫn tái lập trong bảng Screenshot Manifest. Trước đây danh sách phình tới 40 ảnh cho 5 màn mà không ai chụp — `pending` hàng loạt thì vô dụng ngang không có.
 - **Không bao giờ ghi credential** vào bất kỳ artefact design nào, kể cả hướng dẫn chụp.
 - Nếu KHÔNG chụp được, ghi dòng "pending" trong Screenshot Manifest kèm đúng lệnh khởi chạy/đường dẫn — **không bao giờ block vì screenshot**.

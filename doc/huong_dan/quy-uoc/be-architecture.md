@@ -1,3 +1,9 @@
+---
+kind: luat
+scope: core
+verified: 2026-09-06
+---
+
 # Architecture — src/BE
 
 > Xem trước **`doc/kien-truc-core-module.md`** (root repo) để hiểu lý do và
@@ -6,11 +12,14 @@
 
 ## Project layout & dependency direction
 
-> 🚧 **Layout dưới đây là ĐÍCH ĐẾN, chưa phải hiện trạng.** Hôm nay repo theo mô
-> hình `Modules.DtiWeekly.*` — chạy `find src/BE -iname *.csproj` để biết số
-> project chính xác hiện tại thay vì tin số cứng (đã lệch ít nhất 1 lần: 8 → 10
-> khi 2 project test mới được thêm 2026-08-24). Đọc bảng *"có thật hôm nay → sẽ
-> thành"* ở đầu `doc/kien-truc-core-module.md` **trước khi tạo file mới**.
+> 🚧 **Layout dưới đây là ĐÍCH ĐẾN, chưa phải hiện trạng.** Từ 2026-08-29 repo
+> **không còn module nghiệp vụ nào** — module duy nhất (`Modules.DtiWeekly.*`) đã
+> xoá để xây lại, và bản thân thư mục `src/BE/Modules/` **đã xoá 2026-09-08**
+> (lý do + lệnh kiểm lại: `doc/kien-truc-core-module.md:42`). Chạy
+> `find src/BE -iname *.csproj` để biết số project chính xác hiện tại thay vì tin
+> số cứng (đã lệch ít nhất 1 lần: 8 → 10 khi 2 project test mới được thêm
+> 2026-08-24). Đọc bảng *"có thật hôm nay → sẽ thành"* ở đầu
+> `doc/kien-truc-core-module.md` **trước khi tạo file mới**.
 
 > **Chỉ 2 tầng ngang hàng: `Core.*` và `Business.*`** — với PlatformManager, nghiệp vụ là 1 khối
 > thống nhất (DTI Weekly chỉ là tính năng đầu tiên trong `Business.*`), không phải nhiều domain
@@ -18,8 +27,28 @@
 >
 > **Nhưng `Core.*` KHÔNG được biết tên đó.** Corebase sẽ tái sử dụng ở nhiều dự án khác (chốt
 > 2026-08-23), và dự án khác có thể đặt tên tầng nghiệp vụ là `Modules.<Tên>.*`. Vì vậy Core chỉ
-> thấy **`IModuleRegistrar`**, không hardcode chuỗi `"Business"` ở bất kỳ đâu — có ArchTest
-> `Core_MustNotKnowBusinessName` canh. Lý do đầy đủ: `doc/kien-truc-core-module.md`.
+> thấy **`IModuleRegistrar`**, không hardcode chuỗi `"Business"` ở bất kỳ đâu.
+> Lý do đầy đủ: `doc/kien-truc-core-module.md`.
+>
+> **Hai vế, nay CÙNG trạng thái** (vế 1 đối chiếu 2026-09-06, vế 2 đối chiếu 2026-09-08)**:**
+>
+> | Vế | Trạng thái |
+> |---|---|
+> | ArchTest canh chuỗi `"Business"` trong mã Core | ✅ **CÓ THẬT** — `CoreSource_MustNotContain_BusinessNameStringLiteral` (`src/BE/Tests/PlatformManager.ArchTests/CoreMustNotKnowBusinessNameTests.cs:80`), kèm **3** test đối chứng (`:162`, `:192`, `:211`). Thêm cả `Core_MustNotReference_AnyModulesAssembly` (`CoreModuleBoundaryTests.cs:32`) canh ở mức assembly |
+> | Seam `IModuleRegistrar` | ✅ **CÓ THẬT (2026-09-08)** — thi công đủ 3 đường (DI · cấu hình EF · ApplicationPart) + ArchTest canh. Bảng neo `file:dòng` đầy đủ nằm ở `doc/kien-truc-core-module.md` §`IModuleRegistrar`; đây là file chủ của chủ đề, đừng chép bảng đó ra chỗ này |
+>
+> > **🔄 LẬT 2026-09-06.** Bản trước gộp hai vế này vào một nhãn `🚧 "Cả hai đều là ĐÍCH ĐẾN,
+> > chưa thi công"` (đối chiếu 2026-08-27) và gọi ArchTest bằng tên `Core_MustNotKnowBusinessName`
+> > — **không có test nào mang tên đó**. Hai lỗi ngược chiều nhau trong một câu: gate đã có thì
+> > bảo là chưa, còn tên để đi tìm nó thì sai nên không tra ra được.
+> >
+> > **🔄 LẬT LẦN HAI 2026-09-08 — cùng khuôn, ngược chiều.** Ô "Seam `IModuleRegistrar`" ở trên
+> > mang nhãn `📐 CHƯA CÓ` kèm bằng chứng "grep ra 3 dòng, cả ba trong một file test". Seam được
+> > thi công 2026-09-08 và ô này không đổi theo, nên bằng chứng đó chết ngay hôm sau: chạy lại
+> > **chính lệnh grep ấy** ra hàng chục dòng ở nhiều file sản phẩm. Bài học lặp lại y hệt lần
+> > trước: **trạng thái thi công không thuộc file này**, nó thuộc file chủ
+> > `doc/kien-truc-core-module.md`. Ở đây chỉ giữ một dòng trỏ đường — chép trạng thái ra file thứ
+> > hai là tự hẹn ngày nó sai.
 
 ```
 src/BE/
@@ -69,6 +98,51 @@ src/BE/
 ❌ *.Application         → Microsoft.EntityFrameworkCore trực tiếp (DbContext/AsQueryable/Include) — luôn qua interface
 ❌ *.Application         → *.Persistence/*.Infrastructure (bất kỳ project nào)
 ❌ *.Application         → IConfiguration trực tiếp — dùng IOptions<T>
+                           (ĐÚNG 1 ngoại lệ đã khai đích danh, đọc ngay dưới khối này)
+```
+
+### Ngoại lệ DUY NHẤT của luật `*.Application ⇏ IConfiguration` — khai 2026-09-08
+
+Ngoại lệ này áp cho **đúng một chữ ký, gọi đúng tên**:
+`IModuleRegistrar.RegisterServices(IServiceCollection, IConfiguration)` —
+`src/BE/Core/PlatformManager.Core.Application/Modules/IModuleRegistrar.cs:44`.
+Không áp cho kiểu `IConfiguration` nói chung, không áp cho bất kỳ thành viên nào khác của
+`IModuleRegistrar`, không áp cho một chữ ký "tương tự" viết sau này.
+
+**Ranh giới phân biệt là THỜI ĐIỂM, không phải kiểu dữ liệu.** `RegisterServices` chạy lúc
+**composition** — khi `ServiceCollection` còn đang dựng, chưa có `ServiceProvider` nào, chưa có
+request nào. Ở đó `IConfiguration` là **tham số truyền qua**: `Core.Application` chỉ **khai kiểu**
+trong hợp đồng để mỗi tầng tự `Bind` `IOptions<T>` của **chính mình**; bản thân
+`Core.Application` **không đọc một giá trị cấu hình nào**. Đó là điều kiện của ngoại lệ, và nó
+đo được — xem lệnh nghiệm thu cuối mục.
+
+**Luật gốc nhắm vào ca khác hẳn, và ca đó vẫn CẤM TUYỆT ĐỐI:** handler / validator / service của
+`*.Application` nhận `IConfiguration` rồi đọc giá trị lúc chạy (`cfg["Foo"]`,
+`cfg.GetSection(...).Get<T>()`). Bằng chứng ngữ cảnh cho ý định đó nằm ngay ở §"Cấu hình —
+fail-fast validation" bên dưới: cả mục chỉ nói về `IOptions<T>` + `ValidateOnStart()`. Đọc config
+lúc chạy đi vòng qua toàn bộ cơ chế ấy — giá trị thiếu/sai không lộ ra lúc khởi động mà lộ ra ở
+request đầu tiên chạm tới, và handler đó thôi unit-test được nếu không dựng cấu hình thật.
+
+🛑 **Không lấy ngoại lệ này làm tiền lệ.** Nó **không** nới luật thành *"`IConfiguration` được
+phép ở Application nếu có lý do chính đáng"* — mọi lần vi phạm đều tự thấy mình có lý do chính
+đáng. Muốn có ngoại lệ thứ hai thì phải sửa **cả** mục này **và** ArchTest ở dưới; hai việc phải
+giải trình đó là cố ý, không phải thủ tục thừa.
+
+Cưỡng chế bằng máy, không bằng câu văn — hai luật, hai tầng khác nhau (đối chiếu 2026-09-08):
+
+| Canh gì | Test |
+| --- | --- |
+| `Core.Application` chỉ được reference **abstraction** cấu hình, không provider/binder nào | `Core_Application_MustNotReference_ConfigurationPackages_Beyond_Abstractions` (`src/BE/Tests/PlatformManager.ArchTests/LayerDependencyTests.cs:112`) |
+| Trong mã nguồn `Core.Application`, `IConfiguration` chỉ được xuất hiện ở **đúng file khai hợp đồng** | `CoreApplicationSource_MustNotMention_IConfiguration_OutsideRegistrarContract` (`LayerDependencyTests.cs:151`) |
+
+Luật thứ hai là luật thật sự chặn rủi ro tiền lệ: một handler nhận `IConfiguration` rồi dùng
+`cfg["Foo"]` **không** tạo tham chiếu package mới nào, nên luật thứ nhất không thấy nó.
+
+Nghiệm thu bằng tay — lệnh này phải in **đúng một** dòng, và dòng đó phải là chữ ký trong
+`Modules/IModuleRegistrar.cs`:
+
+```bash
+grep -rn 'IConfiguration' src/BE/Core/PlatformManager.Core.Application --include='*.cs'
 ```
 
 **Vì sao giữ luật này ngay từ đầu:** chi phí giữ layer sạch từ slice đầu
@@ -87,10 +161,10 @@ sự độc lập, xem `doc/kien-truc-core-module.md` § Khi nào tách thành m
 module cụ thể (vd dọn `CriteriaAssessment` cũ), **không** inject thẳng
 `ICriteriaAssessmentRepository` của module đó — vi phạm `Core.* → Business.*`
 cấm ở trên. Thay vào đó: khai interface hẹp ở `Core.Application` (vd
-`IAssessmentCleanupService`), để `Modules.DtiWeekly.Infrastructure` tự
+`IAssessmentCleanupService`), để `Modules.<Ten>.Infrastructure` tự
 implement, `Core.Infrastructure` chỉ biết interface. Đối chiếu VNR.Successor
 (đã áp dụng đúng mẫu này khi có ≥2 module) — xem
-[be/trien-khai/04-p3-platform-persistence.md §10](../wiki-core/be/trien-khai/04-p3-platform-persistence.md)
+[../../tham-khao-ngoai/vnr-successor/04-p3-platform-persistence.md §10](../wiki-core/../../tham-khao-ngoai/vnr-successor/04-p3-platform-persistence.md)
 cho thiết kế đầy đủ (`IBoundedContext`) nếu sau này cần enumerate nhiều
 module cùng lúc.
 
@@ -100,33 +174,77 @@ gửi thông báo — dựng cả hệ thống đa kênh (email/push/in-app) nh�
 bây giờ là phình to không cần thiết. Chỉ khai seam tối thiểu:
 
 ```csharp
-// Core.Application
+// Core.Application — nhận KHOÁ + THAM SỐ + ngôn ngữ, KHÔNG nhận chuỗi đã dựng xong
 public interface INotificationSender
 {
-    Task SendAsync(string to, string subject, string body, CancellationToken ct);
+    Task SendAsync(NotificationRequest request, CancellationToken ct);
 }
 // Core.Infrastructure — impl đầu tiên, đọc IOptions<SmtpOptions> (không IConfiguration trực tiếp)
 public sealed class SmtpNotificationSender(IOptions<SmtpOptions> options) : INotificationSender { ... }
 ```
 
-**Use case đầu tiên có thật, không phải hạ tầng chết:** 1 Hangfire recurring
-job quét `CriteriaAssessment.Deadline` sắp tới, gửi email nhắc qua
-`INotificationSender` — xem
-[`be/07-observability.md`](../wiki-core/be/07-observability.md)
-cho Hangfire setup. Lưu ý đã biết: user tự tạo qua CSV/Excel import
-(`UserLookupService.ResolveOrCreateByFullNameAsync`) có `Email = null` — job
-phải tự bỏ qua case này, không throw. FE **không cần thay đổi gì** cho use
-case này (email là kênh ngoài, không cần UI riêng).
+> **🔄 LẬT 2026-09-06 — chữ ký trong khối này đã lỗi thời.** Bản trước khai
+> `SendAsync(string to, string subject, string body, CancellationToken ct)`. Đổi
+> **2026-09-03** sang `SendAsync(NotificationRequest request, …)`
+> (`src/BE/Core/PlatformManager.Core.Application/Notifications/INotificationSender.cs:20`).
+> Lý do ghi ngay trong docstring của nó: chữ ký cũ nhận **chuỗi đã dựng xong**, buộc nơi gọi
+> tự chọn câu chữ trong khi nó là chỗ **ít biết nhất** về ngôn ngữ người nhận; và ba tham số
+> `to`/`subject`/`body` mang **hình dạng của email**, không tái dùng được cho in-app/SMS/Zalo
+> ZNS. Đổi được rẻ vì seam còn **0 consumer** — xem
+> [`../wiki-core/be/12-notifications.md`](../wiki-core/be/12-notifications.md) §0.
+
+**Seam có thật, hiện thực có thật, nhưng CHƯA ĐƯỢC ĐĂNG KÝ** (đối chiếu 2026-09-06):
+`INotificationSender` + `SmtpNotificationSender` + `AddNotificationInfrastructure()` đều tồn
+tại ở Core, nhưng **không dòng nào gọi** `AddNotificationInfrastructure()` — chủ đích, lý do
+ghi thẳng trong `src/BE/PlatformManager.Api/Program.cs:177-185`: chưa có consumer nào, và bật
+lên sẽ làm app **không khởi động được** (`SmtpOptions.ValidateOnStart()` gặp `appsettings.json`
+thiếu section `Smtp`), kéo đỏ luôn toàn bộ integration test.
+
+Use case dự kiến khi bật: một Hangfire recurring job quét mốc hạn của dữ liệu nghiệp vụ, gửi
+email nhắc qua `INotificationSender` — xem
+[`be/07-observability.md`](../wiki-core/be/07-observability.md) cho Hangfire setup. Lưu ý đã
+biết và vẫn còn hiệu lực: user tự tạo qua import
+(`IUserLookupService.ResolveOrCreateByFullNameAsync`,
+`src/BE/Core/PlatformManager.Core.Application/Users/IUserLookupService.cs:19`) có
+`Email = null` — job phải tự bỏ qua case này, không throw. FE **không cần thay đổi gì** (email
+là kênh ngoài, không cần UI riêng).
+
+> **🔄 LẬT 2026-09-06.** Bản trước tiêu đề *"Use case đầu tiên **có thật**, không phải hạ tầng
+> chết"* và mô tả job quét `CriteriaAssessment.Deadline`. Entity đó đã xoá cùng module DtiWeekly
+> 2026-08-29, và recurring job ấy chưa bao giờ tồn tại — hôm nay Hangfire mới chỉ dùng
+> fire-and-forget và **không job nghiệp vụ nào** chạy trên nó. Đúng nghĩa đen, `INotificationSender`
+> hiện **đang là** hạ tầng chết; nói ngược lại là che mất điều kiện phải xử lý trước khi bật.
 
 ## Cấu hình — fail-fast validation
 
 **Nâng từ "chưa cần" lên "nên có sớm" khi chuyển sang giai đoạn product
-(2026-08-17).** Hiện `IConfiguration` không leak vào Application/Domain (đã
-xác nhận sạch) — nhưng phần đọc config ở Infrastructure/composition root
-cũng chưa có validate nào: 1 giá trị bắt buộc (connection string, SMTP host
+(2026-08-17).** Lý do khi đó: 1 giá trị bắt buộc (connection string, SMTP host
 khi Notification implement) gõ sai/thiếu trong `appsettings.json` chỉ lộ ra
 **lúc runtime chạm tới** (vd request đầu tiên gọi tới `SmtpNotificationSender`),
 không phải lúc khởi động — chậm hơn nhiều so với biết ngay khi `dotnet run`.
+
+Trạng thái hôm nay (đối chiếu 2026-09-08):
+
+- **`IConfiguration` KHÔNG còn tuyệt đối vắng mặt khỏi `Core.Application`** — nó xuất hiện đúng
+  **1** lần, ở chữ ký `IModuleRegistrar.RegisterServices`
+  (`src/BE/Core/PlatformManager.Core.Application/Modules/IModuleRegistrar.cs:44`), và
+  `Core.Application` reference `Microsoft.Extensions.Configuration.Abstractions`
+  (`src/BE/Core/PlatformManager.Core.Application/PlatformManager.Core.Application.csproj:18`).
+  Đây là **ngoại lệ đã khai** ở §"Ngoại lệ DUY NHẤT…" phía trên, có 2 ArchTest giữ cho nó không
+  lan ra. `*.Domain` thì vẫn tuyệt đối sạch — `Core.Domain` có **zero** package reference, canh
+  bởi `LayerDependencyTests.cs:47`.
+- Vế "chưa có validate nào" cũng không còn đúng: `ValidateOnStart()` nay là **luật có gate** —
+  mọi `*Options` mang `[Required]` phải có một đường gọi `ValidateOnStart()`, canh bởi
+  `OptionsValidateOnStartTests.EveryRequiredOptions_HasA_ValidateOnStart_CodePath`
+  (`src/BE/Tests/PlatformManager.ArchTests/OptionsValidateOnStartTests.cs:36`).
+
+> **🔄 SỬA 2026-09-08.** Bản trước mở đầu bằng *"Hiện `IConfiguration` không leak vào
+> Application/Domain (đã xác nhận sạch) — nhưng phần đọc config ở Infrastructure/composition
+> root cũng chưa có validate nào"*. Cả hai vế đều đã hết hạn, và vế đầu hết hạn theo đúng kiểu
+> nguy hiểm nhất: nó tuyên bố **sạch tuyệt đối** đúng vào lúc có một ngoại lệ được cố ý mở
+> (seam `IModuleRegistrar` thi công 2026-09-08). Người đọc câu cũ sẽ kết luận code đang **vi
+> phạm** luật ở khối trên, rồi hoặc đi "sửa" một thiết kế đã chốt, hoặc mất niềm tin vào cả hai
+> tài liệu. Ngoại lệ có khai thì phải khai ở **cả hai** chỗ nói về nó.
 
 ```csharp
 public sealed class SmtpOptions
@@ -149,7 +267,70 @@ services.AddOptions<SmtpOptions>()
   deprecate) — `IOptions<T>` + `ValidateOnStart()` là đủ, thêm 1 tầng facade
   chỉ tạo thêm chỗ để lệch.
 
+### ✅ CÓ THẬT (đối chiếu 2026-09-05) — `Cors:AllowedOrigins` đã về đúng khuôn `IOptions<T>`
+
+Quyết định người dùng 2026-08-31, đã thi công. Trước đó có đúng một chỗ đọc cấu hình
+**không** đi qua `IOptions<T>` nên lọt khỏi luật ở mục trên: `Program.cs` đọc thẳng
+`configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? []`. Dấu `?? []` biến
+một cấu hình **thiếu** thành allowlist **rỗng**, mà allowlist rỗng chặn **mọi** origin —
+FE không gọi được một API nào, trong khi `/health` vẫn xanh và deploy vẫn báo thành công.
+
+Hôm nay đường đọc là `src/BE/PlatformManager.Api/Common/CorsPolicyOptions.cs`:
+
+| Thành phần | Ở đâu | Vai trò |
+|---|---|---|
+| `CorsPolicyOptions.AllowedOrigins` | `CorsPolicyOptions.cs:53` (thuộc tính `[Required]` ở `:48`, `[MinLength(1)]` ở `:50`) | Thông điệp lỗi nêu đích danh biến môi trường cần đặt |
+| `ConfigureDefaultCorsPolicy` | `CorsPolicyOptions.cs:64` | Phân giải **lười** qua DI, nên không có đường tắt nào nhận mặc định rỗng |
+
+> *(🔄 LẬT 2026-09-06: hai số cũ `:44`/`:58` đều lệch — `:44` là dấu `}` đóng khai báo, `:58`
+> nằm giữa thân `AddPolicy`. Cả hai vẫn nằm trong file nên cổng `check-docs.sh` §6 cho qua.)*
+
+Nghiệm thu — lệnh này phải **rỗng**, tức khuôn cũ đã biến mất hẳn:
+
+```bash
+grep -n 'GetSection("Cors:AllowedOrigins")' src/BE/PlatformManager.Api/Program.cs
+```
+
+Lập luận đã có sẵn trong dự án này, chỉ áp thêm một chỗ: docstring của
+`BootstrapOptions` viết *"một tài khoản quản trị với mật khẩu ai cũng đoán được còn
+tệ hơn hẳn một app từ chối khởi động."* Câu đó áp thẳng được — một app khởi động
+thành công rồi chặn sạch mọi request của người dùng còn tệ hơn một app dừng lại và
+nói thẳng nó thiếu gì.
+
+Ranh giới: **chỉ fail-fast ở Production.** `ValidateOnStart()` chỉ gắn ở Production;
+Development cố ý **không** fail-fast — để một máy chưa cấu hình xong vẫn boot được — và ở đó
+allowlist rỗng lộ ra ngay lời gọi API đầu tiên chứ không âm thầm.
+
+> **🔄 SỬA 2026-09-08 — vế "cấu hình sẵn trong repo" đã sai từ 2026-08-31.** Câu trên trước
+> đây viết *"Development vẫn chạy được với cấu hình sẵn trong repo"*. Repo **không** mang
+> sẵn cấu hình dev nào: `src/BE/.gitignore:20` (khuôn `appsettings.*.json`) loại
+> `appsettings.Development.json` ra, kiểm bằng `git ls-files src/BE/PlatformManager.Api` —
+> chỉ in `appsettings.json`, và file đó không có khoá `Cors`. Máy mới clone về vì vậy có
+> allowlist **rỗng** cho tới khi tự tạo cấu hình cục bộ; cách làm ở
+> [`repo-artifact.md`](repo-artifact.md) §1.1. Cùng câu sai này còn nằm trong chú thích
+> `CorsPolicyOptions.cs` và `Program.cs`, sửa cùng ngày — và vì phần chú thích đó dài thêm
+> 10 dòng, số dòng ở bảng trên cập nhật theo (`:38`/`:40`/`:43`/`:54` → `:48`/`:50`/`:53`/`:64`).
+
+> **🔄 LẬT 2026-09-05.** Bản trước mang nhãn `🚧` và trình bày khuôn cũ ở thì hiện tại
+> (*"Nó đọc thẳng `IConfiguration` và kết thúc bằng `?? []`"*), kèm một lệnh `grep` đưa ra
+> làm **bằng chứng của vấn đề**. Lệnh đó nay trả về rỗng — tức chính bằng chứng mà mục này
+> dựa vào đã tự bác bỏ nó.
+
+> 📖 Bối cảnh triển khai làm khoá này thành bắt buộc:
+> [`../wiki-core/fe/17-phuc-vu-va-trien-khai.md`](../wiki-core/fe/17-phuc-vu-va-trien-khai.md) §6
+
 ## `PlatformManager.Api` — host mỏng, composition root duy nhất
+
+> 📐 **Mục này mô tả ĐÍCH ĐẾN, cùng phạm vi với banner ở §"Project layout".** Hiện trạng
+> 2026-09-06: `Core.Api` và `Business.Api` **chưa tồn tại**, nên bốn controller đang sống
+> **trong chính host** (`src/BE/PlatformManager.Api/Controllers/`) và `Program.cs` không gọi
+> `AddApplicationPart` ở đâu cả. `AddCoreModule` thì có thật, nhưng chữ ký là
+> `AddCoreModule(builder.Configuration, requireBootstrapOptions: isSeedRun)`
+> (`Program.cs:126`) — tham số thứ hai quyết định luật fail-fast của `BootstrapOptions`, đừng
+> bỏ khi chép. `AddBusinessModule` chưa có gì để đăng ký.
+>
+> *(Thêm 2026-09-06: trước đây cả mục này không mang nhãn nào, nên câu "KHÔNG tự có controller
+> riêng" đọc như một luật đang bị vi phạm — trong khi thực ra nó là đích chưa tới.)*
 
 `Program.cs` đăng ký 2 tầng qua 2 extension method riêng, mỗi extension
 method tự gộp controller assembly `*.Api` của mình:
@@ -212,7 +393,12 @@ phải 1 "module" riêng).
 3. EF Configuration + repository implementation →
    `PlatformManager.Business.Persistence/`.
 4. Controller mới → `PlatformManager.Business.Api/Controllers/`.
-5. Kiểm tra ArchTest `Core_MustNotReference_Business` vẫn pass sau khi thêm.
+5. Chạy `dotnet test` — hai ArchTest canh ranh giới này là
+   `Core_MustNotReference_AnyModulesAssembly` (`CoreModuleBoundaryTests.cs:32`) và
+   `CoreSource_MustNotContain_BusinessNameStringLiteral` (`CoreMustNotKnowBusinessNameTests.cs:80`).
+
+   > *(Sửa 2026-09-06: bản trước gọi tên `Core_MustNotReference_Business` — không test nào mang
+   > tên đó, nên người làm theo checklist sẽ tra không ra rồi bỏ qua bước này.)*
 
 Chỉ khi tính năng đó thực ra là 1 **domain nghiệp vụ độc lập thật** (không
 chia sẻ entity/quy trình gì với `Business.*` hiện có) mới xem xét tách
@@ -264,7 +450,7 @@ thành luật ArchTest — không có gì thêm cần làm ngoài giữ nguyên 
 **OOP — encapsulation/abstraction/inheritance/polymorphism**:
 - *Encapsulation*: field nghiệp vụ `private set`, mutation qua method tên
   nghiệp vụ (`entity.Approve()`, không `entity.Status = ...`) — trừ 6 field
-  kỹ thuật `public set` của `BaseEntity` (lý do ở `entity-domain.md`).
+  kỹ thuật `public set` của `BaseEntity` (lý do ở [`be-entity-domain.md`](be-entity-domain.md)).
 - *Abstraction*: mọi phụ thuộc ra ngoài `*.Domain`/`*.Application` đi qua
   interface — không bao giờ `new SomeInfrastructureClass()` trực tiếp
   trong 2 tầng này.
@@ -283,9 +469,45 @@ thành luật ArchTest — không có gì thêm cần làm ngoài giữ nguyên 
   method, invariant.
 - Application: unit test handler với repository giả lập (in-memory hoặc
   mock) — test logic nghiệp vụ, không test EF Core thật ở tầng này.
-- Api: integration test gọi endpoint thật qua `WebApplicationFactory`, dùng
-  DB test (container hoặc in-memory tuỳ độ trung thực cần thiết).
-- `Tests/PlatformManager.ArchTests`: test kiến trúc (layer dependency, zero
-  package reference ở Domain, Core không reference Business, `*.Api` không
-  reference `*.Persistence`/`*.Infrastructure` trực tiếp) — chạy cùng
-  `dotnet test`, coi là gate bắt buộc trước khi báo hoàn thành 1 phase.
+- Api: integration test gọi endpoint thật qua `WebApplicationFactory`, dùng **Postgres thật
+  trong container** (`Testcontainers.PostgreSql` — `PostgresFixture`).
+  **`UseInMemoryDatabase` bị CẤM**, không phải "tuỳ độ trung thực cần thiết": provider
+  InMemory không có transaction, không có ràng buộc, không có index lọc, nên nó không chứng
+  minh được gì về hành vi thật. Luật đầy đủ:
+  [`../wiki-core/be/04-testing-strategy.md`](../wiki-core/be/04-testing-strategy.md).
+
+  > **🔄 LẬT 2026-09-06 — dòng này đang cho phép đúng thứ một gate ĐANG CHẶN.** Bản trước ghi
+  > *"dùng DB test (container hoặc **in-memory tuỳ độ trung thực cần thiết**)"*. `UseInMemoryDatabase`
+  > bị `BannedDependencyTests` quét mã nguồn và đánh đỏ
+  > (`src/BE/Tests/PlatformManager.ArchTests/BannedDependencyTests.cs:104`), kèm cả test đối chứng
+  > chứng minh bộ dò bắt được (`:171-176`). Ai theo quy ước cũ sẽ viết code đỏ gate ngay lần
+  > `dotnet test` đầu tiên — đúng khuôn "rule sai sinh ra code sai" ở `.claude/CLAUDE.md` §3.
+- `Tests/PlatformManager.ArchTests`: test kiến trúc — chạy cùng `dotnet test`, coi là
+  gate bắt buộc trước khi báo hoàn thành 1 phase.
+
+  Đừng chép danh sách test vào đây (`.claude/CLAUDE.md` §6) — đọc thẳng từ nguồn:
+
+  ```bash
+  grep -rn 'public void ' src/BE/Tests/PlatformManager.ArchTests/*.cs
+  ```
+
+  Ba luật lớn nhất, đối chiếu 2026-09-08:
+
+  | Luật | Test giữ nó |
+  | --- | --- |
+  | `Core.Domain` có **zero** package reference | `LayerDependencyTests.cs:47` |
+  | `Core.Application` không chạm EF Core / ASP.NET Core / bất kỳ hạ tầng nào | `LayerDependencyTests.cs:61` |
+  | Core không reference assembly nghiệp vụ nào | `CoreModuleBoundaryTests.cs` — `Core_MustNotReference_AnyModulesAssembly` |
+
+  > **📐 ĐÍCH ĐẾN — CHƯA THI CÔNG: `*.Api` không reference `*.Persistence`/`*.Infrastructure`
+  > trực tiếp.** Bản trước của gạch đầu dòng này nêu luật đó ở **thì hiện tại**, như thể đã
+  > có test canh. Không có: `LayerDependencyTests` chỉ mang hai test kể trên, và không test
+  > nào ở `ArchTests/` canh cạnh Api → Infrastructure (đối chiếu 2026-09-08).
+  >
+  > Và nó **chưa tới ngưỡng**: hôm nay `PlatformManager.Api` là composition root **duy nhất**
+  > của solution (không có `Core.Api`), nên nó *phải* reference `Core.Infrastructure` để đăng
+  > ký DI — đó là công việc của composition root, không phải vi phạm. Luật này chỉ có nghĩa
+  > khi tách ra một project API riêng khỏi host; đúng lúc đó mới viết test.
+  >
+  > Danh sách project để tự kiểm ngưỡng:
+  > `find src/BE -name '*.csproj' -not -path '*/obj/*' -not -path '*/bin/*'`

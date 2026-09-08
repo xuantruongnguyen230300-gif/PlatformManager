@@ -1,75 +1,97 @@
-<div class="tablewrap">
-  <p-table
-    [value]="rows()"
-    [loading]="loading()"
-    [lazy]="true"
-    [lazyLoadOnInit]="false"
-    [paginator]="true"
-    [rows]="pageSize()"
-    [first]="(page() - 1) * pageSize()"
-    [totalRecords]="totalCount()"
-    [rowsPerPageOptions]="[10, 20, 50]"
-    (onLazyLoad)="onLazyLoad($event)"
-    dataKey="Id"
-  >
-    <ng-template #header>
-      <tr>
-        <th style="min-width:220px">Người dùng</th>
-        <th style="min-width:140px">Vai trò</th>
-        <th style="min-width:120px">Trạng thái</th>
-        <th style="min-width:110px">Ngày tạo</th>
-        <th style="min-width:100px; text-align:right">Hành động</th>
-      </tr>
-    </ng-template>
+<!-- Lưới bản ghi dùng chung giữ KHUNG (chiều cao cố định + cuộn bên trong, phân trang, loading);
+     file này chỉ còn phần RIÊNG của màn Người dùng: cột nào và mỗi ô vẽ ra sao.
+     Ranh giới + lý do: doc/Design/Frontend/PlatformManager/Components/DataTable.md § CHỐT 2026-09-06.
 
-    <ng-template #body let-row>
-      <tr>
-        <td>
-          <div class="user-cell">
-            <span class="avatar">{{ initials(row.FullName) }}</span>
-            <div>
-              <div class="user-name">{{ row.FullName }}</div>
-              <div class="user-email">{{ row.Email ?? '—' }}</div>
-            </div>
+     Template truyền bằng `TemplateRef` chứ không chiếu bằng <ng-content>: `p-table` khớp
+     #header/#body bằng content query, chiếu qua một lớp bọc là dựa vào chi tiết nội tại của
+     Angular và sẽ hỏng âm thầm khi nâng phiên bản. -->
+<app-data-grid
+  class="grid-host"
+  [rows]="rows()"
+  [loading]="loading()"
+  [totalCount]="totalCount()"
+  [page]="page()"
+  [pageSize]="pageSize()"
+  dataKey="Id"
+  [headerTemplate]="hdr"
+  [bodyTemplate]="row"
+  [emptyTemplate]="empty"
+  (pageChange)="onGridPageChange($event)"
+/>
+
+<ng-template #hdr>
+    <tr>
+      <th style="min-width:220px">{{ 'quan-tri-nguoi-dung.grid.user' | translate }}</th>
+      <th style="min-width:140px">{{ 'shared.field.role' | translate }}</th>
+      <th style="min-width:120px">{{ 'quan-tri-nguoi-dung.grid.status' | translate }}</th>
+      <th style="min-width:110px">{{ 'quan-tri-nguoi-dung.grid.dateCreate' | translate }}</th>
+      <th style="min-width:100px; text-align:right">
+        {{ 'quan-tri-nguoi-dung.grid.actions' | translate }}
+      </th>
+    </tr>
+</ng-template>
+
+<ng-template #row let-row>
+    <tr>
+      <td>
+        <div class="user-cell">
+          <span class="avatar">{{ initials(row.FullName) }}</span>
+          <div>
+            <div class="user-name">{{ row.FullName }}</div>
+            <div class="user-email">{{ row.Email ?? '—' }}</div>
           </div>
-        </td>
-        <td>
+        </div>
+      </td>
+      <td>
+        <!-- `.badge.outline` (class toàn cục) chứ KHÔNG phải `.role-tag` riêng: vai trò là một
+             biến thể ĐỊNH DANH của .badge (chốt 2026-08-29): tên vai trò không phải trạng thái
+             nên không mang màu ngữ nghĩa, nhưng vẫn có viền như `.role-tag` cũ.
+             `.role-cell` dưới đây chỉ lo KHOẢNG CÁCH giữa nhiều badge (việc riêng của ô này),
+             không khai lại hình dạng badge. -->
+        <div class="role-cell">
           @for (role of row.Roles; track role) {
-            <span class="role-tag">{{ role }}</span>
+            <span class="badge outline">{{ role }}</span>
           }
-        </td>
-        <td>
-          @if (row.IsLocked) {
-            <span class="badge locked">● Đã khoá</span>
-          } @else {
-            <span class="badge active">● Đang hoạt động</span>
-          }
-        </td>
-        <td class="muted">{{ formatDateVn(row.DateCreate) }}</td>
-        <td>
-          <div class="row-actions">
-            <button type="button" class="action-btn" title="Sửa" (click)="editRow.emit(row)">
-              <i class="pi pi-pencil"></i>
-            </button>
-            <button
-              type="button"
-              class="action-btn"
-              [class.danger]="!row.IsLocked"
-              [disabled]="isSelfLock(row)"
-              [title]="lockButtonTitle(row)"
-              (click)="toggleLock.emit(row)"
-            >
-              <i class="pi" [class.pi-lock]="!row.IsLocked" [class.pi-lock-open]="row.IsLocked"></i>
-            </button>
-          </div>
-        </td>
-      </tr>
-    </ng-template>
+        </div>
+      </td>
+      <td>
+        @if (row.IsLocked) {
+          <span class="badge bad">● {{ 'quan-tri-nguoi-dung.grid.locked' | translate }}</span>
+        } @else {
+          <span class="badge ok">● {{ 'quan-tri-nguoi-dung.grid.active' | translate }}</span>
+        }
+      </td>
+      <td class="muted">{{ row.DateCreate | date: 'shortDate' : undefined : localeId() }}</td>
+      <td>
+        <div class="row-actions">
+          <!-- Hai hành động khác nhau thì khác MÀU: sửa/mở khoá = xanh brand, khoá = đỏ.
+               Cùng là `.icon-btn` (ghost) nên bảng dài vẫn không bị rợp nền nút. -->
+          <button
+            type="button"
+            class="icon-btn primary"
+            [attr.title]="'quan-tri-nguoi-dung.action.edit' | translate"
+            (click)="editRow.emit(row)"
+          >
+            <i class="pi pi-pencil"></i>
+          </button>
+          <button
+            type="button"
+            class="icon-btn"
+            [class.danger]="!row.IsLocked"
+            [class.primary]="row.IsLocked"
+            [disabled]="isSelfLock(row)"
+            [title]="lockButtonTitleKey(row) | translate"
+            (click)="toggleLock.emit(row)"
+          >
+            <i class="pi" [class.pi-lock]="!row.IsLocked" [class.pi-lock-open]="row.IsLocked"></i>
+          </button>
+        </div>
+      </td>
+    </tr>
+</ng-template>
 
-    <ng-template #emptymessage>
-      <tr>
-        <td colspan="5" class="muted">Không có người dùng nào khớp bộ lọc.</td>
-      </tr>
-    </ng-template>
-  </p-table>
-</div>
+<ng-template #empty>
+    <tr>
+      <td colspan="5" class="muted">{{ 'quan-tri-nguoi-dung.grid.empty' | translate }}</td>
+    </tr>
+</ng-template>

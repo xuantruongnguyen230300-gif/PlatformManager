@@ -1,13 +1,15 @@
-<div class="tablewrap">
+<!-- `.tablewrap.scroll`: bảng thuần nên khung này là vùng cuộn thật, `th` sticky ở lớp dùng
+     chung giữ tiêu đề cột đứng yên. -->
+<div class="tablewrap scroll">
   <table>
     <thead>
       <tr>
-        <th style="width:40%">Tài nguyên</th>
+        <th style="width:40%">{{ 'phan-quyen.grid.resource' | translate }}</th>
         @for (role of roles(); track role) {
           <th class="num">
             {{ role }}
             @if (isAlwaysAllowed(role)) {
-              <span class="always-tag muted">luôn có toàn quyền</span>
+              <span class="always-tag muted">{{ 'phan-quyen.grid.alwaysAllowedTag' | translate }}</span>
             }
           </th>
         }
@@ -21,17 +23,22 @@
             <td class="num">
               <input
                 type="checkbox"
+                class="check"
                 [checked]="isChecked(row, role)"
                 [disabled]="isDisabled(role)"
                 (change)="permissionToggle.emit({ ResourceKey: row.ResourceKey, Role: role })"
-                [attr.aria-label]="cellAriaLabel(row, role)"
+                [attr.aria-label]="
+                  cellAriaLabelKey(role) | translate: { resource: row.ResourceName, role: role }
+                "
               />
             </td>
           }
         </tr>
       } @empty {
         <tr>
-          <td [attr.colspan]="roles().length + 1" class="muted">Chưa có tài nguyên nào.</td>
+          <td [attr.colspan]="roles().length + 1" class="muted">
+            {{ 'phan-quyen.grid.emptyResource' | translate }}
+          </td>
         </tr>
       }
     </tbody>
@@ -40,9 +47,10 @@
 
 @if (hasAlwaysAllowedRole()) {
   <p class="muted always-note">
-    Cột <strong>{{ alwaysAllowedRole }}</strong> luôn được tick và không sửa được ở đây: role này
-    mặc định có mọi quyền với mọi tài nguyên, nên bỏ tick cũng không thu hồi được gì. Muốn một
-    người không còn toàn quyền, vào "Quản trị hệ thống → Người dùng" và gỡ role
-    <strong>{{ alwaysAllowedRole }}</strong> khỏi tài khoản của họ.
+    {{ 'phan-quyen.hint.alwaysAllowedLead' | translate }}
+    <strong>{{ alwaysAllowedRole }}</strong>
+    {{ 'phan-quyen.hint.alwaysAllowedBody' | translate }}
+    <strong>{{ alwaysAllowedRole }}</strong>
+    {{ 'phan-quyen.hint.alwaysAllowedTail' | translate }}
   </p>
 }

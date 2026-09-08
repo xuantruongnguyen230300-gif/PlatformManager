@@ -16,6 +16,12 @@
     <PackageReference Include="Hangfire.AspNetCore" Version="1.8.24" />
     <PackageReference Include="Hangfire.PostgreSql" Version="1.21.1" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.9" />
+    <!-- Serilog ghi file xoay vòng theo ngày, giữ 7 ngày (chốt 2026-08-31, xem
+         doc/huong_dan/wiki-core/be/07-observability.md). Gói AspNetCore kéo theo Sinks.File +
+         Sinks.Console + Extensions.Hosting/Logging nên KHÔNG cần khai lại từng cái.
+         Đăng ký ở Program.cs như một PROVIDER của ILoggerFactory (builder.Logging.AddSerilog) để
+         section "Logging:LogLevel" của appsettings.json vẫn là nguồn sự thật duy nhất về mức log. -->
+    <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
     <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="10.0.11" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="10.2.3" />
     <!-- dotnet-ef yêu cầu chính startup project reference package Design (dù DbContext nằm
@@ -34,9 +40,6 @@
     <ProjectReference Include="..\Core\PlatformManager.Core.Domain\PlatformManager.Core.Domain.csproj" />
     <ProjectReference Include="..\Core\PlatformManager.Core.Application\PlatformManager.Core.Application.csproj" />
     <ProjectReference Include="..\Core\PlatformManager.Core.Infrastructure\PlatformManager.Core.Infrastructure.csproj" />
-    <ProjectReference Include="..\Modules\DtiWeekly\PlatformManager.Modules.DtiWeekly.Domain\PlatformManager.Modules.DtiWeekly.Domain.csproj" />
-    <ProjectReference Include="..\Modules\DtiWeekly\PlatformManager.Modules.DtiWeekly.Application\PlatformManager.Modules.DtiWeekly.Application.csproj" />
-    <ProjectReference Include="..\Modules\DtiWeekly\PlatformManager.Modules.DtiWeekly.Infrastructure\PlatformManager.Modules.DtiWeekly.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

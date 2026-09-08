@@ -1,9 +1,9 @@
-.tablewrap {
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-table);
-  overflow: auto;
-  max-height: 560px;
-}
+/* Chỉ còn cách thụt dòng cây cha/con — thứ riêng của ma trận menu.
+   Đã gỡ (trùng lặp với styles.scss — xem báo cáo 2026-08-29):
+     - `.tablewrap` (+ overflow/max-height 560px) → dùng `.tablewrap.scroll`, chiều cao lấy từ
+       token `--grid-h` (theo màn hình) thay cho 560px cứng.
+     - `input[type='checkbox']` + `:focus-visible` → dùng class toàn cục `.check`. Khối này trước
+       đây giống resource-permission-matrix.scss TỪNG CHỮ. */
 
 td.indent {
   padding-left: 28px;
@@ -12,16 +12,4 @@ td.indent {
 .tree-branch {
   color: var(--muted);
   margin-right: 4px;
-}
-
-input[type='checkbox'] {
-  width: 16px;
-  height: 16px;
-  cursor: pointer;
-  accent-color: var(--brand);
-}
-
-input[type='checkbox']:focus-visible {
-  outline: 2px solid var(--brand);
-  outline-offset: 2px;
 }

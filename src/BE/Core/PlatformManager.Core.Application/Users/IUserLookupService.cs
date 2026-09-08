@@ -1,7 +1,8 @@
 namespace PlatformManager.Core.Application.Users;
 
 /// <summary>
-/// Chỉ dùng riêng cho CsvImportService resolve cột "Phụ trách" (tên tự do) → AppUser —
+/// Sinh ra cho đường import resolve cột "Phụ trách" (tên tự do) → AppUser. ⚠️ Đường đó đã bị gỡ
+/// cùng module DtiWeekly 2026-08-29, nên hôm nay interface này CHƯA có nơi dùng thật —
 /// KHÁC IUserAdminService (màn Quản trị người dùng, tạo user đầy đủ UserName/Email/mật
 /// khẩu tạm). Xem spec/danh-muc-dti/business-rules.md mục 2.2 câu #16.
 /// </summary>

@@ -12,7 +12,7 @@ namespace PlatformManager.Core.Infrastructure;
 /// (services.AddScoped), KHÔNG tự thêm filter vào MVC options — Program.cs (Api, composition
 /// root) tự gọi AddPermissionInfrastructure() RỒI tự thêm
 /// options.Filters.Add&lt;RequirePermissionFilter&gt;() khi cấu hình AddControllers(). Xem
-/// .claude/rules/api-controller.md §"Phân quyền theo hành động — permission-key đầy đủ".
+/// doc/huong_dan/quy-uoc/be-api-controller.md §"Phân quyền theo hành động — permission-key đầy đủ".
 /// </summary>
 public static class PermissionInfrastructureExtensions
 {

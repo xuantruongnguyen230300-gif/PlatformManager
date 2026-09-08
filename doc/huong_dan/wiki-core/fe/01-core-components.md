@@ -1,3 +1,9 @@
+---
+kind: luat
+scope: core
+verified: 2026-09-06
+---
+
 # 1. Core FE thật sự cần cho PlatformManager
 
 ## Nguyên tắc chọn lọc — Nhóm A vs Nhóm B
@@ -33,33 +39,54 @@ bên `be/`.
 | 8 | **Testing (mapper/service trước)** | Lỗi wire boundary chỉ lộ ra khi chạy thật | Bắt buộc, ngày đầu |
 | 9 | **Notification/toast abstraction** | Mỗi feature tự viết cách báo lỗi/thành công | Nên có sớm |
 | 10 | **Observability phía client** (correlation với `traceId` BE) | Không tra được request nào gây lỗi khi user báo cáo sự cố | Khi chuẩn bị lên production |
-| 11 | **i18n scaffolding** (`$localize`, chưa cần bật đa-locale) | Viết lại toàn bộ chuỗi khi bật đa ngôn ngữ | Nên có sớm — thư viện đã chốt |
+| 11 | **i18n** (dịch lúc **chạy**, **vi + en**, đổi ngôn ngữ ngay trong app) | Viết lại toàn bộ chuỗi khi bật đa ngôn ngữ | ✅ **CƠ CHẾ ĐÃ CHẠY (đối chiếu 2026-09-06)** — `@ngx-translate/core` v18, `core/i18n/` (`LanguageService`, `ApiErrorMessageService`), bảng dịch `src/FE/public/i18n/{vi,en}.json`, nút đổi ngôn ngữ `shared/components/language-switcher/`, và cổng G12 chặn chữ tiếng Việt trong template. 🔄 LẬT 2026-09-06: bản trước ghi "ĐANG THI CÔNG". Trạng thái từng phần: [08-i18n.md](08-i18n.md) |
 | 12 | **Responsive/breakpoint token hoá** | Mỗi component tự định nghĩa `@media` riêng, không đồng bộ | Nên có sớm |
 | 13 | **Grid engine + đồng bộ metadata với BE** | Tự viết grid nâng cao tốn kém, rủi ro mở rộng thật trong domain ERP/chuyển đổi số; menu/cột grid do BE điều khiển không có hợp đồng chung | **PrimeNG `p-table` ngay** (đã đảo ngược quyết định "đợi ngưỡng"), metadata JSON đã thiết kế sẵn — xem [11-grid-and-metadata.md](11-grid-and-metadata.md) |
-| 14 | **Biểu đồ (charting)** | Tự vẽ canvas tay không mở rộng được khi cần nhiều loại biểu đồ | **PrimeNG `p-chart`** (Chart.js) — xem [12-charting.md](12-charting.md) |
+| 14 | **Biểu đồ (charting)** | Tự vẽ canvas tay không mở rộng được khi cần nhiều loại biểu đồ | 📐 **CHƯA THI CÔNG (đối chiếu 2026-09-06)** — hướng đã chốt là PrimeNG `p-chart` (Chart.js), nhưng `chart.js` **đã gỡ khỏi `src/FE/package.json` ngày 2026-09-04** cùng lượt xoá `TrendChart`, và không màn hình nào còn biểu đồ. Cài lại khi có màn hình cần — xem [12-charting.md](12-charting.md) |
 | 15 | **Performance (zoneless, defer, virtual scroll, bundle budget)** | Zone.js overhead, bundle phình to âm thầm, list dài giật lag | Bắt buộc, ngày đầu — xem [13-performance.md](13-performance.md) |
 | 16 | **Isolation lỗi runtime theo từng vùng UI** (`ErrorHandler` toàn cục + cô lập cục bộ tại nơi rủi ro) | 1 widget lỗi (biểu đồ, tính toán phức tạp) không được kéo theo cả trang, và không ai biết lỗi vừa xảy ra | Bắt buộc, ngày đầu (`ErrorHandler`) — cô lập từng widget chỉ khi widget đó rủi ro cao, xem mục dưới |
 | 17 | **Runtime environment config** (1 bundle build ra chạy được nhiều môi trường, không hardcode lúc build) | Build lại riêng cho từng môi trường tốn CI; artifact test ở staging khác artifact thật sự deploy production | Nên có sớm — khi có ≥2 môi trường triển khai thật (staging + production) |
 | 18 | **Feature flag / kill switch** cho tính năng rủi ro cao | Tắt nhanh 1 tính năng đang lỗi mà không cần `git revert` + build + deploy lại | Khi rollout 1 tính năng rủi ro cao lần đầu, không phải mặc định cho mọi feature |
 | 19 | **Phát hiện mất kết nối mạng** (`navigator.onLine` + phân biệt lỗi mạng với lỗi nghiệp vụ) | Lỗi mạng hiện thành thông báo mơ hồ giống lỗi nghiệp vụ thật, sai hướng xử lý của user | Nên có sớm — chi phí gần bằng 0 |
+| 20 | **Quy tắc render nội dung không tin cậy** (`DomSanitizer`, CSP, secret trong bundle) | `bypassSecurityTrust*` bị dùng như thể nó "làm sạch" HTML — trong khi nó **tắt** sanitize; mở XSS mà build vẫn xanh | Bắt buộc — xem [14-security.md](14-security.md); đối chiếu 2026-08-27 không có lỗ đang mở, nhưng lý do an toàn đang bị ghi sai |
+| 21 | **Accessibility có một điểm vào** (mức chuẩn + checklist màn hình mới) | a11y rải khắp nơi thì không ai trả lời được "màn này đạt chuẩn chưa"; với hệ thống khu vực công đây có thể là ràng buộc pháp lý | **Bắt buộc** — WCAG 2.2 AA đã chốt 2026-08-27 (khu vực công), xem [15-accessibility.md](15-accessibility.md) |
+| 22 | **Chính sách nâng cấp + ma trận trình duyệt** | Angular ra major mỗi 6 tháng, hỗ trợ 18 tháng — nợ này tự lớn lên mà không cần ai viết dòng code nào | Nâng cấp **tạm hoãn** theo quyết định 2026-08-27; `browserslist` thì không hoãn — xem [16-nen-tang-va-nang-cap.md](16-nen-tang-va-nang-cap.md) |
 
 ## Áp dụng vào PlatformManager
 
-Hiện đã có #2, #5 (đúng ngưỡng), #9 (mức tối giản) qua các mapper trong
-`modules/*/services/*.service.ts`, quy ước `state/*.store.ts` trong
-`architecture.md`, và `shared/components/toast`. **Chưa có** #1 đúng chuẩn
-(đang đọc field envelope cũ — xem [02-http-envelope.md](02-http-envelope.md)),
-#3 một phần (token tồn tại trong `styles.scss` nhưng 9 chỗ vẫn hardcode hex
-— xem [04-design-token-system.md](04-design-token-system.md)), #4 thiếu
-trạng thái tương tác (chính `doc/Design/.../COMPONENTS.md` tự ghi nhận), #6
-(chặn bởi quyết định BE, nay đã chốt cookie session — xem
-[07-auth-identity.md](07-auth-identity.md)), #8 gần như 0%. #10 chưa cần
-(chưa production), #11 mới chốt thư viện chưa bật, #12 có breakpoint trong
-prototype nhưng chưa hệ thống hoá.
+> **Rà lại 2026-08-27.** Đoạn này trước đây chép tay mức độ hoàn thành của
+> từng mục và **cả ba con số đều đã lệch** (§6 — không chép vào tài liệu thứ
+> đếm được bằng lệnh). Thay bằng lệnh + tiêu chí, chạy từ gốc repo:
+
+```bash
+grep -rn "#[0-9a-fA-F]\{3,6\}" src/FE/src/app --include=*.scss | wc -l   # #3 — PASS khi 0
+find src/FE/src -name '*.spec.ts' | wc -l                                 # #8 — càng tăng càng tốt
+grep -rn 'documentElement.lang' src/FE/src | wc -l                        # #11 — PASS khi ≥1, xem 17-phuc-vu-va-trien-khai.md §3.1
+```
+
+🔄 LẬT 2026-09-06: dòng #8 trước đây là `ls src/FE/src/app/**/*.spec.ts`. `**` chỉ đệ quy khi
+`shopt -s globstar` đang bật — mặc định nó **tắt**, nên lệnh đó chỉ đếm được đúng một cấp thư
+mục và luôn cho ra con số nhỏ hơn thật. Đúng loại lỗi tệ nhất ở một lệnh đo: nó **có** ra số,
+nên không ai nghi ngờ. `find` không phụ thuộc tuỳ chọn shell nào.
+
+Trạng thái theo mục — **không kèm số**:
+
+| Mục | Trạng thái |
+|---|---|
+| #2, #5, #9 | Đã có ở mức tối giản — mapper ở `platform/*/services/*.mapper.ts`, state bằng `signal()` thường (chưa file `*.store.ts` nào, đúng ngưỡng đã chốt ở [fe-architecture.md](../../quy-uoc/fe-architecture.md)), toast tách đôi: service ở `core/toast/`, component ở `shared/components/toast/`. 🔄 LẬT 2026-09-06: bản trước ghi mapper nằm ở `modules/*/services/` — thư mục `src/app/modules/` **không tồn tại** (2 module nghiệp vụ gỡ 2026-08-29) |
+| #1 | Xem [02-http-envelope.md](02-http-envelope.md) — đối chiếu envelope thật trước khi kết luận |
+| #3 | Token đã có trong `styles.scss`; nguồn chuẩn là `doc/Design/` ([04-design-token-system.md](04-design-token-system.md)) |
+| #4 | Thiếu trạng thái tương tác — `doc/Design/Frontend/PlatformManager/COMPONENTS.md` tự ghi nhận |
+| #6 | Đã chốt cookie session — [07-auth-identity.md](07-auth-identity.md) |
+| #8 | Có test, chưa phủ đủ — [06-testing-strategy.md](06-testing-strategy.md) |
+| #10 | Chưa cần (chưa production) |
+| #11 | ✅ **Cơ chế đã chạy** (đối chiếu 2026-09-06) — xem dòng #11 ở bảng trên. Trạng thái từng phần và lệnh đo nằm ở [08-i18n.md](08-i18n.md); file chủ giữ lệnh, đừng dựng bộ lệnh thứ hai ở đây |
+| #12 | Breakpoint chưa hệ thống hoá thành token |
+| #20, #21, #22 | Xem [14-security.md](14-security.md), [15-accessibility.md](15-accessibility.md), [16-nen-tang-va-nang-cap.md](16-nen-tang-va-nang-cap.md) |
 
 ## Bổ sung 2026-08-24 — đối chiếu thực hành ngành cho hệ thống tầm trung: 4 khoảng trống
 
-> Đối chiếu bảng 15 thành phần ở trên với thực hành thật của senior frontend
+> Đối chiếu bảng thành phần ở trên với thực hành thật của senior frontend
 > tại hệ thống tầm trung (5-15 dev, user thật), cùng nguyên tắc Nhóm A/B ở
 > đầu file này: 4 điểm dưới đây trước đó **không có một dòng nào** trong toàn
 > bộ `fe/` — kể cả [10-observability.md](10-observability.md) (nơi gần nhất
@@ -94,22 +121,35 @@ Ghi đè `ErrorHandler` để lỗi không ai bắt vẫn được log kèm `tra
 [10-observability.md](10-observability.md) §`traceId`) và báo cho user bằng
 toast thay vì im lặng/console trắng:
 
+> ### 🔄 LẬT 2026-09-06 — mẫu cũ lệch code thật ở **ba** chỗ, hai chỗ sinh code sai
+>
+> | Mẫu cũ | Thực tế (`src/FE/src/app/core/errors/global-error.handler.ts`) |
+> |---|---|
+> | File `core/error-handling/global-error-handler.ts` | Đường dẫn thật là `core/errors/global-error.handler.ts` |
+> | `this.toast.showError(...)` | **`ToastService` không có method `showError`.** API thật: `error(text, title?)` / `warn` / `info` / `success` (`src/FE/src/app/core/toast/toast.service.ts`). Chép mẫu cũ ⇒ lỗi biên dịch |
+> | `{ provide: ErrorHandler, useClass: GlobalErrorHandler }` | Phải là **`useExisting`**: `App` inject THẲNG `GlobalErrorHandler` để đọc signal `newVersionAvailable()`. `useClass` tạo thể hiện thứ hai và dải thông báo không bao giờ hiện ra — hỏng im lặng |
+>
+> **Và bản cài đặt thật CỐ Ý không hiện toast cho mọi lỗi.** Nó chỉ nhận diện ca "bản build trên
+> máy chủ đã đổi" rồi bật một dải mời tải lại; mọi lỗi khác vẫn chỉ `console.error`. Lý do ghi
+> tại chỗ trong file đó. Phần "toast cho mọi lỗi không ai bắt" trong mẫu dưới vẫn là 📐 **đích
+> đến chưa thi công**, không phải mô tả hiện trạng.
+
 ```typescript
-// core/error-handling/global-error-handler.ts
-@Injectable()
+// core/errors/global-error.handler.ts  —  📐 phần toast: chưa thi công
+@Injectable({ providedIn: 'root' })
 export class GlobalErrorHandler implements ErrorHandler {
   private readonly toast = inject(ToastService);
 
   handleError(error: unknown): void {
     console.error(error); // chỉ dev — xem 10-observability.md §Log console
-    this.toast.showError('Đã có lỗi xảy ra. Tải lại trang nếu vấn đề còn tiếp diễn.');
+    this.toast.error('Đã có lỗi xảy ra. Tải lại trang nếu vấn đề còn tiếp diễn.');
     // Khi tới ngưỡng bật Sentry (xem 10-observability.md): Sentry.captureException(error);
   }
 }
 
-// app.config.ts
+// app.config.ts — `useExisting`, KHÔNG `useClass` (xem bảng ngay trên)
 providers: [
-  { provide: ErrorHandler, useClass: GlobalErrorHandler },
+  { provide: ErrorHandler, useExisting: GlobalErrorHandler },
 ]
 ```
 
@@ -120,7 +160,9 @@ try/catch ngay trong `effect()`/service của widget, set 1 signal lỗi cục b
 widget tự `@if` fallback của chính nó:
 
 ```typescript
-// widgets/trend-chart/trend-chart.component.ts — widget rủi ro cao (thư viện ngoài, Chart.js qua PrimeNG p-chart)
+// <feature>/components/trend-chart/trend-chart.ts — widget rủi ro cao (gọi thư viện ngoài)
+// 🔄 LẬT 2026-09-06: mẫu cũ ghi `widgets/trend-chart/trend-chart.component.ts`. Repo KHÔNG có
+// tầng `widgets/` và KHÔNG dùng hậu tố `.component.ts` (Angular 20 style: `<ten>.ts`).
 export class TrendChartComponent {
   readonly chartData = input.required<ChartData>();
   readonly renderError = signal<string | null>(null);
@@ -155,18 +197,22 @@ bằng try/catch, đúng nguyên tắc Nhóm A/B ở đầu file.
 `@error` của `@defer` (Angular 17+) là cơ chế boundary DUY NHẤT Angular cấp
 sẵn, nhưng phạm vi hẹp hơn nhiều: nó chỉ bắt lỗi **tải chunk** (mạng đứt giữa
 chừng khi lazy-load JS), không bắt lỗi logic bên trong component đã tải
-xong. Các khối `@defer` đã có ở [13-performance.md](13-performance.md) §2
-(chart, history list, import dialog) nên thêm `@error`:
+xong. Mọi khối `@defer` viết ra về sau đều nên kèm `@error`:
 
 ```html
 @defer (on viewport) {
-  <app-trend-chart [chartData]="chartData()" />
+  <app-khoi-nang />
 } @error {
-  <div class="chart-fallback">Không tải được biểu đồ.</div>
+  <div class="fallback">Không tải được phần này.</div>
 } @placeholder {
-  <div class="chart-skeleton"></div>
+  <div class="skeleton"></div>
 }
 ```
+
+🔄 LẬT 2026-09-06: bản trước viết *"các khối `@defer` **đã có** ở
+[13-performance.md](13-performance.md) §2 (chart, history list, import dialog)"* — **không có
+khối `@defer` nào** trong `src/FE/src` (`grep -rn "@defer" src/FE/src` ⇒ 0 dòng), và cả ba màn
+hình được kể đều đã bị gỡ 2026-08-29.
 
 ### #17 — Runtime environment config: 1 bundle, nhiều môi trường
 
@@ -237,7 +283,7 @@ isEnabled(key: string): boolean {
 ```
 
 ```html
-<!-- danh-muc-dti.page.html -->
+<!-- <ten-man>.page.html -->
 @if (appConfig.isEnabled('import-job-v2')) {
   <app-import-dialog-v2 />
 } @else {
@@ -274,7 +320,7 @@ export const networkStatusInterceptor: HttpInterceptorFn = (req, next) => {
   return next(req).pipe(
     catchError((err: HttpErrorResponse) => {
       if (err.status === 0) { // request không tới được server — mất mạng/DNS/CORS
-        toast.showError('Mất kết nối mạng. Kiểm tra lại đường truyền.');
+        toast.error('Mất kết nối mạng. Kiểm tra lại đường truyền.');  // API thật là `error`, KHÔNG `showError`
       }
       return throwError(() => err);
     }),
@@ -315,12 +361,16 @@ giữ nguyên quyết định đã có ở [13-performance.md](13-performance.md
 5. [Component library](05-component-library.md) — xem `COMPONENTS.md` để biết số thật, 5 trạng thái
 6. [Testing strategy](06-testing-strategy.md) — mapper/interceptor trước
 7. [Auth/Identity](07-auth-identity.md) — cookie session
-8. [i18n](08-i18n.md) — `@angular/localize`
+8. [i18n](08-i18n.md) — dịch lúc chạy, đổi ngôn ngữ trong phiên (chốt 2026-09-03)
 9. [Forms & Validation](09-forms-validation.md)
 10. [Observability](10-observability.md) — correlation với `traceId` BE
 11. [Grid & Metadata sync](11-grid-and-metadata.md) — PrimeNG `p-table`, hợp đồng menu/cột với BE
 12. [Charting](12-charting.md) — PrimeNG `p-chart`, ngưỡng nâng cấp `ngx-echarts`
 13. [Performance](13-performance.md) — zoneless, `@defer`, virtual scroll, bundle budget
+14. [Bảo mật FE](14-security.md) — render HTML không tin cậy, CSP, secret, `npm audit`
+15. [Accessibility](15-accessibility.md) — điểm vào duy nhất + bản đồ a11y nằm ở đâu
+16. [Nền tảng & nâng cấp](16-nen-tang-va-nang-cap.md) — nhịp nâng Angular/PrimeNG, `browserslist`
+17. [Phục vụ & triển khai](17-phuc-vu-va-trien-khai.md) — static file, SPA fallback, cache header (định tuyến theo ngôn ngữ đã bỏ, chốt 2026-09-03)
 
 Phần thực hành (thứ tự làm, file cần sửa) ở
-[fe/trien-khai/00-lo-trinh-tong-the.md](trien-khai/00-lo-trinh-tong-the.md).
+[fe/../../../tham-khao-ngoai/vnr-successor/00-lo-trinh-tong-the.md](../../../tham-khao-ngoai/vnr-successor/00-lo-trinh-tong-the.md).

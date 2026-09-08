@@ -1,0 +1,46 @@
+// Chỉ chứa BỐ CỤC riêng của trang. Mọi bề mặt/nút/badge/dải thông báo dùng class toàn cục ở
+// src/styles.scss — không khai lại ở đây.
+
+.lead {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+// Danh sách "nhãn — giá trị". Là bố cục của riêng trang này (như `.layout`/`.kpis` của
+// dashboard trong prototype), KHÔNG phải một component dùng chung mới.
+.facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--sp-2) var(--sp-5);
+  margin: var(--sp-5) 0 0;
+  font-size: var(--fs-sm);
+  align-items: center;
+}
+
+.facts dt {
+  color: var(--muted);
+}
+
+.facts dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.facts .roles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+
+// Khổ hẹp: hai cột `max-content 1fr` ép giá trị dài xuống một cột rất mảnh. Xếp dọc thay vì co.
+@media (max-width: 560px) {
+  .facts {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+
+  .facts dd:not(:last-child) {
+    margin-bottom: var(--sp-4);
+  }
+}

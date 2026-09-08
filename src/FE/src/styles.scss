@@ -1,56 +1,118 @@
-/* Global styles — token bridge từ prototype đã verify (doc/Prototype/dashboard.html,
-   doc/Prototype/danh-muc-dti.html). Giá trị màu khớp 100% với
-   doc/Design/Frontend/PlatformManager/Tokens/colors.md. Giá trị font-size/spacing dùng
-   đúng bộ token "mật độ hiển thị (compact)" (fs, sp, radius, sidebar-w) hiện
-   có trong 2 file prototype — bản mới nhất, muộn hơn Tokens/typography.md +
-   Tokens/spacing.md (2 file đó được trích xuất từ 1 bản prototype cũ hơn, trước khi
-   density compact được áp dụng — pipeline /design-extract-tokens chưa chạy lại). Theo
-   đúng yêu cầu "tái tạo 1:1" prototype hiện tại, dùng giá trị compact trực tiếp từ
-   prototype làm nguồn — ghi chú lại đây để design-expert biết khi chạy lại tokens. */
+/* =============================================================================
+   styles.scss — TOKEN + THƯ VIỆN COMPONENT DÙNG CHUNG
+   =============================================================================
+   CHIỀU CẬP NHẬT — file này là BẢN ĐUỔI THEO, không phải nguồn.
+
+     doc/Design/.../Tokens/*.md + tokens.json   ← NGUỒN
+                     ↓  code đuổi theo
+     file này  :root { ... }  +  APP_PALETTE trong app/app.config.ts
+
+   Đổi một giá trị: sửa ở Tokens/* trước, rồi áp xuống ĐÂY **và** APP_PALETTE.
+   Không bao giờ sửa file này rồi mong tài liệu tự khớp — xem
+   doc/huong_dan/wiki-core/fe/04-design-token-system.md §Chiều (chốt 2026-08-27,
+   người dùng xác nhận lại 2026-08-29).
+
+   `doc/Design/.../Prototypes/index.html` là bản THAM KHẢO trực quan: nơi xem
+   một thay đổi trông ra sao trước khi vào code. Nó KHÔNG phải nguồn — quyết
+   định chốt xong phải được ghi vào Tokens/* thì mới có hiệu lực.
+
+   NGUYÊN TẮC: mỗi loại component có ĐÚNG MỘT định nghĩa ở đây. SCSS riêng của
+   từng component/trang KHÔNG được khai lại nút, ô nhập, badge, toolbar, khung
+   bảng hay chân dialog — chỉ được dùng lại class ở file này. Đây là thứ giữ
+   cho giao diện đồng bộ; bỏ nó thì mỗi màn lại trôi về một kiểu, đúng tình
+   trạng đã phải dọn ngày 2026-08-29 (5 biến thể nút icon, 3 hợp đồng ô nhập,
+   7 chân dialog, 2 hệ tên badge).
+
+   ⚠️ 10 giá trị màu ở :root được KHAI LẠI trong hằng số APP_PALETTE ở
+   src/app/app.config.ts — nơi app bơm bảng màu vào createCorePreset() để dựng
+   ramp cho PrimeNG (trước 2026-09-02 chúng nằm ngay trong file preset của
+   core/, đã tách ra vì màu thương hiệu là dữ liệu của dự án, không phải của
+   nền tảng). Đổi ở đây mà quên chỗ kia thì CSS và component PrimeNG render
+   hai màu khác nhau, và KHÔNG có gì báo lỗi.
+
+   MỤC LỤC
+     1. Nền tảng          reset, body, tiện ích chữ
+     2. Bề mặt            .card · .tablewrap · .page-fill
+     3. Nút               .btn · .icon-btn · .segmented
+     4. Nhập liệu         .input · .input-icon · .check
+     5. Trạng thái        .badge · .delta · .notice
+     6. Bố cục            .toolbar · .title · .form-row · .dialog-actions
+     7. Bảng              table / th / td
+     8. Dialog            dialog · .dialog-head
+     9. Khối đăng nhập    .field · .btn-block · .login-error
+    10. Chân trang        .footer
+   ============================================================================= */
+
+/* ==========================================================================
+   LỚP 1 — DESIGN TOKEN   (nguồn: src/FE/src/styles.scss :root — chép nguyên xi)
+   👉 SỬA MÀU / KHOẢNG CÁCH / CỠ CHỮ Ở ĐÂY
+   ========================================================================== */
 :root {
-  /* ===== Đã CHỐT LẠI (2026-08-15) — sửa tương phản thấp giữa các bậc bề mặt
-     (nền trang/card/nút gần như cùng 1 màu, đo được ~1.1:1–1.3:1, dưới ngưỡng
-     WCAG 2.2 3:1 cho thành phần UI — xem báo cáo "Kiểm Tra Tương Phản"). Giữ
-     nguyên tông xám-xanh + brand xanh gốc, chỉ tăng độ tách lớp thật bằng màu,
-     không chỉ dựa vào box-shadow. Sau khi đổi, chạy lại
-     `npx --yes --package=@google/design.md designmd lint` để xác nhận số đo
-     mới — giá trị dưới đây là hướng đã tính toán, không phải số cuối cùng
-     tuyệt đối, phải đối chiếu lại bằng công cụ thật. ===== */
-  --bg: #eef2f8;
+  /* ===== Bảng màu 2026-08-29 — nâng tương phản đạt WCAG 3:1 cho ranh giới.
+     Đo trước khi sửa: card so với nền trang chỉ 1.12:1, sọc bảng 1.05:1,
+     viền card 1.26:1 — đó là lý do giao diện trông bẹt. Chữ thì vốn đã đạt,
+     nên chỉ chỉnh --muted cho hợp nền trang mới. Mọi giá trị dưới đây được
+     tính bằng công thức tương phản WCAG, không chọn bằng mắt. ===== */
+  --bg: #cfdaea;             /* card nổi lên 1.41:1 (trước: 1.12:1) */
   --card: #fff;
-  /* Đã CHỐT LẠI LẦN 3 (2026-08-15) — đổi chiến lược từ "border-first" sang
-     "fill-first", đúng hướng dashboard 2026 được đánh giá cao (Linear/Stripe/
-     Vercel/Notion) thay vì kiểu enterprise-software viền-khắp-nơi. Card tách
-     lớp bằng shadow (không phải viền đậm); nút phụ dùng nền tonal (sắc thái
-     nhạt của brand) thay vì xám+viền; viền đậm (--border-strong) giờ CHỈ dùng
-     cho input — nơi duy nhất viền thực sự có giá trị UX ("chỗ này gõ được").
-     Xem artifact "Hướng Màu Sắc" cho so sánh trực quan. */
-  --surface-2: #e1e7f1; /* giờ dùng làm hover tint cho nút ghost (icon-only), KHÔNG còn là nền nút mặc định */
-  --tonal-bg: #dbe7fa; /* nền nút phụ có nhãn chữ (Huỷ, Xuất báo cáo...) — sắc thái nhạt của --brand */
-  --tonal-ink: #0f4a9e; /* chữ trên nền tonal — đậm hơn --brand để đủ tương phản trên nền nhạt */
+  --surface-2: #c1cde2;      /* nền hover nút icon — 1.60:1 trên card */
+  --tonal-bg: #c4d8f6;       /* nền nút phụ có nhãn chữ */
+  --tonal-ink: #0f4a9e;      /* chữ trên nền tonal — 5.82:1 */
   --text: #152033;
-  --muted: #57647a; /* đậm hơn bản cũ #6d788b để vượt an toàn 4.5:1 trên nền trắng */
-  --line: #dfe6ef; /* viền faint cho card/dòng kẻ bảng — KHÔNG phải component tương tác */
-  --border-strong: #7e91b4; /* viền CHỈ dùng cho input/select — không dùng cho nút/card nữa */
+  --muted: #4c576b;          /* đậm hơn #57647a: nền trang mới tối hơn nên
+                                bản cũ chỉ còn 4.24:1. Nay 5.16:1 trên nền
+                                trang, 7.28:1 trên card, 4.54:1 trên hover */
+  --line: #7a97bd;           /* 3.00:1 trên nền trắng — ĐẠT ngưỡng WCAG cho
+                                ranh giới thành phần (trước: 1.26:1) */
+  --border-strong: #6077a2;  /* viền ô nhập — 4.51:1, đậm hơn --line một bậc
+                                rõ rệt để "chỗ này gõ được" vẫn nổi hơn viền
+                                trang trí */
   --brand: #0f5bd7;
   --brand2: #174ca8;
   --good: #0e7050;
   --good-bg: #d9f2e6;
-  --warn: #a8690a;
+  --warn: #965e08;
   --warn-bg: #ffedc7;
-  --bad: #b83232;
+  --bad: #a02b2b;
   --bad-bg: #fbdcdc;
-  --shadow: 0 4px 16px rgba(23, 39, 67, 0.1), 0 1px 3px rgba(23, 39, 67, 0.06); /* 2 lớp — đậm hơn để gánh việc tách lớp thay cho viền */
+  --shadow: 0 4px 16px rgba(23,39,67,.1), 0 1px 3px rgba(23,39,67,.06);
 
-  /* Bổ sung khi dọn gate G1 (2026-08-24) — tên/giá trị lấy nguyên xi từ
-     doc/Design/Frontend/PlatformManager/Tokens/colors.md §"Surface / text roles
-     added 2026-08-20", trước đó doc đã đặt tên nhưng chưa được khai báo thật
-     trong :root. Chỉ thêm 3 token thực sự cần cho các hex literal bị gate bắt
-     — không thêm --text-table-header/--surface-notice/--border-notice vì
-     chưa có literal nào trong src/app cần đến. */
   --on-primary: #fff; /* chữ/icon trên nền --brand: brand mark, avatar, active seg-btn */
-  --surface-track: #edf1f6; /* nền track thanh tiến độ (.bar) */
-  --surface-table-header: #f8fafc; /* nền th, zebra dòng chẵn, chip .role-tag */
+
+  /* Bổ sung 2026-08-29 (audit FE-7). 5 giá trị này trước đây là hex trần nằm rải
+     trong chính file này. Gate G1 chỉ quét `src/FE/src/app` nên không thấy chúng —
+     đúng cơ chế "dọn tay 2 lần, tái sinh cả 2 lần" mà fe/trien-khai/05-gate.md
+     cảnh báo. Khai thành token thì đổi theme là chúng đổi theo. */
+  --btn-hover-bg: #c7dbf5;      /* nền .btn khi rê chuột */
+  --danger-border: #e0a8a8;     /* viền nút/dải mang nghĩa nguy hiểm */
+  --danger-hover-bg: #f5c6c6;   /* nền .btn.danger khi rê chuột */
+  --th-ink: #536076;            /* màu chữ tiêu đề cột bảng */
+  --surface-track: #dbe4f0; /* nền track thanh tiến độ — vẫn NHẠT vì nó là NỀN,
+                               không phải ranh giới; thanh --brand trên nó đo
+                               được 4.68:1 nên biên giới đã đủ rõ */
+  --surface-table-header: #e9eff6; /* nền th + sọc dòng chẵn — 1.16:1 so với
+                               dòng lẻ (trước 1.05:1, gần như vô hình) */
+
+  /* Bổ sung 2026-09-03 (gate G11). Bốn giá trị này TRƯỚC ĐÂY là literal rgb()/rgba()
+     nằm trong SCSS của `shared/` — tức trong CoreBase, nơi màu của dự án này sẽ đi
+     theo nền tảng sang sản phẩm thứ hai và KHÔNG đổi theo bảng màu của nó. G1 không
+     thấy chúng vì G1 chỉ quét `#rrggbb`; G11 quét nốt dạng thập phân.
+
+     Bốn TÊN dưới đây KHÔNG phải phát minh mới: cả bốn đã được khai sẵn trong
+     doc/Design/Frontend/PlatformManager/Tokens/colors.md (§"Shipped as literals" và
+     §"Elevation used outside --shadow") kèm đúng giá trị này, và Open Item 2 của file
+     đó yêu cầu thẳng "Promote to :root". Đây là code đuổi theo doc, đúng chiều cập
+     nhật đã chốt — không phải quyết định thiết kế mới. GIÁ TRỊ HIỂN THỊ GIỮ NGUYÊN. */
+  --surface-nav-active: rgba(15, 91, 215, 0.08); /* nền mục menu ĐANG CHỌN — chính là
+                               --brand #0f5bd7 ở 8%, viết bằng thập phân nên lọt G1 */
+  --overlay-backdrop: rgba(20, 28, 40, 0.45); /* scrim sau dialog và sau drawer mobile —
+                               trước đây khai HAI lần (file này + sidebar.scss), lệch
+                               được mà không ai biết */
+  --surface-topbar: rgba(255, 255, 255, 0.95); /* nền topbar; CỐ Ý mờ 95% chứ không
+                               phải --card đặc, vì nó nằm dưới backdrop-filter: blur */
+  --shadow-toast: 0 14px 38px rgba(23, 39, 67, 0.26), 0 2px 6px rgba(23, 39, 67, 0.12);
+                            /* SÂU HƠN --shadow có chủ đích: toast trôi TRÊN nội dung,
+                               còn card thì nằm TRONG nội dung. Đừng gộp vào --shadow */
 
   --fs-xs: 11px;
   --fs-sm: 12px;
@@ -66,7 +128,7 @@
 
   --radius-sm: 7px;
   --radius-md: 9px;
-  --radius-lg: 16px; /* 14px→16px, theo xu hướng bo góc lớn hơn 2026 (breathing room) */
+  --radius-lg: 16px;
   --radius-dialog: 15px;
   --radius-table: 12px;
   --radius-pill: 999px;
@@ -75,53 +137,271 @@
   --sidebar-w-collapsed: 60px;
 
   --container-max-width: 1600px;
+
+  /* Chiều cao vùng cuộn của LƯỚI DỮ LIỆU — tính theo MÀN HÌNH, không phải số
+     px cứng. Trước đây mỗi bảng tự chọn một con số (480 / 520 / 560px): trên
+     màn 1080p thì thừa chỗ mà bảng vẫn cuộn, trên laptop 768p thì bảng tràn
+     xuống dưới nếp gấp và cả trang phải cuộn — lúc đó tiêu đề cột trôi mất,
+     người dùng không còn biết mình đang đọc cột nào.
+     280px là phần khung cố định phía trên/dưới lưới: topbar + tiêu đề card +
+     toolbar + thanh phân trang. */
+  --grid-h: calc(100dvh - 280px);
+  --grid-h-min: 220px;
 }
 
-* {
-  box-sizing: border-box;
+
+/* ==========================================================================
+   LỚP 2 — THƯ VIỆN COMPONENT DÙNG CHUNG
+   ==========================================================================
+   NGUYÊN TẮC: mỗi loại component có ĐÚNG MỘT định nghĩa ở đây. Không màn hình
+   nào được khai lại nút, ô nhập, badge, toolbar, khung bảng hay chân dialog
+   trong CSS riêng của nó — chỉ được dùng lại class ở lớp này.
+
+   Đây là bản đồ để sau này code component Angular dùng chung: mỗi mục dưới đây
+   tương ứng một component.
+
+   MỤC LỤC
+     1. Nền tảng          reset, body, tiện ích chữ
+     2. Bề mặt            .card · .tablewrap
+     3. Nút               .btn · .icon-btn · .segmented
+     4. Nhập liệu         .input (mọi ô nhập) · .input-icon · .check
+     5. Hiển thị trạng thái  .badge · .delta · .notice
+     6. Bố cục            .toolbar · .title · .form-row · .form-grid · .dialog-actions
+     7. Bảng              table / th / td
+     8. Dialog            dialog
+     9. Khối đăng nhập    .field · .btn-block · .login-error
+    10. Chân trang        .footer
+   ========================================================================== */
+
+/* ===== Be Vietnam Pro — tự phục vụ từ public/fonts =====
+   Khai @font-face TRONG file này chứ không dùng <link> ở index.html: Angular
+   xử lý index.html lúc build và cố phân giải mọi <link rel=stylesheet> theo
+   đường dẫn build, nên `href="fonts/..."` bị tìm thành `D:onts\...` rồi
+   trượt — bản build ra sẽ im lặng chạy bằng font hệ điều hành, đúng lỗi mà
+   `Inter` đã mắc suốt thời gian trước.
+   `url()` để tuyệt đối `/fonts/...`: bundler bỏ qua đường dẫn tuyệt đối, và
+   thư mục `public/` được phục vụ ngay tại gốc web nên khớp `<base href="/">`.
+   5 độ đậm × 3 bộ ký tự (Latin / Latin-Ext / Việt). */
+/* vietnamese */
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(/fonts/QdVPSTAyLFyeg_IDWvOJmVES_Hw4BXoKZA.woff2) format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(/fonts/QdVPSTAyLFyeg_IDWvOJmVES_Hw5BXoKZA.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(/fonts/QdVPSTAyLFyeg_IDWvOJmVES_Hw3BXo.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(/fonts/QdVMSTAyLFyeg_IDWvOJmVES_HTEJm86Rb0bcw.woff2) format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(/fonts/QdVMSTAyLFyeg_IDWvOJmVES_HTEJm87Rb0bcw.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(/fonts/QdVMSTAyLFyeg_IDWvOJmVES_HTEJm81Rb0.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url(/fonts/QdVMSTAyLFyeg_IDWvOJmVES_HToIW86Rb0bcw.woff2) format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url(/fonts/QdVMSTAyLFyeg_IDWvOJmVES_HToIW87Rb0bcw.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url(/fonts/QdVMSTAyLFyeg_IDWvOJmVES_HToIW81Rb0.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(/fonts/QdVMSTAyLFyeg_IDWvOJmVES_HSMIG86Rb0bcw.woff2) format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(/fonts/QdVMSTAyLFyeg_IDWvOJmVES_HSMIG87Rb0bcw.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(/fonts/QdVMSTAyLFyeg_IDWvOJmVES_HSMIG81Rb0.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url(/fonts/QdVMSTAyLFyeg_IDWvOJmVES_HSQI286Rb0bcw.woff2) format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url(/fonts/QdVMSTAyLFyeg_IDWvOJmVES_HSQI287Rb0bcw.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url(/fonts/QdVMSTAyLFyeg_IDWvOJmVES_HSQI281Rb0.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
-html {
-  scroll-behavior: smooth;
-}
 
+/* ===== 1. NỀN TẢNG ======================================================= */
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
 body {
   margin: 0;
-  font-family: Inter, 'Segoe UI', Arial, sans-serif;
+  font-family: 'Be Vietnam Pro', 'Segoe UI', Arial, sans-serif;
   background: var(--bg);
   color: var(--text);
   font-size: var(--fs-base);
 }
+button, input, select, textarea { font: inherit; }
+h1, h2, h3, p { margin: 0; }
+@media print { .no-print { display: none !important; } }
 
-button,
-input,
-select,
-textarea {
-  font: inherit;
-}
-
-h1,
-h2,
-h3,
-p {
-  margin: 0;
-}
-
-.no-print {
-  /* đánh dấu phần tử ẩn khi in — dùng chung ở @media print các component */
-}
-
+/* Bù bố cục cho phần tử đã ẩn khi in. Đây KHÔNG phải "ẩn phần tử" nên `.no-print`
+   không thay được: sidebar là `position: fixed`, nên khi nó biến mất lúc in,
+   `margin-left: var(--sidebar-w)` của `.shell-content` vẫn còn và mọi trang in ra
+   chừa một dải trắng rộng bằng sidebar.
+   Đặt ở đây theo quy ước fe-ui-conventions.md §"In ấn" — @media print tập trung
+   một chỗ, không rải vào SCSS từng component. */
 @media print {
-  .no-print {
-    display: none !important;
+  .shell-content { margin-left: 0 !important; }
+  main { max-width: none; }
+}
+
+/* ===== Tôn trọng thiết lập "giảm chuyển động" của hệ điều hành =====
+   WCAG 2.2 AA là ràng buộc nghiệm thu của dự án (fe/15-accessibility.md §1), và
+   đây là việc rẻ nhất trong nhóm ưu tiên 1. Người bị rối loạn tiền đình có thể
+   chóng mặt hoặc buồn nôn vì hiệu ứng trượt/phóng — tắt hẳn thay vì làm chậm.
+   `!important` là cần thiết: khối này phải thắng mọi transition khai rải rác ở
+   SCSS của từng component. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 
-/* ===== Primitive classes dùng chung nhiều component (card/btn/notice/badge/dialog/
-   filters/form) — port nguyên xi từ doc/Prototype/*.html. Đặt ở global thay vì lặp lại
-   trong từng component SCSS vì đây là các "nguyên tử" style xuất hiện > 5 nơi khác nhau
-   (page + nhiều dumb component); mỗi component vẫn có SCSS riêng cho phần layout đặc thù
-   của nó, chỉ dùng lại các class nền tảng này cho phần "trông giống nhau ở mọi nơi". */
+
+.muted { color: var(--muted); font-size: var(--fs-xs); }
+.num   { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* Chỉ trình đọc màn hình thấy. Dùng khi một dấu hiệu THỊ GIÁC (chấm màu, icon,
+   vị trí) mang thông tin mà người không nhìn thấy sẽ mất — kèm chữ ẩn ở đây
+   thay vì bịa chữ hiện ra làm rối bố cục.
+   KHÔNG dùng `display: none` hay `visibility: hidden`: cả hai gỡ phần tử khỏi
+   cây trợ năng, đúng thứ ta đang cố tránh. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+/* Tiện ích tô màu chữ. Tiền tố `text-` để KHÔNG va tên với biến thể badge
+   (.badge.ok/.warn/.bad) — trước đây `.warn` vừa là chữ vàng vừa là badge vàng,
+   hai thứ khác nghĩa cùng tên.
+   Đậm hơn chữ thường một bậc: một con số đổi màu giữa bảng dày đặc mà vẫn
+   cùng độ đậm với chữ xung quanh thì gần như không ai nhận ra. */
+.text-good, .text-bad, .text-warn { font-weight: 700; }
+.text-good { color: var(--good); }
+.text-bad  { color: var(--bad); }
+.text-warn { color: var(--warn); }
+
+/* Biến thể có nền — dùng khi con số cần đọc được ngay từ xa (ô tổng, ô cảnh
+   báo trong bảng dài). Nền nhạt cùng sắc, chữ giữ nguyên nên vẫn đạt chuẩn. */
+.text-good.filled, .text-bad.filled, .text-warn.filled {
+  display: inline-block;
+  padding: 1px var(--sp-2);
+  border-radius: var(--radius-sm);
+}
+.text-good.filled { background: var(--good-bg); }
+.text-bad.filled  { background: var(--bad-bg); }
+.text-warn.filled { background: var(--warn-bg); }
+
+
+/* ===== 2. BỀ MẶT ========================================================= */
 
 .card {
   background: var(--card);
@@ -131,11 +411,79 @@ p {
   padding: var(--sp-5);
 }
 
+/* Khung bọc bảng. Trước hợp nhất: 4 bản khai riêng ở 4 component, phần viền +
+   bo góc giống hệt nhau, chỉ khác cách cuộn. Giờ 1 gốc + 1 biến thể. */
+.tablewrap {
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-table);
+  overflow: hidden;
+}
+/* Lưới dữ liệu: cao vừa màn hình, cuộn BÊN TRONG. Kết hợp với `th` đã
+   `position: sticky` sẵn nên tiêu đề cột đứng yên trong lúc cuộn dòng.
+
+   ⚠️ CHỈ dùng cho `<table>` THUẦN. Lưới PrimeNG thì KHÔNG:
+   `p-table` tự bọc bảng trong `.p-datatable-table-container` có `overflow`
+   riêng, và tự render paginator NGOÀI container đó. Thêm `.scroll` ra ngoài
+   sẽ (a) làm `thead` mất scrollport thật nên tiêu đề cột trôi mất khi cuộn,
+   và (b) nhốt luôn paginator vào trong vùng cuộn.
+   Với `p-table` dùng `[scrollable]="true" scrollHeight="var(--grid-h)"` —
+   vẫn đúng token, không cần `::ng-deep`. */
+.tablewrap.scroll {
+  overflow: auto;
+  max-height: var(--grid-h);
+  min-height: var(--grid-h-min);
+}
+
+/* ===== Trang dạng danh sách: lưới ăn hết chỗ còn lại của màn hình =====
+   Đặt class `page-fill` lên phần tử gốc của trang, và cho component trang
+   `:host { display: contents }` để thẻ host không cắt đứt chuỗi flex.
+
+   Vì sao KHÔNG dùng `max-height: calc(100vh - N)`: N là tổng chiều cao của
+   topbar + tiêu đề + toolbar + phân trang, và nó KHÁC NHAU ở từng trang, đổi
+   theo cả việc toolbar có xuống dòng hay không — đo được 443px ở trang danh
+   mục nhưng chỉ 280px ở trang khác. Chọn một con số là chắc chắn sai ở đâu
+   đó, đúng kiểu lỗi mà ba giá trị cứng 480/520/560px trước đây đã mắc.
+   Chuỗi flex dưới đây để trình duyệt tự tính, không ai phải đoán.
+
+   `min-height: 0` ở MỌI mắt xích là bắt buộc, không phải cho đẹp: mặc định
+   flex item không co nhỏ hơn nội dung của nó, thiếu dòng đó thì lưới vẫn đẩy
+   trang dài ra và thanh phân trang rơi xuống dưới nếp gấp. */
+.page-fill { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
+.page-fill > .card { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+
+/* Component trung gian giữa card và vùng cuộn (bảng dữ liệu, ma trận...) cũng
+   phải nối chuỗi, nếu không chiều cao dừng lại ở nó. */
+.page-fill > .card > * { min-height: 0; }
+.page-fill .grid-host { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
+
+/* Vùng cuộn thật — bỏ chặn chiều cao vì giờ chiều cao do flex quyết định.
+   `min-height: 0` chứ KHÔNG phải `--grid-h-min`: trong chuỗi flex vùng cuộn
+   phải CO ĐƯỢC. Đặt sẵn một giá trị tối thiểu thì trên màn hình thấp chính
+   nó chiếm chỗ và đẩy thanh phân trang ra khỏi khung. */
+.page-fill .tablewrap.scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+  overflow: auto;
+}
+
+/* Thanh công cụ và tiêu đề luôn giữ nguyên kích thước — chúng phải thấy được
+   ở mọi chiều cao màn hình.
+   KHÔNG có hook cho thanh phân trang ở đây: paginator do PrimeNG tự render
+   bên trong `p-table`, không phần tử nào của ta mang class để móc vào. Một
+   hook không ai dùng chỉ làm người đọc sau tưởng là có hợp đồng. */
+.page-fill .toolbar,
+.page-fill .title { flex: none; }
+
+
+/* ===== 3. NÚT ============================================================ */
+
+/* 3.1 Nút có nhãn chữ. Mặc định = nền tonal (sắc thái nhạt của brand). */
 .btn {
-  /* Đã CHỐT LẠI LẦN 3: nền tonal (sắc thái brand) thay cho xám+viền — xem
-     ghi chú :root. Không viền (border: transparent giữ nguyên box model khi
-     hover/focus đổi màu, tránh layout nhảy 1px). */
-  border: 1px solid transparent;
+  /* Viền --line (3:1) chứ không phải trong suốt: nền tonal chỉ tách khỏi card
+     1.45:1, không đủ để mắt thấy ranh giới nút. Đẩy nền tonal lên 3:1 thì chữ
+     xanh đậm trên nó lại rớt chuẩn — nên ranh giới đặt ở viền. */
+  border: 1px solid var(--line);
   background: var(--tonal-bg);
   color: var(--tonal-ink);
   border-radius: var(--radius-sm);
@@ -143,470 +491,525 @@ p {
   font-size: var(--fs-sm);
   font-weight: 700;
   cursor: pointer;
-  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
-
-  &.primary {
-    background: var(--brand);
-    border-color: var(--brand);
-    color: #fff;
-
-    &:hover {
-      background: var(--brand2);
-      border-color: var(--brand2);
-      box-shadow: 0 8px 20px rgba(15, 91, 215, 0.35);
-    }
-  }
-
-  &.danger {
-    background: var(--bad-bg);
-    color: var(--bad);
-
-    &:hover {
-      background: #f5c6c6;
-    }
-  }
-
-  &:hover {
-    background: #c7dbf5;
-    box-shadow: 0 3px 10px rgba(23, 39, 67, 0.1);
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--brand);
-    outline-offset: 2px;
-  }
-
-  &:active {
-    transform: translateY(1px);
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
+  /* `<a class="btn">` la cach dieu huong bang nut (trang chu -> doi mat khau).
+     Khong tat gach chan thi no trong nhu mot link hong. */
+  text-decoration: none;
+  transition: background .15s ease, box-shadow .15s ease, transform .1s ease;
 }
+.btn:hover { background: var(--btn-hover-bg); box-shadow: 0 3px 10px rgba(23,39,67,.1); }
+.btn:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
 
-/* Nút icon-only tần suất cao (phân trang, thu gọn menu, hành động trong hàng
-   grid) — ghost: trong suốt mặc định, chỉ hiện nền khi hover/focus. Nhiều nút
-   cùng lúc trên 1 màn (mỗi dòng grid 2 nút) nên KHÔNG tonal-fill thường trực
-   như .btn — tránh rợp màu khi danh sách dài. */
-.action-btn {
+.btn.primary { background: var(--brand); border-color: var(--brand); color: var(--on-primary); }
+
+.btn.primary:hover { background: var(--brand2); border-color: var(--brand2); box-shadow: 0 8px 20px rgba(15,91,215,.35); }
+
+/* Gộp từ hai khối .btn.danger khai rời nhau — chính file này tuyên bố "mỗi
+   component đúng MỘT định nghĩa" ở đầu file, nên hai khối rời là tự mâu thuẫn. */
+.btn.danger { background: var(--bad-bg); color: var(--bad); border-color: var(--danger-border); }
+.btn.danger:hover { background: var(--danger-hover-bg); }
+
+/* Cỡ nhỏ — dùng cho nút hành động nằm trong dòng bảng. */
+.btn.sm { padding: 4px var(--sp-2); font-size: var(--fs-xs); }
+
+/* Nút chiếm trọn chiều ngang (dùng ở form đăng nhập). */
+.btn-block { width: 100%; padding: 11px; font-size: var(--fs-md); display: flex; align-items: center; justify-content: center; gap: var(--sp-3); }
+
+/* 3.2 Nút chỉ có icon — GHOST: trong suốt, chỉ hiện nền khi hover.
+   Hợp nhất từ 5 bản trước đây (.action-btn khai 2 lần mâu thuẫn, .cell-icon-btn
+   không ai dùng, .sidebar-toggle, .toast-close, .toggle-visibility) — trước đó
+   có 4 kích thước, 3 bán kính và 2 kiểu viền khác nhau cho cùng một thứ.
+   Ghost là ý đồ gốc của mã nguồn: một dòng bảng có 2 nút, danh sách dài mà nút
+   nào cũng tô nền thì mắt không đọc được dữ liệu nữa. */
+.icon-btn {
   border: 1px solid transparent;
   background: transparent;
   border-radius: var(--radius-sm);
-  color: var(--muted);
-  cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
-
-  &:hover {
-    background: var(--surface-2);
-    color: var(--text);
-  }
-
-  &.danger:hover {
-    background: var(--bad-bg);
-    color: var(--bad);
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--brand);
-    outline-offset: 1px;
-  }
-}
-
-.action-btn {
-  border: 1px solid var(--line);
-  background: #fff;
-  border-radius: var(--radius-sm);
-  padding: 4px var(--sp-2);
-  font-size: var(--fs-xs);
-  font-weight: 700;
-  cursor: pointer;
-  color: var(--text);
-  transition: background 0.15s ease, border-color 0.15s ease;
-  margin-right: var(--sp-1);
-
-  &:hover {
-    background: var(--bg);
-  }
-
-  &.danger {
-    color: var(--bad);
-    border-color: #f3caca;
-
-    &:hover {
-      background: #fdecec;
-    }
-  }
-}
-
-.notice {
-  background: #edf4ff;
-  border: 1px solid #cfe0ff;
-  padding: var(--sp-3) var(--sp-5);
-  border-radius: 12px;
-  font-size: var(--fs-sm);
-  margin-bottom: var(--sp-5);
-
-  a {
-    color: var(--brand);
-    font-weight: 700;
-    text-decoration: none;
-
-    &:hover {
-      text-decoration: underline;
-    }
-  }
-}
-
-.title {
-  display: flex;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  flex: none;
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--sp-3);
-  margin-bottom: var(--sp-4);
-
-  h2 {
-    font-size: var(--fs-md);
-    margin: 0;
-  }
-}
-
-.muted {
+  justify-content: center;
+  font-size: 12px;
+  line-height: 1;
   color: var(--muted);
-  font-size: var(--fs-xs);
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+}
+.icon-btn:hover { background: var(--surface-2); color: var(--text); }
+.icon-btn:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
+.icon-btn:disabled { opacity: .45; cursor: not-allowed; background: transparent; color: var(--muted); }
+/* Hai hành động khác nhau thì khác MÀU, ở cả nút chữ lẫn nút icon:
+   sửa / mở khoá = xanh brand · xoá / khoá = đỏ. Vẫn ghost (không tô nền
+   thường trực), màu nằm ở chính icon nên đọc được ngay mà bảng không bị rợp. */
+.icon-btn.primary { color: var(--brand); }
+.icon-btn.primary:hover { background: var(--tonal-bg); color: var(--tonal-ink); }
+.icon-btn.danger { color: var(--bad); }
+.icon-btn.danger:hover { background: var(--bad-bg); color: var(--bad); }
+
+/* 3.3 Nhóm nút phân đoạn (Tuần / Tháng). */
+.segmented {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  flex: none;
+}
+.seg-btn {
+  border: 0;
+  background: var(--card);
+  padding: var(--sp-2) var(--sp-4);
+  font-weight: 700;
+  font-size: var(--fs-sm);
+  color: var(--muted);
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+}
+.seg-btn + .seg-btn { border-left: 1px solid var(--line); }
+.seg-btn:hover { background: var(--bg); }
+.seg-btn:focus-visible { outline: 2px solid var(--brand); outline-offset: -2px; }
+.seg-btn.active { background: var(--brand); color: var(--on-primary); }
+.seg-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+
+/* ===== 4. NHẬP LIỆU ====================================================== */
+
+/* MỘT hợp đồng cho mọi ô nhập, ở mọi nơi. Trước hợp nhất có 3 bản: ô ngoài
+   trang viền đậm, ô TRONG DIALOG lại viền nhạt --line, ô đăng nhập viền đậm
+   kèm padding riêng. Nay dùng chung --border-strong: input là nơi DUY NHẤT
+   viền thực sự có việc để làm — nó nói "chỗ này gõ được". */
+.input,
+.toolbar input, .toolbar select,
+.form-row input, .form-row select, .form-row textarea,
+.input-icon input {
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  padding: var(--sp-2) var(--sp-3);
+  font-size: var(--fs-sm);
+  color: var(--text);
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.input:focus-visible,
+.toolbar input:focus-visible, .toolbar select:focus-visible,
+.form-row input:focus-visible, .form-row select:focus-visible, .form-row textarea:focus-visible,
+.input-icon input:focus-visible {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(15,91,215,.12);
+}
+.form-row input, .form-row select, .form-row textarea { width: 100%; }
+
+/* Chiều rộng ô nhập theo LOẠI DỮ LIỆU. Ô nhập trải dài hết hàng cho một con số
+   2 chữ số vừa xấu vừa gây hiểu nhầm về lượng chữ cần gõ — chiều rộng là một
+   tín hiệu giao diện, không phải chuyện thẩm mỹ. */
+.input.w-num  { width: 88px; text-align: right; }   /* số nguyên: điểm, số lượng */
+.input.w-pct  { width: 76px; text-align: right; }   /* phần trăm */
+.input.w-date { width: 132px; }                     /* ngày tháng */
+.input.w-sm   { width: 150px; }                     /* mã, từ khoá ngắn */
+.input.w-md   { width: 240px; }                     /* tên, ô tìm kiếm */
+.input.w-lg   { width: 360px; }
+/* Trong form 2 cột, biến thể chiều rộng vẫn thắng width:100% ở trên. */
+.form-row .input.w-num, .form-row .input.w-pct,
+.form-row .input.w-date, .form-row .input.w-sm,
+.form-row .input.w-md, .form-row .input.w-lg { width: auto; }
+.form-row .input.w-num  { width: 88px; }
+.form-row .input.w-pct  { width: 76px; }
+.form-row .input.w-date { width: 132px; }
+.form-row .input.w-sm   { width: 150px; }
+.form-row .input.w-md   { width: 240px; }
+.form-row .input.w-lg   { width: 360px; }
+
+/* Ô chọn: rộng theo nội dung, không kéo dài vô cớ. */
+select.input, .toolbar select { width: auto; min-width: 120px; max-width: 240px; }
+
+/* Bỏ nút tăng/giảm mặc định của trình duyệt ở ô số — chúng chiếm chỗ và
+   không khớp bộ icon nào của hệ thống. */
+.input.w-num::-webkit-inner-spin-button, .input.w-pct::-webkit-inner-spin-button,
+.input.w-num::-webkit-outer-spin-button, .input.w-pct::-webkit-outer-spin-button {
+  -webkit-appearance: none; margin: 0;
+}
+.form-row textarea { min-height: 64px; resize: vertical; }
+
+/* Ô khoá và ô sai — trước hợp nhất không nơi nào khai, nên rơi về style mặc
+   định của trình duyệt (nằm ngoài mọi token). */
+.input:disabled,
+.toolbar input:disabled, .toolbar select:disabled,
+.form-row input:disabled, .form-row select:disabled, .form-row textarea:disabled,
+.input-icon input:disabled {
+  background: var(--surface-track);
+  color: var(--muted);
+  cursor: not-allowed;
+}
+.input.invalid,
+.form-row input.invalid, .form-row select.invalid, .form-row textarea.invalid,
+.input-icon input.invalid {
+  border-color: var(--bad);
+}
+.input.invalid:focus-visible,
+.form-row input.invalid:focus-visible,
+.input-icon input.invalid:focus-visible {
+  border-color: var(--bad);
+  box-shadow: 0 0 0 3px rgba(160, 43, 43, .14);
 }
 
-.good {
-  color: var(--good);
+/* Ô nhập có icon bên trái. Hợp nhất .field-input (đăng nhập) và .search
+   (danh sách người dùng) — cùng cấu trúc, trước đây khác nhau ở cỡ icon
+   (15px vs 13px) và khoảng chừa trái (36px vs 32px). */
+.input-icon { position: relative; display: flex; align-items: center; }
+.input-icon > .pi {
+  position: absolute;
+  left: 12px;
+  color: var(--muted);
+  font-size: 15px;
+  pointer-events: none;
 }
+.input-icon input { width: 100%; padding: 10px 12px 10px 36px; }
+.input-icon .icon-btn { position: absolute; right: 10px; }
 
-.bad {
-  color: var(--bad);
+/* Trong toolbar, o tim kiem phai CAO BANG nut ben canh. Dem 10px o tren la
+   cua form dang nhap (o nhap to, dung mot minh giua trang) — bung nguyen vao
+   mot hang cong cu thi o cao hon nut ~8px, hang bi lech. */
+.toolbar .input-icon input { padding: var(--sp-2) var(--sp-3) var(--sp-2) 30px; }
+.toolbar .input-icon > .pi { left: 10px; font-size: 13px; }
+/* Bỏ nút "×" mặc định của WebKit trong input[type=search]: nó trùng chức năng
+   với chip gỡ điều kiện và nằm ngoài mọi token của hệ thống. */
+.toolbar .input-icon input[type="search"]::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
 }
+/* Có nút bên phải thì chữ phải dừng trước nó, nếu không chữ dài sẽ chui xuống
+   dưới nút hiện/ẩn mật khẩu. */
+.input-icon:has(.icon-btn) input { padding-right: 40px; }
 
-.warn {
-  color: var(--warn);
+/* Ô tick. Trước hợp nhất: khai trùng từng chữ ở 2 ma trận phân quyền. */
+.check {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--brand);
 }
+.check:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.check:disabled { cursor: not-allowed; opacity: .6; }
 
+
+/* ===== 5. HIỂN THỊ TRẠNG THÁI ============================================ */
+
+/* Badge. Trước hợp nhất có HAI hệ tên cho cùng một component:
+   .bdone/.bwork/.bstall ở lớp chung và .active/.locked riêng bảng người dùng
+   (.active trùng y hệt .bdone, .locked trùng y hệt .bstall).
+   Nay một hệ tên theo NGỮ NGHĨA. */
 .badge {
   display: inline-block;
   border-radius: var(--radius-pill);
   padding: 3px 6px;
   font-size: 10px;
   font-weight: 750;
+}
+.badge.ok   { background: var(--good-bg); color: var(--good); }
+.badge.warn { background: var(--warn-bg); color: var(--warn); }
+.badge.bad  { background: var(--bad-bg);  color: var(--bad); }
+.badge.neutral { background: var(--surface-table-header); color: var(--muted); }
 
-  &.bdone {
-    background: var(--good-bg);
-    color: var(--good);
-  }
-
-  &.bwork {
-    background: var(--warn-bg);
-    color: var(--warn);
-  }
-
-  &.bstall {
-    background: var(--bad-bg);
-    color: var(--bad);
-  }
+/* Biến thể ĐỊNH DANH — dùng cho nhãn không mang trạng thái (tên vai trò, mã, nhãn
+   phân loại). Có viền, không màu ngữ nghĩa.
+   Vì sao tách khỏi 4 biến thể trên: `.ok/.warn/.bad` nói "việc này đang thế nào",
+   còn định danh chỉ nói "đây là cái gì". Tô màu ngữ nghĩa cho một cái tên là nói
+   sai — người đọc sẽ tìm ý nghĩa tốt/xấu ở chỗ không có.
+   Đây là hợp nhất của `.role-tag` cũ (2026-08-29): giữ đúng lập luận trong
+   Components/RoleTag.md nhưng dưới dạng biến thể của MỘT component, thay vì một
+   lớp riêng khai lại kích thước và bo góc bằng px trần. */
+.badge.outline {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  font-weight: 700;
 }
 
-.filters {
+/* Chỉ số tăng/giảm. */
+.delta { font-weight: 850; white-space: nowrap; }
+.delta.up   { color: var(--good); }
+.delta.down { color: var(--bad); }
+.delta.flat { color: var(--muted); }
+
+/* Dải thông báo trong trang. Trước đây chỉ có đúng một sắc thái (thông tin),
+   nên muốn báo lỗi đầu trang phải mượn .login-error vốn là khối riêng của màn
+   đăng nhập. Nay đủ 4 mức, cùng một cấu trúc. */
+.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  background: var(--tonal-bg);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--brand);
+  padding: var(--sp-3) var(--sp-5);
+  border-radius: var(--radius-md);
+  font-size: var(--fs-sm);
+  margin-bottom: var(--sp-5);
+}
+.notice > .pi { flex: none; margin-top: 2px; color: var(--brand); }
+.notice > .icon-btn { margin-left: auto; flex: none; }
+.notice a { color: var(--brand); font-weight: 700; text-decoration: none; }
+.notice a:hover { text-decoration: underline; }
+
+.notice.ok   { background: var(--good-bg); border-left-color: var(--good); }
+.notice.ok   > .pi, .notice.ok a   { color: var(--good); }
+.notice.warn { background: var(--warn-bg); border-left-color: var(--warn); }
+.notice.warn > .pi, .notice.warn a { color: var(--warn); }
+.notice.bad  { background: var(--bad-bg);  border-left-color: var(--bad); }
+.notice.bad  > .pi, .notice.bad a  { color: var(--bad); }
+
+
+/* ===== 6. BỐ CỤC ========================================================= */
+
+/* Thanh công cụ đầu trang. Trước hợp nhất: Dashboard dùng .weekbar
+   (margin-bottom: sp-5), DTI dùng .filters (margin: sp-4 0), màn Người dùng
+   không có wrapper nào. Nay một pattern chung. */
+/* Toolbar là một MẶT NỀN riêng, không phải một hàng trôi nổi trong card:
+   nó gom mọi thứ tác động lên danh sách bên dưới, nên phải tự tách ra bằng
+   nền + viền chứ không chỉ bằng khoảng trắng.
+   Đổi so với bản trước: ô tìm kiếm KHÔNG còn `flex: 1` kéo dài hết hàng —
+   một ô tìm kiếm rộng 900px không giúp gõ nhanh hơn, chỉ đẩy mọi thứ khác ra
+   xa nhau. Các điều kiện lọc chuyển vào nút "Lọc" thay vì bày hết ra hàng
+   ngang, đúng cách các bảng dữ liệu thực tế làm khi có quá 2 điều kiện. */
+.toolbar {
   display: flex;
   gap: var(--sp-3);
   flex-wrap: wrap;
   align-items: center;
-  margin: var(--sp-4) 0;
+  /* Nen dam hon han card de toolbar tach ra thanh mot mat rieng: dung
+     --surface-table-header (1.16:1 so voi card) thi gan nhu khong thay. */
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: var(--sp-3) var(--sp-4);
+  margin-bottom: var(--sp-5);
+}
+.toolbar-actions { display: flex; gap: var(--sp-3); margin-left: auto; flex: none; }
+/* Component toolbar luon render the nay vi Angular khong hoi duoc "co ai
+   project vao [actions] khong". Rong thi vo hai o desktop, nhung o <=560px
+   no nhan width:100% tu media query nen sinh mot hang rong + gap o day thanh
+   cong cu. Mot dong :empty xu ly gon. */
+.toolbar-actions:empty { display: none; }
+.toolbar .search { width: 260px; flex: none; }
+.toolbar .grow { flex: 1; min-width: 200px; }
 
-  input {
-    flex: 1;
-    min-width: 220px;
-  }
+/* Vạch ngăn giữa nhóm "tìm/lọc" và nhóm "hành động" khi hàng còn rộng. */
+.toolbar-sep { width: 1px; align-self: stretch; background: var(--line); flex: none; }
+
+/* --- Nút Lọc + bảng điều kiện thả xuống ---
+   Dùng <details>/<summary> nên đóng/mở không cần JavaScript. */
+.filter { position: relative; flex: none; }
+.filter > summary {
+  list-style: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  user-select: none;
+}
+.filter > summary::-webkit-details-marker { display: none; }
+.filter > summary::marker { content: ''; }
+.filter[open] > summary { background: var(--brand); border-color: var(--brand); color: var(--on-primary); }
+.filter[open] > summary .filter-count { background: var(--on-primary); color: var(--brand); }
+
+/* Số điều kiện đang bật — để người dùng biết danh sách đang bị lọc kể cả khi
+   bảng điều kiện đã đóng. Thiếu nó là lỗi kinh điển của toolbar kiểu này. */
+.filter-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: var(--radius-pill);
+  background: var(--brand);
+  color: var(--on-primary);
+  font-size: 10px;
+  font-weight: 800;
 }
 
-.filters-actions {
+.filter-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 50;
+  width: 320px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: 0 16px 40px rgba(23, 39, 67, .22);
+  padding: var(--sp-5);
+  text-align: left;
+}
+.filter-panel .form-row { margin-bottom: var(--sp-4); }
+.filter-panel .form-row:last-of-type { margin-bottom: 0; }
+/* Panel nam BEN TRONG .toolbar nen `.toolbar select { width:auto }` (khai sau)
+   thang `.form-row select { width:100% }` — hau qua la cac select trong bang
+   loc so le nhau theo do dai option. Tra lai day chieu rong o day. */
+.filter-panel select, .filter-panel input, .filter-panel textarea { width: 100%; max-width: none; }
+.filter-foot {
   display: flex;
+  justify-content: space-between;
   gap: var(--sp-3);
-  margin-left: auto;
+  margin-top: var(--sp-5);
+  padding-top: var(--sp-4);
+  border-top: 1px solid var(--line);
+}
+
+/* Điều kiện đang áp, hiện thành thẻ gỡ được ngay trên toolbar. */
+.filter-chips { display: flex; gap: var(--sp-2); flex-wrap: wrap; align-items: center; }
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  background: var(--tonal-bg);
+  border: 1px solid var(--line);
+  color: var(--tonal-ink);
+  border-radius: var(--radius-pill);
+  padding: 2px var(--sp-2) 2px var(--sp-3);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+}
+.filter-chip .icon-btn { width: 16px; height: 16px; font-size: 10px; color: var(--tonal-ink); }
+/* Hover theo sắc của chính con chip, không phải xám hệ thống của .icon-btn —
+   nút này nằm TRÊN nền tonal xanh nên xám trông như lỗi render. */
+.filter-chip .icon-btn:hover { background: var(--brand); color: var(--on-primary); }
+
+@media (max-width: 560px) {
+  .toolbar .search { width: 100%; }
+  .toolbar > * { flex: 1; }
+  /* Nut Loc va day chip khong duoc keo gian theo: chung khong phai o nhap. */
+  .toolbar .filter, .toolbar .filter-chips { flex: none; }
+  .toolbar-actions { margin-left: 0; width: 100%; }
+  .toolbar-sep { display: none; }
+  .filter-panel { width: min(320px, 86vw); }
+}
+
+
+/* Tiêu đề khối trong card. */
+.title { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); margin-bottom: var(--sp-4); }
+.title h2 { font-size: var(--fs-md); margin: 0; }
+
+/* Hàng của form. */
+.form-row { display: flex; flex-direction: column; gap: var(--sp-2); margin-bottom: var(--sp-4); }
+.form-row label, .form-row .form-row-label { font-size: var(--fs-sm); font-weight: 700; color: var(--text); }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 var(--sp-5); }
+@media (max-width: 560px) { .form-grid { grid-template-columns: 1fr; } }
+.form-error { color: var(--bad); font-size: var(--fs-sm); margin: var(--sp-2) 0; }
+.required { color: var(--bad); }
+
+/* Chân dialog. Trước hợp nhất: 7 bản, margin-top ba giá trị khác nhau
+   (8px ×2, 12px ×4, 16px ×1) và 1 bản quên hẳn gap. Nay dùng --sp-5 (14px) —
+   giá trị nằm trong thang token, lệch tối đa 2px so với bản cũ. */
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sp-3);
+  margin-top: var(--sp-5);
+}
+/* Hop thoai 3 lua chon ("Huy / Khong luu / Luu"): nut RUT LUI tach han sang
+   trai, hai nut tien toi dung ben phai — de khong bam nham khi ba nut lien nhau. */
+.dialog-actions .push { margin-right: auto; }
+
+/* --- Đầu hộp thoại: icon tròn + tiêu đề + mô tả ---
+   Dùng cho hộp thoại hỏi ("Lưu thay đổi?"), cảnh báo, và xác nhận xoá. Icon
+   mang màu theo mức độ nghiêm trọng để người dùng nhận ra loại câu hỏi trước
+   khi kịp đọc chữ. */
+.dialog-head {
+  display: flex;
+  gap: var(--sp-4);
+  align-items: flex-start;
+  margin-bottom: var(--sp-4);
+}
+.dialog-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-pill);
   flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
 }
+.dialog-icon.ask  { background: var(--tonal-bg); color: var(--tonal-ink); }
+.dialog-icon.ok   { background: var(--good-bg);  color: var(--good); }
+.dialog-icon.warn { background: var(--warn-bg);  color: var(--warn); }
+.dialog-icon.bad  { background: var(--bad-bg);   color: var(--bad); }
+.dialog-title { font-size: var(--fs-lg); font-weight: 800; color: var(--text); }
+.dialog-desc  { color: var(--muted); margin-top: var(--sp-2); line-height: 1.5; font-size: var(--fs-sm); }
+.dialog-close { margin-left: auto; flex: none; }
 
-.filters input,
-.filters select,
-.weekbar input,
-.weekbar select {
-  /* Viền đậm hơn CÓ CHỦ ĐÍCH — input là nơi duy nhất viền thực sự giúp UX
-     ("chỗ này gõ được"), khác với nút/card giờ đã chuyển sang fill/shadow. */
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
-  background: #fff;
-  padding: var(--sp-2) var(--sp-3);
-  font-size: var(--fs-sm);
 
-  &:focus-visible {
-    outline: 2px solid var(--brand);
-    outline-offset: 1px;
-  }
-}
-
-table {
-  border-collapse: collapse;
-  width: 100%;
-  background: #fff;
-}
-
-th,
-td {
+/* ===== 7. BẢNG ========================================================== */
+table { border-collapse: collapse; width: 100%; background: var(--card); }
+th, td {
   border-bottom: 1px solid var(--line);
   padding: var(--sp-2) var(--sp-3);
   font-size: var(--fs-sm);
   line-height: 1.4;
   vertical-align: top;
 }
-
 th {
   position: sticky;
   top: 0;
-  background: #f8fafc;
+  background: var(--surface-table-header);
   z-index: 4;
-  color: #536076;
+  color: var(--th-ink);
   text-align: left;
   font-size: var(--fs-xs);
   font-weight: 700;
-  letter-spacing: 0.01em;
+  letter-spacing: .01em;
 }
+tbody tr:nth-child(even) { background: var(--surface-table-header); }
+tbody tr:hover { background: var(--bg); }
 
-tbody tr:nth-child(even) {
-  background: #f8fafc;
-}
 
-tbody tr:hover {
-  background: var(--bg);
-}
-
-.num {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-
-.delta {
-  font-weight: 850;
-  white-space: nowrap;
-
-  &.up {
-    color: var(--good);
-  }
-
-  &.down {
-    color: var(--bad);
-  }
-
-  &.flat {
-    color: var(--muted);
-  }
-}
-
-/* ===== Form (dialog) ===== */
-.form-row {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-2);
-  margin-bottom: var(--sp-4);
-
-  label,
-  .form-row-label {
-    font-size: var(--fs-sm);
-    font-weight: 700;
-    color: var(--text);
-  }
-
-  input,
-  select,
-  textarea {
-    border: 1px solid var(--line);
-    border-radius: var(--radius-sm);
-    padding: var(--sp-2) var(--sp-3);
-    background: #fff;
-    width: 100%;
-    font-size: var(--fs-sm);
-  }
-
-  textarea {
-    min-height: 64px;
-    resize: vertical;
-  }
-}
-
-.form-error {
-  color: var(--bad);
-  font-size: var(--fs-sm);
-  margin: var(--sp-2) 0;
-}
-
-.form-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0 var(--sp-5);
-}
-
-/* ===== Dialog (native <dialog>) ===== */
+/* ===== 8. DIALOG ======================================================== */
 dialog {
   border: 0;
   border-radius: var(--radius-dialog);
-  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 24px 70px rgba(0,0,0,.25);
   width: min(700px, 92vw);
   padding: var(--sp-5);
-
-  &::backdrop {
-    background: rgba(20, 28, 40, 0.45);
-  }
-
-  &.form-dialog {
-    width: min(560px, 92vw);
-  }
-
-  &.confirm-dialog {
-    width: min(420px, 92vw);
-  }
 }
+dialog::backdrop { background: var(--overlay-backdrop); }
+dialog.form-dialog { width: min(560px, 92vw); }
+dialog.confirm-dialog { width: min(420px, 92vw); }
 
-.footer {
-  font-size: var(--fs-xs);
-  color: var(--muted);
-  padding: 12px 4px;
 
-  a {
-    color: var(--brand);
-    font-weight: 700;
-    text-decoration: none;
+/* ===== 9. KHỐI ĐĂNG NHẬP ================================================ */
+/* Ở bản Angular, các class này buộc phải global vì nội dung form được project
+   qua <ng-content> của AuthCard — style scoped không xuyên qua được. */
+.field { margin-bottom: var(--sp-4); }
+.field label { display: block; font-size: var(--fs-sm); font-weight: 700; color: var(--text); margin-bottom: var(--sp-2); }
 
-    &:hover {
-      text-decoration: underline;
-    }
-  }
-}
-
-/* ===== Form đăng nhập/đổi mật khẩu (F3) — port từ doc/Prototype/login.html. Đặt global (không
-   phải SCSS riêng của app-auth-card) vì nội dung form được project qua <ng-content> — style
-   scoped của Angular (emulated encapsulation) không xuyên qua nội dung project được, xem
-   doc/huong_dan/wiki-core/fe/04-design-token-system.md §Quy tắc dùng token trong component
-   (2 nơi dùng — platform/login + platform/doi-mat-khau — dưới ngưỡng "≥3 nơi" nhưng bắt buộc global
-   vì ràng buộc kỹ thuật content-projection, không phải sở thích). ===== */
-.field {
-  margin-bottom: var(--sp-4);
-
-  label {
-    display: block;
-    font-size: var(--fs-sm);
-    font-weight: 700;
-    color: var(--text);
-    margin-bottom: var(--sp-2);
-  }
-}
-
-.field-input {
-  position: relative;
-  display: flex;
-  align-items: center;
-
-  .pi {
-    position: absolute;
-    left: 12px;
-    color: var(--muted);
-    font-size: 15px;
-    pointer-events: none;
-  }
-
-  input {
-    width: 100%;
-    border: 1px solid var(--border-strong);
-    border-radius: var(--radius-sm);
-    background: #fff;
-    padding: 10px 12px 10px 36px;
-    font-size: var(--fs-sm);
-    color: var(--text);
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
-
-    &:focus-visible {
-      outline: none;
-      border-color: var(--brand);
-      box-shadow: 0 0 0 3px rgba(15, 91, 215, 0.12);
-    }
-  }
-
-  .toggle-visibility {
-    position: absolute;
-    right: 10px;
-    border: 0;
-    background: none;
-    color: var(--muted);
-    cursor: pointer;
-    padding: 4px;
-    display: flex;
-    border-radius: 6px;
-
-    &:hover {
-      color: var(--text);
-      background: var(--bg);
-    }
-
-    &:focus-visible {
-      outline: 2px solid var(--brand);
-      outline-offset: 1px;
-    }
-  }
-}
-
-.field-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 20px;
-  font-size: var(--fs-sm);
-
-  label {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    color: var(--text);
-    cursor: pointer;
-  }
-
-  a {
-    color: var(--brand);
-    font-weight: 700;
-    text-decoration: none;
-
-    &:hover {
-      text-decoration: underline;
-    }
-  }
-}
-
-.btn-block {
-  width: 100%;
-  padding: 11px;
-  font-size: var(--fs-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
+.field-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; font-size: var(--fs-sm); }
+.field-row label { display: flex; align-items: center; gap: var(--sp-2); color: var(--text); cursor: pointer; }
+.field-row a { color: var(--brand); font-weight: 700; text-decoration: none; }
+.field-row a:hover { text-decoration: underline; }
 
 .login-error {
   display: none;
   background: var(--bad-bg);
-  border: 1px solid #e5a8a8;
+  border: 1px solid var(--danger-border);
   color: var(--bad);
   border-radius: var(--radius-sm);
   padding: var(--sp-3);
   font-size: var(--fs-sm);
   margin-bottom: var(--sp-4);
   align-items: center;
-  gap: 8px;
-
-  &.show {
-    display: flex;
-  }
+  gap: var(--sp-3);
 }
+.login-error.show { display: flex; }
+
+
+/* ===== 10. CHÂN TRANG =================================================== */
+.footer { font-size: var(--fs-xs); color: var(--muted); padding: 12px 4px; }
+.footer a { color: var(--brand); font-weight: 700; text-decoration: none; }
+.footer a:hover { text-decoration: underline; }
+

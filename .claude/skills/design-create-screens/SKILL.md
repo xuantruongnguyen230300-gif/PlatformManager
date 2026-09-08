@@ -37,6 +37,9 @@ di chuyển hoặc đặt tên khác. Vì vậy **KHÔNG hardcode `doc/Design/`*
 
 > Mọi `{DESIGN_ROOT}/...` bên dưới là **placeholder** — thay bằng đường dẫn thật đã resolve. Nếu skill
 > chạy với cwd = Design root thì `{DESIGN_ROOT}` = `.`.
+>
+> Live source của từng project lấy từ chính `source_paths` trong `README.md` của project đó, không giả
+> định theo một framework marker cụ thể.
 
 ## Các bước thực hiện
 

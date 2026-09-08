@@ -1,62 +1,92 @@
-<app-auth-card title="Đổi mật khẩu" [subtitle]="subtitle()">
-  @if (errorMessage()) {
+<app-auth-card
+  [title]="'shared.action.changePassword' | translate"
+  [subtitle]="subtitleKey() | translate"
+>
+  <!-- Chỉ còn lỗi KHÔNG gắn ô nào (vd `AUTH.CHANGE_PASSWORD_FAILED` 422 — Identity trả lý do
+       chi tiết trong `message`). Lỗi có `fields` đã nằm dưới đúng ô ở dưới. -->
+  @if (errorMessage(); as message) {
     <div class="login-error show">
       <i class="pi pi-exclamation-circle"></i>
-      <span>{{ errorMessage() }}</span>
+      <span>{{ message }}</span>
     </div>
   }
 
+  <!-- Mỗi ô sai mang đủ 3 dấu hiệu, không tách rời được (WCAG 2.2 AA — xem
+       doc/huong_dan/wiki-core/fe/15-accessibility.md §1):
+         `.invalid`         → viền đỏ (class toàn cục), thứ NHÌN thấy
+         `aria-invalid`     → cho trình đọc màn hình biết ô này sai
+         `aria-describedby` → trỏ tới đúng câu giải thích, để đọc được LÝ DO chứ không chỉ "sai"
+       Cả ba là `null` khi không có lỗi: `aria-describedby` trỏ tới thẻ không tồn tại là lỗi a11y
+       thật, không phải vô hại. -->
   <form (submit)="$event.preventDefault(); onSubmit()">
     <div class="field">
-      <label for="currentPassword">Mật khẩu hiện tại</label>
-      <div class="field-input">
+      <label for="currentPassword">{{ 'doi-mat-khau.field.currentPassword' | translate }}</label>
+      <div class="input-icon">
         <i class="pi pi-lock"></i>
         <input
           id="currentPassword"
           type="password"
-          placeholder="Nhập mật khẩu hiện tại"
+          [placeholder]="'doi-mat-khau.field.currentPasswordPlaceholder' | translate"
           autocomplete="current-password"
           required
+          [class.invalid]="!!fieldErrors()['CurrentPassword']"
+          [attr.aria-invalid]="fieldErrors()['CurrentPassword'] ? 'true' : null"
+          [attr.aria-describedby]="fieldErrors()['CurrentPassword'] ? errorId('CurrentPassword') : null"
           [value]="currentPassword()"
           (input)="onCurrentPasswordInput($event)"
         />
       </div>
+      @if (fieldErrors()['CurrentPassword']; as message) {
+        <div class="form-error" [id]="errorId('CurrentPassword')">{{ message }}</div>
+      }
     </div>
 
     <div class="field">
-      <label for="newPassword">Mật khẩu mới</label>
-      <div class="field-input">
+      <label for="newPassword">{{ 'doi-mat-khau.field.newPassword' | translate }}</label>
+      <div class="input-icon">
         <i class="pi pi-key"></i>
         <input
           id="newPassword"
           type="password"
-          placeholder="Nhập mật khẩu mới"
+          [placeholder]="'doi-mat-khau.field.newPasswordPlaceholder' | translate"
           autocomplete="new-password"
           required
+          [class.invalid]="!!fieldErrors()['NewPassword']"
+          [attr.aria-invalid]="fieldErrors()['NewPassword'] ? 'true' : null"
+          [attr.aria-describedby]="fieldErrors()['NewPassword'] ? errorId('NewPassword') : null"
           [value]="newPassword()"
           (input)="onNewPasswordInput($event)"
         />
       </div>
+      @if (fieldErrors()['NewPassword']; as message) {
+        <div class="form-error" [id]="errorId('NewPassword')">{{ message }}</div>
+      }
     </div>
 
     <div class="field">
-      <label for="confirmPassword">Xác nhận mật khẩu mới</label>
-      <div class="field-input">
+      <label for="confirmPassword">{{ 'doi-mat-khau.field.confirmPassword' | translate }}</label>
+      <div class="input-icon">
         <i class="pi pi-key"></i>
         <input
           id="confirmPassword"
           type="password"
-          placeholder="Nhập lại mật khẩu mới"
+          [placeholder]="'doi-mat-khau.field.confirmPasswordPlaceholder' | translate"
           autocomplete="new-password"
           required
+          [class.invalid]="!!fieldErrors()['ConfirmPassword']"
+          [attr.aria-invalid]="fieldErrors()['ConfirmPassword'] ? 'true' : null"
+          [attr.aria-describedby]="fieldErrors()['ConfirmPassword'] ? errorId('ConfirmPassword') : null"
           [value]="confirmPassword()"
           (input)="onConfirmPasswordInput($event)"
         />
       </div>
+      @if (fieldErrors()['ConfirmPassword']; as message) {
+        <div class="form-error" [id]="errorId('ConfirmPassword')">{{ message }}</div>
+      }
     </div>
 
     <button type="submit" class="btn primary btn-block" [disabled]="submitting()">
-      {{ submitting() ? 'Đang lưu…' : 'Đổi mật khẩu' }}
+      {{ (submitting() ? 'shared.action.saving' : 'shared.action.changePassword') | translate }}
     </button>
   </form>
 </app-auth-card>

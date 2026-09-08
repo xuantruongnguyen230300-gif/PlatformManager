@@ -38,8 +38,8 @@ di chuyển hoặc đặt tên khác. Vì vậy **KHÔNG hardcode `doc/Design/`*
 > Mọi `{DESIGN_ROOT}/...` bên dưới là **placeholder** — thay bằng đường dẫn thật đã resolve. Nếu skill
 > chạy với cwd = Design root thì `{DESIGN_ROOT}` = `.`.
 >
-> Chưa có `{FE_ROOT}`/`{BE_ROOT}` cố định — `src/FE/` và `src/BE/` hiện đang rỗng (chưa chọn stack).
-> Live source của từng project lấy từ chính `source_paths` trong `README.md` của project đó.
+> Live source của từng project lấy từ chính `source_paths` trong `README.md` của project đó, không giả
+> định theo một framework marker cụ thể.
 
 ## Các bước thực hiện
 
@@ -57,12 +57,11 @@ di chuyển hoặc đặt tên khác. Vì vậy **KHÔNG hardcode `doc/Design/`*
 - Suy ra danh sách component từ các view trong census (hoặc lấy đúng theo argument `[component]` nếu chỉ có một).
 - Với mỗi component:
   - Đọc markup thật đứng sau các view trong census có dùng nó.
-  - **PlatformManager (từ 2026-08-22):** stack là **Angular 20 + PrimeNG + PrimeIcons v7**, không có Storybook. Verify anatomy/variant TRỰC TIẾP từ:
-    - class global trong `src/FE/src/styles.scss` (`.card`, `.btn` + variant, `.badge`, `.action-btn`, `.field`/`.field-input`, `.filters`, `.tablewrap`, `.form-row`, `.toast-stack`);
+  - **PlatformManager:** không có Storybook — oracle cho anatomy/variant là template Angular đã ship + SCSS scoped của nó, cộng global class trong `src/FE/src/styles.scss`. Stack, bộ icon, danh sách component và chỗ nào cố ý hand-rolled: đọc `doc/Design/Frontend/PlatformManager/{COMPONENTS.md, Icons.md, UiInventory.md}` — **đừng chép danh sách đó vào skill**. Verify TRỰC TIẾP từ:
+    - class global trong `src/FE/src/styles.scss` — **đọc từ file, đừng chép danh sách vào đây**;
     - template + SCSS scoped của chính component trong `src/FE/src/app/**`;
-    - `src/FE/src/app/core/theme/platform-manager-preset.ts` cho phần PrimeNG.
-    Data grid là **PrimeNG `p-table`** (có phân trang); hai ma trận phân quyền **cố ý hand-rolled `<table>`**. Shell (`Sidebar`/`Topbar`/`Toast`) và `AuthCard` là component thật cần spec.
-    Không bao giờ ghi lại một variant không thấy trong markup/CSS thật.
+    - `src/FE/src/app/core/theme/core-preset.ts` + `APP_PALETTE` trong `src/FE/src/app/app.config.ts` cho phần PrimeNG.
+    Danh sách component thật cần spec: **tự liệt kê từ đĩa** (`ls src/FE/src/app/shared/components/` — mỗi thư mục con là một component) cộng những component xuất hiện trong view của census. Không chép danh sách đó vào skill, và không bao giờ ghi lại một variant không thấy trong markup/CSS thật.
   - Ghi lại anatomy, variant, và state — đủ cả 5: `default` / `hover` / `focus` / `active` / `disabled` — ĐÚNG NHƯ ĐANG CHẠY THẬT (một số state có thể chỉ tồn tại ngầm qua CSS `:hover`/`:active` selector hoặc `transform`/`opacity` — ghi đúng những gì CSS định nghĩa, không suy đoán thêm).
   - Trích dẫn đường dẫn file trong `Sources:` (kèm gợi ý số dòng).
   - Reference token — không bao giờ dùng giá trị raw khi đã có token tương ứng.

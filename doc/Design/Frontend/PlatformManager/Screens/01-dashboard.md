@@ -1,277 +1,558 @@
 ---
+kind: luat
+scope: du-an
+verified: khong-ap-dung
 project: "PlatformManager"
-status: "draft"
-updated: "2026-08-22"
-flow: "DTI Weekly Dashboard"
-screens: ["DTI Weekly Dashboard"]
-source_routes: ["/dashboard"]
+status: "target — not built"
+updated: "2026-09-08"
+flow: "DTI Dashboard"
+screens: ["DTI Dashboard"]
+source_routes: ["/trang-chu"]
 ---
 
-# DTI Weekly Dashboard — Screens
+# DTI Dashboard — Screens
 
-The Dashboard is the app's landing route (`''` redirects here, and so does the `**` wildcard — `app.routes.ts:10,37`) and its only **read-only** analytical surface: a digital-transformation officer picks a reporting period, then reads five KPI tiles, per-group progress bars, a trend line, the full criteria table for that period, and the list of saved periods. **Nothing on this screen writes data** — the page component says so in its own header comment ("Dashboard 100% đọc-only — không có action ghi dữ liệu nào ở màn này", `dashboard.page.ts:37-38`), and every editing affordance the prototype had (progress inputs, note inputs, "Lưu tuần này", "Sao lưu"/"Khôi phục", the mobile `.fab`) is gone; catalogue writes live on `/danh-muc/dti` (`Screens/02-danh-muc-dti.md`). The one action here is "Xuất báo cáo", which fetches server-rendered HTML into an in-page `Dialog` — not a separate route. This spec cross-references `doc/contracts/dashboard.md` (DB-1 aggregate, DB-2 report, DB-3 period options), `spec/dashboard-dti-weekly/ui-spec.md` (§1 read-only scope, §2 Layout, §3 Actions, §4 States, §5 Responsive, §6 UI↔ERD field map) and `spec/dashboard-dti-weekly/business-rules.md` (§0 the read-only decision, §3.2 delta epsilon, §3.3 weighted average, §3.5 counts, §5 badge vs. `Status`) alongside the shipped Angular source.
-
-> **Rewritten 2026-08-22.** Until this pass, this file described the deleted prototype — a single-page `localStorage` app with inline editing and a floating save button. That file is **frozen history** (`doc/Design/CLAUDE.md` § Fidelity Policy) and is cited below only where it explains *why* a decision was made. Everything factual here was re-verified against `src/FE/src/app/modules/dashboard/`.
+> # 📐 ĐÍCH ĐẾN — CHƯA THI CÔNG
 >
-> **Shell:** app shell — `Sidebar` + `Topbar` + `main` + `Toast` (`app.html:1-14`), rendered because this route does not set `data.noShell`. Route guard is `authGuard` only — no role gate, because Dashboard has no `SysMenuRole` row (`dashboard.routes.ts:4-5,11`). **`DESIGN.md` → Layout describes this shell correctly** as of the 2026-08-22 token refresh.
-> **Token vocabulary:** token names below are the live CSS custom properties in `styles.scss:19-85` minus the `--` prefix (`--sp-*` → `sp-*`, `--brand` → `brand`), plus the named structural measurements in `Tokens/spacing.md` (`breakpoint.tablet`, `dimension.chart-height`, `layout-grid-desktop`, …). `Tokens/*`, `tokens.json` and `DESIGN.md` were all re-extracted from `src/FE/src/styles.scss` on 2026-08-22 and now match this screen; values recorded here without a token name are genuinely untokenised literals and are called out as such.
-> **Sources:** `src/FE/src/app/modules/dashboard/` (`dashboard.routes.ts`, `pages/dashboard/dashboard.page.{html,ts,scss}`, `components/{period-toolbar,kpi-summary,kpi-tile,group-progress-list,trend-chart,criteria-table,delta-indicator,status-badge,history-list,report-dialog}/`, `services/dashboard.{service,mapper}.ts`, `models/dashboard.model.ts`), `src/FE/src/app/{app.html,app.scss,app.ts,app.routes.ts}`, `src/FE/src/app/shared/components/{sidebar,topbar,toast}/`, `src/FE/src/app/shared/services/period-options.service.ts`, `src/FE/src/app/core/{interceptors/http-error.interceptor.ts,toast/toast.service.ts,theme/platform-manager-preset.ts,menu/menu.service.ts}`, `src/FE/src/styles.scss`, `doc/contracts/dashboard.md`, `spec/dashboard-dti-weekly/{ui-spec,business-rules}.md`. Design-intent reference only (**not** as-shipped): the deleted prototype. File:line citations below use the bare filename of these paths.
+> **This screen does not exist in `src/FE`.** The route and the business module
+> behind it were removed on 2026-08-29 and the rebuild has not started. Everything
+> below is a **design to be built**, approved by the product owner on 2026-09-04
+> and 2026-09-05, not a record of running code.
+>
+> Confirm that for yourself before treating any line here as current:
+>
+> ```bash
+> grep -cE '^\s+loadChildren:' src/FE/src/app/app.routes.ts   # routed screens today
+> ls src/FE/src/app/modules 2>/dev/null                       # expect: no such directory
+> ```
+>
+> **No `file:line` citation into `src/FE` appears anywhere in this file for the
+> DTI parts**, because the files they would point at do not exist. Where a Core
+> element genuinely still ships — the app shell, the global component layer — it
+> is cited by **identifier**, per `doc/Design/CLAUDE.md` § Neo trích dẫn vào
+> `styles.scss`.
+>
+> **This file replaces a historical one.** The previous revision carried a
+> historical-document banner describing the `/dashboard` screen as it shipped
+> before 2026-08-29; read that revision in git history (the code it describes was
+> live at commit `98a5d96`) if you need the pre-retirement design. It is superseded
+> here rather than kept, because the two would otherwise be two answers to one
+> question — `.claude/CLAUDE.md` §5.
+
+The Dashboard is the product's **read-only** analytical surface and, per decisions
+Q3 and Q18, its **landing screen at the existing URL `/trang-chu`**. It does not
+get a route of its own: it replaces the welcome page currently rendered there,
+**in place**. Everything that points at that URL therefore stays exactly as it is
+— the `''` redirect, the `**` wildcard, `roleGuard`'s fallback target, the
+`APP_CORE_ROUTES.home` constant, and the seeded sidebar menu row. Nothing in
+`src/FE/src/app/app.routes.ts` changes shape; the route's `loadChildren` target
+changes what it loads.
+
+Two consequences follow from sitting at that URL, and the rest of this spec is
+shaped by them:
+
+- **The route has no role guard and cannot have one** — `roleGuard` redirects a
+  role-less user *here*, so guarding it would loop
+  (`src/FE/src/app/core/auth/role.guard.ts`). Per decision Q21 that is fine:
+  **every signed-in account may see the Dashboard**, no DTI permission required.
+  There is therefore **no "you lack permission" state to design**. Write access on
+  the catalogue screen is a separate question and is still open
+  ([`02-danh-muc-dti.md`](./02-danh-muc-dti.md) § Cần chốt).
+- **A brand-new deployment lands here with nothing in it.** That state is not
+  optional and is specified in § States.
+
+**What happens to the old welcome screen** ([`06-trang-chu.md`](./06-trang-chu.md)) —
+🚧 **ĐÃ CHỐT — ĐANG THI CÔNG.** Decision **Q29**, 2026-09-05: the folder
+`src/FE/src/app/platform/trang-chu/` is **deleted outright**, rather than being kept
+beside the Dashboard or having business content written into it. Its content is not
+relocated either — the account summary it showed (username, email, role badges, the
+change-password link) goes with it, leaving the sidebar menu as the only route to
+`/doi-mat-khau`. That screen spec now carries a historical-document banner.
+
+The code is still there as this is written; the decision is made, the deletion is
+not. Check rather than assume: `ls src/FE/src/app/platform/trang-chu`.
+
+Two consequences the build inherits:
+
+- **The URL survives, the folder does not.** `/trang-chu` stays the landing route,
+  `APP_CORE_ROUTES.home` still resolves to it
+  (`src/FE/src/app/core/config/core-routes.ts` § `home`), the `''` redirect, the `**`
+  wildcard and the seeded menu row are all untouched, and the route keeps its test
+  cover. Only the module behind the URL changes.
+- **The next product built on this CoreBase inherits no home screen.** That folder is
+  the only Core-level landing page there is; the Dashboard replacing it is *business*
+  code and does not travel with CoreBase. A second product reusing the base therefore
+  has to write its own landing screen. That is a real, accepted cost of Q29, recorded
+  here because no other document in the design area would record it.
+
+A digital-transformation officer picks a reporting period, then reads: five KPI
+tiles, per-group progress bars, a trend line, the full criteria table for that
+period, and the list of saved periods. **Nothing on this screen writes data.** The
+single action is `Xuất báo cáo`, which per decision Q13 downloads an `.xlsx` file
+directly — no dialog, no preview. Every write lives on the DTI catalogue
+([`02-danh-muc-dti.md`](./02-danh-muc-dti.md)).
+
+> **Shell:** the app shell — skip link + `Sidebar` + `Topbar` + `main` + `Toast`
+> (`src/FE/src/app/app.html:16-39`), rendered because this route will not set
+> `data.noShell`. `../DESIGN.md` → Layout describes this shell.
+> **Sources:** `Prototype/index.html` § `#screen-dashboard` — the prototype the
+> product owner approved point by point on 2026-09-04 and 2026-09-05, and the
+> **only** source for this screen's layout and copy;
+> `doc/Design/Frontend/PlatformManager/Prototypes/index.html` for the component
+> CSS it reuses; `spec/DTI_CanGiuoc_2026-08-11.csv` for every figure;
+> `src/FE/src/styles.scss` and `src/FE/src/app/shared/components/{sidebar,topbar,toast}/`
+> for the live Core layer this screen composes;
+> `Prototype/mau-xuat-bao-cao_Tuan-33-2026.xlsx` and
+> `Prototype/mau-xuat-bao-cao_Thang-8-2026.xlsx` for the export layout.
+> API contract → `doc/contracts/dashboard.md`; business rules →
+> `spec/dashboard-dti/business-rules.md` (both being rewritten in parallel on
+> 2026-09-05 — if either disagrees with this file, that is a conflict to raise,
+> not to resolve silently).
+> **Token vocabulary:** token names are the live CSS custom properties in
+> `src/FE/src/styles.scss` § `:root` minus the `--` prefix. Values quoted without
+> a token name are literals in the approved prototype, recorded as such.
 
 ---
 
-## DTI Weekly Dashboard (`/dashboard`)
+## DTI Dashboard (`/trang-chu`)
 
 ### Layout Blueprint
 
 <!-- Region tree + structural measurements. Compose ONLY component names present in COMPONENTS.md. -->
 
-- **App shell** (`app.html:1-14`) — `showShell()` is true for this route (no `data.noShell`)
-  - `Sidebar` (`sidebar.html:1-77`) — fixed left, `dimension.sidebar-w` / `dimension.sidebar-w-collapsed`, `z-index:35`, fill `card`, right border `line` (`sidebar.scss:3-20`). Menu tree comes from `GET /api/meta/menu`; the "Dashboard" item is a top-level leaf in the `routerLinkActive="active"` state on this route
-  - `.shell-content` (`app.scss:11-22`) — `margin-left: dimension.sidebar-w` (or `-collapsed`), flex column
-    - `Topbar` (`topbar.html:1-24`) — sticky, `z-index:20`, translucent white + `blur(10px)`, bottom border `line`; inner `.topin` capped at `dimension.container-max-width`, padding `sp-4 sp-5`
-      - `Button` (icon-only modifier, `.btn.sidebar-hamburger.no-print`) — hidden above `breakpoint.tablet`
-      - `.logo h1` — route title text "Dashboard" (`typography.h1-topbar`)
-      - `.topbar-user` (`margin-left:auto`) — user name text + `Button` (default/tonal) "Đăng xuất"
-    - `main` (`app.scss:24-30`) — `max-width: dimension.container-max-width`, centred, padding `sp-5`
-      - `<router-outlet>` → **DashboardPage** (`dashboard.page.html:1-66`)
-  - `Toast` (`toast.html:1-15`) — `.toast-stack.no-print`, fixed bottom-right at `sp-5` inset, `z-index:60`, `dimension.toast-stack-max-width`, `aria-live="polite"`, 4 severities, 5 s auto-dismiss
+- **App shell** (`src/FE/src/app/app.html:16-39`) — surrounds the route; not part of its own template
+  - Skip link, then `Sidebar`, then `.shell-content` → `Topbar` → `main#main-content`, then `Toast` outside the shell conditional
+  - `main` is capped at `container-max-width` with `spacing.sp-5` padding; the regions below are its direct children
+- **Period toolbar** — `app-period-toolbar` → `<section class="toolbar no-print">`, the screen's first region and its primary control. `Toolbar` supplies the surface, so **no `.card` wrapper** (two stacked surfaces would give the bar a shadow and a second padding). Left to right:
+  - `<strong>Kỳ đang xem:</strong>` then `.period-display` — a **read-only** value box, not an `Input`: 1px `colors.border-strong` border, `rounded.sm`, fill `colors.bg`, ink `colors.muted`, padding `spacing.sp-2` `spacing.sp-3`, `fontSize.fs-sm`, `white-space: nowrap` so the full period label never wraps (`doc/Design/Frontend/PlatformManager/Prototypes/index.html` § `app-period-toolbar .period-display`)
+  - Year `<select>`, then **one** period `<select>` — the week list or the month list, never both, so the toolbar cannot gain a second row
+  - `SegmentedControl` (`.segmented` / `.seg-btn`, `role="group"`) — `Tuần` / `Tháng`
+  - `.toolbar-sep` (the flexible gap), then `.toolbar-actions` holding one `Button` `.btn.primary` — `Xuất báo cáo`
+  - **This toolbar has no `Lọc` control.** Choosing a period is the page's primary act, not a filter condition; filtering belongs to the detail table's own toolbar further down
+- **KPI row** — `app-kpi-summary` → `<section class="kpis">`, a `repeat(5, 1fr)` grid with `spacing.sp-4` gap, holding five `KpiTile`. Contents and tones in [`../Components/KpiTile.md`](../Components/KpiTile.md) § The five tiles
+- **Two-column region** — `.layout`, a `1.15fr 0.85fr` grid with `spacing.sp-5` gap and `margin-top: spacing.sp-5`; each child is a `Card` laid out as a flex column so its body fills the remaining height (§ `#screen-dashboard .layout`)
+  - **Left card** — `.title` row (`<h2>Tiến độ theo nhóm</h2>` + `<span class="muted">Tuần hiện tại</span>`) over `app-group-progress-list`: six `ProgressBar` rows, one per criteria group. See [`../Components/ProgressBar.md`](../Components/ProgressBar.md)
+  - **Right card** — `.title` row (`<h2>Biểu đồ tiến độ hàng tuần</h2>` + `<span class="muted">Tiến độ chung</span>`) over `TrendChart`, lazy-loaded behind a viewport boundary with a `.chart-skeleton` placeholder reserving its full height. See [`../Components/TrendChart.md`](../Components/TrendChart.md), which since decision T7 on 2026-09-05 has **nothing open** — the last question, the month-mode x axis, is settled. What it still carries is a hand-off rather than a decision: `chart.js` has to return to `src/FE/package.json` before this region can be built
+- **Detail table** — `app-criteria-table` → `<section class="card criteria-table-card">` with `margin-top: 16px` (a literal, § `app-criteria-table .criteria-table-card`)
+  - `.title` row — `<h2>62 chỉ tiêu DTI</h2>` + `<span class="muted">62/62 chỉ tiêu</span>`. The right-hand count is the same contract the Core user grid uses; see [`02-danh-muc-dti.md`](./02-danh-muc-dti.md) § Layout Blueprint for why it stays
+  - `Toolbar` — **the same contract as the catalogue screen**, no new controls, and in the DOM order the shipped component actually renders (`src/FE/src/app/shared/components/toolbar/toolbar.html`): `.input-icon.search` (fixed 260px) → `<details class="filter">` → `.toolbar-sep` → `.filter-chips` → `.toolbar-actions`. The filter panel holds **two** `.form-row` conditions — `Nhóm chỉ tiêu` and `Trạng thái` — over a `.filter-foot`; the sort `<select>` sits in `.toolbar-actions`, because sorting is not a filter condition. The approved state shows **no** `.filter-count` and **no** `.filter-chip`, matching the unfiltered `62/62 chỉ tiêu` in the title.
+    > Decision **Q22** removed the third condition (`Mức thay đổi so với kỳ trước`) and two of the four sort options (`Tăng nhiều nhất`, `Tiến độ thấp nhất`). Sorting now offers `Theo mã chỉ tiêu` and `Chênh lệch lớn nhất` — the two that have a column behind them. The prototype still draws all three conditions and all four options; **the prototype is the stale side**, see § Normalize on redesign.
+  - **`Table`, not `DataTable`** (decision T4) — a plain table inside `.tablewrap`, scrolled at `--grid-h` / `--grid-h-min`, with **no paginator**, no lazy loading and no rows-per-page control. This region is read-only and shows the whole period at once, so it needs none of the `p-table` mechanism that [`../Components/DataTable.md`](../Components/DataTable.md) documents. Only the catalogue screen uses `DataTable`. Keeping them apart is deliberate: a second `DataTable` variant that merely turns paging off would put two grid mechanisms in the library for one job. **9 columns**, per decision Q8:
 
-- **Page** — six stacked regions, **no page-level wrapper element**: the page component's template starts directly with the toolbar (`dashboard.page.html:1`)
-  - `<app-period-toolbar>` → `Card` (Toolbar-card variant, `.weekbar.card.no-print`, `period-toolbar.html:1`) — horizontal flex, `gap sp-3`, `flex-wrap:wrap`, `margin-bottom sp-5` (`period-toolbar.scss:1-7`)
-    - `<strong>` label text "Kỳ đang xem:" — plain markup
-    - `.period-display` — **plain markup, deliberately not given its own component spec** (`COMPONENTS.md` § "Deliberately NOT given their own spec"): a read-only chip showing the server's `PeriodLabel`; border `border-strong`, radius `rounded.sm`, fill `bg`, text `muted`, padding `sp-2 sp-3`, `fs-sm` (`period-toolbar.scss:16-23`). It is a *display* element styled like an input, not an input — property for property it is the filter tier of `Components/Input.md` with only `background` and `color` changed, i.e. a fifth, read-only input tier. Promote it only if a second read-only-value chip appears, or fold it into `Input.md`; that decision is open
-    - `Badge` (`.badge.bwork`, period-mode chip) — **conditional**, only while `isAllMode()` (`period-toolbar.html:5-7`)
-    - `Input` (select variant, filter tier) — year picker, options from `GET /api/dashboard/periods` → `Years` (`period-toolbar.html:9-13`)
-    - `Input` (select variant, filter tier) — **one of two, swapped by `@if`**: the week picker (`:15-26`, options = "current" + "all" + `WeeksInYear`) or the month picker (`:27-34`, options = "current" + `MonthsInYear`)
-    - `SegmentedControl` (`.segmented` + `.seg-btn` × 2, `Components/SegmentedControl.md`, `period-toolbar.html:36-48`) — `inline-flex` with a shared 1px `line` border, `rounded.sm`, `overflow:hidden`, internal `border-left` divider, and an `.active` state filled `brand` on `on-primary` (`period-toolbar.scss:38-73`). It is the app's **only** view switcher
-    - `.weekbar-actions` (`margin-left:auto`, `flex:none`) → `Button` (primary) "Xuất báo cáo"
-  - `<app-kpi-summary>` → `.kpis` grid (`kpis-grid-desktop`: `repeat(5, 1fr)`, gap `sp-4`, `kpi-summary.scss:1-5`)
-    - `KpiTile` × 5, in fixed order (`kpi-summary.html:2-6`): overall progress · delta vs. previous period (`tone` bound to the delta sign) · "Chỉ tiêu tăng" (`tone="good"`) · "Không tăng" (`tone="warn"`) · "Hoàn thành 100%". Only tiles 2–4 carry a tone; 1 and 5 are `default`
-  - `section.layout` (`layout-grid-desktop`: `1.15fr 0.85fr`, gap `sp-5`, `margin-top sp-5`, `dashboard.page.scss:1-15`) — two `Card`s, each `display:flex; flex-direction:column` with a non-shrinking `.title`
-    - `Card` — `.title` (h2 "Tiến độ theo nhóm" + `.muted` caption) → `<app-group-progress-list>`
-      - `ProgressBar` × N — one `.group-row` per criteria group (`group-row-grid-desktop`: `210px 1fr 80px`), each = bold `Code. Name` + `.bar`/`.fill` track (`dimension.progress-bar-height`, track `surface-track`, fill `brand`, both `rounded.pill`) + right-aligned `.num` percentage. The list is `justify-content: space-between` so rows spread to the card's full height (`group-progress-list.scss:1-7`)
-      - `@empty` branch — one `.muted` line
-    - `Card` — `.title` (h2 with mode-dependent text + `.muted` caption) → `@defer (on viewport)` → `<app-trend-chart>`, with a `.chart-skeleton.muted` placeholder (`min-height` = `dimension.chart-height`, `dashboard.page.scss:21-26`)
-      - `TrendChart` (`Components/TrendChart.md`) — PrimeNG `<p-chart type="line">` (`primeng` 20.2 + `chart.js` 4.5), fixed at `dimension.chart-height` × 100% via an inline `[style]` object (`trend-chart.html:8`), wrapped in a centring `.chart-wrap`. Its palette **is** tokenised — `chart-series-1`, `chart-series-1-fill`, `chart-axis-label`, `chart-grid` in `DESIGN.md` § Chart Palette — and resolved at runtime from `--brand` / `--muted` / `--line` by `readCssVar()` (`trend-chart.ts:13-16,55-61`), because a Chart.js 2D canvas cannot resolve `var()`. Single dataset, legend hidden, y-axis pinned `[0,100]` with a `%` tick suffix, `pointRadius: 4`, `tension: 0`, `fill: true`, `spanGaps: false` over a null-prefiltered series (`trend-chart.ts:85-126`)
-  - `<app-criteria-table>` → `Card` (Criteria-table-card variant, `.card.criteria-table-card`, `margin-top:16px` — an untokenised literal, `criteria-table.scss:1-3`)
-    - `.title` — h2 `{{ rows().length }} chỉ tiêu DTI` + `.muted` filtered/total count
-    - `FilterBar` (`.filters.no-print`, `criteria-table.html:7-27`) — four controls, all **client-side** and all `Input`s at the filter tier: search text (`flex:1`, `dimension.filter-input-min-width`, **not debounced**) + group select + change select + sort select. There is **no** `.filters-actions` cluster on this screen
-    - `.tablewrap` → `DataTable` (`criteria-table.html:29-77`) — PrimeNG `p-table`, `[scrollable]="true"`, `scrollHeight="480px"` (`criteria-table.html:36` — a static literal, not the computed height used on the catalogue), `[paginator]="true"`, `[rows]="20"`, `[rowsPerPageOptions]="[10, 20, 50]"`, `dataKey="CriteriaId"`. **Not `[lazy]`** — `[value]` is the already-filtered client array. Wrapper: border `border-strong`, `rounded.table`, `overflow:hidden` (`criteria-table.scss:5-9`)
-      - Header row — 9 `<th>` with **percentage** widths totalling 100% (6/24/12/7/9/9/8/9/16), four of them `.num`; columns 5 and 6 have mode-dependent labels. No `min-width` anywhere, no frozen columns
-      - Body row — read-only text cells painted by the global `Table` rules, plus `DeltaIndicator` in column 7 and `Badge` (via `<app-status-badge>`) in column 8; column 9 falls back to a `.muted` `—` when the note is empty. **No inputs, no action buttons, no row selection**
-      - `#emptymessage` — one `<tr><td colspan="9" class="muted">` message row
-      - PrimeNG paginator at the bottom, styled entirely by `PlatformManagerPreset`; **not** marked `no-print`
-  - `section.card.history-card` (`margin-top:16px` — untokenised literal, `dashboard.page.scss:17-19`)
-    - `.title` — h2 "Lịch sử các kỳ đã lưu" + `.muted` caption
-    - `@defer (on viewport)` → `<app-history-list>`, with a `.chart-skeleton.muted` placeholder
-      - `HistoryRow` × N (`histrow-grid`: `100px 1fr 90px 70px`) inside a `.history` scroller capped at `dimension.history-max-height` — date · progress · `DeltaIndicator` (or a `.muted` "Kỳ đầu" on the oldest row) · `Button` (default/tonal) "Xem"
-      - `@empty` branch — one `.muted` line
-  - `Footer` (`.footer`, `Components/Footer.md`, `dashboard.page.html:55-58`) — `typography.footer`, colour `muted`, padding `12px 4px`, containing a `brand`-coloured `routerLink` to `/danh-muc/dti`. Page content, not app shell: this is the app's only instance and the other five routes have none. Declared **once**, globally at `styles.scss:486-500` (it was duplicated in `dashboard.page.scss` until 2026-08-22 — see Normalize on redesign)
-  - `<app-report-dialog>` → `Dialog` (default width variant, `dimension.dialog-width`, `report-dialog.html:1-11`)
-    - `.title` row — h2 bound to the server's report title + `Button` (default/tonal) "Đóng"
-    - `.report` body — server-rendered HTML injected via `[innerHTML]` after `bypassSecurityTrustHtml` (`report-dialog.ts:46`). **`.report` has no CSS rule anywhere in `src/FE/`** — the class is a dead style hook and the block inherits body typography (see Normalize on redesign)
-    - `.dialog-actions` — `Button` (default/tonal) "Sao chép" + `Button` (primary) "In"
+    | # | Header | Alignment | Content |
+    | --- | --- | --- | --- |
+    | 1 | `Mã` | left, 5% | bold criteria code — three levels are possible (`4.22.11`), not just two |
+    | 2 | `Chỉ tiêu` | left, 26% | full criterion name |
+    | 3 | `Nhóm` | left, 13% | group label, e.g. `1. Hạ tầng và Nền tảng số` |
+    | 4 | `Điểm tối đa` | `.num`, 8% | integer |
+    | 5 | `Tự đánh giá` | `.num`, 9% | decimal, Vietnamese comma |
+    | 6 | `Thẩm định` | `.num`, 9% | decimal |
+    | 7 | `Chênh lệch` | `.num`, 9% | `DeltaIndicator` — **computed**, never stored: `Thẩm định − Tự đánh giá` (decision Q25 — positive green, negative red, zero grey; the direction and its history are owned by [`../Components/DeltaIndicator.md`](../Components/DeltaIndicator.md)) |
+    | 8 | `Trạng thái` | left, 10% | `Badge`, colour-mapped per decision Q10 |
+    | 9 | `Minh chứng/Ghi chú` | left, 11% | free text, or `<span class="muted">—</span>` when empty |
+
+    The three week-comparison columns of the pre-retirement design (`Tuần trước`, `Tuần này`, `Tăng-giảm`) are **gone**. Period-over-period movement is carried by the trend chart and by KPI tiles 3 and 4 instead, so the table does not repeat it. Column count is unchanged at 9; the set is not
+- **History panel** — `<section class="card history-card">` with `margin-top: 16px` (§ `#screen-dashboard .history-card`); `.title` row (`<h2>Lịch sử các kỳ đã lưu</h2>` + `<span class="muted">Không ghi đè dữ liệu tuần cũ</span>`) over `app-history-list`: one `HistoryRow` per saved period, newest first. See [`../Components/HistoryRow.md`](../Components/HistoryRow.md)
+- **`Footer`** — one closing line pointing at the catalogue screen
+
+<!-- Component gap — reviewed 2026-09-05. Every region composes from an indexed spec:
+       Toolbar -> Components/Toolbar.md          SegmentedControl -> Components/SegmentedControl.md
+       Button  -> Components/Button.md           KpiTile          -> Components/KpiTile.md
+       Card    -> Components/Card.md             ProgressBar      -> Components/ProgressBar.md
+       Table   -> Components/Table.md            TrendChart       -> Components/TrendChart.md
+       Badge   -> Components/Badge.md            DeltaIndicator   -> Components/DeltaIndicator.md
+       Input   -> Components/Input.md            HistoryRow       -> Components/HistoryRow.md
+       FormRow -> Components/FormRow.md          Footer           -> Components/Footer.md
+       NoticeBanner -> Components/NoticeBanner.md
+       Sidebar / Topbar / Toast -> their own specs.
+     NOT used here: DataTable. Decision T4 — this screen's table is read-only and
+     unpaged, so it composes Table alone. DataTable belongs to 02-danh-muc-dti.md.
+     Genuinely screen-local and deliberately NOT promoted: `.period-display` (a
+     read-only value box, one instance, no states, no variants), `.kpis` (a grid
+     container belonging to KpiTile's row), `.layout` (a two-column page grid) and
+     `.chart-skeleton` (a defer placeholder shared with the history panel).
+     Promote `.period-display` only if a second read-only value box appears. -->
 
 ### Copy
 
 <!-- Verbatim shipped strings — typos and mixed languages included — with localization key and file:line source. -->
 
-| Element | Verbatim copy | Localization key | Source |
+The app HAS an i18n layer: `@ngx-translate/core` v18 reading `src/FE/public/i18n/vi.json`
+and `en.json` (`doc/huong_dan/wiki-core/fe/08-i18n.md`). Every string below is therefore the
+**Vietnamese rendering of a key that must be allocated when this screen is built** — the
+Localization key column reads `key TBA` because this screen has never shipped, not because the
+copy may be inlined. Pasting a Vietnamese literal into a template fails the build:
+`scripts/fe-gate.sh` § G12 scans every `.html` for Vietnamese diacritics.
+
+```bash
+bash scripts/fe-gate.sh
+```
+
+PASS = the G12 section reports no hits. Each row below needs a `dashboard.*` key in `vi.json` and an
+English sibling in `en.json` before the markup can pass.
+
+🔄 **SỬA 2026-09-08.** The previous revision of this paragraph said *"No i18n layer exists in
+the app"* and instructed hardcoding. It was already false when written — the i18n layer landed
+2026-09-05 — and following it would have failed G12.
+
+Source for every DTI row is
+`Prototype/index.html` § `#screen-dashboard`; the region is named instead of a line
+number, because line numbers in a 5500-line prototype renumber silently.
+
+| Element | Verbatim copy | Localization key | Source region |
 | --- | --- | --- | --- |
-| Topbar page title | `Dashboard` | — (hardcoded, route `data.title`) | `dashboard.routes.ts:10` |
-| Topbar hamburger `aria-label` | `Mở menu điều hướng` | — (hardcoded) | `topbar.html:6` |
-| Topbar logout button (`title` + label) | `Đăng xuất` | — (hardcoded) | `topbar.html:18-19` |
-| Topbar user name (dynamic) | `{{ currentUser.fullName() }}` | — (server data, `GET /api/auth/me`) | `topbar.html:17` |
-| Sidebar brand mark / brand text | `PM` / `PlatformManager` | — (hardcoded) | `sidebar.html:3-4` |
-| Sidebar collapse toggle `aria-label` (2 values) | `Mở rộng menu` / `Thu gọn menu` | — (hardcoded) | `sidebar.html:8` |
-| Sidebar nav labels (incl. "Dashboard") | *(not in the view)* | — (server-driven, `GET /api/meta/menu` → `SysMenu.Label`) | `sidebar.html:32,46,60`; `menu.service.ts:22` |
-| Toast close `aria-label` | `Đóng thông báo` | — (hardcoded) | `toast.html:8` |
-| Period toolbar label | `Kỳ đang xem:` | — (hardcoded) | `period-toolbar.html:2` |
-| Period display (dynamic) | server `PeriodLabel`, e.g. `Tuần 33/2026 (10/08–16/08/2026)` / `Tháng 8/2026` / `Năm 2026`; falls back to `—` | — (server data, `GET /api/dashboard`) | `period-toolbar.html:3`; `doc/contracts/dashboard.md` DB-1 |
-| All-mode chip (dynamic, conditional) | `Tất cả · <year>` | — (hardcoded) | `period-toolbar.html:6` |
-| Year select `title` | `Chọn năm` | — (hardcoded) | `period-toolbar.html:9` |
-| Week select `title` | `Chọn 1 tuần cụ thể hoặc xem Tất cả` | — (hardcoded) | `period-toolbar.html:18` |
-| Week select, default option | `— Kỳ hiện tại —` | — (hardcoded) | `period-toolbar.html:21` |
-| Week select, aggregate option | `— Tất cả (tổng hợp theo năm) —` | — (hardcoded) | `period-toolbar.html:22` |
-| Week select, saved-period options (dynamic) | `dd/mm/yyyy` + ` · <n,n>%` when progress is known | — (hardcoded template over server data) | `period-toolbar.ts:5-16` |
-| Month select `title` | `Chọn tháng` | — (hardcoded) | `period-toolbar.html:28` |
-| Month select, default option | `— Tháng hiện tại —` | — (hardcoded) | `period-toolbar.html:29` |
-| Month select, options (dynamic) | `Tháng <n>` + ` · <n,n>%` when progress is known | — (hardcoded template over server data) | `period-toolbar.ts:18-21` |
-| Segmented control `aria-label` | `Chế độ xem theo Tuần hoặc Tháng` | — (hardcoded) | `period-toolbar.html:36` |
-| Segmented buttons | `Tuần` / `Tháng` | — (hardcoded) | `period-toolbar.html:38,46` |
-| Export button | `Xuất báo cáo` | — (hardcoded) | `period-toolbar.html:51` |
-| KPI 1 label (3 values) | `Tiến độ chung (tổng hợp năm)` / `Tiến độ chung tháng này` / `Tiến độ chung tuần này` | — (hardcoded) | `kpi-summary.ts:34-37` |
-| KPI 1 sub | `Bình quân gia quyền theo điểm` | — (hardcoded) | `kpi-summary.html:2` |
-| KPI 2 label (2 values) | `So với tháng trước` / `So với tuần trước` | — (hardcoded) | `kpi-summary.ts:39-41` |
-| KPI 2 sub — fallback when there is no previous period | `Chưa có kỳ trước` | — (hardcoded) | `kpi-summary.ts:46` |
-| KPI 2 sub — otherwise (dynamic) | server `PreviousPeriodLabel` | — (server data) | `kpi-summary.ts:46` |
-| KPI 3 label / sub | `Chỉ tiêu tăng` / `Có tiến bộ so với kỳ trước` | — (hardcoded) | `kpi-summary.html:4` |
-| KPI 4 label / sub | `Không tăng` / `Cần chú ý theo dõi` | — (hardcoded) | `kpi-summary.html:5` |
-| KPI 5 label / value / sub | `Hoàn thành 100%` / `<done>/<total>` / `Số chỉ tiêu đạt đủ tiến độ` | — (hardcoded) | `kpi-summary.html:6`, `kpi-summary.ts:47` |
-| KPI percent + delta formats, null placeholder | `vi-VN`, 1 decimal; percent `<n,n>%`; delta `↑ <n,n> đ.%` / `↓ <n,n> đ.%` / `<n,n> đ.%`; null → `—` | — (hardcoded) | `kpi-summary.ts:5-13` |
-| Groups card title | `Tiến độ theo nhóm` | — (hardcoded) | `dashboard.page.html:23` |
-| Groups card caption (3 values, dynamic) | `Tổng hợp năm <year>` / `Tháng hiện tại` / `Tuần hiện tại` | — (hardcoded) | `dashboard.page.html:24` |
-| Group row label (dynamic) | `<GroupCode>. <GroupName>` | — (server data) | `group-progress-list.html:4` |
-| Group row percentage / null placeholder | `<n,n>%` / `—` | — (hardcoded, `vi-VN`) | `group-progress-list.ts:4-6` |
-| Groups empty message | `Chưa có dữ liệu nhóm chỉ tiêu.` | — (hardcoded) | `group-progress-list.html:9` |
-| Chart card title (2 values) | `Biểu đồ tiến độ hàng tuần` / `Biểu đồ tiến độ hàng tháng` | — (hardcoded) | `dashboard.page.html:30` |
-| Chart card caption (2 values, dynamic) | `Tổng hợp năm <year>` / `Tiến độ chung` | — (hardcoded) | `dashboard.page.html:31` |
-| Chart `@defer` placeholder | `Đang tải biểu đồ…` | — (hardcoded) | `dashboard.page.html:36` |
-| Chart empty message | `Chưa có đủ dữ liệu để vẽ biểu đồ.` | — (hardcoded) | `trend-chart.html:11` |
-| Chart y-axis tick format | `<value>%` | — (hardcoded callback) | `trend-chart.ts:119` |
-| Chart x-axis labels (dynamic) | server `Trend[].Label` — `YYYY-Www` in week mode, `Th.1`…`Th.12` in month/year mode | — (server data) | `doc/contracts/dashboard.md` DB-1 |
-| Criteria card title (dynamic) | `<n> chỉ tiêu DTI` | — (hardcoded, interpolation `{{ rows().length }} chỉ tiêu DTI`) | `criteria-table.html:3` |
-| Criteria card count caption (dynamic) | `<filtered>/<total> chỉ tiêu` | — (hardcoded) | `criteria-table.ts:89` |
-| Search placeholder | `Tìm mã hoặc tên chỉ tiêu...` | — (hardcoded) | `criteria-table.html:8` |
-| Group filter, default option | `Tất cả nhóm` | — (hardcoded) | `criteria-table.html:10` |
-| Group filter, option template (dynamic) | `<Code>. <Name>` | — (derived from the loaded rows, `criteria-table.ts:54-60`) | `criteria-table.html:12` |
-| Change filter options (5) | `Tất cả mức thay đổi` / `Chỉ tiêu tăng` / `Không tăng` / `Giảm` / `Hoàn thành` | — (hardcoded) | `criteria-table.html:16-20` |
-| Sort options (3) | `Theo mã chỉ tiêu` / `Tăng nhiều nhất` / `Tiến độ thấp nhất` | — (hardcoded) | `criteria-table.html:23-25` |
-| Grid column headers (7 fixed) | `Mã` / `Chỉ tiêu` / `Nhóm` / `Điểm tối đa` / `Tăng/giảm` / `Trạng thái` / `Ghi chú tuần` | — (hardcoded) | `criteria-table.html:41-44,47-49` |
-| Grid column 5 header (3 values) | `Tuần trước` / `Tháng trước` / `—` | — (hardcoded) | `criteria-table.ts:47-49` |
-| Grid column 6 header (3 values) | `Tuần này` / `Tháng này` / `Tất cả (TB)` | — (hardcoded) | `criteria-table.ts:50-52` |
-| Nhóm cell template (dynamic) | `<GroupCode>. <GroupName>` | — (server data) | `criteria-table.html:56` |
-| Percent cells / null placeholder | `<n,n>%` / `—` | — (hardcoded, `vi-VN`) | `criteria-table.ts:11-13` |
-| Empty-note placeholder | `—` | — (hardcoded) | `criteria-table.html:66` |
-| Delta cell text | `↑ +<n,n> đ.%` / `↓ <n,n> đ.%` / `<n,n> đ.%` / `—` | — (hardcoded, `vi-VN`, default suffix `' đ.%'`) | `delta-indicator.ts:25,35-40` |
-| Status badge labels (4 values, dynamic) | `Hoàn thành` / `Đang thực hiện` / `Không tăng` / `Chưa có dữ liệu` | — (server-computed text, mapped to a class only) | `status-badge.ts:4-9`; `doc/contracts/dashboard.md` DB-1 |
-| Status badge null placeholder | `—` | — (hardcoded) | `status-badge.html:4` |
-| Grid empty message | `Không có chỉ tiêu nào khớp bộ lọc.` | — (hardcoded) | `criteria-table.html:73` |
-| History card title / caption | `Lịch sử các kỳ đã lưu` / `Không ghi đè dữ liệu tuần cũ` | — (hardcoded) | `dashboard.page.html:45-46` |
-| History `@defer` placeholder | `Đang tải lịch sử…` | — (hardcoded) | `dashboard.page.html:51` |
-| History row progress label | `Tiến độ chung` | — (hardcoded) | `history-list.html:6` |
-| History oldest-row marker | `Kỳ đầu` | — (hardcoded) | `history-list.html:10` |
-| History row action button | `Xem` | — (hardcoded) | `history-list.html:14` |
-| History empty message | `Chưa có tuần nào trong năm đang chọn.` | — (hardcoded) | `history-list.html:17` |
-| Footer note | `Xem toàn bộ danh mục & nhập/cập nhật dữ liệu tại Danh mục > DTI.` (source writes `&amp;` and `&gt;`; "Danh mục > DTI" is the link text) | — (hardcoded) | `dashboard.page.html:56-57` |
-| Report dialog default title (before the first fetch resolves) | `Báo cáo tiến độ DTI` | — (hardcoded, in two places) | `dashboard.page.ts:72`, `report-dialog.ts:41` |
-| Report dialog title after fetch (dynamic) | server `Title` | — (server data, `GET /api/dashboard/report`) | `report-dialog.html:3` |
-| Report dialog body (dynamic) | server `ContentHtml`, rendered verbatim — the FE composes **no** report text of its own | — (server data) | `report-dialog.html:6`; `doc/contracts/dashboard.md` DB-2 |
-| Report dialog buttons | `Đóng` / `Sao chép` / `In` | — (hardcoded) | `report-dialog.html:4,8,9` |
-| Copy success toast | `Đã sao chép báo cáo.` | — (hardcoded) | `dashboard.page.ts:167` |
-| Copy failure toast | `Không sao chép được — trình duyệt chặn quyền truy cập clipboard.` | — (hardcoded) | `dashboard.page.ts:169` |
-| HTTP error toasts (shared interceptor fallbacks, 6 values) | `Không thể kết nối tới máy chủ. Kiểm tra kết nối mạng.` / `Bạn cần đăng nhập để tiếp tục.` / `Bạn không có quyền thực hiện thao tác này.` / `Không tìm thấy dữ liệu yêu cầu.` / `Bạn thao tác quá nhanh. Vui lòng chờ một lát rồi thử lại.` / `Đã có lỗi xảy ra. Vui lòng thử lại.` | — (hardcoded) | `http-error.interceptor.ts:21,23,25,27,32,34` |
+| Period toolbar label | `Kỳ đang xem:` | key TBA | `app-period-toolbar` |
+| Period value, week mode | `Tuần 33/2026 (10/08 – 16/08/2026)` | — (composed) | `.period-display` |
+| Period value, month mode | `Tháng 8/2026 (01/08 – 31/08/2026)` | — (composed) | `app-period-toolbar` comment, approved 2026-09-05 |
+| Year select, accessible name | `Chọn năm` | key TBA, on `title` + `aria-label` | `app-period-toolbar` |
+| Week select, accessible name | `Xem tổng hợp cả năm hoặc 1 tuần cụ thể` / `title` `Chọn 1 tuần cụ thể hoặc xem Tất cả` | key TBA | `app-period-toolbar` |
+| Week select — current-period option | `— Kỳ hiện tại —` | key TBA | `app-period-toolbar` |
+| Week select — all-periods option | `— Tất cả (tổng hợp theo năm) —` | key TBA | `app-period-toolbar` |
+| Week select — one option | `Tuần 33 · 10/08 – 16/08 · 82,1%` | — (composed) | `app-period-toolbar` |
+| Month select — current-period option | `— Tháng hiện tại —` | key TBA | `app-period-toolbar` |
+| Month select — one option | `Tháng 8 · 01/08 – 31/08 · 81,0%` | — (composed) | `app-period-toolbar` |
+| View-mode switch | `Tuần` · `Tháng` | key TBA | `.segmented` |
+| View-mode switch, group name | `Chế độ xem theo Tuần hoặc Tháng` | key TBA, on `aria-label` | `.segmented` |
+| Export button | `Xuất báo cáo` | key TBA | `.toolbar-actions` |
+| Export button `title`, no filter applied | `Tải file Excel (.xlsx) của kỳ đang xem — Tuần 33/2026 (10/08 – 16/08/2026)` | — (composed) | `.toolbar-actions` |
+| Export button `title`, **filters applied** | `Tải file Excel (.xlsx) — CHỈ các chỉ tiêu đang lọc (7/62)` | — (composed) | `.toolbar-actions` — settled 2026-09-06 |
+| "All periods" chip, when that option is chosen | `Tất cả · 2026` in a `.badge.warn` | — (composed) | `app-period-toolbar`, currently a disabled branch |
+| KPI labels and captions | five rows | key TBA | see [`../Components/KpiTile.md`](../Components/KpiTile.md) § The five tiles |
+| KPI values in the post-import state | `—` · `—` · `0` · `0` · `26/62` (tiles 1–5, in order) | — (composed) | decision T12; the labels stay as above, only the values change. § States |
+| First-run banner — nothing imported | `Chưa có dữ liệu DTI nào. Vào Danh mục DTI để nhập file hoặc thêm chỉ tiêu đầu tiên.` (`Danh mục DTI` is the link) | key TBA | **Written by this spec 2026-09-05; not drawn in the prototype.** § States |
+| Post-import banner — no `Tiến độ %` yet | `Đã có 62 chỉ tiêu, nhưng chưa chỉ tiêu nào có Tiến độ %. Thanh tiến độ theo nhóm và biểu đồ sẽ hiện ngay khi có số liệu. Nhập Tiến độ % tại Danh mục DTI.` (count composed; `Danh mục DTI` is the link) | — (composed) | **Written by this spec 2026-09-05 for decision Q32; not drawn in the prototype.** § States |
+| Loading — accessible name on the busy overlay | `Đang tải số liệu…` | key TBA, on `aria-label` | **Written by this spec 2026-09-05 for decision Q34; not drawn in the prototype.** § States |
+| Group panel heading | `Tiến độ theo nhóm` | key TBA | `.layout` left card |
+| Group panel caption | `Tuần hiện tại` | key TBA | `.layout` left card |
+| Group names | `1. Hạ tầng và Nền tảng số` · `2. Nhân lực số` · `3. An toàn thông tin, an ninh mạng` · `4. Hoạt động chính quyền số` · `5. Hoạt động Kinh tế số` · `6. Hoạt động Xã hội số` | — (server values) | `app-group-progress-list` |
+| Chart panel heading | `Biểu đồ tiến độ hàng tuần` | key TBA; reads `hàng tháng` in month mode | `.layout` right card |
+| Chart panel caption | `Tiến độ chung` | key TBA | `.layout` right card |
+| Chart accessible label | `Biểu đồ đường tiến độ chung theo tuần, từ tuần 28 đến tuần 33 năm 2026` | — (composed) | `app-trend-chart` |
+| Chart placeholder while loading | `Đang tải biểu đồ…` | key TBA | `.chart-skeleton`, currently a resolved branch |
+| Detail table heading | `62 chỉ tiêu DTI` | — (composed) | `app-criteria-table` `.title` |
+| Detail table count | `62/62 chỉ tiêu` | — (composed, `aria-live`) | `app-criteria-table` `.title` |
+| Search placeholder | `Tìm mã hoặc tên chỉ tiêu...` (three dots, not an ellipsis character) | key TBA | `.input-icon.search` |
+| Search accessible name | `Tìm mã hoặc tên chỉ tiêu` | key TBA, on `aria-label` | `.input-icon.search` |
+| Filter trigger | `Lọc` | key TBA | `<summary class="btn">` |
+| Filter condition 1 | `Nhóm chỉ tiêu` → `Tất cả nhóm` + the six group names | key TBA + server data | `.filter-panel` |
+| Filter condition 2 | `Trạng thái` → `Tất cả trạng thái` · `Chưa thực hiện` · `Đang thực hiện` · `Cần bổ sung minh chứng` · `Hoàn thành` | key TBA | `.filter-panel` |
+| Filter footer | `Xoá lọc` · `Áp dụng` | key TBA | `.filter-foot` |
+| Sort select | `Sắp xếp danh sách` (accessible name) → `Theo mã chỉ tiêu` · `Chênh lệch lớn nhất` | key TBA | `.toolbar-actions` |
+| Chip remove button | `Bỏ lọc <chip label>` (`aria-label`), a `pi pi-times` glyph, **no `title`** | — (composed by `<app-toolbar>`) | `.filter-chip`, per the shipped component |
+| Table headers | `Mã` · `Chỉ tiêu` · `Nhóm` · `Điểm tối đa` · `Tự đánh giá` · `Thẩm định` · `Chênh lệch` · `Trạng thái` · `Minh chứng/Ghi chú` | key TBA | `app-criteria-table` `<thead>` |
+| Status values | `Chưa thực hiện` · `Đang thực hiện` · `Cần bổ sung minh chứng` · `Hoàn thành` | — (server values, fixed set of four) | `app-status-badge` |
+| Empty note cell | `—` (em dash, in `.muted`) | key TBA | `app-criteria-table` `<tbody>` |
+| History panel heading | `Lịch sử các kỳ đã lưu` | key TBA | `.history-card` `.title` |
+| History panel caption | `Không ghi đè dữ liệu tuần cũ` | key TBA | `.history-card` `.title` |
+| History row, period | `10/08 – 16/08/2026` | — (composed) | `app-history-list` |
+| History row, progress | `Tiến độ chung` + a bold percentage | key TBA + value | `app-history-list` |
+| History row, oldest period | `Kỳ đầu` in `.muted` | key TBA | `app-history-list` |
+| History row action | `Xem` | key TBA | `app-history-list` |
+| Footer | `Xem toàn bộ danh mục & nhập/cập nhật dữ liệu tại Danh mục > DTI.` — the last two words are a link | key TBA | `.footer` |
+| Shell copy (sidebar brand, logout, hamburger, toast dismiss) | unchanged from the live shell | — | see [`../Components/Sidebar.md`](../Components/Sidebar.md), [`../Components/Topbar.md`](../Components/Topbar.md) and [`../Components/Toast.md`](../Components/Toast.md) — the shell's copy belongs to those three, not to a screen spec |
+
+**Copy notes.** The period label appears in four places on this one screen, and the
+verbatim strings for each are in the table above: the value box, the select option,
+the history row and the chart's x-axis tick.
+
+> 📖 **The period-label *rule* is not owned by this file.** Which dates a week or a
+> month spans, and the format each of the four labels takes, live in
+> `spec/dashboard-dti/business-rules.md`. This spec records the shipped strings; it
+> does not define how they are built. Restating the rule here would be the second
+> source `.claude/CLAUDE.md` §5 forbids.
+
+One formatting decision does belong here, because it is a copy fix rather than a
+rule: decision **T5** settles the dash on the **spaced** form — `10/08 – 16/08` —
+everywhere. The approved prototype contradicts itself, writing the value box and
+the select options without spaces and the history row and chart axis with them.
+The spaced form wins on legibility and on being the more common of the two. The
+strings above are written in that form; the prototype is the side that needs
+syncing (§ Normalize on redesign).
 
 ### States
 
 <!-- How each state renders: default / loading / empty / error / validation display. -->
 
-- **default (first paint):** `viewMode` = `'week'`, `selectedYear` = `new Date().getFullYear()` evaluated per component instance, `selectedWeekValue` = `''` (`dashboard.page.ts:62-65`). An empty week value means "no `date` param", and the contract makes the server pick today's period (`doc/contracts/dashboard.md` DB-1). Two `effect`s fire in parallel: one loads `GET /api/dashboard/periods?year=…`, the other `GET /api/dashboard?mode=week&year=…` (`dashboard.page.ts:100-118`). Until both land, the page renders `EMPTY_AGGREGATE` (`dashboard.page.ts:16-32`): period display `—`, KPI 1 and 2 `—`, KPIs 3–5 `0`/`0`/`0/0`, empty groups list, empty chart, empty table, `0 chỉ tiêu DTI`.
-- **loading — there is no loading affordance.** `loading()` is set true before every aggregate fetch and false in both callbacks (`dashboard.page.ts:110,114,116`) but is **never read by the template** — grep for `loading` in `modules/dashboard/` returns only those four lines. `<app-criteria-table>` takes no `loading` input and its `p-table` has no `[loading]` binding, so PrimeNG's mask never appears either. Changing period, year or mode therefore swaps the whole page's numbers with no spinner, no skeleton and no dimming; the previous period's data stays fully legible on screen until the new response lands. See Normalize on redesign.
-- **loading — the two `@defer` placeholders are the only "loading" text on the screen**, and they are about *code* loading, not data: `@defer (on viewport)` around `TrendChart` and `HistoryList` renders `Đang tải biểu đồ…` / `Đang tải lịch sử…` in a `.chart-skeleton` until the lazy chunk downloads (`dashboard.page.html:33-37,48-52`). Above the fold on a desktop viewport both usually resolve immediately.
-- **populated — week mode, a specific period (the common case):** the period display shows the server's `PeriodLabel`; the year and week selects both have a value; the mode-dependent labels read "Tuần trước"/"Tuần này", "Tuần hiện tại", "Biểu đồ tiến độ hàng tuần" (`criteria-table.ts:47-52`, `dashboard.page.html:24,30`). All five KPI tiles, every group bar, the trend line and all table columns carry real numbers.
-- **populated — no previous period:** the server returns `Delta: null` and `PreviousPeriodLabel: null`, so KPI 2 shows `—` with the sub-caption `Chưa có kỳ trước` and `tone="default"` (`kpi-summary.ts:9-18,46`). Table columns "Tuần trước" and "Tăng/giảm" render `—` per row. **Unlike the prototype, KPI 4 ("Không tăng") still shows a number, not `—`** — it is bound to `kpi().Flat` unconditionally (`kpi-summary.html:5`), and the backend counts flat only where a previous value exists (`business-rules.md` §3.5). The history panel marks the oldest row `Kỳ đầu` instead of a delta (`history-list.html:9-13`).
-- **populated — month mode:** the segmented control swaps the period select to the month picker, KPI 1/2 labels become "Tiến độ chung tháng này"/"So với tháng trước", the groups caption becomes "Tháng hiện tại", the chart title becomes "…hàng tháng" and the table's two value columns become "Tháng trước"/"Tháng này". Switching mode resets **both** period values to `''` (`dashboard.page.ts:121-125`), so the view always lands on the current month rather than an unrelated period. The history panel is **not** mode-aware — it always lists weeks (`dashboard.page.html:49`).
-- **populated — "Tất cả" (year aggregate):** picking `__ALL__` in the week select makes `isAllMode()` true, which switches the request to `Mode: 'year'` (`dashboard.page.ts:75-77,90-92`). The `Badge` chip `Tất cả · <year>` appears, KPI 1 becomes "Tiến độ chung (tổng hợp năm)", the two card captions become "Tổng hợp năm <year>", the table's column 5 header degrades to `—` and column 6 becomes "Tất cả (TB)". KPI 2 keeps the label "So với tuần trước" in this mode (`kpi-summary.ts:39-41`) — see Normalize on redesign.
-- **empty — no data at all:** every region has its own empty branch and they are independent. Groups → `Chưa có dữ liệu nhóm chỉ tiêu.` (`group-progress-list.html:8-10`); chart → `Chưa có đủ dữ liệu để vẽ biểu đồ.`, shown whenever **no** trend point has a non-null value (`trend-chart.html:2-12`, `trend-chart.ts:50`); table → one `colspan="9"` `.muted` row, and the title reads `0 chỉ tiêu DTI` with `0/0 chỉ tiêu`; history → `Chưa có tuần nào trong năm đang chọn.` (`history-list.html:16-18`). KPI tiles have no empty branch — they render `—`/`0`/`0/0`.
-- **empty — filtered table with zero matches:** identical to the no-data table state: the same `Không có chỉ tiêu nào khớp bộ lọc.` row, with the count caption reading `0/<total> chỉ tiêu`. The paginator still renders. One message therefore covers three situations — no data for the period, no filter matches, and a failed aggregate fetch (see Normalize on redesign).
-- **error — aggregate fetch fails:** the shared interceptor shows an error `Toast` using the API envelope's `message` when present, else the status fallback (`http-error.interceptor.ts:82`). Beyond the toast the page does nothing: the `error` callback only clears `loading()` and leaves `aggregate()` untouched (`dashboard.page.ts:116`). On first load that means the page keeps `EMPTY_AGGREGATE` and looks exactly like a genuinely empty period; on a later period change it keeps the **previous** period's numbers on screen while the toolbar shows the newly-selected period. There is no retry control and no error region.
-- **error — period-options fetch fails:** `periodOptions` is set to `null` (`dashboard.page.ts:104`). The year select then falls back to a single option — the currently selected year, injected by the `years` computed (`dashboard.page.ts:79-82`) — the week/month selects show only their default option, and the history panel shows its empty message even when saved periods exist.
-- **error — report fetch fails:** the dialog simply never opens; `onExportReport`'s error branch is deliberately empty because the interceptor toast is the whole feedback (`dashboard.page.ts:155-157`). The button is not disabled and shows no pending state, so a slow report looks like a dead click.
-- **error — session expired (401 mid-session):** the interceptor clears the user context and navigates to `/dang-nhap?returnUrl=/dashboard` on top of the toast (`http-error.interceptor.ts:52-58,83`). This screen has no 401 handling of its own.
-- **report dialog — open:** `onExportReport` fetches `GET /api/dashboard/report` with the **same** query params as the aggregate, then sets title + HTML and flips `reportOpen` (`dashboard.page.ts:148-159`). An `effect` in the dialog calls native `showModal()` (`report-dialog.ts:51-58`), so it lands on the browser top layer over an `overlay-backdrop` scrim. The body is server-rendered HTML passed through `bypassSecurityTrustHtml` — the FE composes no report text. Closing works via the "Đóng" button and native `Esc`; both route through the `<dialog>` `close` event → `closed` output → `reportOpen(false)`. **Backdrop click does not close it** — no listener is wired (see Normalize on redesign).
-- **report dialog — copy:** "Sao chép" reads `.report`'s `innerText` and writes it to `navigator.clipboard`, then emits success or error; the page turns that into a `Toast` (`report-dialog.ts:64-71`, `dashboard.page.ts:165-171`). The dialog stays open either way.
-- **report dialog — print:** "In" calls `window.print()` (`report-dialog.ts:73-76`) with the dialog still open, so the printed page is the dashboard under the print rules below, not the report block alone (see Normalize on redesign).
-- **history → period navigation:** clicking "Xem" emits the period value; the page forces `viewMode` back to `'week'` and sets `selectedWeekValue`, deliberately mirroring the prototype's `loadSavedWeek()` (`dashboard.page.ts:141-146`). This is the only cross-region interaction on the screen.
-- **validation display:** **none, and none is possible** — the screen has no text input that accepts a value (the search box filters, it does not validate), no form, no submit and no write path. The interceptor toasts are the entire feedback surface; they auto-dismiss after 5000 ms (`toast.service.ts:11,48`) and there is no persistent error region anywhere on the page.
+- **default:** a period is selected and returns data. All six regions render as
+  described above.
+- **loading — decision Q34, 2026-09-05:** the screen fetches its aggregate on entry
+  and on every period change. While that request is in flight the four data regions
+  **dim, with one small spinner over them**: the KPI row, the group-progress panel,
+  the chart card and the detail table. The period toolbar stays fully lit and usable —
+  the control that started the fetch must not become unreachable during it — and so
+  does the history panel, which does not change with the period being previewed.
+
+  What Q34 replaces is **nothing at all.** Per the decision's own account, the
+  pre-retirement build declared a `loading` flag that no template ever read, so
+  switching period left the previous period's numbers standing — undimmed and
+  unlabelled — until the response landed: five KPI tiles and a full table of figures
+  that quietly belonged to a period the user was no longer looking at. That code was
+  deleted on 2026-08-29 and cannot be re-measured today, so it is recorded here as the
+  decision's stated reason rather than as a verified fact. The reason matters either
+  way: the dim is not decoration, it is the only thing marking stale numbers as
+  stale.
+
+  Two distinctions to keep:
+  - **Data loading is not code loading.** The chart also has a *code*-loading state —
+    the `.chart-skeleton` placeholder shown while its lazy chunk downloads (§ Layout
+    Blueprint). The two can happen at once, and they do different jobs: the skeleton
+    reserves height so the card cannot jump, the dim marks content as out of date.
+  - **The catalogue screen needs none of this.** Its grid is a `DataTable`, and
+    `p-table`'s own `[loading]` mask already covers it, painted by the preset
+    ([`../Components/DataTable.md`](../Components/DataTable.md) § Variants). Adding a
+    second loading treatment there would put two mechanisms in the product for one
+    job — [`02-danh-muc-dti.md`](./02-danh-muc-dti.md) § States says so explicitly.
+
+  **The spinner is PrimeNG's `p-progressSpinner`** — decision **T10**, 2026-09-06 — and
+  it is deliberately **not** a new row in [`../COMPONENTS.md`](../COMPONENTS.md). Three
+  reasons, in the order they decided it: PrimeNG is already a dependency, so nothing is
+  installed to get it; it takes its colour from the preset built by
+  `createCorePreset(APP_PALETTE)`, so it needs no new token and cannot drift from the
+  palette; and it is the same *kind* of thing as the paginator arrows and the `p-table`
+  loading mask — **chrome PrimeNG paints at runtime**, catalogued in
+  [`../Icons.md`](../Icons.md) § Per-Action Map rather than specified as a component of
+  this library. The app owns no spinner CSS today and after T10 it needs none:
+
+  ```bash
+  grep -c '@keyframes' src/FE/src/styles.scss      # 0 today, and should stay 0
+  grep -rc 'pi-spin' src/FE/src | grep -v ':0$'    # no output — no hand-rolled spinner
+  ```
+
+  **The dim is this screen's own, and it is one declaration:** `opacity: .5` on each of
+  the four regions while the fetch is in flight, plus `aria-busy="true"` so the state is
+  not carried by colour alone. The value is not invented — `.5` is exactly what the app
+  already dims a disabled control by ([`../Components/Button.md`](../Components/Button.md)
+  § States → disabled), so "unavailable right now" looks the same everywhere. It is an
+  un-tokenised literal all the same; § Normalize on redesign.
+- **empty — no data for the selected period:** each region degrades on its own
+  rather than the page blanking. The chart swaps its plot for one `.muted`
+  sentence; the group list and the history list each render their own `.muted`
+  empty sentence; the detail table shows its empty message. The five KPI tiles
+  render `—` in place of every value (see below).
+- **empty — brand-new deployment, nothing imported yet:** the state a fresh
+  install lands on, because this screen *is* the landing route (Q18). Every region
+  is empty at once and the period selector has nothing to offer. The screen must
+  still read as a working page that says where to go, so it renders a
+  `NoticeBanner` above the KPI row pointing at the catalogue, and the five KPI
+  tiles show `—` rather than zeros. The `Footer` link is the second route out.
+  Default (information) severity, `pi pi-info-circle`. Verbatim copy:
+
+  > `Chưa có dữ liệu DTI nào. Vào Danh mục DTI để nhập file hoặc thêm chỉ tiêu đầu tiên.`
+
+  `Danh mục DTI` is the route out, rendered as the inline `a` child that `.notice`
+  already contracts for ([`../Components/NoticeBanner.md`](../Components/NoticeBanner.md)
+  § Anatomy). **Settled by decision T11, 2026-09-06**: a link, not a labelled button —
+  widening the `NoticeBanner` contract for one action would work against the standing
+  requirement to compose what already ships, and the prototype's own notice library
+  uses the inline link in all four severities.
+- **empty — criteria imported, no `Tiến độ %` entered yet.** ⚠️ **This is the
+  normal state immediately after every import, not an edge case.** Decision Q24
+  settles that import leaves `Tiến độ %` **blank** for the user to fill in, and
+  decision Q11 has the group bars and the trend line drawn from `Tiến độ %`. So
+  right after an import the catalogue is full and this screen is still largely
+  empty: six progress bars at 0 and a trend line with nothing to plot. **The product
+  owner has accepted this behaviour; it is not a defect and must not be "fixed" by
+  silently deriving a progress figure.**
+
+  It does have to be *legible*, and the difference from the state above matters:
+  "nothing has been imported" and "62 criteria exist but nobody has recorded
+  progress" call for different sentences and lead to different next actions. The
+  detail table is fully populated in this state — every score column has values —
+  which is what makes an all-zero group panel above it look broken unless the copy
+  explains it.
+
+  The figures the approved prototype draws (74,3% · 51,8% · … · 82,1%) are
+  therefore **a state reached after someone entered progress**, not the state
+  after import. Read them as an illustration of a working dashboard, not as
+  something import produces.
+
+  **Decision Q32 settles the treatment**: a `NoticeBanner` above the KPI row, default
+  (information) severity with the `pi pi-info-circle` glyph, saying how many criteria
+  exist, that no progress has been entered, that the bars and the chart will fill in
+  once it is, and offering the route to the catalogue. Verbatim copy:
+
+  > `Đã có 62 chỉ tiêu, nhưng chưa chỉ tiêu nào có Tiến độ %. Thanh tiến độ theo nhóm và biểu đồ sẽ hiện ngay khi có số liệu. Nhập Tiến độ % tại Danh mục DTI.`
+
+  The count is composed from the response, not hardcoded — `62` is the figure in
+  `spec/DTI_CanGiuoc_2026-08-11.csv` and it is what the approved prototype shows
+  everywhere else on this screen. `Danh mục DTI` is the route out, the same inline `a`
+  child as in the state above, and settled the same way by decision T11.
+
+  **What each KPI tile reads in this state — settled by decision T12, 2026-09-06.**
+  The *rule* (what each tile is computed from) is owned by
+  `spec/dashboard-dti/business-rules.md`; the table below records only what the screen
+  shows. Labels are verbatim from
+  [`../Components/KpiTile.md`](../Components/KpiTile.md) § The five tiles.
+
+  | # | Tile | Right after import | Why |
+  | --- | --- | --- | --- |
+  | 1 | `Tiến độ chung tuần này` | `—` | derived from `Tiến độ %`, which Q24 leaves blank |
+  | 2 | `So với tuần trước` | `—` | same source, and on a first import there is no earlier period to compare with either |
+  | 3 | `Chỉ tiêu tăng` | `0` | a count of criteria that moved; nothing has moved yet |
+  | 4 | `Không tăng` | `0` | the same comparison and the same absence — **not** `62` |
+  | 5 | `Hoàn thành` | the real figure — `26/62` on the BA's dataset | counted from `Trạng thái`, which the import file carries |
+
+  **Tile 5 is what makes this state legible.** It is the one number that proves the
+  import landed, so the screen reads as *"the data is in, the progress is not"* rather
+  than as a failed import with a full table underneath it by coincidence. T12 also
+  settles the tension the prototype contained: tile 1's sub-caption
+  `Bình quân gia quyền theo điểm (thật: 787,84/960)` describes the **populated** state,
+  not this one.
+
+  ⚠️ **Both banner strings are written by this spec on 2026-09-05, not read off the
+  prototype.** `Prototype/index.html` § `#screen-dashboard` draws neither state — Q32
+  and the first-run copy both postdate its approval.
+- **error:** a failed aggregate request surfaces through the app's global HTTP
+  error handling as a `Toast` in the shell. This screen authors no in-page error
+  banner of its own; whether it should — a `NoticeBanner.bad` above the KPI row is
+  the obvious candidate — is unspecified.
+- **access — every signed-in account, no exceptions.** Per decision **Q21** the
+  Dashboard needs no DTI permission: `authGuard` + `mustChangePasswordGuard` and
+  deliberately **no** `roleGuard`, which is also what the route position requires,
+  since `roleGuard` redirects a role-less user here and a guarded fallback would
+  loop (`src/FE/src/app/core/auth/role.guard.ts`). **There is consequently no
+  "you lack permission" state on this screen and none should be designed.** An
+  earlier revision of this spec specified one; Q21 removed the need for it. Write
+  access on the catalogue is a separate, still-open question
+  ([`02-danh-muc-dti.md`](./02-danh-muc-dti.md) § Cần chốt).
+- **validation:** none. The screen has no input. The period selects, the view-mode
+  switch, the search box, the filter panel and the sort select are all query
+  controls; none can be invalid.
+- **print:** the two `.no-print` regions (the period toolbar and the table toolbar)
+  disappear, along with the shell's sidebar, topbar and toast stack. The scrolled
+  regions are the problem: the detail table and the history list both cap their
+  height, so a printed page silently truncates them. Carried in § Normalize on
+  redesign.
 
 ### Responsive
 
 <!-- Behavior per breakpoint. -->
 
-- **≥`breakpoint.desktop` / above `breakpoint.tablet` (981px and up, desktop default):** `.shell-content` is offset by `dimension.sidebar-w` (or `dimension.sidebar-w-collapsed` when collapsed, `app.scss:11-22`); the topbar hamburger is `display:none` (`topbar.scss:45-47`); a collapsed sidebar renders submenus as hover/focus-within flyouts at `left:100%` (`sidebar.scss:289-336`). `main` is capped at `dimension.container-max-width` with `sp-5` padding. Page grids: `.kpis` = `kpis-grid-desktop`, `.layout` = `layout-grid-desktop`, `.group-row` = `group-row-grid-desktop`.
-- **≤`breakpoint.tablet` (980px):** `.shell-content { margin-left: 0 !important }` (`app.scss:32-36`); the sidebar becomes an off-canvas drawer at `dimension.sidebar-w-drawer-tablet`, `transform: translateX(-100%)` until `.drawer-open`, with `shadow` and a click-to-dismiss `.sidebar-backdrop` (`sidebar.scss:236-276`); the topbar hamburger becomes `display:flex` (`topbar.scss:49-56`). Page-owned rules: `.kpis` → `kpis-grid-tablet` (`repeat(2, 1fr)`, `kpi-summary.scss:7-11`), `.layout` → `layout-grid-tablet` (`1fr`, so the groups card stacks above the chart card, `dashboard.page.scss:35-39`), `.group-row` → `group-row-grid-tablet` (`group-progress-list.scss:31-35`).
-- **≤`breakpoint.mobile` (560px):** `main` padding drops to `10px` (`app.scss:38-42`); the topbar user name is hidden, leaving just the logout button (`topbar.scss:39-43`); the sidebar drawer widens to `dimension.sidebar-w-drawer-mobile` and nav items grow to `min-height:40px` (`sidebar.scss:278-287`). Page-owned rules: `.kpis` gap drops to `8px` and the **fifth** tile spans the full row (`grid-column: 1 / -1`) so the 5-into-2 grid has no hole — reached through the app's **only** `::ng-deep`, `.kpis ::ng-deep .card:last-child` (`kpi-summary.scss:13-21`); `.kpi .value` drops to `18px` (`kpi-tile.scss:38-42`); every direct child of `.weekbar` takes `flex:1` and `.weekbar-actions` goes `margin-left:0; width:100%`, so "Xuất báo cáo" wraps onto its own full-width row (`period-toolbar.scss:75-84`); `.group-row` → `group-row-grid-mobile` (`group-progress-list.scss:37-41`).
-- **Criteria table (all viewports, no breakpoint):** `criteria-table.scss` contains **no `@media` rule at all**, and neither the table nor any column declares a `min-width`. All nine columns are **percentage** widths summing to 100% (`criteria-table.html:41-49`), and `.tablewrap` is `overflow:hidden` — so the table never scrolls horizontally; it compresses. At a 390px viewport the 24%-wide "Chỉ tiêu" column is ~90px and wraps heavily. Vertical extent is the static `scrollHeight="480px"` (`criteria-table.html:36`) at every viewport, with the header pinned by the global sticky `th` rule. **This is a structural change from the prototype**, whose table held `min-width:1200px` and scrolled horizontally (`ui-spec.md` §5 ≤560px).
-- **Filters row (all viewports, no breakpoint):** `.filters` is `flex-wrap: wrap` with the search `Input` at `flex:1; min-width: dimension.filter-input-min-width` (`styles.scss:327-338`), so the four controls reflow intrinsically — content-driven, not media-query-driven. The same is true of `.weekbar` above `breakpoint.mobile` (`period-toolbar.scss:1-7`).
-- **Trend chart (all viewports):** `maintainAspectRatio: false` with `responsive: true` and a fixed `dimension.chart-height`, so the canvas fills its card's width and keeps a constant height at every breakpoint (`trend-chart.ts:112-113`, `trend-chart.html:8`).
-- **History panel (all viewports):** `histrow-grid` has **no** responsive override — the four columns keep `100px 1fr 90px 70px` down to 390px, inside a scroller capped at `dimension.history-max-height` (`history-list.scss:1-17`).
-- **`.card` and `.title` have no responsive rules at all.** `styles.scss` contains exactly **one** `@media` block in the whole file — the print block at `styles.scss:122-126`. The prototype's ≤560px card-padding reduction (14px→12px) and `.title { align-items: flex-start }` were **not ported**.
-- **Print (`@media print`):** `.no-print` elements are hidden globally (`styles.scss:122-126`), which on this screen removes the whole period toolbar card and the criteria filters row, plus the sidebar, sidebar backdrop, topbar and toast stack via their own print rules (`sidebar.scss:338-343`, `topbar.scss:58-62`, `toast.html:1`). `.shell-content` loses its margin and `main` loses its max-width (`app.scss:44-52`). **No dashboard component declares a print rule of its own** — the KPI grid, both `.layout` cards, the chart canvas, the criteria table, the paginator, the history panel and the footer all print as laid out, and nothing releases the table's 480px scroll height or the history panel's 240px cap.
+- **≥981px (desktop default):** `.layout` is a `1.15fr 0.85fr` two-column grid; the KPI row is five equal columns; `main` is centred at `container-max-width` with `spacing.sp-5` padding.
+- **≤980px (tablet):** three things change at once. `.layout` collapses to a single column (§ `@media (max-width: 980px)` → `#screen-dashboard .layout`), so the group panel sits above the chart. The KPI row drops to **two** columns (§ `app-kpi-summary .kpis`). The group rows narrow their name column from 210px to 140px (§ `app-group-progress-list .group-row`). The shell's sidebar becomes an off-canvas drawer opened from the topbar hamburger.
+- **≤560px (mobile):** the KPI grid gap tightens to 8px and — because `app-kpi-tile` is `display: contents` — **all five** tiles span the full width rather than the intended four-in-two-columns-plus-one. That is defect **A1**, recorded as-drawn — `doc/Design/Frontend/PlatformManager/Prototypes/index.html` § `app-kpi-tile` and § `app-kpi-summary .kpis .card:last-child` (inside `@media (max-width: 560px)`). KPI values step down to 18px. Group-row name columns narrow again to 110px. The shell drops `main` padding and hides the user's name in the topbar.
+- **Not responsive at any breakpoint:** the trend chart's height (a fixed 220px from phone to 4K) and the history rows' grid template, which has no breakpoint variant at all — see [`../Components/HistoryRow.md`](../Components/HistoryRow.md) § Normalize #1. The detail table does not restack; it scrolls horizontally inside `.tablewrap`, which is the `Table` contract.
 
 ### Iconography
 
-The shipped app loads **PrimeIcons v7** globally (`angular.json:38-39,100-101`), rendered as `<i class="pi pi-…">`. `Icons.md` was refreshed on 2026-08-22 and now records this correctly — the prototype-era `library: "none"` claim this spec used to repeat is gone.
-
-**This screen authors no icon of its own.** Inside `modules/dashboard/` there is not a single `<i class="pi …">`: every action is a text `Button` or a native `<select>`, and the only directional cues are the literal `↑`/`↓` glyphs inside `DeltaIndicator`'s and `KpiSummary`'s formatted strings (`Icons.md` § Legacy Exceptions). Every PrimeIcons glyph visible while `/dashboard` is open therefore belongs to the app shell. The dashboard module also contains exactly **one** ARIA attribute pair — `role="group"` + `aria-label` on the segmented control (`period-toolbar.html:36`).
-
-**But the screen is not icon-free — PrimeNG injects a second set at runtime.** `[paginator]="true"` on the criteria table (`criteria-table.html:32`) renders four inline `<svg>` arrows from PrimeNG's own icon components — `AngleDoubleLeftIcon`, `AngleLeftIcon`, `AngleRightIcon`, `AngleDoubleRightIcon`, each carrying a `data-p-icon="angle-…"` attribute. **Nothing in `src/FE/` names them**, so a grep for `pi-` misses them entirely; they exist because a component was switched on, not because an icon was written. PrimeNG's spinner (`SpinnerIcon`) does **not** appear on this screen — this `p-table` binds no `[loading]` — and neither do its sort/filter icons, since no template here uses `pSortableColumn`, `[sortField]` or `[filters]`. Full enumeration, including the missing `aria-hidden` and the English paginator labels, is in `Icons.md` § Per-Action Map (rows marked *PrimeNG SVG*) and § Normalize on redesign #7-9.
+See [`../Icons.md`](../Icons.md) § Per-Action Map. The app loads **PrimeIcons v7**
+globally and authors icons as `<i class="pi pi-*">` elements.
 
 | Action | Icon | Placement |
 | --- | --- | --- |
-| Open navigation drawer | `pi pi-bars` | Topbar, leftmost, ≤`breakpoint.tablet` only (`topbar.html:11`) |
-| Log out | `pi pi-sign-out` (icon + "Đăng xuất" label) | Topbar, far right (`topbar.html:19`) |
-| Collapse / expand sidebar | `pi pi-angle-left`, rotated 180° when collapsed | Sidebar brand row, far right (`sidebar.html:12`, `sidebar.scss:83-85`) |
-| Expand / collapse a nav group | `pi pi-chevron-down`, rotated −90° when closed | Sidebar parent item, far right (`sidebar.html:33`) |
-| Nav item glyphs (incl. Dashboard's `pi-th-large`) | server-supplied PrimeIcons class per `SysMenu.Icon`, falling back to `pi-circle` | Sidebar, left of each label (`sidebar.html:31,45,59`; `Icons.md` § Per-Action Map) |
-| Dismiss a toast | `pi pi-times` | Toast item, right edge (`toast.html:11`) |
-| Increase / decrease indicator | literal `↑` / `↓` glyphs **inside the text**, not icon elements | Delta cells, KPI 2 value, history rows (`delta-indicator.ts:38`, `kpi-summary.ts:11`) |
-| Paginate the criteria table (first / previous / next / last) | PrimeNG inline `<svg>`, **not** PrimeIcons — `data-p-icon="angle-double-left"`, `"angle-left"`, `"angle-right"`, `"angle-double-right"` | Paginator strip below the criteria table; injected by `p-table` because `[paginator]="true"` (`criteria-table.html:32`), with no `src/FE/` source line — see `Icons.md` § Per-Action Map |
-| Switch week/month, pick year/period, export report, search/filter/sort, view a saved period, close/copy/print the report | — (text buttons and native controls, no icon) | Period toolbar, filters row, history rows, report dialog |
+| Export the period as `.xlsx` | `pi pi-file-excel` | Leading, inside the `.btn.primary` in `.toolbar-actions` |
+| Search the criteria table | `pi pi-search` (decorative) | Leading adornment inside `.input-icon.search` |
+| Open the filter panel | `pi pi-filter` | Leading, inside `<summary class="btn">` |
+| Open the navigation drawer (≤980px) | `pi pi-bars` | Shell topbar, left |
+| Collapse / expand the sidebar | `pi pi-angle-left` | Shell sidebar brand row |
+| Sign out | `pi pi-sign-out` | Shell topbar, right |
+| Dismiss a toast | `pi pi-times` | Shell toast item, right |
+
+⚠️ **`pi pi-file-excel` is not yet a row in [`../Icons.md`](../Icons.md) § Per-Action
+Map.** It is a genuine addition introduced by decision Q13 (the export button), and
+it is the only new action icon this screen brings. Add the row to `Icons.md` when
+this screen is built — that file is the master for the icon map, and duplicating
+the mapping here instead would create the second source `.claude/CLAUDE.md` §5
+forbids.
+
+Direction arrows (`↑` / `↓`) in the KPI tiles and the history rows are **not
+icons** — they are literal characters inside the label text. `../Icons.md`
+§ Legacy Exceptions.
 
 ### Screenshots
 
-<!-- Refs into Assets/Screenshots/dashboard/ — folder name follows the on-disk precedent (un-numbered flow stem), not the numbered spec filename. -->
+<!-- Refs into Assets/Screenshots/dashboard/ -->
 
-**✅ Captured 2026-08-22 from the live Angular app** — one desktop shot, which is exactly the target under the 2026-08-22 policy (`doc/Design/CLAUDE.md` § Rules).
+**No screenshot of this design exists, and none can be captured**, because the
+screen is not built. `Assets/Screenshots/dashboard/` currently holds captures of
+the **deleted** pre-2026-08-29 build, plus a `_superseded-prototype/` folder of
+captures from the prototype deleted in 2026-08-23. Neither shows this design; both
+are kept for before/after comparison only and must not be cited as evidence of
+anything current.
+
+Under `doc/Design/CLAUDE.md` § Rules the target is **one desktop shot per screen**.
+Exactly one row below is the real gap.
+
+Prerequisites, once the screen is built:
+
+> 📖 Capture environment (server URLs, allowed ports, database setup): read [`../../../CLAUDE.md`](../../../CLAUDE.md) § Rules
 
 | Screenshot path | Status | Capture instructions |
 | --- | --- | --- |
-| `Assets/Screenshots/dashboard/dashboard--empty--desktop-1440.png` | captured 2026-08-22 | Live app, `/dashboard`, full page @ 1440 wide, sidebar expanded, week mode. Captured against an **empty database** — no period had been saved, so the KPI tiles read `—`/`0`, the group card reads `Chưa có dữ liệu nhóm chỉ tiêu.` and the trend card `Chưa có đủ dữ liệu để vẽ biểu đồ.`. That is a real state, not a capture failure, and the `--empty--` in the filename records it. To reproduce: start the API (`dotnet run --project src/BE/PlatformManager.Api --urls http://localhost:5027`; that origin is `apiBaseUrl` in `src/FE/src/environments/environment.development.ts:5`, **not** in `environment.ts`, which ships the production-relative `/api`), then the FE (`npx ng serve --port 4201`), sign in at `/dang-nhap` and open `/dashboard`. Captured via the chrome-devtools MCP; full environment recorded in `UiInventory.md` § Screenshot Manifest. No credentials are recorded in any design artifact. |
-
-Every other view of this screen is **on demand** — captured only when someone actually needs that specific case, then added as a row here. This is deliberately *not* a backlog: an earlier pass queued 40 pending shots across 5 screens and none were ever taken.
-
-- **Populated state** — the most useful next shot: pick a period that has a previous period saved, so KPI 2 and the "Tăng/giảm" column are populated and the trend line has ≥2 points. Full page @ 1440×1400 including the history panel and footer.
-- Month mode · the "Tất cả" aggregate · the report dialog · the no-match table · tablet 900px · mobile 390px.
-
-⚠️ **The prototype-era captures are not app screenshots and must never be reused as such.** They were taken on 2026-08-11 from the deleted prototype via `file://` with a seeded `localStorage`, and show a screen that no longer exists: a topbar toolbar with "Sao lưu"/"Khôi phục"/"Lưu tuần này", editable progress and note inputs, a hand-drawn `<canvas>` trend, a `.fab`, and the older palette/1450px container. Four of them survive under `Assets/Screenshots/dashboard/_superseded-prototype/` (its README says the same) purely for before/after comparison — never cite them from a spec, prompt pack or Figma export as evidence of current behaviour. The prototype's own `dashboard--desktop-1440.png` no longer exists; the live capture above is what replaced it.
-
-| Frozen prototype file, now under `_superseded-prototype/` | Was | Replace with |
-| --- | --- | --- |
-| `dashboard--tablet-900.png` | prototype @ 900px | on demand only |
-| `dashboard--mobile-390.png` | prototype @ 390px | on demand only |
-| `dashboard--with-history--desktop-1440.png` | prototype, seeded history | on demand only |
-| `report-dialog--desktop-1440.png` | prototype report dialog | on demand only |
+| `Assets/Screenshots/dashboard/dashboard--desktop-1440.png` | **blocked — screen not built** | Landing route @ 1440×900, full page, sidebar expanded, week mode, a period with data selected, no filter applied. This is the one shot that must exist. |
+| `Assets/Screenshots/dashboard/dashboard--no-progress--desktop-1440.png` | blocked — screen not built | Same @ 1440×900 **immediately after an import, before anyone enters `Tiến độ %`** — a full detail table above six 0% group bars and an empty chart (§ States). This is the state every deployment passes through and the one most likely to be mistaken for a bug, so it is worth capturing early. |
+| `Assets/Screenshots/dashboard/dashboard--empty--desktop-1440.png` | blocked — **name already taken** by a capture of the deleted build | The existing file of this name shows the pre-retirement screen. Move or rename it before capturing the new empty state, or the two will be silently confused. |
+| `Assets/Screenshots/dashboard/dashboard--month-mode--desktop-1440.png` | on demand | Same @ 1440×900 with `Tháng` selected — the only shot showing the month period label, the month select and the `Th.1 … Th.12` x axis. |
+| `Assets/Screenshots/dashboard/dashboard--mobile-390.png` | on demand | @ 390×844 — the only shot showing the five-tiles-in-one-column artefact and the single-column `.layout`. |
 
 ### Normalize on redesign
 
-<!-- Screen-local quirks ONLY here — sections 1-6 stay as-shipped. Library-wide issues go to COMPONENTS.md → Known inconsistencies. -->
+<!-- Screen-local quirks ONLY here — sections 1-6 stay as-shipped. A quirk that spans components belongs in the component's own spec (`Components/<Name>.md` → Normalize on redesign), not here. -->
 
-- **Every fetch on this screen is silent.** `loading()` is computed and then never rendered (`dashboard.page.ts:69,110,114,116`; no template reference exists), and the criteria `p-table` has no `[loading]` binding even though PrimeNG supplies the mask for free and the sibling grids on `/danh-muc/dti` and `/quan-tri/nguoi-dung` use it. Changing year, period or mode replaces every number on the page with no indication that a request is in flight, and on a slow link the user reads the *old* period's data under the *new* period's label → bind `loading()` to the table and dim/disable the toolbar while a request is open.
-- **A failed aggregate fetch is indistinguishable from an empty period.** The error branch only clears `loading()` and leaves `aggregate()` alone (`dashboard.page.ts:116`), so a first-load failure renders exactly the same "no data" empty states as a genuinely empty period, and a later failure silently keeps stale numbers on screen. One message — `Không có chỉ tiêu nào khớp bộ lọc.` — additionally covers three different situations (no data, no filter match, failed load) → split empty / no-results / load-failed, and give the last a retry action.
-- **"Xuất báo cáo" has no pending or failure state.** The button is never disabled, shows no spinner, and its error branch is deliberately empty (`dashboard.page.ts:155-157`) — a slow or failing report is a click that appears to do nothing, explained only by a 5-second toast → add a pending state on the button and an in-place failure message.
-- **The report dialog's backdrop does not close it.** Only the "Đóng" button and native `Esc` work (`report-dialog.html:1-11`) — no backdrop listener is wired, which is the same gap the prototype had (the deleted prototype, recorded in this spec's previous revision) → wire backdrop-click-to-close, or state the "Đóng/Esc only" rule deliberately.
-- **"In" prints the dashboard, not the report.** `window.print()` is called with the dialog open (`report-dialog.ts:73-76`) and no dashboard component declares a `@media print` rule, so the output is the full page under the global print rules — while the one thing the user asked to print, the `.report` block, is inside a top-layer `<dialog>` → add a print stylesheet that isolates the report body, and release the table's 480px scroll height and the history panel's 240px cap for print.
-- **`.report` is a dead style hook.** `report-dialog.html:6` sets `class="report"` but no `.report` rule exists anywhere in `src/FE/` (verified by grep over all SCSS), so server-rendered report HTML inherits raw body typography with no measure, spacing or heading scale. The prototype had a styled report block that was not ported (`DESIGN.md` § Components) → either style it against the type scale or drop the class.
-- **The criteria table cannot be read on a phone.** Nine percentage-width columns with no `min-width`, no horizontal scroll (`.tablewrap { overflow:hidden }`) and no breakpoint mean the columns simply crush — at 390px "Chỉ tiêu" is ~90px wide. The prototype scrolled a 1200px table instead (`ui-spec.md` §5) → pick one deliberate behaviour: horizontal scroll with a frozen "Mã" column (as `/danh-muc/dti` does), or a stacked card layout below `breakpoint.tablet`.
-- **The table's `scrollHeight` is a hardcoded `480px`** (`criteria-table.html:36`) with no token and no viewport awareness, so on a tall display the card wastes space and on a short one it double-scrolls inside an already-scrolling page. `/danh-muc/dti` solves the same problem with a measured height → converge on one mechanism and tokenise the result.
-- **KPI 2's label is wrong in "Tất cả" mode.** `deltaLabel` only branches on `viewMode`, so the year-aggregate view still reads "So với tuần trước" over a year-over-year delta (`kpi-summary.ts:39-41`), while KPI 1 correctly switches to "(tổng hợp năm)" → add the `isAllMode()` branch to KPI 2.
-- **KPI 2 uses a different delta rule from every other delta on the screen.** `KpiSummary` classifies direction with a bare `v > 0` / `v < 0` (`kpi-summary.ts:9-18`) while `DeltaIndicator` — used in the same table and history panel — applies `EPSILON = 0.001` per `business-rules.md` §3.2 (`delta-indicator.ts:4,27-33`). A delta of `0.0004` therefore renders as an increase in the KPI tile and as flat in the table → have `KpiSummary` use `DeltaIndicator`. Recorded library-wide as `COMPONENTS.md` § Known inconsistencies #8.
-- **The history panel ignores month mode and the selected period.** It is always fed `WeeksInYear` (`dashboard.page.html:49`) and its empty message hardcodes the word "tuần" (`history-list.html:17`), so in month mode the user sees a week list; `MonthsInYear` is fetched and used only by the toolbar → make the panel mode-aware, or label it explicitly as a weekly log.
-- ~~**`.footer` is declared twice, identically**~~ — **FIXED 2026-08-22**: the `dashboard.page.scss` copy was deleted, leaving `styles.scss:486-500` as the single declaration. **Still open:** `period-toolbar.scss:25-36` re-declares the `select` field rule that `styles.scss:347-363` already applies to `.weekbar select`, including the same focus ring → delete that duplicate too.
-- **Two untokenised `margin-top:16px` literals** separate the criteria card and the history card (`criteria-table.scss:2`, `dashboard.page.scss:18`) while every other vertical rhythm on the page uses `sp-5` (14px) — including `.layout`'s own `margin-top` three lines away → move both onto the spacing scale.
-- **Off-scale KPI typography.** The KPI value ships at `21px/850` and drops to `18px` below `breakpoint.mobile` (`kpi-tile.scss:11-13,38-42`); `typography.kpi-value` records the desktop size but the mobile step and the `850` weight are outside the scale entirely, and `.sub`'s `min-height:30px` is a bare literal → extend the type scale rather than adding a fourth off-scale size. Recorded library-wide as `COMPONENTS.md` § Known inconsistencies #10.
-- **The chart palette exists twice.** `trend-chart.ts:55-61` reads `--brand`/`--muted`/`--line` at runtime *and* hardcodes the same three hex values as SSR fallbacks, so a token change in `styles.scss` silently desynchronises the server-rendered first paint → derive the fallback from the token layer or drop SSR support for the chart. Already flagged in `Tokens/colors.md` § Normalize on redesign.
-- **Accessibility gaps this screen carries.** The progress bars have no `role="progressbar"` and no `aria-value*` (`group-progress-list.html:5`), so the numbers are announced but the bars are invisible to assistive tech; the delta arrows are text glyphs, not labelled elements; the trend chart is a bare `<canvas>` with no accessible summary or data table alternative; and the whole dashboard module declares exactly **one** ARIA attribute pair (`period-toolbar.html:36`). Screen-reader users get no signal when the period changes because no region is `aria-live` → add live-region announcements on period change and accessible names to the chart and bars.
-- **`CriteriaTable` is a third `p-table` shape that `Components/DataTable.md` does not describe.** That spec states "Two instances exist" and "Paging is entirely server-side"; this one is client-side (`[value]` is a pre-filtered array, no `[lazy]`, no `[totalRecords]`, filtering and sorting done in a `computed`, `criteria-table.ts:62-89`), has percentage widths instead of `min-width`s, no frozen columns and no loading mask. Not a defect of this screen — a gap in the component spec to close on the next stage-4 run.
+**One divergence from the prototype is left, and it is not the four this section
+used to list.** An earlier revision named Q22, T1, T2 and T5. Re-measured against
+`Prototype/index.html` § `#screen-dashboard` on 2026-09-05, after the prototype's own
+sync pass: the Q22 items **have since been applied** — the filter panel holds two
+conditions and the sort select two options, each change carrying a
+`SỬA 2026-09-05 (Q22)` comment — so that pair was a true divergence at the time it was
+written and is simply closed now. T1 and T2 are different: they cannot apply to this
+screen at all, because its toolbar is drawn in the *unfiltered* state and renders no
+`.filter-chips` block to sit on the wrong side of the separator. They belong to the
+catalogue screen only.
 
-<!-- Undocumented-component pointers — RESOLVED 2026-08-22 by COMPONENTS.md pass C.
-     Kept as a record of what was open and how it closed; the blueprint above now cites
-     the specs directly.
-       - TrendChart      -> WRITTEN, Components/TrendChart.md. The app's only chart; its
-                            palette was already tokenised in DESIGN.md (chart-series-1 /
-                            -fill / chart-axis-label / chart-grid).
-       - SegmentedControl-> WRITTEN, Components/SegmentedControl.md. The app's only view
-                            switcher; the rival TabBar spec was deleted 2026-08-23 as
-                            describing markup that never shipped.
-       - Footer          -> WRITTEN, Components/Footer.md. Declared once at
-                            styles.scss:486-500 (the dashboard.page.scss duplicate
-                            was deleted 2026-08-22).
-     Deliberately NOT given their own spec (decided, not pending):
-       - .period-display (period-toolbar.scss:16-23) — the filter tier of Input.md with
-         only background/color changed; a fifth, read-only input tier. Promote or fold
-         into Input.md only if a second read-only-value chip appears.
-       - .chart-skeleton (dashboard.page.scss:21-26) — the @defer placeholder box. Used
-         TWICE (chart + history list), so it belongs to this page, not to TrendChart;
-         documented inside Components/TrendChart.md as the @defer placeholder state.
-     -->
+| Still divergent | The spec says | Decision | Check |
+| --- | --- | --- | --- |
+| The date-range dash written both ways — `10/08–16/08` in the period value box and the period selects, `10/08 – 16/08` in the history rows and the chart axis | the spaced form everywhere | T5 | `grep -c '[0-9]/[0-9][0-9]–[0-9]' Prototype/index.html` — PASS = 0; every hit today is in this screen's region |
+
+Three things this spec describes are **not in the prototype at all**, and they are
+additions rather than drift: the two first-run banners (Q32 and its first-run twin)
+and the loading dim (Q34). Each is marked where it appears.
+
+Screen-local quirks, unchanged:
+
+1. **Two `margin-top: 16px` literals** sit off the spacing scale — on the detail-table card and the history card (`spacing.sp-5` is the nearest step). Two cards' vertical rhythm is therefore set by a number no token controls.
+2. **The footer link points at an anchor that does not exist.** In the approved prototype the footer targets `#screen-danh-muc-dti` while the catalogue section's id is `screen-dti`, so the link is dead in the prototype itself. Harmless there; it means the real destination route for that link is **not** recorded anywhere and must be decided when the catalogue route is.
+3. **Both scrolled regions truncate in print.** The detail table caps at `--grid-h` and the history list at 240px, and no `@media print` rule releases either — so the printed page shows a window onto the data with no indication that more exists. Defect **A4** — check it with `grep -n '@media print' doc/Design/Frontend/PlatformManager/Prototypes/index.html`: every block there hides chrome (`.proto-bar`, `.no-print`, sidebar, topbar) or widens `main`; none releases `--grid-h` or the 240px history cap.
+4. **Two filter surfaces with different scopes, and nothing says so** — the period toolbar changes the whole page, the table toolbar changes one region. Decision **Q23** sharpens this rather than softening it: `Xuất báo cáo` now exports through the *table's* filters while sitting in the *period* toolbar, so the button's own bar is not the one that decides what it exports. A cue is needed — a count on the button, or moving it next to the filters.
+5. **Sorting lives outside the filter panel** while every condition lives inside it. Defensible — sorting is not a condition — but the two controls look alike and sit on the same bar.
+6. **The KPI row's empty treatment is copy, not structure.** Five tiles rendering `—` is the agreed answer (§ States), but `KpiTile` has no dedicated empty variant — the dash is just a string passed as the value. That works, and it means nothing stops a caller passing `0` instead and losing the distinction. See [`../Components/KpiTile.md`](../Components/KpiTile.md) § Normalize.
+7. **The loading dim is an un-tokenised literal.** `opacity: .5` is borrowed from `.btn:disabled` so that "unavailable right now" reads the same everywhere, but no token carries the value and nothing links the two: change the button's disabled opacity and this screen keeps the old one, silently. A single `opacity-disabled` token would bind them.
+8. **`Chỉ tiêu tăng: 0` beside `Không tăng: 0` is ambiguous, and the fixed tones make it worse.** Right after an import both counters read `0` (decision T12) because no comparison has happened — but the reader sees a green `0` next to an amber `0` above a table of 62 populated rows, which looks like a contradiction rather than an absence. `KpiTile` gives tiles 3 and 4 a fixed tone regardless of value ([`../Components/KpiTile.md`](../Components/KpiTile.md)), so neither can drop to neutral to say "nothing to compare yet". `—` would say it; `0` asserts a measurement that was never taken. Item 6 above is the same gap seen from the other side.
+
+## Cần chốt
+
+<!-- Decisions this file must NOT make on its own. Raised 2026-09-05, emptied 2026-09-06 by T10, T11 and T12. -->
+
+**Nothing is open on this screen.** The three items raised on 2026-09-05 — what draws
+the loading spinner, whether the first-run banners carry a link or a button, and how
+many KPI tiles read `—` right after an import — were all answered on 2026-09-06 and
+have moved into the table below.
+
+Two things this spec settled on its own authority, recorded here so they are visible
+rather than buried: the loading **dim** is `opacity: .5`, reusing the value
+`.btn:disabled` already uses, and neither read-only-ish empty state gets an
+explanatory banner beyond the copy written in § States. Both are visual detail, not
+product decisions; if either is wrong it is a one-line correction, and § Normalize on
+redesign carries the reason each could age badly.
+
+### Answered elsewhere — do not re-ask
+
+| Was open here | Answer | Where it lives now |
+| --- | --- | --- |
+| The route path | **`/trang-chu`**, in place — Q18 | this file's frontmatter + § intro |
+| Who may see the Dashboard | **Everyone signed in**, no DTI permission — Q21. No "lacks permission" state exists | § States → access |
+| Does `Xuất báo cáo` respect the table's filters | **Yes** — Q23, matching Core law `doc/huong_dan/wiki-core/be/15-import-export.md` § 4. The UX risk is logged as § Normalize #4 | `doc/contracts/dashboard.md` |
+| The `Mức thay đổi` filter and two sort options | **Removed** — Q22. KPI tiles 3 and 4 stay; they display, they do not filter | § Layout + § Copy |
+| How `Tiến độ %` is seeded on import | **It is not** — Q24 leaves it blank for the user. Consequence specified in § States | `spec/danh-muc-dti/business-rules.md` |
+| What renders the chart, and the four `chart-*` roles | **`p-chart` over `chart.js`; roles restored** — Q17 | [`../Components/TrendChart.md`](../Components/TrendChart.md), [`../Tokens/colors.md`](../Tokens/colors.md) § Chart Palette |
+| How KPI tile 5 counts `Hoàn thành` | By the manually-chosen `Trạng thái` value, not by `Tiến độ % = 100` | `spec/dashboard-dti/business-rules.md` |
+| Does the trend chart follow the table's filters | **No** — it always shows overall progress for the period | `spec/dashboard-dti/business-rules.md` |
+| The period-label formats, as a rule | ISO week, calendar month, four label formats, spaced dash (T5) | `spec/dashboard-dti/business-rules.md` |
+| What becomes of the old welcome screen and its folder | **Deleted** — Q29, 2026-09-05. `/trang-chu`, `APP_CORE_ROUTES.home`, the `''` redirect, the `**` wildcard and the seeded menu row all stay exactly as they are | § intro; [`06-trang-chu.md`](./06-trang-chu.md) now carries a historical banner |
+| How the page behaves while a period is loading | **The four data regions dim under one spinner** — Q34. Only the mechanism that draws the spinner is still open | § States → loading |
+| Copy for the two empty states | **Written out verbatim** — Q32 for the post-import one, and its first-run twin beside it | § States, § Copy |
+| Which way `Chênh lệch` subtracts, and what its colours mean | **`Thẩm định − Tự đánh giá`; positive green, negative red, zero grey** — Q25 | [`../Components/DeltaIndicator.md`](../Components/DeltaIndicator.md) |
+| The x axis in month mode | **`Th.1 … Th.12`, not date ranges** — T7 | [`../Components/TrendChart.md`](../Components/TrendChart.md) |
+| What draws the loading spinner | **PrimeNG's `p-progressSpinner`** — T10, 2026-09-06. Chrome PrimeNG paints, like the paginator and the `p-table` mask, so **no new row in `COMPONENTS.md`** and no new token | § States → loading |
+| Whether the first-run banners carry a link or a button | **An inline link** — T11. The `.notice` contract has no labelled-button slot and is not being widened for one action | § States, § Copy |
+| What each KPI tile reads right after an import | **`—` · `—` · `0` · `0` · the real `Hoàn thành` count** — T12 | § States; rule owned by `spec/dashboard-dti/business-rules.md` |

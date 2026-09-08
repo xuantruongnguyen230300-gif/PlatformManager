@@ -1,3 +1,9 @@
+---
+kind: lich-su
+scope: du-an
+verified: 2026-09-06
+---
+
 # Kế hoạch: Xoá & xây lại toàn bộ src/BE + src/FE (CoreBase + DTI Weekly)
 
 > # 🗄️ TÀI LIỆU LỊCH SỬ — ĐÃ THỰC THI XONG
@@ -11,10 +17,12 @@
 >
 > | Trong file này → | Thực tế hiện nay |
 > | --- | --- |
-> | Sơ đồ 4 project phẳng `PlatformManager.{Domain,Application,Infrastructure,Api}` | `Core.*` ×3 + `Modules.DtiWeekly.*` ×3 + `PlatformManager.Api` + ArchTests — xem [`kien-truc-core-module.md`](kien-truc-core-module.md) |
+> | Sơ đồ 4 project phẳng `PlatformManager.{Domain,Application,Infrastructure,Api}` | `Core.{Domain,Application,Infrastructure}` + host `PlatformManager.Api` + `Tests/` — **không còn project `Modules.*` nào** (module `DtiWeekly` gỡ 2026-08-29). Đếm bằng `grep -c '<Project Path=' src/BE/PlatformManager.slnx`, đừng chép số; ranh giới ở [`kien-truc-core-module.md`](kien-truc-core-module.md) |
 > | Đánh số phase FE F0 → F1 → F3 (bỏ F2) | F0…F3 + gate — xem [`huong_dan/wiki-core/fe/trien-khai/`](huong_dan/wiki-core/fe/trien-khai/) |
 > | §"File quan trọng nhất" trỏ `PlatformManager.Infrastructure/…`, `PlatformManager.Application/…` | các đường dẫn đó **không còn tồn tại** |
 > | `SysMenu.RequiredRole` | đã thay bằng bảng nối `SysMenuRole` |
+> | `BaseEntity` với `Id,UserCreate,UserUpdate,DateCreate,DateUpdate,IsDelete` (public get/set) | `Id` (`init`) + `CreatedBy`/`UpdatedBy`/`CreatedAt`/`UpdatedAt`/`IsDeleted` — đổi tên 2026-08-28, xem [`huong_dan/quy-uoc/be-entity-domain.md`](huong_dan/quy-uoc/be-entity-domain.md) |
+> | Soft-delete khai `HasQueryFilter` lẻ ở từng `*Configuration.cs` | một vòng lặp trong `PlatformManagerDbContext.OnModelCreating` |
 >
 > **Nguồn sống thay thế:** kiến trúc → [`kien-truc-core-module.md`](kien-truc-core-module.md);
 > quy ước thi hành → [`huong_dan/quy-uoc/`](huong_dan/quy-uoc/); hợp đồng API →

@@ -1,8 +1,34 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
+import { registerLocaleData } from '@angular/common';
+import localeVi from '@angular/common/locales/vi';
 import { By } from '@angular/platform-browser';
 import { UserGridTable } from './user-grid-table';
 import { IUser } from '../../models/quan-tri-nguoi-dung.model';
+import { provideTranslateService } from '@ngx-translate/core';
+import { useTranslationsInTest } from '../../../../core/i18n/i18n.testing';
+
+/**
+ * 🛑 SPEC NÀY PHẢI TỰ ĐỨNG — sửa flake 2026-09-08.
+ *
+ * `UserGridTable` render cột "Ngày tạo" bằng `DatePipe` với locale `'vi'` (mặc định của input
+ * `localeId`). Angular chỉ biên dịch sẵn `en-US`; mọi locale khác phải qua `registerLocaleData`,
+ * và chỗ DUY NHẤT gọi hàm đó trong app là `LanguageService.init()`.
+ *
+ * Nhưng `registerLocaleData` ghi vào một **registry toàn cục của tiến trình**, còn Karma chạy mọi
+ * spec trong CÙNG một context trình duyệt theo **thứ tự ngẫu nhiên**. Nên trước đây spec này xanh
+ * hay đỏ tuỳ vào việc `language.service.spec.ts` / `app.config.spec.ts` có tình cờ chạy trước hay
+ * không: chạy trước ⇒ `vi` đã có trong registry ⇒ xanh; chạy sau ⇒ `DatePipe` ném **NG0701** và
+ * 5 test ở đây đỏ. Tần suất quan sát được ~1/5 lượt.
+ *
+ * Đăng ký ngay tại đây làm spec không còn phụ thuộc vào tác dụng phụ toàn cục của spec khác. Gọi
+ * ở cấp module (không phải trong `beforeEach`) vì registry là toàn cục — gọi lại nhiều lần chỉ
+ * ghi đè cùng một giá trị, không có gì để dọn.
+ *
+ * ⚠️ Đây KHÔNG phải chỗ để kiểm "app có khai `localeData` không" — phép thử đó phải kiểm HÌNH
+ * DẠNG của `APP_I18N`, và nó đã nằm ở `app.config.spec.ts` với lý do đầy đủ tại chỗ.
+ */
+registerLocaleData(localeVi);
 
 const ME = 'me-id';
 const OTHER = 'other-id';
@@ -17,6 +43,7 @@ function aUser(id: string, overrides: Partial<IUser> = {}): IUser {
     IsLocked: false,
     MustChangePassword: false,
     DateCreate: '2026-08-19T00:00:00Z',
+    Version: 'stamp-1',
     ...overrides,
   };
 }
@@ -24,16 +51,17 @@ function aUser(id: string, overrides: Partial<IUser> = {}): IUser {
 /**
  * `USER.SELF_LOCK_FORBIDDEN` (403, doc/contracts/users.md §"Bảo vệ tài khoản quản trị"): bấm
  * "Khoá" trên chính dòng mình chắc chắn lỗi → chặn sẵn ở UI. Ranh giới cố ý: chỉ chặn đúng ca này,
- * KHÔNG chặn "Mở khoá" và KHÔNG chặn khoá người khác (kể cả SuperAdmin) — xem
- * `src/FE/.claude/docs/ui-conventions.md` §"Chặn trước ở UI".
+ * KHÔNG chặn "Mở khoá" và KHÔNG chặn khoá người khác (kể cả SuperAdmin) — quy ước UI chung ở
+ * `doc/huong_dan/quy-uoc/fe-ui-conventions.md`, luật nghiệp vụ ở `doc/contracts/users.md`.
  */
 describe('UserGridTable — nút Khoá/Mở khoá', () => {
   let fixture: ComponentFixture<UserGridTable>;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     TestBed.configureTestingModule({
-      providers: [provideZonelessChangeDetection()],
+      providers: [provideZonelessChangeDetection(), provideTranslateService()],
     });
+    await useTranslationsInTest();
     fixture = TestBed.createComponent(UserGridTable);
   });
 
@@ -95,5 +123,41 @@ describe('UserGridTable — nút Khoá/Mở khoá', () => {
     lockButton(0).click();
 
     expect(emitted?.Id).toBe(OTHER);
+  });
+});
+
+/**
+ * FE-9 — vai trò dùng biến thể `.badge.outline` TOÀN CỤC, không phải lớp `.role-tag` riêng của
+ * lưới này. Chốt 2026-08-29: tên vai trò là ĐỊNH DANH nên không mang màu ngữ nghĩa như
+ * `.ok/.warn/.bad`, nhưng vẫn giữ viền — đúng lập luận của Components/RoleTag.md, chỉ khác là
+ * nó nằm dưới dạng một biến thể của MỘT component thay vì một lớp riêng.
+ *
+ * `.role-tag` là bản thứ hai của cùng một khái niệm (cùng nền `--surface-table-header`) kèm 3 giá
+ * trị px trần ngoài thang token — đúng cơ chế đã làm bảng người dùng trôi khỏi các màn khác một
+ * lần (hai hệ tên badge `.active`/`.locked` vs `.ok`/`.bad`).
+ */
+describe('UserGridTable — nhãn vai trò', () => {
+  let fixture: ComponentFixture<UserGridTable>;
+
+  beforeEach(async () => {
+    TestBed.configureTestingModule({
+      providers: [provideZonelessChangeDetection(), provideTranslateService()],
+    });
+    await useTranslationsInTest();
+    fixture = TestBed.createComponent(UserGridTable);
+  });
+
+  it('mỗi vai trò là một `.badge.outline`, và không còn `.role-tag` nào', () => {
+    fixture.componentRef.setInput('rows', [aUser(OTHER, { Roles: ['SuperAdmin', 'Admin'] })]);
+    fixture.componentRef.setInput('totalCount', 1);
+    fixture.detectChanges();
+
+    const badges = fixture.debugElement.queryAll(By.css('.role-cell .badge.outline'));
+    expect(badges.length).toBe(2);
+    expect(badges.map((node) => (node.nativeElement as HTMLElement).textContent?.trim())).toEqual([
+      'SuperAdmin',
+      'Admin',
+    ]);
+    expect(fixture.debugElement.queryAll(By.css('.role-tag')).length).toBe(0);
   });
 });

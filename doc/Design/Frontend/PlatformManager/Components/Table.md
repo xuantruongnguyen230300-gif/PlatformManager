@@ -1,86 +1,120 @@
 ---
+kind: luat
+scope: du-an
+verified: 2026-09-06
 project: "PlatformManager"
 status: "draft"
-updated: "2026-08-23"
+updated: "2026-09-06"
 component: "Table"
-sources: ["src/FE/src/styles.scss", "src/FE/src/app/platform/phan-quyen/components/permission-matrix/permission-matrix.html", "src/FE/src/app/platform/phan-quyen/components/permission-matrix/permission-matrix.scss", "src/FE/src/app/modules/dashboard/components/criteria-table/criteria-table.html"]
+sources:
+  - "src/FE/src/styles.scss"
+  - "src/FE/src/app/platform/phan-quyen/components/permission-matrix/permission-matrix.html"
+  - "src/FE/src/app/platform/phan-quyen/components/permission-matrix/permission-matrix.scss"
+  - "src/FE/src/app/platform/phan-quyen/components/resource-permission-matrix/resource-permission-matrix.html"
+  - "src/FE/src/app/platform/phan-quyen/components/resource-permission-matrix/resource-permission-matrix.scss"
 ---
 
 # Table
-**Description:** Two things, because in this app they are inseparable: **(1)** the global table primitive — the element rules for `table`, `th`, `td` and `.num` (`styles.scss:365-403`) plus the `.tablewrap` container — which paints *every* table in the app, and **(2)** the hand-rolled `<table>` family, i.e. the one `Phân quyền` permission matrix, which is deliberately not PrimeNG.
 
-> **Scope boundary.** The PrimeNG `p-table` grid mechanism — `[lazy]` paging, the rows-per-page selector, the loading mask, frozen columns — is documented in **`DataTable.md`**. This spec owns the shared cell/header/wrapper layer that `DataTable.md` relies on ("both share the same global `th`/`td` cell rules") and the matrix that uses it directly. When you need a paginated record grid, read both.
+> ## 🔄 SỬA 2026-09-06 — ma trận cũng phải cao bằng màn hình
 >
-> The previous version of this spec described the frozen prototype's fixed-column 1200px table and instructed *"don't add pagination"* — that table was never ported and the guidance was inverted. Both are gone.
+> `.tablewrap.scroll` cấp `max-height: var(--grid-h)` + `min-height: 220px`. Với ma trận ít
+> dòng, kết quả là một bảng cao ~220px giữa một màn hình trống — không phải "cao bằng màn hình,
+> cuộn bên trong" như yêu cầu.
+>
+> `styles.scss` đã có sẵn lối thoát: trong chuỗi `.page-fill`, `.tablewrap.scroll` được ghi đè
+> thành `flex: 1 1 auto; max-height: none`. Thứ còn thiếu là **không trang nào bật `page-fill`**.
+>
+> Nay `phan-quyen.page.ts` đặt `host: { class: 'page-fill' }`, hai ma trận nhận `class="grid-host"`,
+> và `<section>` của mỗi tab được nối vào chuỗi flex ở `phan-quyen.page.scss` — mắt xích này
+> `styles.scss` không thể biết trước vì nó thuộc bố cục riêng của trang.
+>
+> Chi tiết cơ chế và vế PrimeNG: **`DataTable.md`** § SỬA 2026-09-06.
+
+**Description:** Two things, because in this app they are inseparable: **(1)** the global table primitive — the element rules for `table`, `th`, `td` and `.num` plus the `.tablewrap` frame (`src/FE/src/styles.scss` §§ 2 and 7) — which paints *every* table in the app including PrimeNG's, and **(2)** the hand-rolled `<table>` family, i.e. the two permission matrices, which are deliberately not PrimeNG.
+
+> **Scope boundary.** The PrimeNG `p-table` grid *mechanism* — `[lazy]` paging, the rows-per-page selector, the loading mask, `[scrollable]` — is documented in **`DataTable.md`**. This spec owns the shared cell / header / wrapper layer that `DataTable.md` relies on, and the matrices that use it directly. When you need a paginated record grid, read both.
+
+> **Citation policy.** Values cite `src/FE/src/styles.scss` plus the **selector name**, not a line number.
 
 ## Anatomy
-`.tablewrap` (border 1px `colors.border-strong`, `rounded.table`, `overflow` per contract — see Variants) → `<table>` (`border-collapse:collapse`, `width:100%`, bg `colors.card`) → `<thead>` → `<tr>` of `<th>` (sticky `top:0`, bg `colors.surface-table-header`, text `colors.text-table-header`, `typography.table-header`, `letter-spacing:.01em`, `z-index:4`, left-aligned) → `<tbody>` of `<tr>` → `<td>` (`typography.table-cell`, `spacing.cell-padding`, `line-height:1.4`, `vertical-align:top`, bottom border 1px `colors.line`). Numeric columns add `.num` (`text-align:right`, `font-variant-numeric:tabular-nums`, `styles.scss:400-403`). Even rows are tinted `colors.surface-table-header` (`:392-394`); hovered rows are tinted `colors.bg` (`:396-398`).
 
-Because PrimeNG's `p-table` emits real `<table>`/`<th>`/`<td>` elements, these global rules paint the PrimeNG grids too — there is no separate cell styling anywhere in the app.
+`.tablewrap` (border 1px `colors.border-strong`, radius `rounded.table`, `overflow: hidden`) → `<table>` (`border-collapse: collapse`, `width: 100%`, fill `colors.card`) → `<thead>` → `<tr>` of `<th>` (`position: sticky; top: 0`, fill `colors.surface-table-header`, ink `colors.th-ink`, `typography.table-header`, `letter-spacing: .01em`, `z-index: 4`, left-aligned) → `<tbody>` of `<tr>` → `<td>` (`typography.table-cell`, padding `spacing.cell-padding`, `line-height: 1.4`, `vertical-align: top`, bottom border 1px `colors.line`).
 
-The matrix adds a **role-per-column** shape on top: column 1 is the menu item and every remaining column is one role, generated by `@for (role of roles())`, so the column count is data-driven and the `colspan` of the empty row is computed as `roles().length + 1` (`permission-matrix.html:5-8`, `:32-36`).
+Numeric columns add `.num` (`text-align: right`, `font-variant-numeric: tabular-nums`). Even rows are tinted `colors.surface-table-header`; hovered rows are tinted `colors.bg`, which overrides the stripe.
+
+Note the two border tiers meeting here: the **frame** uses `colors.border-strong`, the **rules between rows** use `colors.line`, so the outer edge of a table reads heavier than its internal ruling. That is intentional and is the only place outside form fields where `border-strong` appears.
+
+Because PrimeNG's `p-table` emits real `<table>` / `<th>` / `<td>` elements, these global rules paint the PrimeNG grids too — there is no separate cell styling anywhere in the app.
+
+A matrix adds a **role-per-column** shape on top: column 1 is the subject and every remaining column is one role, generated by an `@for` over the role list, so the column count is data-driven and the empty row's `colspan` is computed as `roles().length + 1`.
+
+### `.tablewrap` — one class, two scroll contracts
+
+`.tablewrap` is global as of 2026-08-29, with exactly one modifier:
+
+| Selector | `overflow` | Height | Who scrolls |
+| --- | --- | --- | --- |
+| `.tablewrap` | `hidden` | none | nobody, or the grid component internally |
+| `.tablewrap.scroll` | `auto` | `max-height: dimension.grid-h`, `min-height: dimension.grid-h-min` | the wrapper itself |
+| `.page-fill .tablewrap.scroll` | `auto` | `max-height: none`, `min-height: 0`, `flex: 1 1 auto` | the wrapper, sized by the page's flex chain |
+
+⚠️ **`.scroll` is for plain `<table>` only — never for a PrimeNG grid.** The stylesheet states the reason inline, and it is not cosmetic. `p-table` wraps its own table in `.p-datatable-table-container`, which carries its own `overflow`, and it renders the paginator **outside** that container. Adding `.scroll` to the wrapper therefore (a) removes the real scrollport from under the `position: sticky` `thead`, so column headers scroll away, and (b) traps the paginator inside the scrolling region, so a user has to scroll the whole table to reach the page controls. A PrimeNG grid uses `[scrollable]="true" scrollHeight="flex"` instead, and gets its height from the page's flex chain — no `::ng-deep`, and no `var(--grid-h)` either. ⚠️ The comment inside `styles.scss` § `.tablewrap.scroll` still says `scrollHeight="var(--grid-h)"`; that sentence has been stale since the `page-fill` chain landed on 2026-09-06. The shipped value is in `data-grid.html` — read it, not the comment.
 
 ## Variants
 
 | Variant | Classes | Key values | When to use |
 | --- | --- | --- | --- |
-| Permission matrix | `.tablewrap > table` | `overflow:auto`, `max-height:560px`; column 1 `width:40%`; child rows indented via `td.indent { padding-left:28px }` + a `└` `.tree-branch` glyph in `colors.muted` | `/quan-tri/phan-quyen` — the app’s only hand-rolled table (`permission-matrix.html:1-39`) |
-| Header cell | `th` | bg `colors.surface-table-header`, text `colors.text-table-header`, `typography.table-header`, sticky `top:0`, `z-index:4` | Every column header, hand-rolled and PrimeNG alike |
-| Body cell (text) | `td` | `spacing.cell-padding`, `typography.table-cell`, `vertical-align:top`, bottom border `colors.line` | Default cell |
-| Body cell (numeric) | `td.num` / `th.num` | `text-align:right`, `font-variant-numeric:tabular-nums` | Scores and percentages in the grids — and, in the matrix, the checkbox columns, where `.num` is reused purely to right-align the box |
-| Zebra row | `tbody tr:nth-child(even)` | bg `colors.surface-table-header` | Automatic, both families |
-| Matrix checkbox cell | `td.num > input[type=checkbox]` | 16px square, `accent-color: colors.brand`, focus ring `2px colors.brand` / offset 2px; disabled `cursor:not-allowed; opacity:.6` | See `Input.md` § Checkbox for the full treatment |
-| Empty state | `@empty` | one `<td class="muted">` with computed `[attr.colspan]="roles().length + 1"` | `Chưa có mục menu nào.` (`permission-matrix.html:32-36`) |
+| Framed table | `.tablewrap > table` | `overflow: hidden`; the frame clips the table's corners to `rounded.table` | A table that does not scroll itself, or a PrimeNG grid that scrolls internally |
+| Scrolling table | `.tablewrap.scroll > table` | `overflow: auto`, height between `dimension.grid-h-min` and `dimension.grid-h`; sticky `th` stays pinned | A plain `<table>` long enough to need its own scrollport — both permission matrices |
+| Flex-sized table | `.page-fill .tablewrap.scroll` | Height decided by the page's flex chain instead of the token | A list page whose grid should take exactly the leftover viewport height |
+| Header cell | `th` | fill `colors.surface-table-header`, ink `colors.th-ink`, `typography.table-header`, sticky `top: 0`, `z-index: 4` | Every column header, hand-rolled and PrimeNG alike |
+| Body cell | `td` | padding `spacing.cell-padding`, `typography.table-cell`, `vertical-align: top`, bottom border `colors.line` | Default cell |
+| Numeric cell | `td.num` / `th.num` | `text-align: right`, `font-variant-numeric: tabular-nums` | Figures — and, in the matrices, the checkbox columns, where `.num` is reused purely to right-align the box |
+| Zebra row | `tbody tr:nth-child(even)` | fill `colors.surface-table-header` | Automatic |
+| Tree row | `td.indent` | `padding-left: 28px` plus a `└` `.tree-branch` glyph in `colors.muted` | A child menu item in the menu permission matrix |
+| Empty state | `@empty` | one `<td class="muted">` with computed `[attr.colspan]="roles().length + 1"` | keys `phan-quyen.grid.emptyMenu` / `phan-quyen.grid.emptyResource` |
 
-### `.tablewrap` — one class name, two contracts
+### Hand-rolled tables, as shipped
 
-`.tablewrap` is **not global**. It is re-declared in three component stylesheets with the same border and radius but opposite overflow behaviour:
-
-| Declared in | `overflow` | Extra | Who scrolls |
+| Table | Wrapper | Columns | Paging |
 | --- | --- | --- | --- |
-| `permission-matrix.scss:1-6` | `auto` | `max-height:560px` | the wrapper |
-| `criteria-table.scss:5-9` | `hidden` | — | PrimeNG, internally |
-| `user-grid-table.scss:1-5` | `hidden` | — | PrimeNG, internally |
+| Menu permissions (`permission-matrix`) | `.tablewrap.scroll` | 1 + one per role | none |
+| Resource permissions (`resource-permission-matrix`) | `.tablewrap.scroll` | 1 + one per role | none |
 
-All three use border 1px `colors.border-strong` + `rounded.table`.
+Both matrices are reachable: `/quan-tri/phan-quyen` carries a two-option `SegmentedControl` and renders the menu matrix under **Theo màn hình**, the resource matrix under **Theo tài nguyên** (`phan-quyen.page.html:87-93`, `:156-162`). The resource matrix's `break-glass` role column is always ticked and never editable; the page prints an explicit notice that no endpoint enforces these permissions yet (`phan-quyen.hint.noEnforcement`), so saving there writes rows without gating anything.
 
-### Table census (all four shipped tables)
-
-| Table | Family | Spec that owns the mechanism | Cols | Paging |
-| --- | --- | --- | --- | --- |
-| Menu permissions (`permission-matrix`) | hand-rolled | **this spec** | 1 + one per role | none |
-| Users (`user-grid-table`) | PrimeNG `p-table` | `DataTable.md` | 5 | server-side `[lazy]` |
-| DTI catalogue (`criteria-grid-table`) | PrimeNG `p-table` | `DataTable.md` | 12 | server-side `[lazy]` |
-| Dashboard criteria (`criteria-table`) | PrimeNG `p-table` | **neither — see Normalize #1** | 9 | **client-side** `[rows]="20"`, `scrollHeight="480px"` |
+The one PrimeNG grid that ships is the shared `<app-data-grid>` (`DataTable.md`). It uses the plain `.tablewrap`, and the head comment explaining why the `.scroll` modifier must not be added lives in `data-grid.html:1-5`.
 
 ## States
 <!-- Exactly these five rows, in this order — treatments as rendered by the shipped CSS. -->
 
 | State | Treatment |
 | --- | --- |
-| default | Per-cell bottom border 1px `colors.line`; header sticky at `top:0`, `z-index:4`, on `colors.surface-table-header`; even rows tinted `colors.surface-table-header` (`styles.scss:365-394`) |
-| hover | **Row highlight ships** — `tbody tr:hover { background: colors.bg }` (`styles.scss:396-398`). It is a global rule, so it applies to the matrix and the PrimeNG grids alike |
-| focus | **N/A at table/row level** — neither `<table>` nor `<tr>` is focusable and no `tr:focus-visible` rule exists. Focus lands on descendants: the matrix checkboxes draw `outline: 2px solid colors.brand; outline-offset: 2px` (`permission-matrix.scss:24-27`) |
-| active | **N/A — row selection does not exist.** No table in the app sets `selectionMode`; the hover tint is the only row feedback |
-| disabled | **N/A at table level.** Inside the matrix every checkbox carries a real `[disabled]="loading()"` (`permission-matrix.html:25`), and the page passes `loading() \|\| saving()` into it, so all boxes freeze during a fetch and for the length of a save (`phan-quyen.page.html:16`). There is no per-cell disabled treatment — the greying users see belongs to the save `Button` above the table |
+| default | Per-cell bottom border 1px `colors.line`; header sticky at `top: 0`, `z-index: 4`, on `colors.surface-table-header`; even rows tinted `colors.surface-table-header`; frame `colors.border-strong` at `rounded.table` |
+| hover | **Row highlight ships** — `tbody tr:hover` fills `colors.bg`, overriding the zebra stripe. It is a global rule, so it applies to the matrices and the PrimeNG grid alike |
+| focus | **Not applicable at table or row level** — neither `<table>` nor `<tr>` is focusable and no `tr:focus-visible` rule exists. Focus lands on descendants: matrix checkboxes draw `outline: 2px solid colors.brand`, `outline-offset: 2px` from the shared `.check` rule |
+| active | **Not applicable — row selection does not exist.** No table in the app sets `selectionMode`; the hover tint is the only row feedback |
+| disabled | **Not applicable at table level.** Inside a matrix every checkbox carries a real `[disabled]`, so the whole grid freezes during a fetch or a save; the resource matrix additionally disables the break-glass column permanently. The greying comes from the shared `.check:disabled` rule (`Input.md`) |
 
 ## Tokens Used
-- `colors.card`, `colors.line`, `colors.border-strong`, `colors.surface-table-header`, `colors.text-table-header`, `colors.text`, `colors.bg`, `colors.brand`, `colors.muted`
+- `colors.card`, `colors.line`, `colors.border-strong`, `colors.surface-table-header`, `colors.th-ink`, `colors.text`, `colors.bg`, `colors.muted`
 - `rounded.table`
 - `spacing.cell-padding`
+- `dimension.grid-h`, `dimension.grid-h-min`
 - `typography.table-header`, `typography.table-cell`
 
-`max-height:560px`, `td.indent`'s `padding-left:28px`, the 16px checkbox and `z-index:4` on `th` are literals in the source with no token behind them (`permission-matrix.scss:1-27`, `styles.scss:358-368`).
+`td.indent`'s `padding-left: 28px`, the `line-height: 1.4` on cells and `z-index: 4` on the sticky `th` are literals with no token behind them.
 
 ## Reference markup
 
 ```html
-<!-- hand-rolled matrix: roles become columns, no paging, wrapper scrolls -->
-<div class="tablewrap">
+<!-- hand-rolled matrix: roles become columns, wrapper scrolls, sticky header -->
+<div class="tablewrap scroll">
   <table>
     <thead>
       <tr>
-        <th style="width:40%">Màn hình</th>
+        <th style="width:40%">{{ 'phan-quyen.grid.screen' | translate }}</th>
         @for (role of roles(); track role) { <th class="num">{{ role }}</th> }
       </tr>
     </thead>
@@ -93,38 +127,55 @@ All three use border 1px `colors.border-strong` + `rounded.table`.
           </td>
           @for (role of roles(); track role) {
             <td class="num">
-              <input type="checkbox" [checked]="isChecked(row, role)" [disabled]="loading()"
+              <input type="checkbox" class="check" [checked]="isChecked(row, role)" [disabled]="loading()"
                      (change)="permissionToggle.emit({ SysMenuId: row.SysMenuId, Role: role })"
                      [attr.aria-label]="row.SysMenuName + ' — ' + role" />
             </td>
           }
         </tr>
       } @empty {
-        <tr><td [attr.colspan]="roles().length + 1" class="muted">Chưa có mục menu nào.</td></tr>
+        <tr>
+          <td [attr.colspan]="roles().length + 1" class="muted">
+            {{ 'phan-quyen.grid.emptyMenu' | translate }}
+          </td>
+        </tr>
       }
     </tbody>
   </table>
 </div>
 ```
 
-Sources: `src/FE/src/styles.scss:365-403` (global `table`/`th`/`td`/`.num`/zebra/hover), `src/FE/src/app/platform/phan-quyen/components/permission-matrix/permission-matrix.html:1-39` + `permission-matrix.scss:1-27`, `src/FE/src/app/modules/dashboard/components/criteria-table/criteria-table.html:29-77` + `criteria-table.scss:5-9`, `src/FE/src/app/platform/quan-tri-nguoi-dung/components/user-grid-table/user-grid-table.scss:1-5`, `src/FE/src/app/core/theme/platform-manager-preset.ts` (PrimeNG chrome mapping)
+Sources: `src/FE/src/styles.scss` (§ 2 `.tablewrap`, § `.tablewrap.scroll`, § `.page-fill .tablewrap.scroll`; § 7 `table`, § `th, td`, § `tbody tr:nth-child(even)`, § `tbody tr:hover`; and § `.num`, which sits with the utilities in § 1, **not** in § 7), `src/FE/src/app/platform/phan-quyen/components/permission-matrix/permission-matrix.html:1-44`, `src/FE/src/app/platform/phan-quyen/components/permission-matrix/permission-matrix.scss:8-15`, `src/FE/src/app/platform/phan-quyen/components/resource-permission-matrix/resource-permission-matrix.html:1-56`, `src/FE/src/app/platform/phan-quyen/pages/phan-quyen/phan-quyen.page.html:87-93`, `:156-162`, `src/FE/src/app/shared/components/data-grid/data-grid.html:1-6` (the `.tablewrap` without `.scroll`, and the comment explaining why)
+
+> 🔄 **SỬA 2026-09-06 (lần thứ hai trong ngày)** — ngoài khối đầu file, bản trước còn sai bốn chỗ:
+> 1. **`scrollHeight="var(--grid-h)"`** — giá trị thật là `"flex"`. Hai chỗ nói sai (§ `.tablewrap` và Do/Don't).
+> 2. **"The resource matrix is built but not routed"** — nó đã được nối vào tab thứ hai của màn Phân quyền. Normalize #5 cũng theo đó.
+> 3. **Hai chuỗi tiếng Việt khai cứng** trong Reference markup và bảng Variants — cả hai nay là khoá dịch.
+> 4. **`.num` được xếp vào § 7** — nó ở § 1 cùng `.muted`, không ở khối bảng. Và nguồn cũ trỏ `user-grid-table.html` cho chú thích `.tablewrap` — file đó nay không còn `p-table` nào; chú thích đã sang `data-grid.html`.
 
 ## Do / Don't
 
 - ✅ Wrap every table in `.tablewrap` — it supplies the `colors.border-strong` frame and the `rounded.table` corner clip that a bare `<table>` has none of.
-- ✅ Keep the permission matrix hand-rolled. It needs a full checkbox grid, a data-driven column count, no paging and a `max-height` scroll box — none of which `p-table` was earning its weight for (`DataTable.md` § Do/Don't agrees).
+- ✅ Add `.scroll` **only** to a wrapper around a plain `<table>`. For a PrimeNG grid use `[scrollable]="true" scrollHeight="flex"` and let the `page-fill` chain size it; putting `.scroll` outside `p-table` unpins the header and swallows the paginator.
+- ✅ Keep the permission matrices hand-rolled. They need a full checkbox grid, a data-driven column count and no paging — none of which `p-table` was earning its weight for.
 - ✅ Mark numeric columns `.num` on both `th` and `td` so tabular figures line up.
-- ✅ Compute the empty row's `colspan` from the role list (`roles().length + 1`) rather than hardcoding it — the matrix does, the PrimeNG grids do not.
-- ✅ Give every checkbox an `aria-label` naming both axes (`row + ' — ' + role`); a bare checkbox in a matrix is meaningless to a screen reader.
-- ❌ Don't set a `min-width` on a table to force horizontal scroll — that was the prototype's model and was not ported.
-- ❌ Don't add row selection; no table sets `selectionMode`, and the hover tint is the only row feedback.
-- ❌ Don't restyle PrimeNG chrome per screen — `platform-manager-preset.ts` already maps it to these tokens.
+- ✅ Compute the empty row's `colspan` from the role list (`roles().length + 1`) rather than hardcoding it; a hardcoded span silently desynchronises when a column is added.
+- ✅ Give every matrix checkbox an `aria-label` naming both axes. A bare checkbox in a grid is meaningless to a screen reader.
+- ❌ Don't set a `min-width` on a table to force horizontal scroll — that was the pre-2026-08-29 model and was not carried forward.
+- ❌ Don't add row selection; no table enables it, so a selected-row treatment would never appear.
+- ❌ Don't re-declare `.tablewrap` in a component stylesheet. Four local copies is what the 2026-08-29 consolidation removed.
 
 ## Normalize on redesign
-1. **The dashboard criteria grid is owned by neither table spec.** `criteria-table` is a third `p-table` but pages **client-side** (`[paginator]="true" [rows]="20"`, no `[lazy]`, `scrollHeight="480px"`), while `DataTable.md` scopes itself to the two server-side lazy grids. So "20 per page" means something different on the dashboard than on the other two screens, and the difference is undocumented. Either converge the paging model or extend `DataTable.md` to cover all three.
-2. **`.tablewrap` has two conflicting contracts under one name**, declared in three separate files (table above). Promote one to global, or rename the other.
-3. `<p-table styleClass="dti-grid">` (`criteria-grid-table.html:14`) references a class that **exists nowhere** in `src/FE/` — dead attribute; the only near-match, `.dti-grid-card`, is the page's card wrapper.
-4. Sticky `th` uses a bare `z-index:4` literal while `Tokens/spacing.md` documents a six-value z-index stack.
-5. Two empty-state mechanisms coexist — PrimeNG's `#emptymessage` (hardcoded `colspan` of `9`, `12`, `5`, which will silently desynchronise if a column is added) and Angular's `@empty` (computed colspan).
-6. `.num` is overloaded: it means "right-aligned tabular figures" in the grids but "checkbox column" in the matrix, where there is no number at all.
-7. The matrix's `└` tree marker is a text glyph rather than a CSS-drawn line — see `Icons.md` § Normalize on redesign #3.
+1. **`.num` is overloaded.** It means "right-aligned tabular figures" in a data grid but "checkbox column" in a matrix, where there is no number at all.
+2. **Sticky `th` uses a bare `z-index: 4` literal** while `Tokens/spacing.md` documents a seven-value z-index stack with no token behind any of it.
+3. **The `└` tree marker is a text glyph**, not a drawn line — see `Icons.md` § Normalize on redesign.
+4. **`td.indent`'s `28px` is off the spacing scale** and is the only indentation value in the app, so a second level of nesting has no defined step.
+5. ~~**The resource matrix has no route.**~~ — **đã xử lý**, đối chiếu 2026-09-06: it is the second tab of `/quan-tri/phan-quyen`. What remains open is one step further in: no endpoint carries `[RequirePermission]` yet, so the rows it saves gate nothing. The page says so on screen (`phan-quyen.hint.noEnforcement`) rather than pretending otherwise — remove that notice when the first endpoint is gated.
+6. **Two empty-state mechanisms coexist** — Angular's `@empty` with a computed `colspan` in the matrices, and PrimeNG's `#emptymessage` with a hardcoded one in the grid (`DataTable.md`).
+
+## Resolved in the 2026-08-29 redesign
+<!-- Items that used to sit in "Normalize on redesign" and were actually done. Kept, not deleted, so the history is not lost. -->
+1. **`.tablewrap` had two conflicting contracts under one name — resolved 2026-08-29.** It was declared separately in four component stylesheets, identical in border and radius but opposite in overflow. It is now one global rule plus one `.scroll` modifier, and the component stylesheets record where their copy used to be.
+2. **Three hand-picked grid heights — resolved 2026-08-29.** The matrices capped themselves at a literal `560px` while other grids chose `480px` and `520px`. All of them now read `dimension.grid-h`, which is computed from the viewport, with `dimension.grid-h-min` as the floor.
+3. **Checkbox styling duplicated verbatim between the two matrices — resolved 2026-08-29.** Both stylesheets declared the same `input[type='checkbox']` block, character for character. They now use the global `.check` (`Input.md`), which also brought them a real `:disabled` appearance.
+4. **A dead `styleClass` attribute — resolved 2026-08-29** along with the grid that carried it; no `p-table` in the app references a class that does not exist.

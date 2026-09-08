@@ -2,6 +2,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { ResourcePermissionMatrix } from './resource-permission-matrix';
 import { IResourcePermissionRow } from '../../models/phan-quyen.model';
+import { provideTranslateService } from '@ngx-translate/core';
+import { useTranslationsInTest } from '../../../../core/i18n/i18n.testing';
 
 const ROLES = ['SuperAdmin', 'Admin', 'User'];
 
@@ -21,8 +23,11 @@ const ROWS: IResourcePermissionRow[] = [
 describe('ResourcePermissionMatrix — cột SuperAdmin (break-glass)', () => {
   let fixture: ComponentFixture<ResourcePermissionMatrix>;
 
-  beforeEach(() => {
-    TestBed.configureTestingModule({ providers: [provideZonelessChangeDetection()] });
+  beforeEach(async () => {
+    TestBed.configureTestingModule({
+      providers: [provideZonelessChangeDetection(), provideTranslateService()],
+    });
+    await useTranslationsInTest();
     fixture = TestBed.createComponent(ResourcePermissionMatrix);
     fixture.componentRef.setInput('rows', ROWS);
     fixture.componentRef.setInput('roles', ROLES);

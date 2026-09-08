@@ -1,0 +1,46 @@
+<dialog
+  #dialogEl
+  class="confirm-dialog"
+  [attr.aria-labelledby]="titleId"
+  [attr.aria-describedby]="description() ? descriptionId : null"
+  (close)="onNativeClose()"
+>
+  <div class="dialog-head">
+    <span class="dialog-icon" [class]="severity()" aria-hidden="true">
+      <i class="pi" [class]="iconClass()"></i>
+    </span>
+    <div>
+      <div class="dialog-title" [id]="titleId">{{ title() }}</div>
+      @if (description()) {
+        <div class="dialog-desc" [id]="descriptionId">{{ description() }}</div>
+      }
+    </div>
+    <button
+      type="button"
+      class="icon-btn dialog-close"
+      [attr.aria-label]="'shared.action.close' | translate"
+      (click)="onCancel()"
+    >
+      <i class="pi pi-times"></i>
+    </button>
+  </div>
+
+  <ng-content />
+
+  <div class="dialog-actions">
+    <!-- Nút này nhận focus khi dialog mở (xem `open()` trong .ts) — lối thoát an toàn đứng trước. -->
+    <button #cancelEl type="button" class="btn" (click)="onCancel()">
+      {{ cancelLabel() || ('shared.action.cancel' | translate) }}
+    </button>
+    <button
+      type="button"
+      class="btn"
+      [class.primary]="!confirmDanger()"
+      [class.danger]="confirmDanger()"
+      [disabled]="confirmDisabled()"
+      (click)="onConfirm()"
+    >
+      {{ confirmLabel() || ('shared.action.confirm' | translate) }}
+    </button>
+  </div>
+</dialog>

@@ -3,6 +3,7 @@ using MediatR;
 using PlatformManager.Core.Application.Common.CQRS;
 using PlatformManager.Core.Application.Common.Interfaces;
 using PlatformManager.Core.Application.Common.Results;
+using PlatformManager.Core.Application.Users;
 
 namespace PlatformManager.Core.Application.Auth;
 
@@ -31,8 +32,20 @@ public sealed class ChangePasswordHandler(ICurrentUser currentUser, IIdentitySer
         var result = await identityService.ChangePasswordAsync(
             currentUser.UserId.Value, cmd.CurrentPassword, cmd.NewPassword, ct);
 
+        // Tài khoản biến mất giữa lúc còn phiên đăng nhập — KHÔNG phải "đổi mật khẩu thất bại".
+        // Trước 2026-09-05 nhánh này nhét một CÂU TIẾNG VIỆT vào danh sách Errors, nên nó ghép ra
+        // "Đổi mật khẩu thất bại: Không tìm thấy người dùng."; sau khi danh sách đó thành khoá tra
+        // bảng dịch (§11.2 bẫy 3) thì câu ấy sẽ trở thành một khoá dịch là một câu tiếng Việt.
+        if (result.NotFound)
+            return Fail<bool>(UserErrors.NotFound);
+
         if (!result.Succeeded)
-            return Fail<bool>(AuthErrors.ChangePasswordFailed, string.Join("; ", result.Errors));
+            // Từng mã Identity đi ra fieldErrors kèm ĐÚNG ô nhập nó nói tới — PasswordMismatch nói
+            // về ô "mật khẩu hiện tại", không phải ô "mật khẩu mới" (bẫy 1 của §11.2). Ánh xạ nằm ở
+            // IdentityFieldErrors, dùng chung với đường tạo/sửa người dùng.
+            return Fail<bool>(
+                AuthErrors.ChangePasswordFailed,
+                IdentityFieldErrors.Build(result.Errors, IdentityFormFields.ChangePassword));
 
         return Ok(true);
     }

@@ -1,3 +1,9 @@
+---
+kind: luat
+scope: core
+verified: 2026-09-06
+---
+
 # Tiêu chí chấm review — cái gì là finding, cái gì không
 
 Dùng bởi `core-reviewer`. File này **không nhắc lại quy ước** — quy ước nằm ở
@@ -19,17 +25,33 @@ Mức chấm: **PASS** (đúng) · **PARTIAL** (có nhưng thiếu/sai một ph�
 > 📖 Quy ước: [`../../kien-truc-core-module.md`](../../kien-truc-core-module.md) —
 > **đọc bảng `🚧` "có thật hôm nay → sẽ thành" ở đầu file trước khi chấm mục này.**
 
+> 🚧 **Hiện trạng 2026-08-29 — repo KHÔNG còn module nghiệp vụ nào.** Module duy
+> nhất (`Modules.DtiWeekly.*`) đã gỡ để xây lại: không còn project `Modules.*`
+> nào trong `src/BE/PlatformManager.slnx`, và `src/FE/src/app/modules/` **không
+> tồn tại**. Kiểm bằng `grep -c '<Project Path=' src/BE/PlatformManager.slnx` và
+> `ls -d src/FE/src/app/*/` — đừng chấm theo con số nào chép sẵn trong văn bản.
+
 **KHÔNG phải finding:**
 
-- Thấy `PlatformManager.Modules.<Tên>.*` — đó là **hiện trạng đã biết**
-  (`Modules.DtiWeekly.*`), không phải dấu hiệu quay lại mô hình cũ. ArchTest
-  `Modules_MustNotReference_OtherModules` đang canh nó là **đúng, phải giữ**.
+- **Không tìm thấy module nghiệp vụ nào** (BE lẫn FE). Đó là hiện trạng đã biết ở
+  trên, không phải MISSING, và không phải dấu hiệu ai đó xoá nhầm.
+- **ArchTest `Modules_MustNotReference_OtherModules` hiện pass "rỗng"** — không
+  còn assembly `Modules.*` nào để nó bắt. Đây **không** phải test chết:
+  `src/BE/Tests/PlatformManager.ArchTests/CoreModuleBoundaryTests.cs:49`. Rule
+  còn lại trong cùng file, `Core_MustNotReference_AnyModulesAssembly`
+  (`src/BE/Tests/PlatformManager.ArchTests/CoreModuleBoundaryTests.cs:32`),
+  **vẫn kiểm thật** vì nó quét tham chiếu của `Core.*`, không cần module tồn tại.
+- Thấy tên `PlatformManager.Modules.<Tên>.*` quay lại — bản thân cái tên không
+  sai; chỉ thành finding khi thiếu lý do tách domain (xem ngay dưới).
 - Chưa có `Core.Persistence`, `Core.Api`, `Business.*` — đang thi công.
 
 **Là finding thật:**
 
-- Code tạo **module mới** ngoài `DtiWeekly` mà không có lý do tách domain ghi rõ
-  trong doc.
+- Code tạo **module nghiệp vụ mới** mà không có lý do tách domain ghi rõ trong
+  doc — mô hình đã chốt là **1 khối `Business.*`**, không phải N-module.
+- **Đề xuất xoá ArchTest ranh giới vì "không còn module nào để canh"** — chúng là
+  bảo hiểm cho module đầu tiên được dựng lại; gỡ lúc này là mất lưới đúng ngay
+  trước lúc cần nó nhất.
 - `Core.*` `ProjectReference` (kể cả gián tiếp) tới `Business.*` — đọc `.csproj`
   trực tiếp, đừng chỉ tin tên project.
 - `*.Api` reference thẳng `*.Persistence`/`*.Infrastructure` — chỉ được qua
@@ -47,10 +69,26 @@ LSP/ISP) · `Core.*` bị sửa chỉ để phục vụ một module cụ thể 
 field nghiệp vụ của entity không `private set` + mutation qua method tên nghiệp
 vụ.
 
-**FE:** `modules/` chỉ chứa module nghiệp vụ; 4 màn Core (`login`,
-`doi-mat-khau`, `quan-tri-nguoi-dung`, `phan-quyen`) phải ở `platform/`. Gate G8
-(ESLint `no-restricted-paths`) — kiểm bằng cách **đọc `eslint.config.js`**,
-không tin báo cáo.
+**FE:** màn Core phải ở `platform/`; `modules/` — khi được dựng lại — chỉ chứa
+module nghiệp vụ. Từ 2026-08-29 `src/FE/src/app/modules/` **không tồn tại**, nên
+"không có `modules/`" là hiện trạng, không phải finding. Liệt kê thư mục thật
+bằng `ls -d src/FE/src/app/*/` và `ls -d src/FE/src/app/platform/*/` thay vì tin
+danh sách chép sẵn (bản trước ghi cứng "4 màn Core" và đã lạc hậu).
+
+Gate G8 (ESLint `import/no-restricted-paths`) hiện **không khai zone nào** cho
+`modules/` — và đó **không phải finding**. Schema của rule đòi `zones` tối thiểu
+1 phần tử, nên truyền mảng rỗng làm ESLint chết ngay lúc nạp config ("Invalid
+Options") và `ng lint` đỏ vì lý do không liên quan tới code. Vì chưa có module
+nghiệp vụ nào, cả block G8 được bỏ qua bằng spread có điều kiện
+(`BUSINESS_MODULES` rỗng → `moduleBoundaryZones` rỗng → block không sinh ra).
+**Bật lại khi module nghiệp vụ đầu tiên ra đời**: chỉ cần thêm tên module vào
+`BUSINESS_MODULES`, zone tự sinh.
+
+Chỉ báo finding khi `src/FE/src/app/modules/` **có** module nghiệp vụ mà
+`BUSINESS_MODULES` vẫn rỗng — kiểm bằng cách **đọc `src/FE/eslint.config.js`**
+và `ls -d src/FE/src/app/modules/*/`, không tin báo cáo. Zone trỏ vào thư mục
+không có thật còn tệ hơn không khai: `no-restricted-paths` không phân giải nổi
+`target` nên không chặn gì, tức G8 là no-op nhưng vẫn TRÔNG như đang chạy.
 
 ## 2. Phân quyền theo hành động
 
@@ -62,8 +100,25 @@ mức nghiêm trọng nhất trong report**, không gộp chung với các PARTI
 [OWASP #1 Broken Access Control](https://owasp.org/Top10/2025/A01_2025-Broken_Access_Control/),
 và dự án đã qua giai đoạn demo.
 
-**KHÔNG phải finding:** quyết định *"không phân biệt role cho nghiệp vụ này"* đã
-CHỐT tường minh với người dùng **và** ghi rõ trong code.
+**KHÔNG phải finding:**
+
+- Quyết định *"không phân biệt role cho nghiệp vụ này"* đã CHỐT tường minh với
+  người dùng **và** ghi rõ trong code.
+- **Endpoint Core hiện có (`AuthController` / `MetaController` / `PermissionsController` /
+  `UsersController`) chỉ mang `[Authorize]`.** Đây là hiện trạng đã biết và đã ghi
+  ở [`be-api-controller.md`](be-api-controller.md) §Phân quyền theo hành động:
+  cơ chế `[RequirePermission]` **đã dựng đủ** nhưng **chưa endpoint sản phẩm nào
+  khai nó**. Ghi *"gap đã biết, đã theo dõi ở file chủ"* — **đừng mở lại thành N
+  finding MISSING mới**, mỗi lượt review một lần, cho cùng một gap.
+
+> 🔄 **LẬT 2026-09-06.** Bản trước của mục này chỉ có đúng một câu miễn trừ
+> (*"đã CHỐT … ghi rõ trong code"*), nên đọc theo đúng chữ thì **mọi** action ghi
+> của 4 controller Core đều phải bị chấm MISSING *"ở mức nghiêm trọng nhất"* — một
+> tiêu chí bắt reviewer báo lại cùng một gap đã có chủ sở hữu, mỗi lượt một lần.
+> Đo hiện trạng bằng lệnh, đừng tin câu văn:
+> `grep -rn "\[RequirePermission" src/BE --include=*.cs | grep -v Tests | grep -v "///" | grep -v "//"`
+> — PASS của mục này là *"khớp con số mà `be-api-controller.md` đang ghi"*, không
+> phải *"in ra 0"*.
 
 ## 3. Concurrency — token phiên bản
 
@@ -84,7 +139,22 @@ không phải đạt** — công thức SQL Server trên PostgreSQL tạo cột 
 check concurrency **vô hiệu im lặng**. Xem `be-entity-domain.md` §RowVersion (đã
 cập nhật 2026-08-24) cho recipe đầy đủ.
 
-**KHÔNG phải finding:** entity chỉ có 1 luồng ghi (CRUD thường).
+**KHÔNG phải finding:**
+
+- Entity chỉ có 1 luồng ghi (CRUD thường).
+- **`AppUser` không có property `uint Version`.** Token phiên bản của người dùng
+  là `ConcurrencyStamp` **có sẵn của ASP.NET Core Identity** (kiểu `string`,
+  không thêm cột) — đây là lựa chọn đúng, không phải thiếu sót. Đường ghi thật:
+  `src/BE/Core/PlatformManager.Core.Application/Users/UpdateUserCommand.cs:62`;
+  test khoá hành vi:
+  `src/BE/Tests/PlatformManager.Core.IntegrationTests/Users/UserUpdateVersionTests.cs:77`.
+  Chỉ chấm finding khi endpoint sửa `AppUser` **bỏ qua** token này, không phải khi
+  nó không dùng `uint`.
+
+> 🔄 **LẬT 2026-09-06.** Bản trước chỉ nêu hai kiểu CLR (`uint` đúng, `byte[]` sai)
+> và không nhắc `ConcurrencyStamp`. Chấm đúng theo chữ đó thì entity duy nhất
+> **đang thật sự có** kiểm tra concurrency trong repo sẽ bị đánh MISSING vì sai
+> kiểu, trong khi cơ chế của nó chạy và có test phủ.
 
 ## 4. Rate limiting & cấu hình fail-fast
 
@@ -99,7 +169,8 @@ cập nhật 2026-08-24) cho recipe đầy đủ.
 
 ## 5. CI & gate — KHÔNG kiểm sự tồn tại, PHẢI kiểm còn chạy được
 
-Repo **cố ý không có CI** (`.github/workflows/` rỗng, người dùng xoá 2026-08-21).
+Repo **cố ý không có CI**: thư mục `.github/` **không tồn tại** (người dùng xoá
+2026-08-21; đối chiếu 2026-09-06 bằng `ls -d .github`).
 **Đừng báo "thiếu CI" như finding** — đó là lựa chọn đã biết.
 
 Điều **vẫn phải kiểm**: các gate chạy tay còn **chạy được** không — `dotnet build`,
@@ -109,6 +180,10 @@ còn máy nào chạy hộ, một gate hỏng sẽ không ai biết cho tới l�
 > ⚠️ Đợt 2026-08-23 phát hiện `scripts/fe-gate.sh` — script mà `fe/trien-khai/05-gate.md`
 > khai là chạy G1/G3/G6 — **không tồn tại**. Đây đúng là kịch bản trên. Kiểm sự
 > tồn tại của script trước khi coi gate là xanh.
+>
+> Script này **nay đã có** (`ls -l scripts/fe-gate.sh`, đối chiếu 2026-09-06) — nên
+> "thiếu `fe-gate.sh`" không còn là finding. Nhưng nó **không phải toàn bộ cổng FE**:
+> phần còn lại nằm ở `ng lint`/`ng build`/`ng test`, xem `.claude/CLAUDE.md` §8.
 
 ## 6. Query, index, N+1, cache
 

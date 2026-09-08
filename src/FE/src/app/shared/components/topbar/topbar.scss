@@ -2,7 +2,7 @@
   position: sticky;
   top: 0;
   z-index: 20;
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--surface-topbar);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--line);
 }
@@ -55,8 +55,5 @@
   }
 }
 
-@media print {
-  .topbar {
-    display: none !important;
-  }
-}
+// Đã gỡ `@media print` ngày 2026-08-29 — cùng lý do như sidebar.scss: quy tắc in tập trung ở
+// styles.scss, `.topbar` nay mang class `no-print` trong topbar.html.

@@ -4,13 +4,10 @@
     <Project Path="Core/PlatformManager.Core.Application/PlatformManager.Core.Application.csproj" />
     <Project Path="Core/PlatformManager.Core.Infrastructure/PlatformManager.Core.Infrastructure.csproj" />
   </Folder>
-  <Folder Name="/Modules/DtiWeekly/">
-    <Project Path="Modules/DtiWeekly/PlatformManager.Modules.DtiWeekly.Domain/PlatformManager.Modules.DtiWeekly.Domain.csproj" />
-    <Project Path="Modules/DtiWeekly/PlatformManager.Modules.DtiWeekly.Application/PlatformManager.Modules.DtiWeekly.Application.csproj" />
-    <Project Path="Modules/DtiWeekly/PlatformManager.Modules.DtiWeekly.Infrastructure/PlatformManager.Modules.DtiWeekly.Infrastructure.csproj" />
-  </Folder>
   <Project Path="PlatformManager.Api/PlatformManager.Api.csproj" />
   <Folder Name="/Tests/">
     <Project Path="Tests/PlatformManager.ArchTests/PlatformManager.ArchTests.csproj" />
+    <Project Path="Tests/PlatformManager.Core.UnitTests/PlatformManager.Core.UnitTests.csproj" />
+    <Project Path="Tests/PlatformManager.Core.IntegrationTests/PlatformManager.Core.IntegrationTests.csproj" />
   </Folder>
 </Solution>

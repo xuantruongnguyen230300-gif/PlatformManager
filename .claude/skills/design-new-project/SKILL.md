@@ -38,7 +38,6 @@ di chuyển hoặc đặt tên khác. Vì vậy **KHÔNG hardcode `doc/Design/`*
 > Mọi `{DESIGN_ROOT}/...` bên dưới là **placeholder** — thay bằng đường dẫn thật đã resolve. Nếu skill
 > chạy với cwd = Design root thì `{DESIGN_ROOT}` = `.`.
 >
-> Chưa có `{FE_ROOT}`/`{BE_ROOT}` cố định — `src/FE/` và `src/BE/` hiện đang rỗng (chưa chọn stack).
 > Live source của từng project lấy từ chính `source_paths` trong `README.md` của project đó, không giả
 > định theo một framework marker cụ thể.
 
@@ -62,6 +61,7 @@ Tạo:
 {DESIGN_ROOT}/<Group>/<Project>/
 ├── README.md               # từ Templates/ProjectReadme.md
 ├── UiInventory.md          # stub từ Templates/UiInventory.md
+├── Icons.md                # stub từ Templates/Icons.md
 ├── Tokens/
 ├── Components/
 ├── Screens/
@@ -75,6 +75,7 @@ Tạo:
 
 - Điền các placeholder của template README: `title`, `group`, `stack` (từ stack hint), `source_paths` — hỏi lại hoặc để placeholder nếu chưa rõ; `current_stage: 1-Scaffold`; stage 1 ✅ done, stage 2 🚧 in progress, các stage còn lại ⬜ pending.
 - `UiInventory.md` là stub với các section của template để trống — file gate này có mặt ngay từ ngày đầu; stage 2 sẽ điền nội dung.
+- `Icons.md` cũng là stub từ template, cùng lý do: `design-audit` (stage 7) gate trên nó và `design-create-screens` chỉ **mở rộng** Per-Action Map chứ không tạo file. Không scaffold ở đây thì project chạy 1→7 sẽ BLOCKED ở một file không skill nào sinh ra.
 
 ### 4. Đăng ký project
 

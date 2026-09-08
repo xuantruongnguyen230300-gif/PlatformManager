@@ -1,41 +1,67 @@
 ---
+kind: luat
+scope: core
+verified: 2026-09-06
 project: "<project>"
+artifact: "Component index"
 status: "draft"
 updated: "YYYY-MM-DD"
-components_total: "<n>"
 ---
 <!-- This template holds TWO skeletons. PART A becomes COMPONENTS.md (the library index); PART B becomes Components/<Name>.md (one file per component). Cut at the PART B delimiter. -->
+<!-- When instantiated into doc/Design/<Group>/<Project>/, both parts take `scope: du-an` and `verified: chua-doi-chieu` — see doc/Design/CLAUDE.md § Per-project folder convention. `scope: core` above belongs to the TEMPLATE itself, which is CoreBase tooling. -->
 
-# COMPONENTS.md — <project> Component Library
+# Components — <project>
 
-> **Purpose:** index of the reusable UI components extracted from the live views, so designers and AI tools generate UI that matches the shipped product.
-> **Principle:** every screen MUST be composed from these components — extend a spec in `Components/` instead of inventing new ones. All values come from `DESIGN.md` frontmatter and `Tokens/`; never hard-code colors/sizes outside them.
+<!-- Open by saying that this index is the GATE: a screen spec may only compose components listed here, and a Components/*.md without a row here is not composable. -->
 
-## General conventions
-<!-- House rules that apply to every component: the five required states, framework/theme, icon set, dark-mode mechanism. -->
+Count the specs rather than trusting a number written in prose
+(`.claude/CLAUDE.md` §6 — never hard-code a component total, in the frontmatter or the body):
 
-## Component index
+```bash
+ls doc/Design/<Group>/<project>/Components/*.md | wc -l
+```
 
-| Component | File | Summary |
-| --- | --- | --- |
-| Button | [Components/Button.md](../Frontend/PlatformManager/Components/Button.md) | Primary/danger variants, pill radius |
+**Source of truth for every row:** <!-- the shared component layer (global stylesheet) + the framework components it wraps; cite exact paths. -->
 
-## Known inconsistencies (current code — normalize in redesigns)
-<!-- Library-wide quirks shipped in the product, recorded AS-IS with the convergence target. Screen-local quirks stay in that screen's "Normalize on redesign". -->
-1. <inconsistency as shipped> — converge on <target>.
+<!-- If any row is specified but NOT implemented, mark it and say so here, with a command that counts those rows. Do not let a spec-only row read as a description of running code. -->
+
+## The rule this index enforces
+
+<!-- One component, one definition. No screen/page/component stylesheet re-declares a button, input, badge, toolbar, table frame or dialog footer. State it as a rule, then say what it buys: each row maps to exactly one thing to build. -->
+
+---
+
+## Index
+
+| Component | Spec | What it is |
+|---|---|---|
+| Button | [Components/Button.md](../Frontend/PlatformManager/Components/Button.md) | <one line: the base class it wraps + the variants that matter> — link target here points at the live example so this template's own links resolve; in the generated file it is `./Components/Button.md` |
+
+## What a spec must contain
+
+<!-- Every file cites a Sources section against the live file, and a table of the five states — `default`, `:hover`, `:focus-visible`, `:active`, `:disabled`. Hand-rolled components must define all five explicitly. -->
+
+<!-- Close with: extending a component is preferred over adding one; a variant that is missing gets added to the existing spec AND to the shared layer, never as a parallel class. -->
 
 ## Checklist when adding a new component
+
 - [ ] Clear, consistent name; one file in `Components/`; anatomy, all variants, and the five states documented.
 - [ ] Only token values from `DESIGN.md` / `Tokens/`; exact source file paths cited.
-- [ ] Row added to the index table above (and `components_total` bumped).
+- [ ] Row added to the `## Index` table above.
+- [ ] Frontmatter carries `kind` / `scope` / `verified` (`.claude/CLAUDE.md` §9) — the gate `check-docs.sh` §10 fails without all three.
 
 <!-- ==================== PART B — Components/<Name>.md ==================== -->
 ---
+kind: luat
+scope: du-an
+verified: chua-doi-chieu
 project: "<project>"
 status: "draft"
 updated: "YYYY-MM-DD"
 component: "<Name>"
-sources: ["<src/FE/src/app/shared/components/<component>/>"]
+sources:
+  - "<src/FE/src/styles.scss>"
+  - "<src/FE/src/app/shared/components/<component>/<component>.html>"
 ---
 
 # <Name>
@@ -48,7 +74,7 @@ sources: ["<src/FE/src/app/shared/components/<component>/>"]
 
 | Variant | Classes | Key values | When to use |
 | --- | --- | --- | --- |
-| Primary | `btn primary` | bg `var(--brand)`, text `#fff` | Main action of the view |
+| Primary | `btn primary` | bg `var(--brand)`, text `var(--on-primary)` | Main action of the view |
 
 ## States
 <!-- Exactly these five rows, in this order — treatments as rendered by the shipped CSS. -->
@@ -65,8 +91,13 @@ sources: ["<src/FE/src/app/shared/components/<component>/>"]
 <!-- Bullets of DESIGN.md / Tokens/ names this component consumes; a raw value with no token behind it is an inconsistency to log. -->
 ## Reference markup
 
+<!-- Copy the shipped markup verbatim. Two constraints it must respect, both enforced by machine:
+     - no hard-coded colour/size — reference tokens (doc/Design/CLAUDE.md § Rules);
+     - no user-facing sentence written into the template — text comes from the i18n layer, and
+       gate G12 in scripts/fe-gate.sh fails on a Vietnamese sentence in an .html template. -->
+
 ```html
-<button class="btn primary" onclick="saveWeek()">Lưu tuần này</button>
+<button class="btn primary" type="submit">{{ 'shared.action.save' | translate }}</button>
 ```
 
 Sources: `<file1>`, `<file2>` <!-- the exact views the spec was extracted from; mirror the frontmatter `sources` list. -->

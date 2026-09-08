@@ -35,9 +35,15 @@ internal static class IntegrationTestHostEnvironment
     {
         Environment.SetEnvironmentVariable("ConnectionStrings__Default", connectionString);
 
-        // Development: đúng môi trường WebApplicationFactory tự đặt, và là điều kiện để
-        // DtiWeeklySeeder (danh mục demo) chạy. Đặt tường minh để không phụ thuộc thứ tự áp
-        // cấu hình của factory.
+        // Development: đúng môi trường WebApplicationFactory tự đặt. Đặt tường minh để không
+        // phụ thuộc thứ tự áp cấu hình của factory.
+        //
+        // ⚠️ KHÔNG còn là điều kiện để CoreSeeder chạy (sửa 2026-09-01). Khối
+        // `if (app.Environment.IsDevelopment()) { … CoreSeeder.SeedAsync() }` đã bị gỡ khỏi
+        // Program.cs — seed nay là lệnh riêng `--seed` (SeedCommand.cs), và host phục vụ thật
+        // KHÔNG bao giờ ghi dữ liệu seed nữa. Trạng thái nền của database test do
+        // PostgresFixture.SeedCoreAsync() dựng; đừng thêm lại giả định "Development ⇒ đã có
+        // role/user/menu" vào bất kỳ test nào.
         Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
 
         // BootstrapOptions có ValidateOnStart ⇒ thiếu 2 giá trị này thì host KHÔNG boot được và

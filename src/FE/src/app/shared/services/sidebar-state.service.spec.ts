@@ -2,7 +2,10 @@ import { TestBed } from '@angular/core/testing';
 import { PLATFORM_ID, provideZonelessChangeDetection } from '@angular/core';
 import { SidebarStateService } from './sidebar-state.service';
 
-const COLLAPSED_STORAGE_KEY = 'platform_manager_sidebar_collapsed_v1';
+// Chép tay khoá thật thay vì export từ service: test phải ĐỎ khi ai đó đổi khoá, vì đổi khoá là
+// đổi hợp đồng với dữ liệu đã lưu trên máy người dùng. Import chung hằng số sẽ làm hai bên đổi
+// cùng lúc và phép kiểm không còn kiểm gì (2026-09-03 khoá đã đổi một lần, đúng vì lý do đó).
+const COLLAPSED_STORAGE_KEY = 'core.sidebar.collapsed.v1';
 
 // `PLATFORM_ID` khai kiểu `InjectionToken<Object>` nhưng giá trị thật LUÔN là chuỗi
 // ('browser'/'server' — `isPlatformBrowser()` so chuỗi), nên tham số nhận `string`.

@@ -1,6 +1,23 @@
+---
+kind: luat
+scope: du-an
+verified: 2026-09-06
+---
+
 # Design — Product Design Home
 
-Single home for PlatformManager's Product Design work, covering every UI surface of the solution — the shipped Angular 20 app in `src/FE/` (6 routed screens) and, once one exists, any UI embedded in `src/BE/`.
+Single home for PlatformManager's Product Design work, covering every UI surface of the solution — the shipped Angular 20 app in `src/FE/` and, once one exists, any UI embedded in `src/BE/`.
+
+Count the routed screens rather than reading a number out of prose here — the count changes whenever a module lands or is removed:
+
+```bash
+grep -cE '^\s+loadChildren:' src/FE/src/app/app.routes.ts
+```
+
+PASS = that number equals the row count of the Screen Census in
+[`Frontend/PlatformManager/UiInventory.md`](./Frontend/PlatformManager/UiInventory.md). The `''`
+redirect and the `**` wildcard are **not** routed screens; both resolve onto one of the counted
+routes.
 
 ## Structure
 
@@ -14,7 +31,7 @@ doc/Design/
 │   ├── Assets/                    #    Logos, illustrations, icon sources
 │   └── UserFlows/                 #    Journeys spanning multiple apps
 └── Frontend/                      # 🖥️ Frontend UI projects
-    └── PlatformManager/           #    Angular 20 app — src/FE/, 6 routed screens
+    └── PlatformManager/           #    Angular 20 app — src/FE/
 ```
 
 One folder per UI project, grouped by where its source code lives. New projects get a folder under the matching group (`Frontend/` or `Backend/`) when design work starts on that surface.
@@ -27,9 +44,34 @@ The Pipeline column tracks the 8 stages (1 Scaffold · 2 Inventory · 3 Tokens �
 | --- | --- | --- | --- | --- |
 | [PlatformManager](./Frontend/PlatformManager/README.md) | Frontend | Angular 20 (standalone + Signals, zoneless), PrimeNG + PrimeIcons v7, SCSS | `src/FE/src/app`, `src/FE/src/styles.scss` | 1✅ 2✅ 3✅ 4✅ 5✅ 6✅ 7🔁 8⛔ |
 
-> **Stages 2–6 were all re-run on 2026-08-22** against `src/FE/` after the Angular app superseded the prototype. The earlier ✅ row described artifacts extracted from the deleted prototype, which had drifted from what ships.
+> **Re-run again on 2026-08-29 after the app changed underneath the specs.** Two things happened
+> that day: the `DtiWeekly` business module (dashboard + DTI catalogue) was removed from `src/FE`
+> to be rebuilt, and the shared component layer plus the whole palette were rewritten. Stages 2–4
+> were re-run against the result.
 >
-> **The 2026-08-22 audit came back BLOCKED with 11 findings, and all 11 were fixed the same day** — which is why stages 2–6 are back to ✅ and stage 7 shows 🔁 (fixed, awaiting a re-run to issue a fresh verdict). Every finding was documentation drift, mostly one repeated failure: a doc was corrected and the documents citing it were not. **None needed a `src/` change.** `Frontend/PlatformManager/AUDIT.md` keeps the original verdict alongside a resolution log. Stage 8 is ⛔ for an unrelated reason: every Figma account tried hit the Starter-plan MCP quota (6 tool calls/month), so the artifact set here is the hand-off instead.
+> 🔄 **SỬA 2026-09-08.** This paragraph continued *"Stages 5 and 6 are 🔁 because the artifacts for
+> the **removed** screens are being retired rather than refreshed — `Screens/01`, `Screens/02` and
+> their prompt packs now carry historical banners"*. Neither half is true any more, and the two
+> halves stopped being true on different days. **Stage 5**: `Screens/01` and `Screens/02` were
+> rewritten on 2026-09-05 as `status: "target — not built"` — approved designs for the DTI rebuild,
+> not retired descriptions of deleted code — so the 🔁 there was already stale. **Stage 6**: their
+> prompt packs were regenerated on 2026-09-08 from those specs, with the current palette, the current
+> type face and the current token names. Read each artifact's own frontmatter rather than this
+> paragraph:
+>
+> ```bash
+> grep -H 'status:' doc/Design/Frontend/PlatformManager/Screens/*.md doc/Design/Frontend/PlatformManager/Prompts/*.md
+> ```
+>
+> **Stage 7 is 🔁 and stale**: the last audit ran 2026-08-22, before both of those changes.
+> `/design-audit PlatformManager` needs a fresh run before its verdict means anything.
+> Stage 8 is ⛔ for an unrelated reason: every Figma account tried hit the Starter-plan MCP quota
+> (6 tool calls/month), so the artifact set here is the hand-off instead.
+>
+> The 2026-08-22 pass is still worth knowing about: it came back BLOCKED with 11 findings, all
+> fixed the same day, and every one was documentation drift from the same failure — a doc was
+> corrected and the documents citing it were not. `Frontend/PlatformManager/AUDIT.md` keeps that
+> verdict alongside its resolution log.
 
 ## Per-project folder convention
 
@@ -62,7 +104,7 @@ The arc is **capture → generate (Stitch / Claude Design / Google AI Studio) �
 7. `/design-audit <project>` — PASS/BLOCKED verdict with fix commands (`AUDIT.md`).
 8. `/design-export-figma <project>` — tokens via Tokens Studio and/or the Figma MCP; screens mapped 1:1 to component specs; proof logged in `Exports/ExportLog.md`.
 
-**Where things stand**: `Frontend/PlatformManager` has stages 1–6 complete against `src/FE/`. Next is `/design-audit PlatformManager`. See [SETUP.md](./SETUP.md) for the one-time environment setup (MCP servers, prerequisites).
+**Where things stand**: `Frontend/PlatformManager` has stages 1–4 current against `src/FE/`, with stages 5–6 mid-refresh after the 2026-08-29 module removal and palette rewrite. Next is `/design-audit PlatformManager` — its last verdict predates both changes. See [SETUP.md](./SETUP.md) for the one-time environment setup (MCP servers, prerequisites).
 
 **Hand off**: every spec cites its source files so developers map designs 1:1 to existing markup.
 

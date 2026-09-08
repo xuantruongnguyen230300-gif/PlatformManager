@@ -1,87 +1,147 @@
 ---
+kind: luat
+scope: du-an
+verified: khong-ap-dung
 project: "PlatformManager"
-status: "draft"
-updated: "2026-08-22"
+status: "target — not built"
+updated: "2026-09-05"
 component: "HistoryRow"
-sources: ["src/FE/src/app/modules/dashboard/components/history-list/history-list.html", "src/FE/src/app/modules/dashboard/components/history-list/history-list.scss", "src/FE/src/app/modules/dashboard/components/history-list/history-list.ts"]
+sources:
+  - "doc/Design/Frontend/PlatformManager/Prototypes/index.html"
 ---
 
 # HistoryRow
-**Description:** One saved-period row in the dashboard's "Lịch sử các kỳ đã lưu" panel (`.histrow`). Rendered once per period by `HistoryList` (`history-list.html:1-19`), newest first. **Confirmed live** — `grep -rn "histrow" src/FE/src` returns `history-list.html:3` and `history-list.scss:9`.
+
+> 📐 **ĐÍCH ĐẾN — CHƯA THI CÔNG.** Neither `.history` nor `.histrow` is declared
+> anywhere in `src/FE` — the dashboard module that owned them was removed on
+> 2026-08-29. Check rather than trust:
+>
+> ```bash
+> grep -rn 'histrow' src/FE/src
+> ```
+>
+> PASS for the claim above = zero hits. Restored 2026-09-05 as design input for
+> the rebuild, with **one deliberate change** to the retired values — see § Anatomy.
+
+**Description:** One saved-period row in the Dashboard's `Lịch sử các kỳ đã lưu`
+panel (`.histrow`), rendered once per period, newest first. The panel exists to
+make one promise visible: saving a new period does not overwrite an old one.
+
+> **Citation policy.** Style values cite
+> `doc/Design/Frontend/PlatformManager/Prototypes/index.html` by **selector name**;
+> markup and copy cite `Prototype/index.html` § `#screen-dashboard`.
 
 ## Anatomy
-`.history` (the scroll container: `flex column`, `gap: spacing.sp-2`, `max-height:240px`, `overflow:auto`) → one `.histrow` per period. Each row is a **4-column grid** (`100px 1fr 90px 70px`, `gap: spacing.sp-3`, `align-items:center`, `spacing.sp-2` padding, 1px `colors.line` bottom border, `typography.muted-caption` size):
 
-1. **Date** — `<b>{{ row.DateLabel }}</b>`, formatted `dd/mm/yyyy` in TypeScript (`history-list.ts:5-8`)
-2. **Progress** — `Tiến độ chung <b>…</b>`, the number formatted `vi-VN` to one decimal with a `%` suffix, or `—` when null
-3. **Change** — `DeltaIndicator` (see `DeltaIndicator.md`), **or** `<span class="muted">Kỳ đầu</span>` for the oldest row
-4. **Action** — a default-variant `Button` labelled `Xem` (see `Button.md`), emitting `view` with the period value
+`.history` is the scroll container — flex column, gap `spacing.sp-2`,
+`max-height: 240px`, `overflow: auto`
+(§ `app-history-list .history`). Inside it, one `.histrow` per period: a
+**four-column grid**, gap `spacing.sp-3`, `align-items: center`, padding
+`spacing.sp-2`, 1px `colors.line` bottom border, `fontSize.fs-xs`
+(§ `app-history-list .histrow`).
+
+| Cell | Content | Component |
+| --- | --- | --- |
+| 1 | The period's **date range**, bold — `10/08 – 16/08/2026` | — plain `<b>` |
+| 2 | `Tiến độ chung <b>82,1%</b>` | — plain text |
+| 3 | The movement against the previous period, **or** `Kỳ đầu` on the oldest row | [`DeltaIndicator.md`](./DeltaIndicator.md), or `.muted` copy |
+| 4 | A default-variant `Xem` button | [`Button.md`](./Button.md) |
+
+### The one value that changes from the retired spec
+
+⚠️ **The grid template must widen.** The retired component used
+`100px 1fr 90px 70px`, sized for a single date (`16/08/2026`). Decision Q12 makes
+every period display its **full range** — `10/08 – 16/08/2026` — and 100px does
+not hold that string. The approved prototype flags this in its own comment as the
+**only** style value the date-range decision forces to change.
+
+**Decided 2026-09-05 (T3): the template is `150px 1fr 90px 70px`.** This spec is
+the **single** place that value is written. `Screens/01-dashboard.md` and
+`spec/dashboard-dti/ui-spec.md` carry a one-line pointer here and no number of
+their own — writing it twice is precisely how two sources for one value appear.
 
 ## Variants
 
 | Variant | Classes | Key values | When to use |
 | --- | --- | --- | --- |
-| History row | `histrow` | grid `100px 1fr 90px 70px`, `gap: spacing.sp-3`, padding `spacing.sp-2`, bottom border 1px `colors.line`, `typography.muted-caption`, `align-items:center` | One per saved period in the selected year |
-| First-period row | `histrow` + `.muted` in cell 3 | identical box; cell 3 renders `Kỳ đầu` instead of a `DeltaIndicator` | The oldest row in the list (`row.IsFirst`), which has nothing to compare against |
-| Null-progress row | `histrow` | identical box; cell 2's value renders `—` | `row.Progress === null` — the period exists but carries no overall figure |
-| Empty state | — (no `.histrow` rendered) | `<div class="muted">Chưa có tuần nào trong năm đang chọn.</div>` (`history-list.html:17`) | `@empty` — the selected **year** has no saved periods. Note the copy is year-scoped, matching the year filter above it |
+| History row | `histrow` | 4-column grid, gap `spacing.sp-3`, padding `spacing.sp-2`, bottom border 1px `colors.line`, `fontSize.fs-xs`, `align-items: center` | One per saved period in the selected year |
+| Oldest row | `histrow` + `.muted` in cell 3 | identical box; cell 3 reads `Kỳ đầu` instead of a delta | The first period on record, which has nothing to compare against |
+| No overall figure | `histrow` | identical box; cell 2's number renders `—` | The period exists but carries no overall progress |
+| Empty state | — no `.histrow` rendered | one `.muted` sentence instead of the list | The selected **year** has no saved periods — note the copy must stay year-scoped, because the list is filtered by year |
 
 ## States
 <!-- Exactly these five rows, in this order — treatments as rendered by the shipped CSS. -->
 
 | State | Treatment |
 | --- | --- |
-| default | grid layout as above; bottom border `colors.line`; text `colors.text`; the change cell coloured by `DeltaIndicator`'s own variant rules |
-| hover | **Not styled** — no `.histrow:hover` rule. (Unlike table rows, which do highlight — see `Table.md`.) The `Xem` `Button` inside has its own hover |
-| focus | **N/A at row level** — the row is a plain `<div>` with no `tabindex`. Only the `Xem` `Button` is focusable, using `.btn:focus-visible` (`styles.scss:182-185`) |
-| active | **N/A at row level** — the row has no click handler; only the `Xem` `Button` carries `.btn:active` |
-| disabled | **N/A** — not a form control. The `Xem` button is never `[disabled]` in this list |
+| default | Grid as above; bottom border `colors.line`; text `colors.text` at `fontSize.fs-xs`; cell 3 coloured by `DeltaIndicator`'s own variant rules |
+| hover | **Not styled at row level** — no `.histrow:hover` rule. Unlike table rows, which do highlight (see [`Table.md`](./Table.md)). The `Xem` button inside has its own hover from [`Button.md`](./Button.md) |
+| focus | **Not applicable at row level** — a plain `<div>` with no `tabindex`. Only the `Xem` button is focusable, via `src/FE/src/styles.scss` § `.btn:focus-visible` |
+| active | **Not applicable at row level** — the row carries no click handler; only the `Xem` button has `:active` |
+| disabled | **Not applicable** — not a form control. The `Xem` button is never disabled in this list |
 
 ## Tokens Used
-- `colors.line`, `colors.text`, `colors.muted`
-- `spacing.sp-2` (row padding and container gap), `spacing.sp-3` (column gap)
-- `typography.muted-caption` (`--fs-xs`, the row's font size)
-- Plus everything `Button` and `DeltaIndicator` bring with them
 
-The grid template `100px 1fr 90px 70px` and the container's `max-height:240px` are literals with no token behind them.
+- `colors.line` (row separator), `colors.text`, `colors.muted`
+- `spacing.sp-2` (row padding and container gap), `spacing.sp-3` (column gap)
+- `fontSize.fs-xs` (row text)
+- Everything [`Button.md`](./Button.md) and [`DeltaIndicator.md`](./DeltaIndicator.md) bring with them
+
+Un-tokenised literals: the four-column grid template and the container's
+`max-height: 240px`. Both are carried in `../Tokens/spacing.md` among the other
+structural literals.
 
 ## Reference markup
 
 ```html
-<div class="history">
-  @for (row of rows(); track row.Value) {
+<!-- Prototype/index.html § #screen-dashboard → app-history-list -->
+<app-history-list>
+  <div class="history">
     <div class="histrow">
-      <b>{{ row.DateLabel }}</b>
-      <span>
-        Tiến độ chung
-        <b>{{ row.Progress === null ? '—' : row.Progress.toLocaleString('vi-VN', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%' }}</b>
-      </span>
-      @if (row.IsFirst) {
-        <span class="muted">Kỳ đầu</span>
-      } @else {
-        <app-delta-indicator [value]="row.Delta" />
-      }
-      <button type="button" class="btn" (click)="view.emit(row.Value)">Xem</button>
+      <b>10/08 – 16/08/2026</b>
+      <span>Tiến độ chung <b>82,1%</b></span>
+      <app-delta-indicator><span class="delta up">↑ +2,3 đ.%</span></app-delta-indicator>
+      <button type="button" class="btn">Xem</button>
     </div>
-  } @empty {
-    <div class="muted">Chưa có tuần nào trong năm đang chọn.</div>
-  }
-</div>
+    <!-- newer to older … -->
+    <div class="histrow">
+      <b>06/07 – 12/07/2026</b>
+      <span>Tiến độ chung <b>68,9%</b></span>
+      <span class="muted">Kỳ đầu</span>
+      <button type="button" class="btn">Xem</button>
+    </div>
+  </div>
+</app-history-list>
 ```
 
-Sources: `src/FE/src/app/modules/dashboard/components/history-list/history-list.html:1-19` (markup, both branches, empty state), `history-list.scss:1-17` (`.history` container + `.histrow` grid), `history-list.ts:36-54` (sort, delta computation, `IsFirst`, reverse), `src/FE/src/app/modules/dashboard/pages/dashboard/dashboard.page.html:43-53` (the card + `@defer (on viewport)` wrapper)
+Sources: `doc/Design/Frontend/PlatformManager/Prototypes/index.html`
+(§ `app-history-list`, § `app-history-list .history`, § `app-history-list .histrow`
+— and the comment attached to the last of these recording that the grid template
+was copied verbatim from the deleted Angular stylesheet),
+`Prototype/index.html` § `#screen-dashboard` → `app-history-list` (the six approved
+rows, the date-range format and the `Kỳ đầu` branch),
+`src/FE/src/styles.scss` (§ `.btn`, § `.muted` — the live classes the row composes).
 
 ## Do / Don't
 
-- ✅ Sort ascending by date to compute each row's delta against its immediate predecessor, then `.reverse()` for display — that is the shipped order of operations (`history-list.ts:37-53`), and computing deltas on the reversed list would invert every sign.
-- ✅ Show `Kỳ đầu` rather than a zero delta on the oldest row — "nothing to compare" is a distinct fact from "no change".
-- ✅ Keep `Xem` as the only per-row action; the row itself is not clickable, so the hit target is deliberately the button.
-- ✅ Keep the empty-state copy year-scoped — the list is filtered by the selected year, and a generic "no periods saved" message would misreport a year that simply has none.
-- ❌ Don't add edit or delete affordances to a row; the panel is a read-only jump list.
-- ❌ Don't make the whole row clickable without also giving it focus and hover treatments — today it has neither.
+- ✅ Sort ascending by date to compute each row's movement against its immediate predecessor, **then** reverse for display. Computing on the reversed list inverts every sign.
+- ✅ Print `Kỳ đầu` on the oldest row rather than a zero. "Nothing to compare" and "no change" are different facts, and the panel is where the distinction is most visible.
+- ✅ Keep the full date range in cell 1 (decision Q12) and widen the column to fit it — a truncated range is worse than the single date it replaced.
+- ✅ Keep `Xem` as the only per-row action, so the hit target is deliberate and the row itself stays non-clickable.
+- ✅ Keep the empty-state copy year-scoped. A generic "no periods saved" would misreport a year that simply has none while other years do.
+- ❌ Don't add edit or delete affordances to a row. The panel is a read-only jump list, and the promise it exists to make is that old periods are not touched.
+- ❌ Don't make the whole row clickable without also giving it hover and focus treatments — today it has neither.
 
 ## Normalize on redesign
-1. **The row derives its own delta on the client.** `HistoryList` reuses `GET /api/dashboard/periods` and computes each delta in the browser (`history-list.ts:41-44`), while the criteria grid's deltas arrive pre-computed from the backend. Two sources for one rule.
-2. Fixed pixel columns (`100px 1fr 90px 70px`) with no responsive override — the panel keeps the same template at every breakpoint, unlike `.group-row`, which has two. Long date or delta strings will crowd at narrow widths.
-3. No row hover, while the tables directly above it do highlight rows — inconsistent feedback for two similar scan-and-pick lists.
-4. `max-height:240px` on the scroll container is a literal, and the scroll area has no visual affordance (no fade or shadow) indicating more rows exist below.
+
+1. **Fixed pixel columns with no responsive override.** `.group-row` in [`ProgressBar.md`](./ProgressBar.md) has two breakpoint variants; this row has none, so it keeps one template from 1440px down to 390px. Widening column 1 for the date range (§ Cần chốt) makes that worse, not better.
+2. **No row hover, while the tables directly above it do highlight.** Two similar scan-and-pick lists give opposite feedback on the same screen.
+3. **`max-height: 240px` is a literal**, and the scroll area has no fade or shadow indicating more rows below — the panel silently hides periods.
+4. **The row's movement figure may be derived client-side.** In the retired implementation this panel recomputed each delta in the browser while the detail table received deltas pre-computed by the server: two sources for one rule. Decide once, in `spec/dashboard-dti/business-rules.md`, before either is built again.
+
+## Cần chốt
+
+<!-- Open questions this spec must not answer on its own. Raised 2026-09-05. -->
+
+1. ~~**The new width of grid column 1.**~~ **Resolved 2026-09-05 (T3) — `150px`.** Recorded once, in § Anatomy above.
+2. **Whether the month mode changes cell 1's format.** Q12 fixes the week format; a month period spans `01/08 – 31/08/2026`, which is longer still.

@@ -1,11 +1,19 @@
 <div class="toast-stack no-print" aria-live="polite" role="status">
   @for (toast of toasts(); track toast.Id) {
     <div class="toast-item" [class]="toast.Severity">
-      <span class="toast-text">{{ toast.Text }}</span>
+      <!-- Icon tròn mang màu theo mức độ: người dùng nhận ra "thành công / hỏng" trước khi kịp
+           đọc chữ. `aria-hidden` vì nó lặp lại đúng thông tin mà nội dung chữ đã nói. -->
+      <span class="toast-icon" aria-hidden="true"><i class="pi" [class]="iconClass(toast.Severity)"></i></span>
+      <span class="toast-body">
+        @if (toast.Title) {
+          <b class="toast-title">{{ toast.Title }}</b>
+        }
+        <span class="toast-text">{{ toast.Text }}</span>
+      </span>
       <button
         type="button"
-        class="toast-close"
-        [attr.aria-label]="'Đóng thông báo'"
+        class="icon-btn toast-close"
+        [attr.aria-label]="'shared.toast.dismiss' | translate"
         (click)="dismiss(toast.Id)"
       >
         <i class="pi pi-times"></i>

@@ -1,4 +1,7 @@
 ---
+kind: luat
+scope: core
+verified: 2026-09-06
 project: "<project>"
 status: "draft"
 updated: "YYYY-MM-DD"
@@ -16,11 +19,11 @@ live_source: "<repo path of the CSS/SCSS/theme file the values were read from>"
 
 ## Token Table
 
-<!-- One row per token; "Live variable" is the CSS custom property / SCSS var in code, "Source line" is file:line so every value is re-checkable. Repeat the table per tier (semantic, subtle-bg, text-emphasis, ...) if the category needs it. -->
+<!-- One row per token; "Live variable" is the CSS custom property / SCSS var in code, "Declared at" is the file plus the IDENTIFIER that declares it, written `path/to/file.scss` § `--token` — never a line number: line numbers rot silently and the repo gate cannot tell a rotted one from a good one (see doc/Design/CLAUDE.md § Neo trích dẫn vào `styles.scss`). Repeat the table per tier (semantic, subtle-bg, text-emphasis, ...) if the category needs it. -->
 
-| Name | Value (light) | Value (dark) | Live variable | Source line |
+| Name | Value (light) | Value (dark) | Live variable | Declared at |
 | --- | --- | --- | --- | --- |
-| brand | `#0f5bd7` | `#0f5bd7` | `--brand` | `dashboard.html:12` |
+| brand | `#0f5bd7` | `#0f5bd7` | `--brand` | `src/FE/src/styles.scss` § `--brand` |
 
 ## Chart Palette
 

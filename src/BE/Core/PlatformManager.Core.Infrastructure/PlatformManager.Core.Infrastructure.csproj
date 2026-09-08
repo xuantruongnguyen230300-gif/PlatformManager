@@ -21,7 +21,23 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.11" />
+    <!-- Chặn mật khẩu phổ biến ngay lúc đặt (chốt 2026-08-31, xem
+         doc/huong_dan/wiki-core/be/09-security-beyond-auth.md §"Chính sách mật khẩu"). Danh sách
+         top 10.000 NHÚNG SẴN trong assembly ⇒ chạy offline, KHÔNG gọi API ra Internet lúc chạy.
+         Đăng ký ở DependencyInjection.cs qua .AddTop10000PasswordValidator<AppUser>(). -->
+    <PackageReference Include="CommonPasswordsValidator" Version="1.5.0" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
+    <!-- Hangfire.Core: HangfireBackgroundJobScheduler — hiện thực seam IBackgroundJobScheduler
+         (khai ở Core.Application). Chỉ TẦNG NÀY được biết tới Hangfire; *.Application KHÔNG
+         reference Hangfire (ArchTest LayerDependencyTests cưỡng chế). Server/Dashboard/
+         PostgreSql storage vẫn chỉ cần ở PlatformManager.Api (composition root). Xem
+         doc/huong_dan/quy-uoc/be-cqrs-handler.md §"Command chạy lâu → job nền". -->
+    <PackageReference Include="Hangfire.Core" Version="1.8.24" />
+    <!-- Ghim tường minh — Hangfire.Core 1.8.24 kéo transitively Newtonsoft.Json 11.0.1, dính
+         NU1903 (high severity). Bản 13.0.4 không còn cảnh báo. Ghim đi CÙNG Hangfire.Core:
+         trước 2026-08-28 nó nằm ở Modules.DtiWeekly.Application.csproj, chuyển sang đây cùng
+         lượt tách seam. -->
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
   </ItemGroup>
 
   <ItemGroup>

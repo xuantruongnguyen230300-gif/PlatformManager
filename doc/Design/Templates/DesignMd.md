@@ -1,4 +1,7 @@
 ---
+kind: luat
+scope: core
+verified: 2026-09-06
 project: "<project>"
 status: "draft"
 updated: "YYYY-MM-DD"

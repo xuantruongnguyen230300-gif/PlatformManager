@@ -1,3 +1,9 @@
+---
+kind: luat
+scope: core
+verified: 2026-09-06
+---
+
 # 11. Grid — thư viện, ngưỡng nâng cấp, và đồng bộ metadata với BE
 
 ## Quyết định — Đã CHỐT LẠI (2026-08-15): PrimeNG `p-table` ngay từ module tiếp theo
@@ -16,42 +22,74 @@
 npm install primeng @primeng/themes
 ```
 
-### Hiện trạng — không bắt buộc migrate ngay `CriteriaGridTable` đã có
+### Hiện trạng (đối chiếu 2026-09-06) — mọi lưới đi qua `shared/components/data-grid/`
 
-`CriteriaGridTable` (`modules/danh-muc-dti/components/criteria-grid-table/`)
-hiện chạy tốt, khớp thiết kế — **không** bắt buộc viết lại ngay lập tức chỉ
-để đổi thư viện (rủi ro regression không đáng, tính năng inline-edit từng ô
-hiện tại còn tinh vi hơn `p-table` mặc định hỗ trợ). Quy tắc áp dụng:
+🔄 LẬT 2026-09-06: mục này trước đây nói về `CriteriaGridTable`
+(`modules/danh-muc-dti/components/criteria-grid-table/`) và dặn "không bắt buộc migrate ngay".
+Component đó **không còn tồn tại** — cả module `danh-muc-dti` đã gỡ 2026-08-29. Không còn lưới
+hand-rolled nào để migrate.
 
-- **Module/grid mới từ giờ**: dùng `p-table` ngay, không hand-roll.
-- **`CriteriaGridTable` đã có**: giữ nguyên tới khi cần sửa/mở rộng tính
-  năng đáng kể (thêm sort đa cột, thêm export...) — lúc đó migrate luôn
-  sang `p-table` thay vì mở rộng tiếp code tay.
+Luật hiện hành:
 
-### Mẫu dùng `p-table` với server-side pagination
+- **`p-table` chỉ được import ở đúng MỘT chỗ**: `src/FE/src/app/shared/components/data-grid/`.
+  Lưới của màn hình là **người dùng** của `DataGrid`, không dựng `p-table` rời.
+- Lý do gói lại thay vì để mỗi màn tự dựng: chiều cao "cố định bằng màn hình, cuộn bên trong"
+  đòi **ba** thao tác ở **ba** file rời nhau (xem §Chiều cao lưới ngay dưới) — thiếu một cái là
+  hỏng im lặng, và nó đã hỏng thật trước 2026-09-06.
+- Ví dụ người dùng đầu tiên:
+  `src/FE/src/app/platform/quan-tri-nguoi-dung/components/user-grid-table/`.
 
-```html
-<p-table
-  [value]="rows()"
-  [lazy]="true"
-  [paginator]="true"
-  [rows]="pageSize()"
-  [totalRecords]="totalCount()"
-  (onLazyLoad)="onLazyLoad($event)"
->
-  <ng-template #header>
-    <tr><th pSortableColumn="code">Mã</th><th>Chỉ tiêu</th>...</tr>
-  </ng-template>
-  <ng-template #body let-row>
-    <tr><td>{{ row.code }}</td>...</tr>
-  </ng-template>
-</p-table>
+```bash
+grep -rn "primeng/table" src/FE/src --include=*.ts | grep -v spec
+# PASS: đúng 1 dòng, và dòng đó thuộc shared/components/data-grid/
 ```
 
-`[lazy]="true"` + `(onLazyLoad)` giữ nguyên đúng pattern server-side
-pagination đã có (`GetGrid` nhận `Page`/`PageSize`, xem
-[13-performance.md](13-performance.md) §5) — PrimeNG không ép phải tải hết
-dữ liệu về client.
+### Mẫu dùng `DataGrid` với server-side pagination
+
+Màn hình khai **cột** bằng hai `ng-template` rồi truyền vào; `DataGrid` giữ **khung**
+(phân trang, cuộn, chiều cao, câu rỗng mặc định):
+
+```html
+<ng-template #header><tr><th>Mã</th><th>Tên</th></tr></ng-template>
+<ng-template #body let-row><tr><td>{{ row.Code }}</td><td>{{ row.Name }}</td></tr></ng-template>
+
+<app-data-grid
+  class="grid-host"
+  [rows]="rows()"
+  [loading]="loading()"
+  [totalCount]="totalCount()"
+  [page]="page()"
+  [pageSize]="pageSize()"
+  [headerTemplate]="header"
+  [bodyTemplate]="body"
+  (pageChange)="onPageChange($event)"
+/>
+```
+
+Hai điều `DataGrid` đã lo hộ, **đừng** làm lại ở màn hình:
+
+- **`[lazy]` + quy đổi trang.** PrimeNG phát `first` (0-based); API và mọi tầng gọi dùng trang
+  **1-based**. Phép quy đổi lệch-một-đơn-vị đó nằm gọn trong `DataGrid.onLazyLoad`, một chỗ duy
+  nhất. Server-side pagination vẫn là mặc định — xem
+  [13-performance.md](13-performance.md) §5.
+- **Truyền template bằng `TemplateRef`, KHÔNG `<ng-content>`.** `p-table` nhận
+  `#header`/`#body`/`#emptymessage` bằng *content query*; chiếu chúng qua một lớp bọc là dựa
+  vào chi tiết nội tại của Angular — chạy được hôm nay, hỏng khi nâng phiên bản mà **không có
+  lỗi biên dịch**.
+
+### Chiều cao lưới — ba thao tác, thiếu một là hỏng im lặng
+
+"Lưới cao bằng màn hình, cuộn bên trong, phân trang luôn thấy" cần **cả ba** thứ sau. Hai
+trong ba đã nằm sẵn trong `DataGrid`; phần còn lại là việc của màn hình:
+
+| Ai làm | Việc |
+|---|---|
+| Trang | `host: { class: 'page-fill' }` trên component trang |
+| Màn hình | đặt `class="grid-host"` lên thẻ `<app-data-grid>` |
+| `DataGrid` (đã lo) | `[scrollable]="true"` + `scrollHeight="flex"` trên `p-table` |
+
+Mỗi thao tác nhìn riêng đều **có vẻ đủ**, nên thiếu một cái không đỏ ở đâu cả — lưới chỉ trông
+hơi khác. Đó đúng là cách nó đã hỏng thật trước 2026-09-06.
 
 ## Tính năng ERP-grade có sẵn, không cần tự viết thêm
 
@@ -72,23 +110,44 @@ không cần thiết).
 Đối chiếu `doc/huong_dan/wiki-core/be/03-metadata-driven-design.md` §3.1 —
 2 loại liên quan tới FE:
 
-- **Loại C (menu)** — dữ liệu thuần, DB tự do 100%. **Chưa cần** ở quy mô 2
-  module hiện tại (`be/03` §Áp dụng: "menu sidebar... chưa cần bảng riêng —
-  2 màn hình, hard-code trong Angular route là đủ") — cùng ngưỡng đó áp
-  dụng cho FE: **không** xây lớp tiêu thụ menu động trước khi BE thật sự
-  phục vụ endpoint đó.
+- **Loại C (menu)** — ✅ **ĐÃ THI CÔNG (đối chiếu 2026-09-06).** `MenuService`
+  (`src/FE/src/app/core/menu/menu.service.ts`) gọi `GET /meta/menu`, dựng cây 1 cấp từ danh
+  sách phẳng, và cache theo **phiên đăng nhập** (khoá gồm cả `Roles`, vì BE lọc `SysMenuRole`
+  theo role — cùng user mà đổi role thì không được dùng lại bản cũ). `Sidebar` là nơi tiêu thụ.
+
+  🔄 LẬT 2026-09-06: bản trước ghi *"**Chưa cần** ở quy mô 2 module hiện tại … **không** xây
+  lớp tiêu thụ menu động trước khi BE thật sự phục vụ endpoint đó"*. Ngưỡng đó đã bị vượt qua
+  và code đã về; câu cũ nay khuyên gỡ bỏ một thứ đang chạy.
 - **Loại A (cột grid)** — data facet **sinh từ code** BE, DB/JSON chỉ
   override phần trình bày (tên cột, thứ tự, ẩn/hiện) — không phải toàn bộ
-  cấu trúc cột. Ngưỡng theo `be/03`: "khi có ≥5-10 màn CRUD giống nhau" —
-  PlatformManager hiện có 2, **chưa chạm ngưỡng**.
+  cấu trúc cột. Ngưỡng theo `be/03`: "khi có ≥5-10 màn CRUD giống nhau" — 📐 **chưa chạm
+  ngưỡng (đối chiếu 2026-09-06)**: đếm màn CRUD bằng `ls -d src/FE/src/app/platform/*/`, hiện
+  còn xa mức đó và `IGridColumnMeta` chưa có file nào.
 
 ### Hợp đồng đã thiết kế trước — dùng khi chạm ngưỡng
 
 Để BE/FE không phải đàm phán lại từ đầu khi ngưỡng tới, hợp đồng JSON cho cả
 2 loại **chốt sẵn hình dạng** ở đây:
 
+> 🔄 LẬT 2026-09-06 — **hợp đồng Loại C không còn là "thiết kế trước", nó đã thành code, và
+> hình dạng thật KHÁC bản thiết kế.** Bản dưới đây giữ lại làm lịch sử; đừng viết code theo nó.
+>
+> | Bản thiết kế (dưới) | Thực tế `src/FE/src/app/core/menu/menu-item.model.ts` |
+> |---|---|
+> | `core/models/menu-item.model.ts` | `core/menu/menu-item.model.ts` |
+> | `key` | `Id` (guid) + `Code` |
+> | `order` | `DisplayOrder` |
+> | `requiredPermission` | **không có** — BE đã lọc theo role trước khi trả, FE không lọc lại |
+> | *(không có)* | `ParentId` + `Children` — menu là **cây 1 cấp**, không phải danh sách phẳng |
+> | camelCase | model app **PascalCase** (`IMenuItem`), DTO camelCase (`IMenuItemDto`) — đúng ranh giới wire ở [`../../quy-uoc/fe-api-client.md`](../../quy-uoc/fe-api-client.md) |
+>
+> Một chi tiết đáng giữ lại vì nó đã gây bug thật: `IMenuItemDto` khai `parentId?: string | null`
+> (**có** dấu `?`) vì BE bật `DefaultIgnoreCondition = WhenWritingNull` — field null là **key
+> vắng mặt** trên dây, không phải `null`. Khai `field: T | null` là type nói sai sự thật; đã làm
+> ma trận phân quyền render rỗng hoàn toàn một lần.
+
 ```ts
-// core/models/menu-item.model.ts — Loại C
+// 🗄️ LỊCH SỬ — bản thiết kế trước 2026-09-06, KHÔNG phải hình dạng đang chạy
 export interface IMenuItem {
   key: string;
   label: string;
@@ -114,16 +173,18 @@ export interface IGridColumnMeta {
 `pSortableColumn`, `order`→ thứ tự `<th>`, `visible`→ `*ngIf`/`@if` ẩn cột,
 `width`→ style cột) — không cần tầng chuyển đổi trung gian nào khác.
 
-`GET /api/meta/menu`, `GET /api/meta/grid/{gridKey}` — 2 endpoint riêng (BE
-tự thêm khi cần, xem `be/03-metadata-driven-design.md` §3.2 nếu quyết định
-dùng cột JSON thay vì bảng riêng). `MetadataService` (`core/services/`) gọi,
-cache trong `signal()` (không cần `signalStore()` — state đơn giản, đọc
-nhiều/ghi gần như không có), invalidate bằng cách gọi lại khi user thao tác
-đổi cấu hình (không cần polling).
+`GET /api/meta/menu` — ✅ **đã có thật cả hai phía** (đối chiếu 2026-09-06).
+`GET /api/meta/grid/{gridKey}` — 📐 chưa, đúng ngưỡng Loại A ở trên.
 
-**Việc KHÔNG làm bây giờ:** viết `MetadataService`/2 model trên thành code
-thật trước khi BE có endpoint — đây là hợp đồng **thiết kế trước**, không
-phải thứ cần implement ngay ở F0–F3.
+🔄 LẬT 2026-09-06, hai câu đã sai:
+
+- *"`MetadataService` (`core/services/`) gọi, cache trong `signal()`"* — **không có**
+  `MetadataService` và không có thư mục `core/services/`. Việc đó do `MenuService`
+  (`core/menu/`) làm. Cách cache thì đúng như đã thiết kế: `signal()`, không `signalStore()`,
+  và có `invalidate()` gọi ở `login`/`logout`.
+- *"**Việc KHÔNG làm bây giờ:** viết `MetadataService`/2 model trên thành code thật trước khi
+  BE có endpoint"* — câu này đã hết hiệu lực cho **Loại C** (BE có endpoint, FE đã tiêu thụ).
+  Nó vẫn còn nguyên hiệu lực cho **Loại A** (`IGridColumnMeta`): đừng viết trước.
 
 **Cập nhật (2026-08-15):** bảng `SysMenu` (Loại C) đã có ERD + migration thật
 — xem `doc/cau-truc-database.md` §4.1 §2 và
@@ -188,7 +249,8 @@ nêu ở [13-performance.md](13-performance.md) §5.
 server, mất thì user chỉnh lại chứ không hỏng dữ liệu nghiệp vụ nào:
 
 ```ts
-// modules/danh-muc-dti/components/criteria-grid-table/criteria-grid-table.ts
+// <feature>/components/<ten>-grid-table/<ten>-grid-table.ts
+// (🔄 LẬT 2026-09-06: mẫu cũ ghi `modules/danh-muc-dti/...`, module đã gỡ 2026-08-29)
 private readonly storageKey = 'grid-pref:criteria-list';   // tiền tố gridKey riêng, tránh đụng key khác
 
 onColReorder(event: { columns: { field: string }[] }): void {
@@ -244,3 +306,62 @@ mở (đã nêu ở [13-performance.md](13-performance.md) §3), hoặc màn hì
 xem/so sánh nhiều dòng cùng lúc mà phân trang cắt ngang thao tác đó (chưa
 gặp ở PlatformManager hiện tại). **Không** bật virtual scroll "cho chắc" khi
 phân trang server đã hoạt động tốt — 2 cơ chế giải quyết cùng vấn đề, chọn 1.
+
+## Ba trạng thái của lưới — ✅ CÓ THẬT (thi công xong 2026-08-31)
+
+Một lưới có **ba** trạng thái khác hẳn nhau về ý nghĩa, và người dùng phải phân biệt được:
+
+| Trạng thái | Nghĩa với người dùng | Việc tiếp theo của họ |
+|---|---|---|
+| Đang tải | Chờ chút | Không làm gì |
+| Không có kết quả | Bộ lọc không khớp ai | Nới bộ lọc |
+| Tải hỏng | Hệ thống trục trặc | Thử lại |
+
+🔄 LẬT 2026-09-06: ngay dưới tiêu đề "✅ CÓ THẬT" này, bản trước còn để lại câu *"Hôm nay lưới
+chỉ phân biệt được **một** — `[loading]` của `p-table`. Không có `emptyMessage`, không có nhánh
+lỗi."* Đó là mô tả **trước** đợt 2026-08-31, đọc như hiện trạng và mâu thuẫn thẳng với chính
+tiêu đề mục. Đã đổi sang thì quá khứ.
+
+### Ca nguy hiểm ĐÃ SỬA: tải hỏng mà bảng vẫn hiện dữ liệu cũ
+
+Trước 2026-08-31, nhánh lỗi chỉ tắt cờ `loading`, **không xoá `rows`**. Nên khi người dùng đổi bộ lọc
+sang "Đang khoá" mà request hỏng, bảng vẫn hiện danh sách của bộ lọc **trước** — trông
+y như đó là kết quả của bộ lọc mới.
+
+Interceptor có bắn toast, nhưng toast biến mất sau vài giây còn bảng thì ở lại. Người
+đến sau hoặc người vừa rời mắt khỏi màn hình chỉ thấy một bảng dữ liệu trông hoàn toàn
+bình thường và **sai**.
+
+### Chốt
+
+**Tải hỏng ⇒ xoá bảng, hiện khối lỗi kèm nút thử lại.**
+
+Đánh đổi đã chấp nhận: người dùng mất danh sách đang xem, hơi giật. Đổi lại nguyên tắc
+được giữ — **không hiển thị dữ liệu mà ta không biết có còn đúng hay không.** Hai phương
+án kia (giữ dữ liệu cũ kèm dải cảnh báo; hoặc khôi phục bộ lọc về giá trị cũ) đều đã cân
+nhắc và loại: cái đầu phụ thuộc vào việc người dùng đọc dải cảnh báo, cái sau làm bộ lọc
+tự nhảy ngược khiến người dùng tưởng mình bấm nhầm.
+
+### Đã thi công
+
+Đối chiếu lại 2026-09-06: nhánh lỗi **xoá** `rows`/`totalCount` và bật `loadError`;
+template thay bảng bằng khối `.notice.bad` mang `role="alert"` kèm nút "Thử lại" gọi lại
+đúng bộ lọc đang chọn — `quan-tri-nguoi-dung.page.html:68` (`@if (loadError(); as messageKey)`)
+và `:69` (`<div class="notice bad" role="alert">`). "Không có kết quả" vẫn là dòng
+trong lòng bảng (`#emptymessage` của `DataGrid`) nên **khác hẳn** khối lỗi về mặt thị giác.
+
+🔄 LẬT 2026-09-06 — trích dẫn cũ ở đây là `quan-tri-nguoi-dung.page.html:64`, và **dòng 64 là
+một dòng COMMENT**, không phải câu lệnh dựng khối lỗi. Gate `check-docs.sh` mục 6 chỉ kiểm số
+dòng có nằm trong file hay không nên nó qua được; ai mở ra kiểm thì thấy một lời chú thích và
+không có bằng chứng nào. Trích dẫn phải trỏ vào **câu lệnh**.
+
+### Nghiệm thu
+
+| # | Phép thử | PASS |
+|---|---|---|
+| 1 | Tắt mạng rồi đổi bộ lọc | Bảng **trống**, hiện khối lỗi có nút thử lại |
+| 2 | Bật mạng, bấm thử lại | Dữ liệu về đúng bộ lọc đang chọn |
+| 3 | Lọc theo điều kiện chắc chắn không khớp ai | Hiện *"không có kết quả"*, **khác hẳn** khối lỗi ở phép thử 1 |
+
+Phép thử 3 là phép thử phân biệt: nếu "trống vì lỗi" và "trống vì không khớp" trông
+giống nhau thì việc này chưa xong.

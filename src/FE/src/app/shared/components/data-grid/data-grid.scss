@@ -1,0 +1,35 @@
+/* ===== Nối chuỗi chiều cao khi trang dùng `.page-fill` =====
+   Trang đặt `page-fill` lên thẻ host của mình, và `grid-host` lên thẻ <app-data-grid>.
+   `styles.scss` cấp cho `.page-fill .grid-host` phần `flex: 1 1 auto; display: flex;
+   flex-direction: column; min-height: 0`. Từ host trở xuống phải nối tiếp, nếu không chiều
+   cao dừng ở mắt xích đầu tiên không phải flex và lưới lại co theo số dòng.
+
+   `min-height: 0` ở MỌI mắt xích là bắt buộc, không phải cho đẹp: mặc định flex item không co
+   nhỏ hơn nội dung, thiếu nó thì lưới đẩy trang dài ra thay vì cuộn bên trong và thanh phân
+   trang rơi xuống dưới nếp gấp.
+
+   Ràng buộc `:host(.grid-host)` để lưới dùng ở trang KHÔNG bật `page-fill` giữ nguyên hành vi
+   cao theo nội dung — không đổi hành vi ở nơi chưa ai yêu cầu đổi. */
+:host(.grid-host) {
+  .tablewrap,
+  p-table {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+}
+
+/* Tổng `min-width` của các cột, do màn hình khai qua input `minWidth`. Không khai thì không đặt
+   gì — bảng co theo khung, đúng cho lưới ít cột. */
+.tablewrap :is(table) {
+  min-width: var(--data-grid-min-width, auto);
+}
+
+/* Câu "không có dữ liệu" mặc định. Chỉ căn chỗ — MÀU lấy từ class `.muted` dùng chung ở
+   styles.scss, không khai lại `color` ở đây: hai nơi cùng định nghĩa một màu chữ phụ là hai
+   nơi sẽ trôi khỏi nhau. Màn hình muốn câu khác thì truyền `emptyTemplate`. */
+.grid-empty {
+  padding: var(--sp-6) var(--sp-4);
+  text-align: center;
+}

@@ -1,13 +1,19 @@
 import { Routes } from '@angular/router';
 import { authGuard } from '../../core/auth/auth.guard';
 
-// `authGuard` áp cho CHÍNH route này (không bỏ) — vẫn cần chặn user chưa đăng nhập truy cập
-// thẳng /doi-mat-khau; guard tự nhận diện route này qua state.url để không redirect vòng lặp.
+// 🛑 CHỈ `authGuard` — route này KHÔNG được gắn `mustChangePasswordGuard`, gắn vào là VÒNG LẶP
+// REDIRECT VÔ HẠN (guard sẽ đẩy về đúng route đang chạy nó). Vẫn cần `authGuard` để chặn user
+// chưa đăng nhập gõ thẳng /doi-mat-khau. Xem doc/huong_dan/quy-uoc/fe-routing-guard.md §4 —
+// ràng buộc này được khoá lại bằng máy ở src/app/app.routes.spec.ts.
+//
+// `title` ở CẤP `Route`, `noShell` ở lại trong `data` — xem chú thích cùng chủ đề ở
+// platform/login/login.routes.ts.
 export const DOI_MAT_KHAU_ROUTES: Routes = [
   {
     path: '',
     loadComponent: () => import('./pages/doi-mat-khau/doi-mat-khau.page').then((m) => m.DoiMatKhauPage),
-    data: { title: 'Đổi mật khẩu', noShell: true },
+    title: 'doi-mat-khau.routeTitle',
+    data: { noShell: true },
     canActivate: [authGuard],
   },
 ];

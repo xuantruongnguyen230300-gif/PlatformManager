@@ -2,6 +2,32 @@
   display: block;
 }
 
+/* Skip link (WCAG 2.2 AA 2.4.1 Bypass Blocks) — nằm ngoài màn hình cho tới khi được focus, lúc đó
+   trượt vào góc trên bên trái. Không dùng `display:none`/`visibility:hidden`: hai cách đó gỡ luôn
+   phần tử khỏi thứ tự Tab nên link sẽ không bao giờ nhận được focus.
+   `z-index` phải cao hơn sidebar (35) và topbar (20), nếu không link hiện ra nhưng bị che. */
+.skip-link {
+  position: fixed;
+  top: 0;
+  left: var(--sp-3);
+  z-index: 60;
+  transform: translateY(-200%);
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  background: var(--brand);
+  color: var(--on-primary);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  text-decoration: none;
+
+  &:focus,
+  &:focus-visible {
+    transform: translateY(0);
+    outline: 2px solid var(--text);
+    outline-offset: 2px;
+  }
+}
+
 .shell {
   position: relative;
   min-height: 100vh;
@@ -27,6 +53,21 @@ main {
   padding: var(--sp-5);
   width: 100%;
   flex: 1;
+  // Cột flex để trang dạng danh sách (`.page-fill`, src/styles.scss §2) nối được chuỗi chiều cao
+  // xuống tới vùng cuộn của lưới. Thiếu ba dòng này thì `.page-fill` đứt ngay ở <main>: lưới đẩy
+  // trang dài ra và thanh phân trang rơi xuống dưới nếp gấp. Trang thường không đặt `.page-fill`
+  // thì con vẫn cao tự nhiên, nên không ảnh hưởng gì.
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+
+  /* `tabindex="-1"` (đích của skip link) làm <main> focus được bằng chuột ở một số trình duyệt và
+     vẽ viền focus không ai yêu cầu. Chỉ tắt viền cho focus KHÔNG do bàn phím — `:focus-visible`
+     (điều hướng bằng bàn phím) vẫn giữ nguyên viền mặc định, đúng thứ người dùng skip link cần
+     để biết con trỏ đã nhảy tới đâu. */
+  &:focus:not(:focus-visible) {
+    outline: none;
+  }
 }
 
 @media (max-width: 980px) {
@@ -41,12 +82,27 @@ main {
   }
 }
 
-@media print {
-  .shell-content {
-    margin-left: 0 !important;
-  }
 
-  main {
-    max-width: none;
+
+/* Dải "đã có phiên bản mới" (xem app.html). Ghim đầu màn hình, phủ mọi lớp của shell trừ skip
+   link: nó chỉ hiện khi ứng dụng đã không còn điều hướng được sang màn khác, nên bị che khuất
+   thì cũng không còn đường nào khác để người dùng thoát ra.
+   z-index 50 = trên sidebar (35) và topbar (20), DƯỚI skip link (60) — skip link chỉ hiện khi
+   nhận focus và lúc đó nó phải thấy được. Bỏ bo góc và lề dưới của `.notice` vì ở đây nó là một
+   dải chạm hai mép màn hình, không phải một khối trong dòng nội dung. */
+.app-update {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 50;
+  align-items: center;
+  margin-bottom: 0;
+  border-radius: 0;
+  border-left-width: 0;
+  border-top-width: 0;
+  box-shadow: var(--shadow);
+
+  .btn {
+    margin-left: auto;
+    flex: none;
   }
 }

@@ -1,0 +1,20 @@
+<!-- `role="group"` + nhãn: hai nút rời rạc không tự nói lên chúng là MỘT lựa chọn. Nhãn lấy từ
+     bảng dịch (`shared.languageSwitcher.label`) nên nó đổi theo ngôn ngữ đang chọn, giống mọi
+     chuỗi khác của giao diện. -->
+<div class="lang-switch" role="group" [attr.aria-label]="'shared.languageSwitcher.label' | translate">
+  @for (language of languages; track language.code) {
+    <!-- `[attr.lang]` — WCAG 3.1.2 Language of Parts: "English" nằm giữa một trang `lang="vi"` phải
+         được đánh dấu, nếu không trình đọc màn hình phát âm nó bằng bộ âm tiếng Việt.
+         `aria-current="true"` chứ không chỉ đổi màu: trạng thái "đang chọn" phải nghe được. -->
+    <button
+      type="button"
+      class="lang-switch__option"
+      [class.is-active]="language.code === current()"
+      [attr.aria-current]="language.code === current() ? 'true' : null"
+      [attr.lang]="language.code"
+      (click)="select(language.code)"
+    >
+      {{ language.label }}
+    </button>
+  }
+</div>

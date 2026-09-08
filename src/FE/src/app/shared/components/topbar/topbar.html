@@ -1,9 +1,10 @@
-<div class="topbar">
+<!-- `no-print`: topbar chỉ có nghĩa khi tương tác (tiêu đề trang đã có ở nội dung in). -->
+<div class="topbar no-print">
   <div class="topin">
     <button
       type="button"
       class="btn sidebar-hamburger no-print"
-      aria-label="Mở menu điều hướng"
+      [attr.aria-label]="'shared.topbar.openMenu' | translate"
       aria-controls="sidebar"
       [attr.aria-expanded]="state.mobileOpen()"
       (click)="state.openDrawer()"
@@ -15,8 +16,13 @@
     @if (currentUser.isAuthenticated()) {
       <div class="topbar-user no-print">
         <span class="topbar-user-name">{{ currentUser.fullName() }}</span>
-        <button type="button" class="btn" title="Đăng xuất" (click)="onLogout()">
-          <i class="pi pi-sign-out"></i> Đăng xuất
+        <button
+          type="button"
+          class="btn"
+          [attr.title]="'shared.topbar.logout' | translate"
+          (click)="onLogout()"
+        >
+          <i class="pi pi-sign-out"></i> {{ 'shared.topbar.logout' | translate }}
         </button>
       </div>
     }

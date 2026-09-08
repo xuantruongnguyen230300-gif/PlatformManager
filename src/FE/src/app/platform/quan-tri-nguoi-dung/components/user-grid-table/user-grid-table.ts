@@ -1,12 +1,9 @@
+import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
-import { TableLazyLoadEvent, TableModule } from 'primeng/table';
+import { TranslatePipe } from '@ngx-translate/core';
+import { DataGrid, IDataGridPageChange } from '../../../../shared/components/data-grid/data-grid';
 import { IUser } from '../../models/quan-tri-nguoi-dung.model';
 
-function formatDateVn(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '—';
-  return d.toLocaleDateString('vi-VN');
-}
 
 function initials(fullName: string): string {
   const parts = fullName.trim().split(/\s+/);
@@ -16,14 +13,15 @@ function initials(fullName: string): string {
 }
 
 /**
- * Grid người dùng — `p-table` server-side pagination (`[lazy]`), khớp bố cục
- * `doc/Prototype/quan-tri-nguoi-dung.html` (avatar chữ cái đầu, role tag, badge trạng thái, cột
- * Hành động ghim phải). Dumb — không tự gọi service, chỉ phát output().
+ * Grid người dùng — `p-table` server-side pagination (`[lazy]`), khớp bố cục màn "Người dùng"
+ * trong `doc/Design/Frontend/PlatformManager/Prototypes/index.html` (avatar chữ cái đầu, role
+ * tag, badge trạng thái, cột Hành động ghim phải). Dumb — không tự gọi service, chỉ phát
+ * output().
  */
 @Component({
   selector: 'app-user-grid-table',
   standalone: true,
-  imports: [TableModule],
+  imports: [DataGrid, DatePipe, TranslatePipe],
   templateUrl: './user-grid-table.html',
   styleUrl: './user-grid-table.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -43,14 +41,37 @@ export class UserGridTable {
   readonly toggleLock = output<IUser>();
   readonly pageChange = output<{ Page: number; PageSize: number }>();
 
-  protected readonly formatDateVn = formatDateVn;
+  /**
+   * `localeId` của ngôn ngữ đang chọn, truyền làm THAM SỐ CUỐI của `DatePipe`.
+   *
+   * Trước 2026-09-05 chỗ này là `toLocaleDateString('vi-VN')` khai cứng, nên ngày **luôn** hiện
+   * theo định dạng Việt kể cả khi người dùng đã chuyển sang English — lỗi không bao giờ tự lộ ra,
+   * vì cả hai định dạng đều là "một ngày trông hợp lý".
+   *
+   * **Là `input()` chứ KHÔNG `inject(LanguageService)`**: component này nằm trong
+   * `components/`, tức dumb — LUẬT G4 cấm inject service dữ liệu ở đây. Bản đầu tôi inject thẳng
+   * và nó làm **37 test đỏ**: `LanguageService` cần token `CORE_I18N`, mà spec của các màn nghiệp
+   * vụ không cấp token đó nên `inject()` ném NG0201 và kéo đổ cả loạt.
+   *
+   * 🛑 Điều KHÔNG được đọc ra từ đoạn trên: *"cổng G4 đã bắt được lỗi này"*. Lúc đó cổng CHƯA
+   * tồn tại — thứ làm 37 test đỏ là **bộ test**, không phải cổng.
+   *
+   * ✅ Cổng G4 nay đã có (bật 2026-09-08, section `G4` trong `scripts/fe-gate.sh`, xem
+   * doc/huong_dan/wiki-core/fe/trien-khai/05-gate.md §G4). Nên lần vi phạm sau **sẽ** bị bắt kể
+   * cả ở chỗ không có test tương ứng — đó chính là khoảng trống mà đoạn trên từng cảnh báo.
+   *
+   * Mặc định `'vi'` để spec nào không quan tâm định dạng ngày thì không phải khai gì.
+   */
+  readonly localeId = input<string>('vi');
   protected readonly initials = initials;
 
-  onLazyLoad(event: TableLazyLoadEvent): void {
-    const rows = event.rows ?? this.pageSize();
-    const first = event.first ?? 0;
-    const page = Math.floor(first / rows) + 1;
-    this.pageChange.emit({ Page: page, PageSize: rows });
+  /**
+   * Chỉ đổi tên trường, KHÔNG tính lại trang: phép quy đổi `first` (0-based của PrimeNG) sang
+   * trang 1-based nay nằm trong `DataGrid` — một chỗ duy nhất cho một phép tính lệch-một-đơn-vị,
+   * thay vì mỗi màn hình tự nhớ.
+   */
+  protected onGridPageChange(event: IDataGridPageChange): void {
+    this.pageChange.emit({ Page: event.page, PageSize: event.pageSize });
   }
 
   /** Chỉ đúng khi đang bấm "Khoá" (chưa khoá) trên chính dòng của người đang đăng nhập. */
@@ -58,8 +79,17 @@ export class UserGridTable {
     return !row.IsLocked && this.currentUserId() !== null && row.Id === this.currentUserId();
   }
 
-  lockButtonTitle(row: IUser): string {
-    if (this.isSelfLock(row)) return 'Không thể tự khoá tài khoản của chính mình — dùng Đăng xuất';
-    return row.IsLocked ? 'Mở khoá tài khoản' : 'Khoá tài khoản';
+  /**
+   * KHOÁ DỊCH cho `title` của nút khoá/mở khoá — template dịch bằng `| translate`.
+   *
+   * Trả khoá chứ không trả câu vì component này nằm trong `components/`, tức DUMB: LUẬT G4 cấm
+   * inject service dữ liệu ở đây (doc/huong_dan/wiki-core/fe/trien-khai/05-gate.md — cổng tự
+   * động chưa có, xem ghi chú ở `localeId`), nên nó không có
+   * `TranslateService` để tự dịch. Dịch ở template thì `TranslatePipe` lo cả việc vẽ lại khi đổi
+   * ngôn ngữ — xem thêm ghi chú cùng chủ đề ở `localeId` phía trên.
+   */
+  lockButtonTitleKey(row: IUser): string {
+    if (this.isSelfLock(row)) return 'quan-tri-nguoi-dung.grid.selfLockTitle';
+    return row.IsLocked ? 'quan-tri-nguoi-dung.grid.unlockTitle' : 'quan-tri-nguoi-dung.grid.lockTitle';
   }
 }

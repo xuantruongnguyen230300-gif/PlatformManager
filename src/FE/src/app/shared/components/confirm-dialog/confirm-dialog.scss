@@ -1,0 +1,7 @@
+/* Component này CỐ Ý không có style riêng.
+   `dialog`, `dialog.confirm-dialog`, `.dialog-head`, `.dialog-icon` (4 sắc thái), `.dialog-title`,
+   `.dialog-desc`, `.dialog-close`, `.dialog-actions`, `.btn`, `.icon-btn` đều đã định nghĩa MỘT
+   LẦN ở src/FE/src/styles.scss §6 và §8.
+   Chân dialog là ví dụ đắt nhất của việc khai lại: trước ngày 2026-08-29 có 7 bản `.dialog-actions`
+   ở 7 component với 3 giá trị `margin-top` khác nhau và 1 bản quên hẳn `gap`. Cần đổi khoảng cách
+   chân dialog → sửa ở styles.scss cho cả hệ thống, đừng vá riêng ở đây. */

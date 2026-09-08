@@ -13,7 +13,7 @@ namespace PlatformManager.Core.Infrastructure.Permissions;
 /// ký DI qua AddPermissionInfrastructure() (PermissionInfrastructureExtensions.cs) — filter KHÔNG
 /// tự thêm vào MVC options, Program.cs (composition root) tự gọi
 /// options.Filters.Add&lt;RequirePermissionFilter&gt;(). Xem
-/// .claude/rules/api-controller.md §"Phân quyền theo hành động — permission-key đầy đủ".
+/// doc/huong_dan/quy-uoc/be-api-controller.md §"Phân quyền theo hành động — permission-key đầy đủ".
 ///
 /// Truy vấn DB nằm sau <see cref="IPermissionChecker"/> chứ không inject thẳng DbContext — để
 /// luồng quyết định ở đây test được không cần Postgres (xem PlatformManager.Core.UnitTests),
@@ -46,10 +46,13 @@ public sealed class RequirePermissionFilter(IPermissionChecker permissionChecker
         //  1. Tránh TỰ KHOÁ HỆ THỐNG. Màn ma trận phân quyền cho phép thu hồi quyền hàng loạt;
         //     nếu SuperAdmin cũng phải có RolePermission thì một lần thu nhầm là mất hẳn đường
         //     vào, chỉ còn cách sửa thẳng DB.
-        //  2. CoreSeeder chỉ chạy khi IsDevelopment() (gate trong Program.cs) — nếu dựa vào seed
-        //     thì trên môi trường thật tài khoản chỉ mang role SuperAdmin vẫn bị 403, một cái bẫy
-        //     rất khó hiểu (đây chính là finding đã phát hiện qua audit 2026-08-18).
-        //  3. Khớp lại với ý định đã ghi sẵn ở header doc/ERD/migrations/0004_role_permission_import_job.sql
+        //  2. (Lý do này đã HẾT HIỆU LỰC 2026-08-30 — giữ lại để thấy căn cứ đã đổi.) Trước đó:
+        //     "CoreSeeder chỉ chạy khi IsDevelopment() nên môi trường thật không có dữ liệu seed".
+        //     Nay seed production là lệnh `--seed` gọi chính CoreSeeder, nên vế đó không còn đúng.
+        //     Quyết định GIỮ bypass không đổi — lý do 1 tự nó đã đủ. Xem
+        //     doc/contracts/permissions.md §"Luật bypass SuperAdmin".
+        //  3. Khớp lại với ý định đã ghi ở doc/contracts/permissions.md §"Luật bypass SuperAdmin"
+        //     (file sql/0004_* đã gộp vào 0001_initial_baseline.sql khi baseline 2026-08-31)
         //     ("MỌI role, trừ SuperAdmin bypass") — trước 2026-08-19 tài liệu mô tả bypass nhưng
         //     code KHÔNG có, nay code và tài liệu thống nhất.
         //

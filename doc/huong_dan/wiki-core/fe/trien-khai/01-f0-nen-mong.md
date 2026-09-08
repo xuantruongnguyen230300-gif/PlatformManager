@@ -1,3 +1,9 @@
+---
+kind: luat
+scope: core
+verified: 2026-09-06
+---
+
 # F0 — Nền móng
 
 > **Định nghĩa hoàn thành:** `ng build` xanh trên app zoneless mới; cây thư
@@ -19,8 +25,12 @@ chế độ zoneless, và lỗi lộ ra rải rác chứ không tập trung.
 
 > 📖 Cây thư mục 4 tầng (`core/ shared/ platform/ modules/`) và cấu trúc bên
 > trong một feature: [`../../../quy-uoc/fe-architecture.md`](../../../quy-uoc/fe-architecture.md)
-> §Tầng app. Tạo sẵn 4 thư mục rỗng ở bước này để không ai "tạm để đây rồi
-> chuyển sau".
+> §Tầng app.
+>
+> 🔄 **LẬT 2026-09-06** — bản trước dặn *"tạo sẵn 4 thư mục rỗng ở bước này"*. Không làm được:
+> git không theo dõi thư mục rỗng, nên `modules/` biến mất khỏi bản clone ngay lần kế tiếp và
+> lời dặn tự sinh ra một checklist không bao giờ tick đúng. Tầng nào chưa có file thì chưa có
+> thư mục — `src/FE/src/app/` hôm nay có `core/ shared/ platform/`, không có `modules/`.
 
 ## 2. `core/http` — envelope là thứ viết trước tiên
 
@@ -28,11 +38,24 @@ Mọi service sau này đều đi qua đây, nên sai ở đây là sai lan ra t
 
 | File | Việc |
 | --- | --- |
-| `core/http/api-result.model.ts` | `IApiResult<T>` đủ **8 field**, khớp 1:1 BE |
-| `core/http/api-http-error.ts` | Kiểu `ApiHttpError` để nơi gọi khỏi ép kiểu tay |
-| `core/interceptors/http-error.interceptor.ts` | Dịch lỗi → toast, gắn `apiResult` vào error |
-| `core/interceptors/with-credentials.interceptor.ts` | Gửi cookie session kèm mọi request |
-| `core/services/toast.service.ts` | Nơi duy nhất hiện thông báo lỗi chung |
+| `core/http/api-result.model.ts` | `IApiResult<T>` khớp 1:1 BE — **8 field bắt buộc** (`data` `message` `status` `code` `businessCode` `traceId` `retryable` `fields`) + **2 field tuỳ chọn** (`fieldErrors` `messageParams`) |
+| `core/http/api-result.model.ts` | Chứa luôn `IHttpErrorWithApiResult` — nơi gọi khỏi ép kiểu tay |
+| `core/interceptors/api-base-url.interceptor.ts` | Gắn domain/port của API vào URL tương đối — chạy **trước** hai cái dưới |
+| `core/interceptors/credentials.interceptor.ts` | Gửi cookie session kèm mọi request (hàm `withCredentialsInterceptor`) |
+| `core/interceptors/http-error.interceptor.ts` | Dịch lỗi → toast, gắn `apiResult` vào error — đăng ký **cuối** |
+| `core/toast/toast.service.ts` | Nơi duy nhất hiện thông báo lỗi chung |
+
+> Sửa 2026-08-27: bảng này từng lệch 3 dòng. `core/toast/toast.service.ts` là
+> vị trí đúng đã chốt ở [`05-gate.md`](05-gate.md) §G9 (bản trước ghi
+> `core/services/`). Hai dòng kia đổi theo tên file thật — khác biệt thuần đặt
+> tên, không phải quyết định kiến trúc.
+>
+> 🔄 **LẬT 2026-09-06** — hai chỗ nữa trong bảng đã lệch so với `src/FE`:
+> (1) envelope ghi *"đủ **8 field**"*, nhưng BE đã thêm `fieldErrors` và `messageParams`
+> (`src/FE/src/app/core/http/api-result.model.ts:98`, `:124`) nên hình dạng thật là **8 bắt
+> buộc + 2 tuỳ chọn**; (2) bảng thiếu hẳn `apiBaseUrlInterceptor`, trong khi
+> `src/FE/src/app/app.config.ts:155` đăng ký **ba** interceptor và **thứ tự** giữa chúng là
+> ràng buộc thật, không phải chi tiết.
 
 > 📖 Định nghĩa `IApiResult<T>` và **bản interceptor đúng** (đã vá 2 lỗi
 > hỏng-im-lặng: `inject()` ngoài injection context, và spread phá prototype
@@ -64,9 +87,9 @@ minh được gì — nó có thể đang xanh vì assert sai chứ không vì c
 ## Kiểm chứng
 
 - [ ] `ng build` xanh, `app.config.ts` có `provideZonelessChangeDetection()`
-- [ ] `IApiResult<T>` đủ 8 field, tên khớp field JSON **thật** — xác nhận
+- [ ] `IApiResult<T>` đủ 8 field bắt buộc + 2 tuỳ chọn, tên khớp field JSON **thật** — xác nhận
       bằng 1 lần gọi thật hoặc Swagger, **không đoán** theo cấu hình mặc định
 - [ ] Test interceptor đã kiểm chứng đỏ→xanh, không chỉ xanh sẵn
 - [ ] `fields` bind được vào ít nhất 1 form thử (không chỉ toast) — xác nhận
       key **PascalCase** đọc đúng, xem `../02-http-envelope.md` §`fields`
-- [ ] 4 thư mục `core/ shared/ platform/ modules/` đã tồn tại
+- [ ] 3 thư mục `core/ shared/ platform/` đã tồn tại (`modules/` dựng cùng module nghiệp vụ đầu tiên — hôm nay chưa tồn tại, xem [00-lo-trinh-tong-the.md](00-lo-trinh-tong-the.md) §Phạm vi)

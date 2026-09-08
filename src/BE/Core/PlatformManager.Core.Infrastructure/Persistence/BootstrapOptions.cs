@@ -46,12 +46,12 @@ public sealed class BootstrapOptions
     /// <summary>Mật khẩu ban đầu của tài khoản <c>SuperAdmin</c>.</summary>
     [Required(AllowEmptyStrings = false, ErrorMessage =
         "Thiếu Bootstrap:SuperAdminPassword. Dev: dotnet user-secrets set. Production: biến môi trường Bootstrap__SuperAdminPassword.")]
-    [MinLength(6, ErrorMessage = "Bootstrap:SuperAdminPassword phải dài ít nhất 6 ký tự (khớp Identity Password.RequiredLength).")]
+    [MinLength(12, ErrorMessage = "Bootstrap:SuperAdminPassword phải dài ít nhất 12 ký tự (khớp Identity Password.RequiredLength).")]
     public string SuperAdminPassword { get; init; } = default!;
 
     /// <summary>Mật khẩu ban đầu của tài khoản <c>Admin</c>.</summary>
     [Required(AllowEmptyStrings = false, ErrorMessage =
         "Thiếu Bootstrap:AdminPassword. Dev: dotnet user-secrets set. Production: biến môi trường Bootstrap__AdminPassword.")]
-    [MinLength(6, ErrorMessage = "Bootstrap:AdminPassword phải dài ít nhất 6 ký tự (khớp Identity Password.RequiredLength).")]
+    [MinLength(12, ErrorMessage = "Bootstrap:AdminPassword phải dài ít nhất 12 ký tự (khớp Identity Password.RequiredLength).")]
     public string AdminPassword { get; init; } = default!;
 }

@@ -1,141 +1,240 @@
 ---
+kind: luat
+scope: du-an
+verified: khong-ap-dung
 project: "PlatformManager"
-status: "draft"
-updated: "2026-08-22"
+status: "target — not built"
+updated: "2026-09-05"
 component: "TrendChart"
 sources:
-  - "src/FE/src/app/modules/dashboard/components/trend-chart/trend-chart.ts"
-  - "src/FE/src/app/modules/dashboard/components/trend-chart/trend-chart.html"
-  - "src/FE/src/app/modules/dashboard/components/trend-chart/trend-chart.scss"
-  - "src/FE/src/app/modules/dashboard/pages/dashboard/dashboard.page.html"
-  - "src/FE/src/app/modules/dashboard/pages/dashboard/dashboard.page.scss"
-  - "src/FE/src/app/modules/dashboard/models/dashboard.model.ts"
+  - "doc/Design/Frontend/PlatformManager/Prototypes/index.html"
 ---
 
 # TrendChart
-**Description:** `<app-trend-chart>` — the app's **only** chart: a PrimeNG `p-chart type="line"` (`primeng` 20.2 on `chart.js` 4.5) that plots overall DTI progress across the saved periods, wrapped in a centring `.chart-wrap` box and lazy-loaded by the host page behind `@defer (on viewport)`. It is a dumb component: one `input.required<ITrendPoint[]>()`, **no** `output()`, no service, no click handling.
+
+> 📐 **ĐÍCH ĐẾN — CHƯA THI CÔNG.** No chart component exists in `src/FE`:
+>
+> ```bash
+> grep -rni 'chart' src/FE/src        # PASS for the claim above = zero hits
+> ```
+>
+> **The two decisions that used to block this file are now answered** (decision
+> Q17, 2026-09-05 — the product owner asked for the chart back, rendered by
+> PrimeNG's `p-chart` as before):
+>
+> | Was open | Now |
+> | --- | --- |
+> | Which renderer | **`p-chart` over `chart.js`**, the same pairing as the pre-2026-08-29 build |
+> | Whether the four `chart-*` token roles return | **Yes.** Declared again in [`../Tokens/colors.md`](../Tokens/colors.md) § Chart Palette and in `Tokens/tokens.json`, with the full flip history kept in that section |
+>
+> **One prerequisite remains, and it is not a decision — it is work in `src/`.**
+> `chart.js` was dropped from `src/FE/package.json` on 2026-09-04 (recorded in that
+> file's own `//dependencies` block) because this component was its only consumer.
+> It has to be re-added before the chart can be built. The design area may not edit
+> `src/` (`doc/Design/CLAUDE.md` § Scope), so that is a hand-off, tracked in
+> § Handoff below rather than as an open question.
+
+**Description:** The app's only chart — a single-series line plotting overall DTI
+progress across the saved periods, mounted inside a `Card` and lazy-loaded so its
+code does not sit in the initial bundle. It is a dumb component: points in, no
+outputs, no service, no click handling, no selection.
+
+Retired 2026-08-29 with the screen that hosted it; restored 2026-09-05 because the
+approved prototype puts it back on the rebuilt Dashboard.
+
+> **Citation policy.** Style values cite
+> `doc/Design/Frontend/PlatformManager/Prototypes/index.html` by **selector name**;
+> geometry and axis copy cite `Prototype/index.html` § `#screen-dashboard`.
 
 ## Anatomy
 
-`.chart-wrap` → **either** `<p-chart type="line">` **or** a one-sentence `.muted` empty state. Nothing else — the component template is thirteen lines.
+`.chart-wrap` → **either** the chart canvas **or** a one-sentence `.muted` empty
+state. Nothing else.
 
-- **`.chart-wrap`** — `flex: 1`, `display:flex` centred on both axes, `width: 100%`, `min-height: dimension.chart-height`. It paints no surface of its own: no background, border, radius or shadow. The white surface behind it is the host `Card`, and the `.title` row above it belongs to the card too.
-- **`<p-chart>`** — sized by an inline `[style]` object, `height: dimension.chart-height` × `width: 100%`, and by `responsive: true` + `maintainAspectRatio: false` in the options, so the canvas fills the card's width and keeps a constant height at every breakpoint.
-- **Empty state** — `<p class="muted">` carrying one sentence; the canvas is not rendered at all. Gate: `hasData()` = "at least one point has a non-null `Value`".
-- **Deferred placeholder** — `.chart-skeleton.muted` (same `min-height: dimension.chart-height`, flex-centred) shown while the lazy chunk downloads. It lives in the **host page's** stylesheet, not this component's, and the same class is reused for the history panel's placeholder.
+- **`.chart-wrap`** — `flex: 1`, flex-centred on both axes, `width: 100%`,
+  `min-height: 220px` (§ `app-trend-chart .chart-wrap`). It paints **no surface of
+  its own**: no background, border, radius or shadow. The white surface behind it
+  is the host [`Card.md`](./Card.md), and the `.title` row above it belongs to the
+  card too.
+- **The plot** — sized `height: 220px` × `width: 100%`, so the chart fills the
+  card's width and keeps a constant height at every breakpoint.
+- **Empty state** — one `.muted` sentence; the plot is not rendered at all. Gate:
+  at least one period must carry a value.
+- **Deferred placeholder** — `.chart-skeleton`, flex-centred at the same 220px, is
+  shown while the lazy chunk downloads. It belongs to the **host page**, not to
+  this component, and it is shared with the history panel.
 
-**Data shape and painting rules, as shipped.** `ITrendPoint` is `{ Label: string; Value: number | null }`. `chartData` maps **every** point the API returns — labels come from the unfiltered array, and a point with no value is passed through as `null` while the rest are clamped to `[0, 100]`. Combined with `spanGaps: false`, a period with no data **keeps its slot on the x axis and breaks the line**, so the axis reads as a continuous run of periods with a visible hole. `tension: 0` (straight segments), `pointRadius: 4`, `fill: true`. The y axis is pinned `min: 0` / `max: 100` with a `%` tick suffix.
+### Painting rules, as drawn in the approved prototype
 
-> **Changed 2026-08-22.** Until then `chartData` filtered nulls out *before* building `labels`, which deleted the missing period from the axis entirely: its two neighbours were drawn adjacent and joined by a solid segment, asserting a continuity that did not exist. The same filter also made `spanGaps: false` dead configuration, since no null ever reached Chart.js. Regression-tested in `trend-chart.spec.ts`.
-
-**Colour resolution — the load-bearing mechanism.** Chart.js draws to a 2D canvas, which cannot resolve `var(--x)` the way CSS can. `readCssVar()` therefore reads **exactly three** custom properties once via `getComputedStyle(document.documentElement)` and passes literal strings into the dataset and scale options:
-
-| Chart role | Reads | Design token | Chart.js option |
+| Element | Treatment | Design token | Anchor |
 | --- | --- | --- | --- |
-| Series line | `--brand` | `colors.chart-series-1` | `datasets[0].borderColor` |
-| Series points | `--brand` | `colors.chart-series-1` | `datasets[0].pointBackgroundColor` |
-| Area under the line | `--brand` @ **12%** alpha via `hexToRgba()` | `colors.chart-series-1-fill` | `datasets[0].backgroundColor` |
-| Tick labels, **both** axes | `--muted` | `colors.chart-axis-label` | `scales.x.ticks.color`, `scales.y.ticks.color` |
-| Grid lines, **y only** | `--line` | `colors.chart-grid` | `scales.y.grid.color` |
-| Grid lines, x | — | — | `scales.x.grid.display: false` |
-| Legend | — | — | `plugins.legend.display: false` |
+| Series line | 2px stroke, no fill | `colors.chart-series-1` | § `.proto-chart-line` |
+| Series points | radius 4, 1.5px stroke in the card colour | `colors.chart-series-1` on `colors.card` | § `.proto-chart-point circle` |
+| Area under the line | fill at **12% opacity**, no stroke | `colors.chart-series-1-fill` | § `.proto-chart-area` |
+| Grid lines, **y only** | 1px | `colors.chart-grid` | § `.proto-chart-grid line` |
+| Grid lines, x | **not drawn** | — | — |
+| Tick labels, both axes | 11px | `colors.chart-axis-label` | § `.proto-chart-axis-y text`, § `.proto-chart-axis-x text` |
+| Legend | **not drawn** — one series needs none | — | — |
 
-**One dataset, no categorical palette.** There is no series 2, so there is no second chart colour to specify and none exists in `Tokens/colors.md` or `DESIGN.md`.
+The four `chart-*` names are **roles, not CSS custom properties** — see
+[`../Tokens/colors.md`](../Tokens/colors.md) § Chart Palette, which is their master
+and which records what each resolves to. Do not restate the resolution here.
 
-**Recorded constraint — colours cannot change at runtime.** `trend-chart.ts:52-54` states it in the code: the three values are read once at construction *because* there is no dark mode and no theme switch to react to. Under SSR (`document` absent) the same three values are supplied as hardcoded hex fallbacks. Any redesign that introduces a theme switch must also make this component re-resolve; today it deliberately does not.
+The y axis is pinned to `[0, 100]` with a `%` tick suffix — `100%` / `75%` / `50%`
+/ `25%` / `0%` — so two periods are always visually comparable and a run of high
+values does not silently rescale the axis.
+
+The line is drawn **straight-segment**, not smoothed. A missing period keeps its
+slot on the x axis and breaks the line rather than being dropped: a gap in the
+data must read as a gap, not as a straight run between its two neighbours.
+
+⚠️ **The `.proto-*` selectors above are prototype scaffolding**, a static SVG
+standing in for a real chart renderer. Their geometry is the approved *design*;
+their implementation is not a shipped decision. See § Cần chốt.
+
+### The x axis changed on 2026-09-05
+
+Decision Q12 replaced the period codes on the x axis with **date ranges**:
+
+| Mode | X-axis labels | Approved values |
+| --- | --- | --- |
+| Week | date range per tick | `06/07 – 12/07` · `13/07 – 19/07` · `20/07 – 26/07` · `27/07 – 02/08` · `03/08 – 09/08` · `10/08 – 16/08` |
+| Month | month abbreviation, **not** a date range — decision T7 | `Th.1` … `Th.12` |
+
+The month mode deliberately keeps the short form: twelve date-range labels do not
+fit across one card width. A month's range is read from the period selector and the
+`Kỳ đang xem` label instead.
+
+**Settled 2026-09-05 by decision T7**, which was the last open question on this
+component. What T7 closed is whether the month axis should be widened to carry date
+ranges like the week axis does; the answer is no. The asymmetry it leaves behind is
+real and stays on the § Normalize on redesign list as item 5 — a reader switching
+modes still gets no cue that the axis changed kind.
 
 ## Variants
 
 | Variant | Classes | Key values | When to use |
 | --- | --- | --- | --- |
-| Line chart, with data | `.chart-wrap` → `<p-chart type="line">` | Single dataset; line + points `colors.chart-series-1`, area `colors.chart-series-1-fill`, ticks `colors.chart-axis-label`, y-grid `colors.chart-grid`; y `[0,100]` with `%` suffix; `pointRadius: 4`, `tension: 0`, `fill: true` | Any period selection that returns at least one non-null `Value` |
-| Empty | `.chart-wrap` → `<p class="muted">` | `colors.muted`, `typography.muted-caption`; canvas not rendered | Every `Trend` point is `null`, or `Trend` is empty (the dashboard's initial `EMPTY_AGGREGATE`) |
-| Deferred placeholder | `.chart-skeleton muted` (host page) | `colors.muted`, `typography.muted-caption`, flex-centred at `dimension.chart-height` | While `@defer (on viewport)` downloads the lazy chunk — about *code*, not data |
+| Line chart, with data | `.chart-wrap` → the plot | single series; line and points `colors.chart-series-1`, area `colors.chart-series-1-fill`, y-grid `colors.chart-grid`, ticks `colors.chart-axis-label`; y pinned `[0,100]` with `%`; straight segments, point radius 4 | Any period selection returning at least one value |
+| Empty | `.chart-wrap` → `<p class="muted">` | ink `colors.muted`, `fontSize.fs-xs`; no plot rendered | Every period in range is empty |
+| Deferred placeholder | `.chart-skeleton muted` (host page) | ink `colors.muted`, flex-centred, 220px reserved | While the lazy chunk downloads — this is about *code*, not data |
 
-There is **no** variant of the chart itself: no bar/area/donut type, no compact or sparkline size, no dark treatment, no second series. `p-chart`'s `type` is hardcoded to `"line"` in the template.
+There is **no** variant of the chart itself: no bar, area or donut type, no compact
+or sparkline size, no dark treatment, no second series.
 
 ## States
 <!-- Exactly these five rows, in this order — treatments as rendered by the shipped CSS. -->
 
-`trend-chart.scss` is eight lines of layout and contains **no** pseudo-class rule; `chartOptions` configures only `responsive`, `maintainAspectRatio`, `plugins.legend` and `scales`. The rows below record that precisely rather than calling it "not styled".
-
 | State | Treatment |
 | --- | --- |
-| default | Canvas painted with the palette above, at `dimension.chart-height` × 100% inside a flex-centred `.chart-wrap`. Empty variant instead renders one `colors.muted` sentence at `typography.muted-caption` |
-| hover | **No app-authored treatment.** No `:hover` rule exists in `trend-chart.scss` and `chartOptions` sets **no** `plugins.tooltip`, `interaction` or `hover*` option — so Chart.js's own library defaults apply: a nearest-point tooltip in the library's default dark surface, and the library's default point hover radius. That tooltip is the one surface in the app painted entirely outside the token layer; see § Normalize on redesign |
-| focus-visible | **Not applicable — nothing here can take focus.** PrimeNG renders the chart as a `<canvas>` with no `tabindex`, the component sets none, and neither `trend-chart.scss` nor `styles.scss` authors a focus rule that could match it. The empty state is a `<p>`. The component therefore contributes zero stops to the tab order, and the data is unreachable by keyboard. Note this is **not** fixed by the `ariaLabel` added 2026-08-22: that gives the canvas a *name* for screen readers, which is a different thing from being reachable — a sighted keyboard user still cannot get to any data point. See § Normalize on redesign #3 |
-| active / selected | **Not applicable — the chart has no selection model.** `points` is a one-way `input.required`, the component declares **no** `output()`, `chartOptions` configures no `onClick`, and PrimeNG's own `(onDataSelect)` is not bound. Clicking a point does nothing; no point, series or period is ever marked as current |
-| disabled | **Not applicable — not a control.** Nothing can be disabled: there is no `[disabled]` binding possible on a chart, and the app never dims it. The two conditions that *would* justify a disabled look are handled by swapping content instead — no data swaps the canvas for the `.muted` sentence, and code-not-loaded-yet swaps it for the host page's `.chart-skeleton` |
+| default | Plot painted with the palette above at 220px × 100% inside a flex-centred `.chart-wrap`. The empty variant instead renders one `colors.muted` sentence |
+| hover | **No design-owned treatment.** No `:hover` rule exists on `.chart-wrap` or on any `.proto-*` selector, and no tooltip surface is specified. Whatever renderer is chosen will supply its own tooltip in its own palette — the one surface on this screen painted outside the token layer. See § Normalize on redesign |
+| focus | **Not applicable — nothing here can take focus.** The plot has no `tabindex` and the empty state is a `<p>`. The component contributes zero tab stops, so the data is unreachable by keyboard. An accessible *name* on the plot does not change this |
+| active | **Not applicable — there is no selection model.** Points in, nothing out; no click handler, no "current period" marker on the line |
+| disabled | **Not applicable — not a control.** The two conditions that would justify a dimmed look are handled by swapping content instead: no data swaps in the `.muted` sentence, code-not-loaded swaps in the host's `.chart-skeleton` |
 
 ## Tokens Used
-- `colors.chart-series-1` (`--brand`), `colors.chart-series-1-fill` (`--brand` at 12% alpha), `colors.chart-axis-label` (`--muted`), `colors.chart-grid` (`--line`) — the four names already carried in `DESIGN.md` § Chart Palette and `Tokens/colors.md` § Chart Palette
-- `colors.muted` + `typography.muted-caption` — via the global `.muted` class, used by both the empty state and the `@defer` placeholder
-- `dimension.chart-height` (`Tokens/spacing.md` § Structural Measurements) — a **named measurement, not a CSS custom property**: it ships as three separate literals (`p-chart` inline `[style]`, `.chart-wrap` `min-height`, `.chart-skeleton` `min-height`)
-- No radius, border, background, shadow or spacing token — `.chart-wrap` declares none, and the surface belongs to the host `Card`
-- Motion: none authored. Chart.js's default animation runs on data change; there is no motion scale to reference (`Tokens/spacing.md` § Motion)
-- Icons: none
+
+- `colors.chart-series-1` — series line and point fill
+- `colors.chart-series-1-fill` — the area under the line
+- `colors.chart-axis-label` — tick labels, both axes
+- `colors.chart-grid` — y grid
+- `colors.card` — the point stroke, so points read as discs punched out of the card
+- `colors.muted` + `fontSize.fs-xs` via `.muted` — empty state and placeholder copy
+- **No** radius, border, background, shadow or spacing token — `.chart-wrap` declares none, and the surface belongs to the host `Card`
+
+The four `chart-*` roles were removed from the token layer on 2026-08-29 with this
+component and **restored 2026-09-05** by decision Q17. They are declared in
+[`../Tokens/colors.md`](../Tokens/colors.md) § Chart Palette and in
+`Tokens/tokens.json`; that section is their master and carries the reason the line
+has now been flipped twice.
+
+Un-tokenised literals: the `220px` height (which appears in **two** places, the
+plot and `.chart-wrap`'s `min-height`, plus a third in the host page's
+`.chart-skeleton`), the `11px` tick size, the 2px line stroke and the point
+radius 4. The 12% fill opacity is **not** in this list — it is carried by
+`colors.chart-series-1-fill`, which is exactly what that role exists for.
 
 ## Reference markup
 
 ```html
-<!-- trend-chart.html — the whole template -->
-<div class="chart-wrap">
-  @if (hasData()) {
-    <p-chart type="line" [data]="chartData()" [options]="chartOptions()" [style]="{ height: '220px', width: '100%' }" />
-  } @else {
-    <p class="muted">Chưa có đủ dữ liệu để vẽ biểu đồ.</p>
-  }
-</div>
-```
-
-```html
-<!-- dashboard.page.html — how it is mounted: inside a Card, behind @defer (on viewport) -->
+<!-- Prototype/index.html § #screen-dashboard — the host card and the defer boundary -->
 <div class="card">
   <div class="title">
-    <h2>Biểu đồ tiến độ hàng {{ viewMode() === 'month' ? 'tháng' : 'tuần' }}</h2>
-    <span class="muted">{{ isAllMode() ? 'Tổng hợp năm ' + selectedYear() : 'Tiến độ chung' }}</span>
+    <h2>Biểu đồ tiến độ hàng tuần</h2>
+    <span class="muted">Tiến độ chung</span>
   </div>
-  @defer (on viewport) {
-    <app-trend-chart [points]="aggregate().Trend" />
-  } @placeholder {
-    <div class="chart-skeleton muted">Đang tải biểu đồ…</div>
-  }
+  <app-trend-chart>
+    <div class="chart-wrap">
+      <!-- the plot: 220px tall, 100% wide, role="img" with a describing label -->
+    </div>
+  </app-trend-chart>
 </div>
 ```
 
-```ts
-// trend-chart.ts — the palette contract, reproduced because it is the component's design surface
-borderColor: this.colors.brand,                     // colors.chart-series-1
-backgroundColor: hexToRgba(this.colors.brand, 0.12) // colors.chart-series-1-fill
-pointBackgroundColor: this.colors.brand,            // colors.chart-series-1
-plugins: { legend: { display: false } },
-scales: {
-  y: { min: 0, max: 100, ticks: { color: this.colors.muted, … }, grid: { color: this.colors.line } },
-  x: { ticks: { color: this.colors.muted }, grid: { display: false } },
-}
-```
+Verbatim copy: card heading `Biểu đồ tiến độ hàng tuần` · card caption
+`Tiến độ chung` · plot accessible label
+`Biểu đồ đường tiến độ chung theo tuần, từ tuần 28 đến tuần 33 năm 2026`. These are the
+Vietnamese renderings, not markup: the app translates through `@ngx-translate/core` v18
+(`src/FE/public/i18n/{vi,en}.json`), so each needs a key with an English sibling, and the
+accessible label needs a parameterised key because it carries the week numbers and the year.
+Inlining any of them fails `scripts/fe-gate.sh` § G12. (Corrected 2026-09-08; the previous
+sentence read *"All hardcoded Vietnamese — there is no i18n layer"*.)
 
-Verbatim copy: empty state `Chưa có đủ dữ liệu để vẽ biểu đồ.` · placeholder `Đang tải biểu đồ…` (host page). Both are hardcoded Vietnamese in the templates — there is no i18n layer.
-
-Sources: `src/FE/src/app/modules/dashboard/components/trend-chart/trend-chart.html:1-13`, `trend-chart.scss:1-8`, `trend-chart.ts:13-16` (`readCssVar`), `:18-24` (`hexToRgba`), `:31-36` (the "no interpolation of missing points" decision), `:39-44` (inputs + `hasData`), `:46-55` (three-token resolution + the no-theme-switch constraint), `:57-74` (`chartData`), `:76-92` (`chartOptions`), `src/FE/src/app/modules/dashboard/pages/dashboard/dashboard.page.html:28-38` (host card + `@defer`), `dashboard.page.scss:21-26` (`.chart-skeleton`), `src/FE/src/app/modules/dashboard/models/dashboard.model.ts:95-98` (`ITrendPoint`), `src/FE/package.json:34,36` (`chart.js` 4.5, `primeng` 20.2), `src/FE/src/styles.scss` — `--brand`, `--muted`, `--line` in `:root`
+Sources: `doc/Design/Frontend/PlatformManager/Prototypes/index.html`
+(§ `app-trend-chart .chart-wrap`, § `#screen-dashboard .chart-skeleton`, and the
+prototype-only block § `.proto-chart`, § `.proto-chart-grid line`,
+§ `.proto-chart-axis-y text`, § `.proto-chart-axis-x text`, § `.proto-chart-area`,
+§ `.proto-chart-line`, § `.proto-chart-point circle`),
+`Prototype/index.html` § `#screen-dashboard` → `app-trend-chart` (the approved
+geometry, the six date-range x labels and the accessible label),
+`src/FE/package.json` § `//dependencies` (the 2026-09-04 note recording that the
+chart library was dropped — the removal decision Q17 reverses),
+[`../Tokens/colors.md`](../Tokens/colors.md) § Chart Palette (master of the four
+`chart-*` roles and of the flip history).
 
 ## Do / Don't
 
-- ✅ Keep every chart colour flowing from a token through `readCssVar()`. Hardcoding a hex in the dataset is exactly what this indirection exists to prevent, and it is the reason the four `chart-*` names exist in `DESIGN.md`.
-- ✅ Mount it inside a `Card` with a `.title` row — the chart supplies no heading, surface or padding of its own.
-- ✅ Keep it behind `@defer (on viewport)` with a `.chart-skeleton` placeholder that reserves `dimension.chart-height`, so the card does not jump when the chunk lands.
-- ✅ Handle "no data" by swapping in the `.muted` sentence, never by rendering an empty axis pair.
-- ❌ Don't add a second dataset or a categorical palette — there is one series, and no series-2 colour is defined anywhere in the token layer.
-- ❌ Don't add a legend; it is explicitly disabled, and one hidden series needs none.
-- ❌ Don't reach for `.chart-skeleton` as this component's own class — it belongs to the host page and is shared with the history panel.
+- ✅ Keep every chart colour flowing from a token. A canvas renderer cannot resolve `var(--x)`, so whatever is chosen must read the custom properties once and pass literal strings in — that indirection is the entire reason the `chart-*` role names existed.
+- ✅ Mount it inside a `Card` with a `.title` row. The chart supplies no heading, surface or padding of its own.
+- ✅ Keep it behind a lazy boundary with a placeholder that reserves the full 220px, so the card does not jump when the chunk lands.
+- ✅ Handle "no data" by swapping in the `.muted` sentence, never by rendering an empty pair of axes.
+- ✅ Keep the y axis pinned to `[0, 100]`. An auto-scaled axis makes a 2-point movement look like a cliff.
+- ❌ Don't add a second series or a categorical palette. There is one series, and no series-2 colour is defined anywhere in the token layer.
+- ❌ Don't add a legend; one hidden series needs none.
+- ❌ Don't drop empty periods from the axis. Removing the label removes the gap, and the chart then asserts a continuity that does not exist — the precise failure the straight-line-with-a-break rule prevents.
+- ❌ Don't claim `.chart-skeleton` as this component's class; it belongs to the host page and is shared with the history panel.
 
 ## Normalize on redesign
-1. **The palette exists twice.** `trend-chart.ts:55-61` reads `--brand` / `--muted` / `--line` at runtime **and** repeats the same three hex values as SSR fallbacks, so a token change in `styles.scss` silently desynchronises the server-rendered first paint. Either derive the fallbacks from the token layer or drop them now that the app builds with `--ssr=false`. Also logged in `Tokens/colors.md` § Normalize #2.
-2. **`hexToRgba()` assumes a 6-digit hex.** It slices character pairs out of the string, so a 3-digit value or an `rgb()`/`hsl()` token would produce `rgba(NaN, NaN, NaN, 0.12)` and a fill that silently disappears. `--brand` is 6-digit today, and as of 2026-08-22 **so is every colour in `:root`** — `--card` was the one shorthand (`#fff`) and was normalised to `#ffffff` during the contrast pass, so no 3-digit value remains for this to trip over. The fragility is unchanged though: nothing stops the next shorthand from being added, and the failure is silent (a fill that quietly disappears, not an error).
-3. **~~The chart has no accessible name~~ — FIXED 2026-08-22.** PrimeNG 20 renders the canvas as `role="img"` with an optional `ariaLabel` input, and `role="img"` discards all child content — so an unbound `ariaLabel` shipped as an image with **no name at all**, which a screen reader announces as an empty region. `trend-chart.html` now binds `[ariaLabel]="chartAriaLabel()"`, a computed that states the chart type, how many periods carry data, how many are missing, and the first and last labels with their values (`trend-chart.ts` § `chartAriaLabel`). Covered by `trend-chart.spec.ts` § "canvas phải có tên cho trình đọc màn hình".
-   **Still open:** no `tabindex`, no data-table alternative. A name is not keyboard access — a sighted keyboard user still cannot reach any data point. Providing the series as a visually-hidden `<table>` would close both this and item 4's tooltip dependency.
-4. **Hover is entirely Chart.js's default.** No tooltip surface, text colour, radius or padding is configured, so the one interactive affordance on the chart renders in a third-party palette that no token controls and that will change when the library is upgraded.
-5. **`dimension.chart-height` is three unlinked literals** — the `p-chart` inline `[style]`, `.chart-wrap { min-height }` and `.chart-skeleton { min-height }`. Two of them live in different files from the third; changing the chart height means editing all three or the placeholder stops matching the chart.
-6. **~~`spanGaps: false` is dead configuration~~ — FIXED 2026-08-22.** The pre-filter was dropped, not the option: `chartData` now maps **every** point the API returns, keeping the label on the x axis and putting `null` in the data array where `Value` is null, so `spanGaps: false` has something real to act on and the line breaks at the hole.
-   Why this was worth fixing rather than recording: filtering nulls removed the *label* too, so a missing period vanished from the axis and its two neighbours were drawn adjacent and joined by a solid segment. The chart asserted a continuity that did not exist — the precise failure `spanGaps: false` is meant to prevent, produced by the code that also disabled it. Covered by `trend-chart.spec.ts` § "kỳ thiếu số liệu phải GIỮ CHỖ trên trục x", including a control case proving fully-populated series gain no spurious nulls.
-7. **Sizing is fixed, not fluid.** `maintainAspectRatio: false` plus a hard `220px` means the chart is the same height on a 390px phone and a 1600px desktop, while every card around it reflows. There is no responsive height step.
+
+1. **Hover is whatever the renderer supplies.** No tooltip surface, text colour, radius or padding is specified, so the chart's one interactive affordance will render in a third-party palette that no token controls and that changes on library upgrade.
+2. **No keyboard access and no data-table alternative.** An accessible name on the plot is not access — a sighted keyboard user still cannot reach a data point. Providing the series as a visually-hidden `<table>` closes this and item 1 at once, since a table needs no tooltip.
+3. **The 220px height is three unlinked literals** — the plot, `.chart-wrap`'s `min-height` and the host page's `.chart-skeleton`. Two live in a different file from the third, so changing the chart height means editing all three or the placeholder stops matching the chart.
+4. **Sizing is fixed, not fluid.** A hard 220px means the chart is the same height on a 390px phone and a 1600px desktop while every card around it reflows. There is no responsive height step.
+5. **The x axis uses two vocabularies** — date ranges in week mode, month abbreviations in month mode (§ Anatomy). Defensible on space grounds, but a reader switching modes gets no cue that the axis changed kind.
+6. **`flex: 1` sits on the child, not the host.** Defect **A2** — `doc/Design/Frontend/PlatformManager/Prototypes/index.html` § `app-trend-chart .chart-wrap` declares `flex: 1`, and the host declares no `display: flex`, so the wrapper does not actually stretch to the card's height.
+
+## Handoff — one prerequisite outside this folder
+
+**`chart.js` must be re-added to `src/FE/package.json`** before this component can
+be built. It was removed on 2026-09-04 when this was its only consumer, and
+decision Q17 reversed that on 2026-09-05. The design area may not edit `src/`
+(`doc/Design/CLAUDE.md` § Scope), so this is a hand-off to whoever builds the
+screen, not an open question — the decision is made.
+
+## Cần chốt
+
+<!-- Open questions this spec must not answer on its own. Raised 2026-09-05, emptied the same day. -->
+
+**Nothing is open on this component.** The last item — the month-mode x-axis labels —
+was settled by decision T7 on 2026-09-05. What remains is not a question but a task
+in a folder this one may not edit: § Handoff above.
+
+### Answered elsewhere — do not re-ask
+
+| Was open here | Answer | Owner |
+| --- | --- | --- |
+| Month-mode x-axis labels | **`Th.1 … Th.12`, not date ranges** — decision T7, 2026-09-05 | § The x axis changed on 2026-09-05 |
+| What renders the chart | `p-chart` over `chart.js`, as before — decision Q17, 2026-09-05 | § banner above |
+| Whether the four `chart-*` roles return | Yes — decision Q17 | [`../Tokens/colors.md`](../Tokens/colors.md) § Chart Palette |
+| Whether the chart follows the detail table's filters | **No.** The line always shows overall progress for the period; the table's filters change only the table | `spec/dashboard-dti/business-rules.md` |

@@ -1,5 +1,8 @@
 ---
-updated: "2026-08-24"
+kind: luat
+scope: du-an
+verified: 2026-09-06
+updated: "2026-09-06"
 ---
 
 # Setup Guide — Design → Figma Pipeline
@@ -20,8 +23,15 @@ bám vào **source thật** (không bịa) — xem "Fidelity Policy" trong
 
 Pipeline này được đưa vào từ một dự án tham chiếu (`VNR.Successor`) và điều
 chỉnh lại cho quy mô của `PlatformManager` — hiện chỉ có một project
-(`Frontend/PlatformManager`), trỏ vào **`src/FE/`** (app Angular 20 thật, 6
-route) làm nguồn sống. Trước 2026-08-22 project này trỏ vào prototype tĩnh
+(`Frontend/PlatformManager`), trỏ vào **`src/FE/`** (app Angular 20 thật) làm
+nguồn sống. Số màn hình có route thì **đếm bằng lệnh**, đừng chép vào đây
+(`.claude/CLAUDE.md` §6):
+
+```bash
+grep -cE '^\s+loadChildren:' src/FE/src/app/app.routes.ts
+```
+
+Trước 2026-08-22 project này trỏ vào prototype tĩnh
 (đã xoá 2026-08-23) vì lúc đó `src/FE/`/`src/BE/` còn rỗng — carve-out đó đã
 **hết hạn 2026-08-22**, xem `CLAUDE.md` § Fidelity Policy.
 
@@ -92,7 +102,7 @@ doc/Design/
 ├── CLAUDE.md              # convention AI phải tuân theo
 ├── README.md               # index project + tóm tắt 8-stage workflow
 ├── SETUP.md                 # chính là file này
-├── Templates/                # 10 template gốc cho mọi artifact
+├── Templates/                # template gốc cho mọi artifact (đếm: ls doc/Design/Templates/*.md)
 └── Frontend/
     └── PlatformManager/       # đã chạy xong stage 1 (scaffold)
         ├── README.md           # source_paths: src/FE/src/app
@@ -131,8 +141,8 @@ khác (vd. `Backend/Api` khi `src/BE/` có app thật).
 Trước 2026-08-22, `src/FE/` và `src/BE/` còn rỗng — chưa chọn framework.
 Pipeline lúc đó chạy tạm bằng cách coi prototype tĩnh (đã xoá 2026-08-23) là
 "live source" (carve-out cũ trong `CLAUDE.md` § Fidelity Policy). Carve-out
-đó **đã hết hạn 2026-08-22** — `src/FE/` giờ là app Angular 20 thật (6
-route), `src/BE/` là solution .NET đang chạy, và pipeline đã re-run trên
+đó **đã hết hạn 2026-08-22** — `src/FE/` giờ là app Angular 20 thật,
+`src/BE/` là solution .NET đang chạy, và pipeline đã re-run trên
 nguồn thật này (xem bảng trạng thái ở `README.md`). 3 bước dưới đây đã làm
 xong, giữ lại chỉ để biết lịch sử — không phải việc còn tồn đọng:
 
@@ -147,8 +157,15 @@ xong, giữ lại chỉ để biết lịch sử — không phải việc còn t
   "reverse intake" từ BusinessAnalysis) — repo này chưa có quy trình đó.
 - Chỉ một project duy nhất (`Frontend/PlatformManager`) thay vì nhiều app
   trong một workspace nhiều repo.
-- `{FE_ROOT}`/`{BE_ROOT}` không cố định theo marker framework (không có
-  `angular.json`/`*.sln`) — mỗi project tự khai `source_paths` trong
-  `README.md` của nó.
+- Mỗi project tự khai `source_paths` trong `README.md` của nó, thay vì để
+  pipeline suy ra từ một cây thư mục cố định.
+
+  > 🔄 **LẬT 2026-09-06.** Dòng này trước đây viết *"`{FE_ROOT}`/`{BE_ROOT}` không cố định theo
+  > marker framework (**không có** `angular.json`/`*.sln`)"*. Vế trong ngoặc đã sai từ khi
+  > `src/FE` được dựng: `src/FE/angular.json` và `src/BE/PlatformManager.slnx` **đều tồn tại**
+  > (đối chiếu 2026-09-06). Marker BE là định dạng solution mới `.slnx`, không phải `.sln` —
+  > tìm bằng `*.sln` sẽ không thấy nó, và đó là cách câu trên trở thành sai mà không ai để ý.
+  > Điều còn đúng và là lý do dòng này tồn tại: pipeline `/design-*` **không** dò marker, nó
+  > đọc `source_paths`.
 - Không cấu hình sẵn Stitch MCP hay Postgres MCP (không liên quan tới pipeline
   Figma của repo này).

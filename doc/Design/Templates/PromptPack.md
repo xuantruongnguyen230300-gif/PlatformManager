@@ -1,8 +1,11 @@
 ---
+kind: luat
+scope: core
+verified: 2026-09-06
 project: "<project>"
 status: "draft"
 updated: "YYYY-MM-DD"
-screen_ref: "<stem of the Screens file, e.g. DashboardOverview>"
+screen_ref: "<stem of the Screens file, e.g. 03-quan-tri-nguoi-dung>"
 tools: ["stitch", "claude-design", "ai-studio", "generic"]
 ---
 
@@ -62,5 +65,7 @@ Match the attached screenshots pixel-for-pixel where they conflict with this tex
 
 <!-- Explicit file list — everything a tool needs beyond the prompt text. -->
 
-- `Assets/Screenshots/<screen_ref stem>/<view>.png`
-- `Assets/Brand/<logo>.svg`
+- `Assets/Screenshots/<flow-stem>/<view>--desktop-1440.png`
+- `Assets/Brand/<file>` — only if the project actually ships brand imagery; a project whose brand mark is
+  a styled text glyph has an empty `Assets/Brand/`, and listing a logo file that does not exist sends the
+  tool looking for it. Check `UiInventory.md` § Brand Assets first.

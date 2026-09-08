@@ -18,6 +18,12 @@ public sealed class GetPermissionMatrixHandler(ISysMenuRepository menuRepo, ISys
         var menus = await menuRepo.GetAllAsync(ct);
         var assignments = await menuRoleRepo.GetAssignedRoleNamesBySysMenuAsync(ct);
 
+        // Token phiên bản đọc SAU dữ liệu ma trận, nhưng cả hai đều là truy vấn đọc trong cùng
+        // một request nên khoảng hở là không đáng kể — và nếu có ai ghi xen vào đúng khe đó thì
+        // hậu quả tệ nhất là client nhận token mới hơn dữ liệu, tức PUT kế tiếp bị 409 (an toàn)
+        // chứ không phải ghi đè im lặng.
+        var version = await menuRoleRepo.GetVersionAsync(ct);
+
         var rows = menus
             .OrderBy(m => m.DisplayOrder)
             .Select(m => new PermissionMatrixRowDto(
@@ -25,6 +31,6 @@ public sealed class GetPermissionMatrixHandler(ISysMenuRepository menuRepo, ISys
                 assignments.TryGetValue(m.Id, out var roles) ? roles : []))
             .ToList();
 
-        return Ok(new PermissionMatrixDto(Roles.All, rows));
+        return Ok(new PermissionMatrixDto(Roles.All, rows, version));
     }
 }

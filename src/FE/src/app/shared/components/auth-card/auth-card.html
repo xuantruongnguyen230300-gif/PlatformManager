@@ -1,7 +1,9 @@
 <div class="login-shell">
   <div class="login-card">
     <div class="login-brand">
-      <span class="brand-mark">PM</span>
+      <!-- Chữ tắt thương hiệu đến từ `CORE_BRANDING` (xem `auth-card.ts`) — màn đăng nhập là
+           nơi đầu tiên người dùng thấy tên sản phẩm, không được khai cứng trong `shared/`. -->
+      <span class="brand-mark">{{ branding.shortName }}</span>
       <h1>{{ title() }}</h1>
       @if (subtitle()) {
         <p>{{ subtitle() }}</p>

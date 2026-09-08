@@ -1,20 +1,64 @@
+---
+kind: luat
+scope: core
+verified: 2026-09-08
+---
+
 # 5. Thư viện component dùng chung
 
 ## Phạm vi áp dụng — PrimeNG vs hand-rolled (Đã CHỐT 2026-08-15)
 
 Sau khi đối chiếu thực tế thị trường ERP/chuyển đổi số (xem
 [04-design-token-system.md](04-design-token-system.md) §Thư viện component),
-PrimeNG là mặc định cho thành phần **tương tác phức tạp**. 9 component đơn
-giản đã build (bảng dưới) **không bắt buộc migrate ngay** — chi phí viết lại
-không tương xứng lợi ích khi chúng đã chạy đúng và khớp thiết kế 1:1.
+PrimeNG là mặc định cho thành phần **tương tác phức tạp**. Nhóm đơn giản (bảng dưới)
+**không bắt buộc migrate** — chi phí viết lại không tương xứng lợi ích khi chúng đã chạy đúng
+và khớp thiết kế 1:1.
+
+> ### 🔄 LẬT 2026-09-06 — "9 component đơn giản **đã build**" là hai lỗi trong một câu
+>
+> **(a) Con số chép tay.** `.claude/CLAUDE.md` §6 cấm chép thứ đếm được bằng lệnh; chính file
+> này ở §Nguồn cũng đã dặn *"chạy `ls` để có số chính xác thay vì tin số hardcode ở đây"* rồi
+> lại hardcode ở đầu file. Đếm bằng lệnh:
+>
+> ```bash
+> ls -d src/FE/src/app/shared/components/*/          # component Angular dùng chung
+> ls doc/Design/Frontend/PlatformManager/Components/ # spec thiết kế
+> ```
+>
+> **(b) "Đã build" hiểu sai hình dạng của chúng.** Nhóm đơn giản ở dòng cuối bảng dưới
+> **không phải component Angular** và không có thư mục nào trong `shared/components/`. Những
+> cái **đã có** là **lớp CSS toàn cục** khai trong `src/FE/src/styles.scss` (`.btn`, `.card`,
+> `.badge`, `.input`, `.notice`, `.delta` — kèm `:hover` `:focus-visible` `:active`
+> `:disabled`), dùng thẳng trên thẻ HTML. Đây là quyết định có chủ đích — thứ chỉ có style,
+> không có hành vi, thì không cần một lớp bọc Angular — nhưng gọi nhầm nó là "component đã
+> build" khiến người đọc đi tìm một thư mục không tồn tại, rồi kết luận là còn thiếu và dựng
+> bản thứ hai.
+>
+> **🔄 LẬT 2026-09-08 — (b) đúng về cơ chế nhưng sai về danh sách.** Bản 2026-09-06 nói cả
+> nhóm ở dòng cuối bảng là "lớp CSS toàn cục trong `styles.scss`". Ba cái trong đó —
+> `ProgressBar`, `HistoryRow`, `KpiTile` — **không tồn tại dưới bất kỳ hình dạng nào**: không
+> có lớp CSS, không có thư mục component, không có ở đâu trong `src/FE/src`. Chúng là 📐 **ĐÍCH
+> ĐẾN — CHƯA THI CÔNG**, và spec của chúng nằm ở `doc/Design/…/Components/`. Nói ở thì hiện tại
+> rằng chúng "đã build" gây ra đúng thiệt hại mà (b) mô tả, chỉ theo chiều ngược: người đọc đi
+> tìm một lớp CSS không có thật rồi kết luận mình vừa xoá nhầm.
+>
+> Đếm bằng lệnh thay vì tin danh sách (`.claude/CLAUDE.md` §6) — **tiêu chí PASS: mỗi tên nêu
+> ở thì hiện tại phải trúng ít nhất một dòng**:
+>
+> ```bash
+> for c in btn card badge input notice delta; do
+>   printf '%-8s ' "$c"; grep -c "^\.$c" src/FE/src/styles.scss
+> done
+> ```
 
 | Component | Quyết định | Vì sao |
 |---|---|---|
-| Table/Grid (`danh-muc-dti`) | **PrimeNG `p-table`** — mọi grid mới; grid cũ giữ tới khi cần mở rộng lớn | Xem [11-grid-and-metadata.md](11-grid-and-metadata.md) — đây là thành phần rủi ro "chay" thật nhất |
-| Chart | **PrimeNG `p-chart`** | Xem [12-charting.md](12-charting.md) |
+| Table/Grid | **PrimeNG `p-table`**, bọc trong `shared/components/data-grid/` (dùng chung, chốt 2026-09-06) — mọi grid mới đi qua đó, không dựng `p-table` rời | Xem [11-grid-and-metadata.md](11-grid-and-metadata.md) — đây là thành phần rủi ro "chay" thật nhất. 🔄 LẬT 2026-09-06: ô này trước neo vào `danh-muc-dti`, module đã gỡ 2026-08-29 |
+| Chart | **PrimeNG `p-chart`** — 📐 chưa thi công, `chart.js` đã gỡ khỏi `package.json` 2026-09-04 cùng lượt xoá `TrendChart` | Xem [12-charting.md](12-charting.md) |
 | Dropdown/Select có tìm kiếm, multiselect, date-range picker, autocomplete | **PrimeNG** (`p-select`, `p-multiselect`, `p-datepicker`...) khi lần đầu cần — **không** tự viết tay | Đây đúng nhóm input phức tạp mà tự viết tốn công + dễ thiếu a11y (xem cảnh báo 5 trạng thái bên dưới) |
-| Dialog | Giữ nguyên `<dialog>` gốc hiện có — chỉ đổi sang `p-dialog` khi cần animation/nested dialog thật sự | Dialog gốc đã đơn giản, đủ dùng, không có nỗi đau rõ ràng để đổi ngay |
-| Button, Card, Badge, ProgressBar, NoticeBanner, DeltaIndicator, HistoryRow, KpiTile, Input (text/number cơ bản) | **Giữ nguyên hand-rolled** — không migrate | Đã build đúng, khớp `Components/*.md` 1:1, đơn giản, không có tính năng ẩn khó tái tạo — PrimeNG không mang lại lợi ích tương xứng chi phí đổi |
+| Dialog | Giữ `<dialog>` gốc — ✅ đang chạy ở `shared/components/confirm-dialog/` và ở `platform/quan-tri-nguoi-dung/components/user-form-dialog/` (đối chiếu 2026-09-06, cả hai dùng `showModal()`). Chỉ đổi sang `p-dialog` khi cần animation/nested dialog thật sự | Dialog gốc đã đơn giản, đủ dùng, không có nỗi đau rõ ràng để đổi ngay |
+| **Đã có:** Button, Card, Badge, NoticeBanner, DeltaIndicator, Input (text/number cơ bản) | **Giữ nguyên hand-rolled** — không migrate. Hình dạng thật: **lớp CSS toàn cục trong `src/FE/src/styles.scss`** (`.btn`, `.card`, `.badge`, `.notice`, `.delta`, `.input`), không phải component Angular (xem cảnh báo §Phạm vi áp dụng) | Đã chạy đúng, khớp `Components/*.md` 1:1, đơn giản, không có tính năng ẩn khó tái tạo — PrimeNG không mang lại lợi ích tương xứng chi phí đổi |
+| **📐 ĐÍCH ĐẾN — CHƯA THI CÔNG:** ProgressBar, HistoryRow, KpiTile | Khi dựng thì **hand-rolled**, cùng lý do dòng trên — nhưng **chưa tồn tại** trong `src/FE/src` dưới bất kỳ hình dạng nào (đối chiếu 2026-09-08). Spec đã có ở `doc/Design/…/Components/`; đọc spec trước khi code | Ba cái này chỉ hiển thị, không có logic ẩn — không có lý do gọi PrimeNG. Ghi tách dòng để không ai lại nêu chúng ở thì hiện tại |
 
 **Nguyên tắc chung khi phân vân:** component càng nhiều trạng thái tương
 tác/logic ẩn (sort, filter, keyboard nav phức tạp, a11y nhiều quy tắc) →
@@ -35,7 +79,7 @@ không đoán anatomy từ tên.
 
 > Component PrimeNG (Table/Chart/input phức tạp, xem §Phạm vi áp dụng ở
 > trên) đã có sẵn `:hover`/`:focus-visible`/`:disabled`/a11y chuẩn — mục
-> này chỉ áp dụng cho 9 component **giữ hand-rolled**.
+> này chỉ áp dụng cho nhóm **giữ hand-rolled** (dòng cuối bảng trên).
 
 `COMPONENTS.md` tự ghi nhận: prototype gốc **không có** `:hover`/`:focus`/
 `:disabled` custom cho gần như mọi component (chỉ có đúng 1 rule
@@ -63,6 +107,8 @@ sửa spec trước (thêm vào `Components/Button.md`, báo cáo), rồi mới 
 
 ## Vị trí trong cây thư mục
 
+Component Angular dùng chung — mỗi cái một thư mục:
+
 ```
 shared/components/<name>/
 ├── <name>.ts          # standalone, input()/output(), không inject service data
@@ -70,11 +116,41 @@ shared/components/<name>/
 └── <name>.scss        # dùng token, không hex trần (xem 04-design-token-system.md)
 ```
 
-Ngoại lệ đã ghi nhận (audit trước): component "app-shell" (`sidebar`,
-`topbar`, `toast`) được phép inject service hạ tầng UI singleton
-(`SidebarStateService`, `NotificationService`) dù nằm trong `components/` —
-đây là ngoại lệ tường minh cho lớp vỏ app, **không** áp dụng cho component
-hiển thị dữ liệu nghiệp vụ.
+Thứ **chỉ có style, không có hành vi** (`.btn`, `.card`, `.badge`, `.input`, `.notice`,
+`.delta`) thì **không** tạo thư mục — nó là lớp CSS toàn cục trong `src/FE/src/styles.scss`.
+Xem cảnh báo ở §Phạm vi áp dụng, kèm lệnh kiểm tên nào có thật.
+
+**Ngoại lệ inject — cập nhật 2026-09-06.** Component "app-shell" được phép inject service hạ
+tầng UI singleton dù nằm trong `components/`; đây là ngoại lệ tường minh cho lớp vỏ app,
+**không** áp dụng cho component hiển thị dữ liệu nghiệp vụ. Đọc danh sách thật bằng lệnh thay
+vì tin bảng chép tay (`.claude/CLAUDE.md` §6):
+
+> 📖 Ranh giới này **đã có máy cưỡng chế từ 2026-09-08** (cổng G4). Ngoại lệ ở đây được cổng
+> đọc theo hai trục rời nhau, và mở rộng nó không phải việc sửa một dòng FAIL — đọc
+> [`trien-khai/05-gate.md`](trien-khai/05-gate.md) §G4 trước khi thêm bất cứ tên nào.
+
+```bash
+grep -rn "inject(" src/FE/src/app/shared/components/*/*.ts | grep -v spec
+```
+
+🔄 LẬT 2026-09-06 — bản trước liệt đúng ba cái (`sidebar`, `topbar`, `toast`) và gọi tên
+service là **`NotificationService`**. Cả hai đều sai với code hôm nay: service thật tên
+`ToastService` (`src/FE/src/app/core/toast/toast.service.ts`) — chép tên cũ ⇒ lỗi biên dịch —
+và số nơi inject đã nhiều hơn ba. Điểm cần giữ nguyên là **ranh giới**, không phải danh sách.
+
+🔄 LẬT 2026-09-08 — câu minh hoạ cho ranh giới đó **nêu sai component**. Bản trước viết
+*"`data-grid` cố ý không inject `LanguageService` mà nhận `localeId` qua `input()`"*.
+`data-grid` **không có** input `localeId` nào (đối chiếu 2026-09-08 — input của nó là
+`loading` / `totalCount` / `page` / `pageSize`); chỗ thật sự nhận `localeId` là
+`platform/quan-tri-nguoi-dung/components/user-grid-table/user-grid-table.ts`, đúng nơi có
+`DatePipe` cần locale. Ranh giới thì **không đổi** và vẫn là điều cần nhớ: component trong
+`components/` nhận locale qua `input()` chứ không `inject(LanguageService)` — lách chỗ đó từng
+làm 37 test đỏ vì `LanguageService` đòi token `CORE_I18N` mà spec màn nghiệp vụ không cấp.
+Kiểm bằng lệnh, **PASS = chỉ trúng `user-grid-table.ts`**:
+
+```bash
+grep -rn "localeId = input" src/FE/src/app --include=*.ts
+```
 
 ## Test trực quan
 
@@ -112,6 +188,9 @@ npx source-map-explorer "dist/*/browser/*.js" --html dist/bundle-report.html
 
 ## Tab order xuyên nhiều component — "5 trạng thái" ở trên là mức component, đây là mức trang
 
+> Đây là **phần a11y thuộc chủ đề component** — file chủ giữ nguyên ở đây. Điểm
+> vào chung cho a11y: [15-accessibility.md](15-accessibility.md).
+
 > Bổ sung 2026-08-24, đối chiếu thực hành ngành cho hệ thống tầm trung:
 > bảng "5 trạng thái bắt buộc" ở trên đúng nhưng kiểm **từng component
 > riêng lẻ** — `:focus-visible` của 1 `Button` không nói được gì về việc
@@ -144,10 +223,14 @@ Quy tắc bắt buộc, áp cho mọi trang có ≥2 component tương tác:
   chỗ — đây là tổ hợp cụ thể hay vỡ ở hệ thống nhiều dialog, không phải lý
   thuyết.
 - Nếu 1 component hand-rolled mới **thật sự** cần tự bẫy focus (không dùng
-  `<dialog>` gốc) → dùng `cdkTrapFocus` (`@angular/cdk/a11y`) thay vì tự
-  viết — `@angular/cdk` đã là dependency của dự án (dùng cho
-  `CdkVirtualScrollViewport`, xem [13-performance.md](13-performance.md)
-  §3), `a11y` nằm cùng package, không phải thêm phụ thuộc mới:
+  `<dialog>` gốc) → dùng `cdkTrapFocus` (`@angular/cdk/a11y`) thay vì tự viết.
+
+  🔄 LẬT 2026-09-06: bản trước nói `@angular/cdk` *"đã là dependency của dự án (dùng cho
+  `CdkVirtualScrollViewport`)"*. **Chưa hề cài** — `grep -rn "@angular/cdk" src/FE/package.json
+  src/FE/src` cho 0 dòng, và `CdkVirtualScrollViewport` ở
+  [13-performance.md](13-performance.md) §3 cũng là đích đến chưa thi công. Nghĩa là dùng
+  `cdkTrapFocus` **có** thêm một phụ thuộc mới; cân nhắc điều đó trước, đừng tin câu "miễn phí"
+  của bản cũ:
 
 ```html
 <!-- chỉ dùng khi KHÔNG có <dialog>/p-dialog gốc để bẫy focus sẵn -->
@@ -185,8 +268,8 @@ it('không có vi phạm a11y cấu trúc (axe-core)', async () => {
 });
 ```
 
-- **Phạm vi: 9 component hand-rolled** ở §Phạm vi áp dụng trên — đây đúng
-  nhóm không có a11y có sẵn từ thư viện. Không chạy `axe-core` lên component
+- **Phạm vi: nhóm hand-rolled** ở §Phạm vi áp dụng trên — đây đúng
+  nhóm không có a11y có sẵn từ thư viện. (🔄 LẬT 2026-09-06: bỏ con số "9", §6.) Không chạy `axe-core` lên component
   PrimeNG: thư viện tự chịu trách nhiệm a11y của chính nó (đây cũng là 1 lý
   do đã chọn PrimeNG cho input phức tạp, xem bảng quyết định trên).
 - **Giới hạn phải biết:** `axe-core` bắt được vi phạm **cấu trúc/tĩnh**

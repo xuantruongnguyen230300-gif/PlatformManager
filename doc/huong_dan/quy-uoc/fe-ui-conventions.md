@@ -1,3 +1,9 @@
+---
+kind: luat
+scope: core
+verified: 2026-09-06
+---
+
 # UI Conventions — src/FE
 
 ## Angular 20 — bắt buộc cho code mới
@@ -48,25 +54,74 @@ if (isPlatformBrowser(inject(PLATFORM_ID))) {
   style toàn cục (`src/FE/src/styles.scss` sau khi scaffold) — **không hardcode
   hex/px** khi token tương ứng đã tồn tại.
 - Nếu chưa có token cho giá trị cần dùng → báo cáo, đừng tự phát minh token
-  mới một cách ngầm định. Một khi `doc/Design/` đã chạy pipeline tới stage 3
-  (`/design-extract-tokens`), token ở đó là nguồn tham chiếu.
+  mới một cách ngầm định.
+- **Nguồn token là `doc/Design/Frontend/PlatformManager/Tokens/`** (chốt
+  2026-08-27), `styles.scss` đuổi theo — xem
+  [`../wiki-core/fe/04-design-token-system.md`](../wiki-core/fe/04-design-token-system.md)
+  §Chiều. Chiều đó không đổi. Nhưng **đừng chép trạng thái "code đi sau ở mấy token" vào đây**
+  (`.claude/CLAUDE.md` §6) — đối chiếu bằng lệnh:
+
+  ```bash
+  grep -h -- '--brand:' src/FE/src/styles.scss
+  grep -h 'brand:'      src/FE/src/app/app.config.ts
+  grep -h 'theme-color' src/FE/src/index.html
+  # PASS: cả ba in ra cùng MỘT mã hex
+  ```
+
+  🔄 LẬT 2026-09-06: bản trước ghi *"Hôm nay code **đang đi sau** ở 2 token màu"*. Không còn
+  đúng — hai token đó (`--warn`, `--bad`) đã vào code từ 2026-08-28 và vẫn khớp hôm nay. Câu
+  cũ còn kèm *"đừng lấy giá trị từ `styles.scss` làm chuẩn"*, đọc như thể `styles.scss` đang
+  hỏng; thứ đáng nói là **thứ tự sửa** (`Tokens/*` trước, code sau), không phải một con số nợ.
 
 ## i18n
 
-**Đã CHỐT (2026-08-15):** dùng `@angular/localize` — built-in chính chủ
-Angular, không thêm dependency ngoài. Đánh đổi đã chấp nhận: đổi ngôn ngữ
-cần rebuild theo locale (compile-time), không đổi runtime mà không tải lại
-trang — chấp nhận được vì PlatformManager chưa có yêu cầu "đổi ngôn ngữ
-live không reload". Nếu phát sinh yêu cầu đó sau này, cân nhắc thêm
-`ngx-translate` cho đúng phần cần runtime-switch, không thay thế toàn bộ
-`@angular/localize` đã dùng.
+**File chủ: [`../wiki-core/fe/08-i18n.md`](../wiki-core/fe/08-i18n.md)** — quyết
+định đã chốt, cú pháp đánh dấu chuỗi, ranh giới "chuỗi FE tự viết" vs "chuỗi BE
+trả về", và các bước bật đa-locale. Đọc file đó trước khi viết chuỗi hiển thị
+mới; nội dung không lặp lại ở đây.
 
-Chuỗi hiển thị đánh dấu bằng `i18n` attribute (template) hoặc `$localize`
-tagged template (code), build riêng theo locale qua `angular.json`
-`i18n.locales`. Chưa cần bật build đa-locale ngay khi core mới dựng — nhưng
-viết chuỗi mới **từ giờ nên đã dùng `$localize`/`i18n` attribute** thay vì
-string literal trần, để không phải quét lại toàn bộ codebase khi thật sự
-bật i18n.
+✅ **Cơ chế đã chạy (đối chiếu 2026-09-06).** Phạm vi vi + en (chốt 2026-08-27), dịch lúc
+**chạy** (chốt 2026-09-03) — thư viện đã cài, bảng dịch đã có, nút đổi ngôn ngữ đã có, và cổng
+**G12** chặn chữ tiếng Việt lọt vào template (`bash scripts/fe-gate.sh`). Cú pháp đánh dấu
+chuỗi chỉ có một nơi: file chủ ở trên; **đừng** chép nó xuống đây (§5).
+
+Điều mục này **giữ nguyên hiệu lực**, vì nó là quy ước viết UI chứ không phải
+chi tiết thư viện:
+
+- Chuỗi hiển thị mới phải **bọc** — mỗi câu là một chuỗi trọn vẹn, có
+  chỗ cắm tham số. Nối chuỗi bằng `+`, hoặc tự chọn dạng số ít/số nhiều bằng
+  `if`, sẽ **chạy đúng khi chỉ có tiếng Việt** và chỉ vỡ lúc bật `en` — muộn
+  nhất và đông người nhìn nhất. Cách viết đúng nằm ở file chủ.
+- Xây thêm màn hình chưa bọc là tăng khối lượng rà, và khối lượng đó chỉ tăng.
+
+🔄 LẬT 2026-09-06 — **đoạn ở đây trước kia ra lệnh ngược lại.** Nguyên văn: *"**Chưa bọc chuỗi
+nào ngay bây giờ** khi thư viện chưa cài … Đây là nợ có chủ đích … nó tan cùng lượt cài thư
+viện."* Thư viện **đã cài** (`@ngx-translate/core` v18), nợ đó **đã tan**, và cổng G12 nay đỏ
+lên với đúng những chuỗi mà câu cũ cho phép để trần. Ai còn đọc câu cũ sẽ viết màn hình mới
+không bọc rồi không hiểu vì sao cổng đỏ.
+
+Luật hiện hành: **mọi câu người dùng đọc đến từ `src/FE/public/i18n/<code>.json`.** Kể cả
+`title` của route — nó là **khoá dịch**, không phải câu; viết thẳng tiếng Việt vào đó thì tiêu
+đề tab và tiêu đề topbar là hai chỗ duy nhất trên màn hình không đổi khi bấm sang English, và
+không có gì báo.
+
+## In ấn — quy ước `.no-print` đang tồn tại, nay được ghi lại
+
+> Ghi nhận 2026-08-27: quy ước này đã chạy trong code từ trước mà **không tài
+> liệu nào định nghĩa** — đúng dạng lỗi đã tìm ra với `src/environments/`. Người
+> viết màn hình tiếp theo hoặc bỏ sót, hoặc phát minh lại một cách khác.
+
+Màn hình có nội dung người dùng cần in (báo cáo, danh sách) phải in ra được
+**bản dùng được**, không phải ảnh chụp nguyên giao diện.
+
+- Gắn `.no-print` cho phần tử chỉ có nghĩa khi tương tác: sidebar, topbar,
+  toolbar lọc, nút hành động, toast, phân trang.
+- Quy tắc `@media print` đặt tập trung ở `styles.scss`, không rải vào từng
+  component — nếu không, mỗi màn hình sẽ in ra một kiểu.
+- Bảng dài: để trình duyệt ngắt trang tự nhiên, đừng ép chiều cao cố định.
+
+Kiểm: `grep -rl "no-print" src/FE/src` — mỗi file trả về phải nằm trong nhóm
+"chỉ có nghĩa khi tương tác" ở trên.
 
 ## Testing
 

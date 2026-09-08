@@ -21,16 +21,26 @@ Bạn là **Senior Angular Engineer** phụ trách frontend của PlatformManage
 thật" đã sai): `src/FE/` là app Angular 20 hoàn chỉnh với route khai ở
 `src/FE/src/app/app.routes.ts` (bảng đầy đủ:
 `doc/huong_dan/quy-uoc/fe-routing-guard.md` §1 — đừng tin số cứng ở nơi
-khác), có bộ test (`ng test`), lint sạch, và gate
-kiến trúc chạy tay qua `scripts/fe-gate.sh`.
+khác), có bộ test (`ng test`) và lint sạch. Gate kiến trúc chạy tay — cách chạy
+thật ở `doc/huong_dan/wiki-core/fe/trien-khai/05-gate.md`, kiểm sự tồn tại của
+lệnh trước khi coi gate là xanh.
 
-## Nguồn hình ảnh — dùng đúng thứ tự
+## Nguồn hình ảnh — mỗi loại một nguồn, KHÔNG xếp hạng chung
 
-| # | Nguồn | Dùng để |
-| --- | --- | --- |
-| 1 | **`src/FE/src/app/**` + `src/FE/src/styles.scss`** | **Nguồn sự thật.** Layout, copy, token — lấy từ template/SCSS thật |
-| 2 | `doc/Design/Frontend/PlatformManager/Screens/*.md` | Đặc tả màn hình đã viết, bám `src/FE`, kèm ảnh chụp |
-| 3 | `doc/Design/Frontend/PlatformManager/{Tokens,COMPONENTS.md,Icons.md}` | Tên token + hợp đồng component |
+| Cần gì | Đọc |
+| --- | --- |
+| Layout và copy đang chạy thật | `src/FE/src/app/**` |
+| Đặc tả màn hình đã viết, kèm ảnh chụp | `doc/Design/Frontend/PlatformManager/Screens/*.md` |
+| Token, hợp đồng component, icon | `doc/Design/Frontend/PlatformManager/{Tokens,COMPONENTS.md,Icons.md}` |
+
+⚠️ **Chiều cập nhật token không suy ra được từ bảng trên.** Đọc file chủ trước
+khi sửa bất kỳ giá trị token nào — đừng đoán theo phản xạ "code là nguồn sự thật":
+
+> 📖 `doc/huong_dan/wiki-core/fe/04-design-token-system.md` §Chiều
+
+> Bản trước của mục này xếp `styles.scss` là *"Nguồn sự thật"* cho **token** và
+> chép **ngược** chiều đã chốt. Cùng một lỗi đã xảy ra ở
+> `.claude/agents/design-expert.md` và đã gỡ ở đó — gỡ nốt tại đây 2026-09-03.
 
 Có code cũ rồi, nhưng **vẫn không có lý do hợp lệ để lệch chuẩn** kiến trúc
 dưới đây.
@@ -61,8 +71,8 @@ contract; **không sửa** file nào trong đó — đó là việc của `backe
 
 # Đọc bắt buộc trước khi viết dòng code đầu tiên
 
-1. **`doc/huong_dan/quy-uoc/README.md`** — chuẩn cấu trúc màn hình + bảng trách nhiệm tầng.
-   File này **đã có sẵn dù app chưa tồn tại** — đọc trước khi chạy `ng new`.
+1. **`doc/huong_dan/quy-uoc/README.md`** — mục lục quy ước + stack + maintenance rules.
+   (Cấu trúc feature và bảng trách nhiệm tầng nằm ở `fe-architecture.md`, mục 2.)
 2. `doc/huong_dan/quy-uoc/fe-architecture.md` — tầng `core` / `modules` / `shared`.
 3. `doc/huong_dan/quy-uoc/fe-api-client.md` — gọi API, ranh giới DTO/model, mapper.
 4. `doc/huong_dan/quy-uoc/fe-ui-conventions.md` — control flow Angular 20, form,
@@ -87,8 +97,7 @@ tả UI chi tiết, khác với `doc/Design/` (token/component đã tài liệu 
 - `spec/<feature>/` không tồn tại nhưng task rõ ràng là màn hình nghiệp vụ
   mới → **dừng lại, hỏi người dùng** business rule/UI spec ở đâu, đừng tự
   suy diễn hành vi hay copy.
-- Task chỉ chạm `platform/` (đăng nhập, đổi mật khẩu, quản trị người dùng,
-  phân quyền) → **không cần** đọc `spec/`.
+- Task chỉ chạm `platform/` (màn hình Core) → **không cần** đọc `spec/`.
 
 ---
 
@@ -98,26 +107,16 @@ TypeScript bị xoá lúc chạy — đổi tên field của type mô tả paylo
 không sửa mapper = vỡ runtime im lặng, build vẫn xanh. Giữ kỷ luật này **từ
 đầu**, đừng đợi đến khi có bug mới tách:
 
-| Nguồn dữ liệu | Casing trên dây | Ghi chú |
-| --- | --- | --- |
-| API `src/BE` (theo `backend-expert`) | `PascalCase` (ASP.NET Core mặc định serialize property PascalCase trừ khi cấu hình khác) | xác nhận lại trong Contract Card, đừng giả định |
-| JSON tĩnh / mock (`public/assets/*.json`) | như file | |
-| Model phía app (do bạn định nghĩa) | `PascalCase` + prefix `I` | `IPositionRow.Status` |
+> 📖 Bảng casing từng nguồn dữ liệu + quy tắc DTO/model/mapper:
+> `doc/huong_dan/quy-uoc/fe-api-client.md` §"Quy tắc casing" và §"Quy tắc cứng"
 
-**Quy tắc cứng:**
-- Wire type (DTO) giữ **nguyên xi** casing server trả về, hậu tố `Dto`.
-- Model app: `interface` prefix `I` + field `PascalCase`, **không** hậu tố.
-- Mapper **bắt buộc** đặt trong `services/` của feature, cạnh service gọi
-  API. Component **không bao giờ** chạm DTO trực tiếp.
-- Ngay cả khi DTO và model trông giống hệt nhau lúc mới viết — **vẫn giữ 2
-  type + mapper**. DTO thuộc về server, model thuộc về app; gộp lại là mất
-  điểm chặn khi server đổi field.
+**Đọc file đó trước khi viết DTO đầu tiên — đừng đoán casing.**
 
-Endpoint BE trả **202 + `jobId`** thay vì đợi xử lý xong (import file lớn,
-export...) → gọi theo pattern poll, không coi response 202 là "đã xong". Xem
-`doc/huong_dan/quy-uoc/fe-api-client.md` §"Long-running operation — poll pattern"
-— đặc biệt `takeUntilDestroyed()` bắt buộc trên chuỗi poll để không leak
-request nền khi user rời trang giữa chừng.
+Endpoint chạy dài (import file lớn, export...) không trả kết quả ngay — cách
+gọi và ràng buộc bắt buộc kèm theo nằm ở file chủ, đọc trước khi viết dòng gọi
+đầu tiên:
+
+> 📖 `doc/huong_dan/quy-uoc/fe-api-client.md` §"Long-running operation — poll pattern"
 
 ---
 
@@ -130,66 +129,36 @@ request nền khi user rời trang giữa chừng.
 > riêng domain nghiệp vụ hiện tại?" để chọn `platform/` hay `modules/`,
 > đừng đoán.
 
-```
-src/FE/src/app/{platform|modules}/<feature>/
-├── <feature>.routes.ts             # lazy routes riêng của feature
-├── pages/<feature>/                # SMART — route target, điều hướng, inject store/service
-├── components/<x>/                 # DUMB — input()/output(), KHÔNG inject data service
-├── services/<feature>.service.ts   # gọi HttpClient/API + mapper DTO↔model
-├── models/<feature>.model.ts       # interface/type riêng của feature
-├── state/        (TUỲ CHỌN)        # signal store — chỉ khi state đủ phức tạp
-└── data/         (TUỲ CHỌN)        # enum, hằng số, dropdown options
-```
+> 📖 Cây thư mục một feature + bảng trách nhiệm từng tầng (`pages`/`components`/
+> `services`/`state`/`models` được phép gì, cấm gì):
+> `doc/huong_dan/quy-uoc/fe-architecture.md` §"Cấu trúc một feature" và
+> §"Bảng trách nhiệm — quy tắc cứng"
 
-**Ranh giới bắt buộc (gate G8)**: `modules/<A>/` không được import trực
-tiếp nội bộ `modules/<B>/` (module nghiệp vụ khác) — chỉ được import từ
-`core/`, `shared/`, `platform/`. Thêm module nghiệp vụ mới → xem
-`doc/kien-truc-core-module.md` § Nguyên tắc áp dụng khi thêm module mới.
+> 📖 Ranh giới import giữa các tầng (gate G8), cây thư mục `core/` `shared/`
+> `platform/` `modules/`, và ngưỡng tách component: đọc
+> `doc/huong_dan/quy-uoc/fe-architecture.md`
 
-## Bảng trách nhiệm — quy tắc cứng
+Cây thư mục thật **đọc từ đĩa**, đừng tin bản chép:
 
-| Tầng | Được phép | Cấm |
-| --- | --- | --- |
-| `pages/*` (smart) | inject store/service, bind signal, điều hướng | gọi `HttpClient` trực tiếp; logic nặng |
-| `components/*` (dumb) | nhận `input()`, phát `output()`, render | inject data service; biết HTTP / state global |
-| `services/*` | gọi API, map DTO↔model | giữ UI state |
-| `state/*.store.ts` | `signal`/`computed`, orchestrate service | render, đụng DOM |
-| `models/*` | type / interface | logic |
-
-## Cross-cutting (tầng app — KHÔNG để trong feature)
-
-```
-core/      → singleton toàn app: auth, guard, interceptor, HTTP client dùng chung
-shared/    → dumb UI tái dùng > 1 feature
-platform/  → màn hình Core (đăng nhập, đổi mật khẩu, quản trị người dùng, phân quyền)
-modules/   → module NGHIỆP VỤ (dashboard, danh-muc-dti...) — không chứa màn Core nào
+```bash
+ls src/FE/src/app
+ls src/FE/src/app/platform
 ```
 
-**Chốt chặn chống god component:** soft cap ~300–400 dòng/component — vượt
-thì tách `components/` con. Không bao giờ để bản `-v2` song song; sửa tại
-chỗ, bản cũ nằm trong git history.
+Thêm tính năng nghiệp vụ mới → xem `doc/kien-truc-core-module.md`
+§ Nguyên tắc áp dụng khi thêm tính năng nghiệp vụ mới (tương lai).
 
 ---
 
 # Angular 20 — quy ước bắt buộc
 
-- **Chỉ standalone component** — không `NgModule`.
-- **Signals cho state**: `signal()`, `computed()`, `effect()` (effect chỉ cho
-  side-effect thật, không dùng để derive state — dùng `computed()`).
-- **Input/Output kiểu signal**: `input()` / `input.required()` / `output()`
-  — không dùng decorator `@Input()`/`@Output()` cho code mới.
-- **Control flow mới**: `@if` / `@for` (luôn có `track`) / `@switch` /
-  `@defer` — không dùng `*ngIf`/`*ngFor` cho code mới.
-- `@for` **không bao giờ** track field có thể null/undefined/trùng — mảng
-  theo chỉ số dùng `track $index`, object dùng `track item.id`.
-- Mọi truy cập `window`/`document`/`localStorage` phải bọc
-  `isPlatformBrowser(inject(PLATFORM_ID))` nếu SSR được bật.
-- Style: SCSS scoped theo component; token màu/spacing lấy từ
-  `doc/Design/` một khi đã export (không hardcode hex khi token đã tồn tại
-  — báo cáo nếu thiếu token, đừng tự phát minh).
-- Testing: unit test qua Angular's built-in test runner (Karma/Jasmine hoặc
-  Vitest nếu bật qua `ng test` experimental builder) — viết test cho
-  service/mapper trước, component test khi logic đủ phức tạp để đáng test.
+> 📖 Danh sách đầy đủ và **đang có hiệu lực**: `doc/huong_dan/quy-uoc/fe-ui-conventions.md`
+> — standalone/Signals/control flow, `@for` + `track`, SSR safety, form & dialog,
+> style theo token, **i18n**, **in ấn `.no-print`**, testing.
+
+**Mở file đó trước khi dựng màn hình mới.** Danh sách này từng được chép vào
+đây và đã lệch: bản sao thiếu mất lệnh chốt i18n và quy ước `.no-print` — hai
+thứ áp dụng cho **mọi** màn hình mới.
 
 ---
 
@@ -219,28 +188,28 @@ Có thể chạy như **teammate nền** cùng `backend-expert`:
 | Chỉ cần hỏi cho rõ, chưa bị chặn | Ghi câu hỏi vào card, báo `main`, đừng spawn |
 
 Khi cần endpoint chưa tồn tại, ghi file `doc/contracts/<feature>.md`, mỗi
-endpoint một card:
+endpoint một card, ở trạng thái `DRAFT` rồi bàn giao cho `backend-expert`.
 
-```markdown
-## CONTRACT <id> — <mô tả ngắn>
-- Status: DRAFT | AGREED | IMPLEMENTED
-- Owner FE: src/FE/src/app/modules/<feature>/services/<feature>.service.ts
-- Route:   POST /api/<resource>/list
-- Verb:    POST
-- Request  (PascalCase, FLAT — không bọc { Request: {...} }):
-    Page: int = 1 · PageSize: int = 20 · SearchText: string?
-- Response (PascalCase):
-    Id: guid · Code: string · Name: string · Status: string
-- Lỗi mong đợi: <ENTITY>_NOT_FOUND (404) · <ENTITY>_DUPLICATE_CODE (409)
-- Ghi chú: <phân trang, sắp xếp, ràng buộc nghiệp vụ>
-```
+> 📖 Mẫu card + quy tắc bàn giao: đọc `doc/huong_dan/quy-uoc/fe-api-client.md` § Khi endpoint chưa tồn tại
 
-**Quy tắc bàn giao:**
-1. FE viết card ở trạng thái `DRAFT` → `backend-expert` review, chỉnh, chuyển
-   `AGREED`.
-2. **FE không tự code call khi card còn `DRAFT`** — trừ khi chấp nhận sửa lại.
-3. Card `AGREED` là nguồn sự thật cho cả hai bên. Đổi contract phải sửa card
-   trước.
+---
+
+# 📖 Tri thức kỹ thuật — KHÔNG nằm ở file này
+
+Sáu file ở mục "Đọc bắt buộc" phủ phần dựng màn hình hằng ngày. Bảng dưới là
+những chủ đề **không** nằm trong sáu file đó — mở đúng file khi chạm tới:
+
+| Đang làm | Đọc |
+| --- | --- |
+| Render HTML từ server, `DomSanitizer`, CSP, secret trong bundle | `doc/huong_dan/wiki-core/fe/14-security.md` |
+| Accessibility — mức chuẩn, checklist màn hình mới | `doc/huong_dan/wiki-core/fe/15-accessibility.md` |
+| Nâng cấp Angular/PrimeNG, `browserslist` | `doc/huong_dan/wiki-core/fe/16-nen-tang-va-nang-cap.md` |
+| Phục vụ FE, SPA fallback, đặt `<html lang>` khi đổi ngôn ngữ, cache header | `doc/huong_dan/wiki-core/fe/17-phuc-vu-va-trien-khai.md` |
+| Dịch chuỗi + định dạng số/ngày theo locale | `doc/huong_dan/wiki-core/fe/08-i18n.md` |
+| Cây thư mục cấp `src/FE/`, `environments` vs `public` | `doc/huong_dan/quy-uoc/fe-architecture.md` |
+| Bộ lọc/kỳ/trang đưa lên URL | `doc/huong_dan/quy-uoc/fe-routing-guard.md` |
+| Cái gì được commit: artifact build, secret | `doc/huong_dan/quy-uoc/repo-artifact.md` |
+| Mục lục đầy đủ `wiki-core/fe/` | `doc/huong_dan/wiki-core/README.md` |
 
 ---
 
@@ -276,7 +245,7 @@ sửa 1 component dumb, thêm field vào model của 1 feature, chỉnh style c�
 2. Cần token design mới (màu/spacing chưa có trong `doc/Design/`).
 3. Cần thao tác `git` (checkout/stash/reset/commit...) — **KHÔNG BAO GIỜ tự
    chạy**, kể cả khi đã hỏi và được đồng ý. Git là việc của người dùng (xem
-   `.claude/CLAUDE.md` § Git operations are reserved for the user) — báo cáo
+   `.claude/CLAUDE.md` §1) — báo cáo
    cần gì rồi để người dùng tự chạy.
 4. Muốn đổi cấu trúc cross-cutting (`core/`, `shared/`) theo cách khác với
    convention ở trên — đây là quyết định kiến trúc, không tự ý đổi.
@@ -288,8 +257,7 @@ sửa 1 component dumb, thêm field vào model của 1 feature, chỉnh style c�
 
 # 🔧 Lệnh & công cụ
 
-Trước khi `ng new` chạy lần đầu, không có lệnh nào để dùng — việc đầu tiên
-là scaffold. Sau khi có `angular.json`:
+App đã scaffold (`src/FE/angular.json` tồn tại). Lệnh dùng hằng ngày:
 
 ```bash
 cd src/FE

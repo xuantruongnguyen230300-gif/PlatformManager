@@ -11,10 +11,11 @@ namespace PlatformManager.Core.UnitTests.Users;
 /// NHÓM A — luồng QUYẾT ĐỊNH phân quyền của CreateUserHandler/UpdateUserHandler, KHÔNG cần
 /// Postgres (<see cref="IUserAdminService"/> bị thay bằng substitute).
 ///
-/// Đóng Finding 1 của audit doc/huong_dan/wiki-core/audit/2026-08-19-be-fe.md (OWASP A01 —
-/// Broken Access Control): trước đây Admin gọi thẳng API là tự cấp được role SuperAdmin, và
-/// nhờ break-glass ở RequirePermissionFilter thì role đó đi qua MỌI [RequirePermission].
-/// Chặn duy nhất khi đó nằm ở model phía FE, tức không chặn gì cả với curl.
+/// Đóng lỗ hổng leo thang đặc quyền (OWASP A01 — Broken Access Control): trước đây Admin gọi
+/// thẳng API là tự cấp được role SuperAdmin, và nhờ break-glass ở RequirePermissionFilter thì
+/// role đó đi qua MỌI [RequirePermission]. Chặn duy nhất khi đó nằm ở model phía FE, tức không
+/// chặn gì cả với curl. (Bản trước trỏ tới một file trong thư mục audit/ — CẢ thư mục đó đã xoá,
+/// không có đích thay thế, nên bỏ tham chiếu thay vì đoán.)
 ///
 /// Mỗi test chặn đều khẳng định HAI thứ: (a) mã lỗi 403 đúng loại, (b) tầng ghi
 /// (CreateAsync/UpdateAsync) KHÔNG HỀ được gọi — (b) mới chứng minh chặn xảy ra TRƯỚC khi
@@ -120,7 +121,7 @@ public class SuperAdminRoleEscalationTests
     {
         var service = Substitute.For<IUserAdminService>();
         service.GetByIdAsync(TargetId, Arg.Any<CancellationToken>()).Returns(TargetWith(Roles.User));
-        service.UpdateAsync(default, default, default!, default!, default).ReturnsForAnyArgs(true);
+        service.UpdateAsync(default, default, default!, default!, default).ReturnsForAnyArgs(UpdateUserOutcome.Success());
         var handler = new UpdateUserHandler(service, Caller(Roles.SuperAdmin));
 
         var result = await handler.Handle(
@@ -156,7 +157,7 @@ public class SuperAdminRoleEscalationTests
         var service = Substitute.For<IUserAdminService>();
         service.GetByIdAsync(TargetId, Arg.Any<CancellationToken>())
             .Returns(TargetWith(Roles.SuperAdmin, Roles.Admin));
-        service.UpdateAsync(default, default, default!, default!, default).ReturnsForAnyArgs(true);
+        service.UpdateAsync(default, default, default!, default!, default).ReturnsForAnyArgs(UpdateUserOutcome.Success());
         var handler = new UpdateUserHandler(service, Caller(Roles.SuperAdmin));
 
         var result = await handler.Handle(
@@ -175,7 +176,7 @@ public class SuperAdminRoleEscalationTests
         var service = Substitute.For<IUserAdminService>();
         service.GetByIdAsync(TargetId, Arg.Any<CancellationToken>())
             .Returns(TargetWith(Roles.SuperAdmin, Roles.Admin));
-        service.UpdateAsync(default, default, default!, default!, default).ReturnsForAnyArgs(true);
+        service.UpdateAsync(default, default, default!, default!, default).ReturnsForAnyArgs(UpdateUserOutcome.Success());
         var handler = new UpdateUserHandler(service, Caller(Roles.Admin));
 
         var result = await handler.Handle(
@@ -195,7 +196,7 @@ public class SuperAdminRoleEscalationTests
     {
         var service = Substitute.For<IUserAdminService>();
         service.GetByIdAsync(TargetId, Arg.Any<CancellationToken>()).Returns(TargetWith(Roles.User));
-        service.UpdateAsync(default, default, default!, default!, default).ReturnsForAnyArgs(true);
+        service.UpdateAsync(default, default, default!, default!, default).ReturnsForAnyArgs(UpdateUserOutcome.Success());
         var handler = new UpdateUserHandler(service, Caller(Roles.Admin));
 
         var result = await handler.Handle(

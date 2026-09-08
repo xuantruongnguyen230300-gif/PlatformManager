@@ -1,19 +1,181 @@
 <div class="card">
-  <div class="title">
-    <h2>Phân quyền màn hình</h2>
-    <button type="button" class="btn primary" [disabled]="saving() || loading()" (click)="onSave()">
-      {{ saving() ? 'Đang lưu…' : 'Lưu thay đổi' }}
+  <!-- Bộ chuyển chế độ xem dùng lại `.segmented`/`.seg-btn` toàn cục (COMPONENTS.md →
+       SegmentedControl) — KHÔNG dựng thanh tab bằng `.btn`. Dùng `role="group"` + `aria-pressed`
+       chứ không phải `role="tablist"`: hai lựa chọn này là 2 chế độ xem loại trừ nhau, và nhóm
+       nút bật/tắt không đòi hỏi cơ chế roving tabindex + phím mũi tên mà mẫu ARIA tab bắt buộc
+       phải có mới đúng — khai `role="tab"` rồi thiếu bàn phím còn tệ hơn không khai. -->
+  <div
+    class="segmented tabs"
+    role="group"
+    [attr.aria-label]="'phan-quyen.action.tabGroupLabel' | translate"
+  >
+    <button
+      type="button"
+      class="seg-btn"
+      [class.active]="tab() === 'menu'"
+      [attr.aria-pressed]="tab() === 'menu'"
+      (click)="onSelectTab('menu')"
+    >
+      {{ 'phan-quyen.action.tabMenu' | translate }}
+      <!-- Chữ THẬT chứ không phải chấm tròn + text ẩn: dấu hiệu "chưa lưu" phải đến được cả
+           người dùng bàn phím/trình đọc màn hình LẪN người nhìn. Chấm tròn + `.sr-only` giấu
+           tín hiệu khỏi đúng nhóm người đang nhìn màn hình — ngược chiều cần thiết.
+           (Sửa 2026-08-29: bản trước lý giải bằng "app chưa có tiện ích `.sr-only`" — SAI,
+           `.sr-only` có từ trước ở `src/FE/src/styles.scss`; tìm bằng
+           `grep -n '^\.sr-only' src/FE/src/styles.scss`. Nó dành cho ca NGƯỢC LẠI: khi tín
+           hiệu đã hiện ra bằng thị giác thuần tuý và cần chữ kèm cho trình đọc màn hình.) -->
+      @if (dirty()) {
+        <span class="unsaved"> • {{ 'phan-quyen.hint.unsaved' | translate }}</span>
+      }
+    </button>
+    <button
+      type="button"
+      class="seg-btn"
+      [class.active]="tab() === 'resource'"
+      [attr.aria-pressed]="tab() === 'resource'"
+      (click)="onSelectTab('resource')"
+    >
+      {{ 'phan-quyen.action.tabResource' | translate }}
+      <!-- Chữ THẬT chứ không phải chấm tròn + text ẩn: dấu hiệu "chưa lưu" phải đến được cả
+           người dùng bàn phím/trình đọc màn hình LẪN người nhìn. Chấm tròn + `.sr-only` giấu
+           tín hiệu khỏi đúng nhóm người đang nhìn màn hình — ngược chiều cần thiết.
+           (Sửa 2026-08-29: bản trước lý giải bằng "app chưa có tiện ích `.sr-only`" — SAI,
+           `.sr-only` có từ trước ở `src/FE/src/styles.scss`; tìm bằng
+           `grep -n '^\.sr-only' src/FE/src/styles.scss`. Nó dành cho ca NGƯỢC LẠI: khi tín
+           hiệu đã hiện ra bằng thị giác thuần tuý và cần chữ kèm cho trình đọc màn hình.) -->
+      @if (resourceDirty()) {
+        <span class="unsaved"> • {{ 'phan-quyen.hint.unsaved' | translate }}</span>
+      }
     </button>
   </div>
-  <p class="muted">
-    Tick chọn role được thấy màn hình tương ứng. Mục không tick role nào = mở cho mọi user đã
-    đăng nhập.
-  </p>
 
-  <app-permission-matrix
-    [rows]="rows()"
-    [roles]="roles()"
-    [loading]="loading() || saving()"
-    (permissionToggle)="onToggle($event)"
-  />
+  @if (tab() === 'menu') {
+    <section [attr.aria-label]="'phan-quyen.menuSectionLabel' | translate">
+      <div class="title">
+        <h2>{{ 'phan-quyen.menuTitle' | translate }}</h2>
+        <!-- ⚠️ `!dirty()` là phần KHÔNG được bỏ (sửa 2026-08-31): `PUT` này GHI ĐÈ TOÀN BỘ và gửi
+             đúng `rows()` đang có trong bộ nhớ. Nếu `GET` lúc mở trang hỏng thì `rows` rỗng, mà
+             nút vẫn bật ⇒ một cú bấm theo phản xạ xoá sạch ma trận menu. Khoá theo `dirty()` cắt
+             cả chuỗi đó ngay từ đầu, vì `GET` hỏng thì không thể có thay đổi nào để lưu. -->
+        <button
+          type="button"
+          class="btn primary"
+          [disabled]="saving() || loading() || !dirty()"
+          [attr.title]="dirty() ? null : ('phan-quyen.hint.nothingToSave' | translate)"
+          (click)="onSave()"
+        >
+          {{ (saving() ? 'shared.action.saving' : 'phan-quyen.action.save') | translate }}
+        </button>
+      </div>
+
+      <!-- Dải cảnh báo tranh chấp ghi — 409 `PERMISSION.VERSION_CONFLICT`, xem `onSave()`. Nó Ở
+           LẠI trên màn hình cho tới khi tải lại, khác toast của `httpErrorInterceptor` vốn tự tắt
+           sau vài giây và không mang theo lối đi tiếp nào. `role="alert"` vì người dùng vừa bấm
+           Lưu và đang chờ kết quả: trình đọc màn hình phải đọc ngay, không đợi họ đi tìm. -->
+      @if (conflict(); as messageKey) {
+        <p class="notice warn" role="alert">
+          <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
+          {{ messageKey | translate }}
+          <button type="button" class="btn" [disabled]="loading() || saving()" (click)="loadMatrix()">
+            {{ 'shared.action.reload' | translate }}
+          </button>
+        </p>
+      }
+
+      <p class="muted">{{ 'phan-quyen.hint.menuMatrix' | translate }}</p>
+
+      <app-permission-matrix
+        class="grid-host"
+        [rows]="rows()"
+        [roles]="roles()"
+        [loading]="loading() || saving()"
+        (permissionToggle)="onToggle($event)"
+      />
+    </section>
+  } @else {
+    <section [attr.aria-label]="'phan-quyen.resourceTitle' | translate">
+      <div class="title">
+        <h2>{{ 'phan-quyen.resourceTitle' | translate }}</h2>
+        <!-- ⚠️ `!resourceDirty()` KHÔNG được bỏ — và nay ĐỐI XỨNG với nút Lưu của tab "Theo màn
+             hình" ở trên, vốn cũng đã có `!dirty()`. Lý do vẫn nguyên: `PUT` này GHI ĐÈ TOÀN BỘ và
+             gửi đúng `resourceRows()` đang có trong bộ nhớ, nên bấm Lưu lúc bảng rỗng vì `GET`
+             hỏng là gửi một ma trận rỗng đè lên ma trận thật.
+             Lớp thứ hai nằm ở BE và mạnh hơn: payload thiếu bất kỳ `ResourceKey` nào (kể cả
+             `entries: []`) nay bị TỪ CHỐI bằng 400 ngay ở validator, trước khi chạm dữ liệu
+             (`UpdateResourcePermissionMatrixCommand.cs` — rule "phủ đủ"). Giữ CẢ HAI: lớp BE chặn
+             mọi client, lớp nút này chặn cú bấm trước khi nó rời trình duyệt nên người dùng không
+             nhận một lỗi 400 cho việc họ không hề định làm.
+             (Sửa 2026-09-01 — bản trước khẳng định ba điều nay đều SAI: rằng chỉ tab này khoá theo
+             `dirty`, rằng "BE trả 200 cho cả `entries: []`", và rằng ở PERM-1 thao tác thừa đó "vô
+             hại" — chính chú thích của nút Lưu tab kia nói ngược lại: nó xoá sạch ma trận.) -->
+        <button
+          type="button"
+          class="btn primary"
+          [disabled]="resourceSaving() || resourceLoading() || !resourceDirty()"
+          [attr.title]="resourceDirty() ? null : ('phan-quyen.hint.nothingToSave' | translate)"
+          (click)="onResourceSave()"
+        >
+          {{ (resourceSaving() ? 'shared.action.saving' : 'phan-quyen.action.save') | translate }}
+        </button>
+      </div>
+
+      <!-- Dải cảnh báo tranh chấp ghi của PERM-2 — xem chú thích cùng chỗ ở tab "Theo màn hình".
+           Signal RIÊNG (`resourceConflict`) chứ không dùng chung: hai ma trận có hai token phiên
+           bản độc lập, xung đột ở bảng này không nói gì về bảng kia. -->
+      @if (resourceConflict(); as messageKey) {
+        <p class="notice warn" role="alert">
+          <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
+          {{ messageKey | translate }}
+          <button
+            type="button"
+            class="btn"
+            [disabled]="resourceLoading() || resourceSaving()"
+            (click)="loadResourceMatrix()"
+          >
+            {{ 'shared.action.reload' | translate }}
+          </button>
+        </p>
+      }
+
+      <p class="muted">
+        {{ 'phan-quyen.hint.resourceLead' | translate }}
+        <strong>{{ 'phan-quyen.hint.resourceEmphasis' | translate }}</strong
+        >{{ 'phan-quyen.hint.resourceTail' | translate }}
+      </p>
+
+      <!-- Nói đúng sự thật hiện trạng, đừng để màn này ngụ ý nó đang điều khiển thứ gì đó. Tính
+           tới 2026-08-29, `ResourceKeys.All` phía BE chỉ còn đúng 1 key (`import.manage`) và
+           CHƯA endpoint nào mang `[RequirePermission]` — nghĩa là lưu ở đây ghi được vào bảng
+           `RolePermissions` nhưng chưa chặn/mở thao tác nào. Gỡ ghi chú này khi endpoint đầu
+           tiên gắn `[RequirePermission]`. -->
+      <p class="notice">
+        <i class="pi pi-info-circle" aria-hidden="true"></i>
+        {{ 'phan-quyen.hint.noEnforcement' | translate }}
+      </p>
+
+      <app-resource-permission-matrix
+        class="grid-host"
+        [rows]="resourceRows()"
+        [roles]="resourceRoles()"
+        [loading]="resourceLoading() || resourceSaving()"
+        (permissionToggle)="onResourceToggle($event)"
+      />
+    </section>
+  }
 </div>
+
+<!-- Hộp thoại của LỚP 1 (`canDeactivate`) — xem `canDeactivate()` trong .ts. Đặt SAU `.card` để
+     nút "Lưu thay đổi" vẫn là `.btn.primary` đầu tiên trong DOM.
+     `severity="warn"` chứ không `bad`: rời trang không phá dữ liệu đã lưu, chỉ bỏ phần chưa lưu;
+     nhưng nút xác nhận mang `.danger` vì nó là chiều mất việc đang làm. Nút Huỷ ("Ở lại") nhận
+     focus khi hộp thoại mở (xem confirm-dialog.ts), nên Enter theo phản xạ rơi vào lối an toàn. -->
+<app-confirm-dialog
+  severity="warn"
+  [title]="'phan-quyen.dialog.leaveTitle' | translate"
+  [description]="'phan-quyen.dialog.leaveDescription' | translate"
+  [confirmLabel]="'phan-quyen.dialog.leaveConfirm' | translate"
+  [cancelLabel]="'phan-quyen.dialog.leaveCancel' | translate"
+  [confirmDanger]="true"
+  (confirmed)="onLeaveConfirmed()"
+  (cancelled)="onLeaveCancelled()"
+/>

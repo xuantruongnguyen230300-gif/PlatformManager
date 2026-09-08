@@ -1,27 +1,9 @@
-.tablewrap {
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-table);
-  overflow: auto;
-  max-height: 560px;
-}
-
-input[type='checkbox'] {
-  width: 16px;
-  height: 16px;
-  cursor: pointer;
-  accent-color: var(--brand);
-}
-
-input[type='checkbox']:focus-visible {
-  outline: 2px solid var(--brand);
-  outline-offset: 2px;
-}
-
-/* Cột break-glass (`SuperAdmin`) — ô khoá: vẫn thấy rõ là đã tick, nhưng không mời gọi bấm. */
-input[type='checkbox']:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
-}
+/* Chỉ còn hai nhãn chú thích của cột break-glass — thứ riêng của ma trận tài nguyên.
+   Đã gỡ (trùng lặp với styles.scss — xem báo cáo 2026-08-29):
+     - `.tablewrap` (+ overflow/max-height 560px) → dùng `.tablewrap.scroll`, chiều cao theo token
+       `--grid-h` thay cho 560px cứng.
+     - `input[type='checkbox']`, `:focus-visible` và `:disabled` → class toàn cục `.check` đã có
+       đủ ba trạng thái, kể cả ô khoá (`cursor: not-allowed` + `opacity: .6`) của cột SuperAdmin. */
 
 /* Nhãn nhỏ dưới tên role ở header. Chỉ layout — màu/cỡ chữ lấy từ class global `.muted`. */
 .always-tag {

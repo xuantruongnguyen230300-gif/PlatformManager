@@ -1,9 +1,36 @@
+<!-- Dải "đã có phiên bản mới" — hiện khi `GlobalErrorHandler` nhận ra một file chunk không còn
+     tồn tại trên máy chủ (deploy xảy ra trong lúc tab này đang mở). Đặt TRƯỚC shell và ngoài mọi
+     nhánh route: lúc này mọi màn chưa tải đều không vào được, nên thông báo không thể phụ thuộc
+     vào việc điều hướng thành công.
+     `role="alert"` để trình đọc màn hình được báo ngay — người dùng bàn phím vừa bấm một liên kết
+     và không thấy gì xảy ra cả.
+     `no-print`: đây là lời mời thao tác, không có nghĩa gì trên giấy.
+     KHÔNG tự tải lại — nút này là hành động của NGƯỜI DÙNG, xem `GlobalErrorHandler`. -->
+@if (newVersionAvailable()) {
+  <div class="notice warn app-update no-print" role="alert">
+    <i class="pi pi-refresh" aria-hidden="true"></i>
+    <span>{{ 'shared.app.newVersion' | translate }}</span>
+    <button type="button" class="btn primary" (click)="reloadApp()">
+      {{ 'shared.action.reload' | translate }}
+    </button>
+  </div>
+}
 @if (showShell()) {
+  <!-- Skip link — PHẢI là phần tử focus được ĐẦU TIÊN trong DOM của shell. Người dùng bàn phím /
+       trình đọc màn hình nếu không có nó sẽ phải Tab qua toàn bộ sidebar (mỗi mục menu 1 điểm
+       dừng) ở MỌI trang trước khi tới nội dung. WCAG 2.2 AA 2.4.1 Bypass Blocks — ràng buộc
+       nghiệm thu, xem doc/huong_dan/wiki-core/fe/15-accessibility.md §3d.
+       Ẩn khỏi bản in bằng `no-print` như mọi phần tử chỉ có nghĩa khi tương tác. -->
+  <a class="skip-link no-print" href="#main-content" (click)="focusMainContent($event)">
+    {{ 'shared.app.skipToContent' | translate }}
+  </a>
   <div class="shell">
     <app-sidebar />
     <div class="shell-content" [class.collapsed]="sidebarState.collapsed()">
       <app-topbar [title]="pageTitle()" />
-      <main>
+      <!-- `tabindex="-1"`: đích của skip link phải nhận được focus bằng chương trình, nếu không
+           trình duyệt chỉ cuộn tới mà con trỏ bàn phím vẫn nằm lại ở sidebar. -->
+      <main id="main-content" tabindex="-1">
         <router-outlet />
       </main>
     </div>

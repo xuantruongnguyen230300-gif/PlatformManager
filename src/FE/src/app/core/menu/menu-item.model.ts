@@ -1,7 +1,9 @@
 // Hợp đồng menu động — BE trả danh sách PHẲNG (mỗi item có `parentId`), FE tự dựng cây 1 cấp
 // (item cha có `children`, không có `route`; item không `children` là điểm đến thật). Xem
 // doc/ke-hoach-xay-lai-corebase.md §"Phân quyền màn hình" (bảng SysMenu) và
-// spec/sidebar-menu/ui-spec.md §1 (IA cây menu, chỉ hỗ trợ đúng 1 cấp lồng).
+// doc/Design/Frontend/PlatformManager/Components/Sidebar.md §"Do / Don't" ("Keep exactly one
+// nesting level") + §Variants dòng `Group parent` ("one nesting level only") — ràng buộc 1 cấp
+// lồng nằm ở đó. (Sửa 2026-09-08: chỗ này từng trỏ một ui-spec sidebar-menu nay đã bị xoá.)
 //
 // BE đã lọc `SysMenuRole` theo role hiện tại trước khi trả về — FE KHÔNG tự lọc lại theo quyền
 // (xem doc/ke-hoach-xay-lai-corebase.md §"Điểm bàn giao"). Casing camelCase theo đúng quy ước

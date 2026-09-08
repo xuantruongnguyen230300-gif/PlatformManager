@@ -1,4 +1,48 @@
+/* ===== Nối chuỗi chiều cao cho `.page-fill` =====
+   Giữa `.card` và ma trận còn một `<section>` (mỗi tab một cái). `styles.scss` chỉ cấp
+   `min-height: 0` cho con trực tiếp của `.card`; muốn ma trận ăn hết chỗ còn lại thì
+   chính `<section>` phải là flex column co giãn được, nếu không chiều cao dừng ở đây.
+
+   `:host(.page-fill)` chứ không phải `section` trần: trang nào không bật `page-fill` thì
+   giữ nguyên hành vi cao theo nội dung. */
+:host(.page-fill) > .card > section {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* Đoạn hướng dẫn ngay dưới tiêu đề. KHÔNG khai lại `.muted` (màu + cỡ chữ đã ở styles.scss) —
+   ở đây chỉ thêm phần bố cục mà lớp dùng chung không quyết định được: `.muted` mặc định dùng cho
+   chữ nội dòng trong bảng, còn ở đây nó là một đoạn văn đứng riêng nên cần xuống dòng và chừa
+   khoảng cách với ma trận bên dưới. */
 .muted {
   display: block;
   margin-bottom: var(--sp-4);
+}
+
+/* Bộ chuyển 2 ma trận. KHÔNG khai lại `.segmented`/`.seg-btn` (hình dạng, màu, viền, focus đều
+   đã ở styles.scss §3) — chỉ đặt khoảng cách với phần nội dung bên dưới, thứ mà component dùng
+   chung không thể tự quyết vì nó phụ thuộc vào chỗ đặt. */
+.tabs {
+  margin-bottom: var(--sp-4);
+}
+
+/* Nút "Tải lại" trong dải cảnh báo xung đột phiên bản. KHÔNG khai lại hình dạng nút (`.btn` ở
+   styles.scss §3 lo màu/viền/focus) — `.notice` dùng chung mới chỉ chừa chỗ cho `.icon-btn`
+   (`margin-left: auto`), còn đây là nút có chữ. `flex: none` giữ nó không bị bóp lại khi câu cảnh
+   báo dài, `align-self` để nó thẳng hàng với dòng chữ đầu chứ không dãn cao bằng cả đoạn. */
+.notice .btn {
+  margin-left: auto;
+  flex: none;
+  align-self: flex-start;
+  white-space: nowrap;
+}
+
+/* Nhãn "chưa lưu" trong nút phân đoạn. `currentColor` là cố ý: nút đang chọn có nền `--brand`,
+   nút không chọn có nền `--card`, nên mọi màu cứng sẽ mất tương phản ở đúng một trong hai trạng
+   thái. Chữ nhỏ hơn + nhạt hơn nhờ opacity, không dùng token màu riêng. */
+.unsaved {
+  font-weight: 400;
+  opacity: 0.85;
 }

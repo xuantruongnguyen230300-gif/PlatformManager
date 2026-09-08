@@ -1,8 +1,9 @@
-.tablewrap {
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-table);
-  overflow: hidden;
-}
+/* Chỉ còn thứ RIÊNG của lưới người dùng.
+   Đã gỡ (trùng lặp với styles.scss — xem báo cáo 2026-08-29):
+     - `.tablewrap`  → chép nguyên khối `.tablewrap` ở LỚP 2.
+     - `.badge.active` / `.badge.locked` → đổi sang hệ tên ngữ nghĩa `.badge.ok` / `.badge.bad`
+       đã có sẵn, cùng màu y hệt. Hai hệ tên cho một badge là lý do bảng người dùng và các màn
+       khác trôi khỏi nhau. */
 
 .user-cell {
   display: flex;
@@ -33,31 +34,18 @@
   font-size: var(--fs-xs);
 }
 
-.role-tag {
-  display: inline-block;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: 2px 8px;
-  font-size: var(--fs-xs);
-  color: var(--text);
-  background: var(--surface-table-header);
-  margin-right: 4px;
-}
-
-// Biến thể trạng thái riêng cho màn này (khác .bdone/.bwork/.bstall của .badge global) — cùng
-// class .badge nền tảng (padding/radius/font) đã có ở styles.scss, chỉ thêm màu theo trạng thái.
-.badge.active {
-  background: var(--good-bg);
-  color: var(--good);
-}
-
-.badge.locked {
-  background: var(--bad-bg);
-  color: var(--bad);
+/* Chỉ lo XẾP CHỖ cho nhiều badge vai trò trên một ô — hình dạng badge đến từ `.badge.outline`
+   toàn cục. Trước đây ô này dùng `.role-tag` riêng: bản thứ hai của `.badge` (cùng nền
+   `--surface-table-header`) kèm 3 giá trị px trần ngoài thang token (6px/2px 8px/4px). Gỡ 2026-08-29.
+   Dùng `gap` thay cho `margin-right` cũ: không đẻ khoảng thừa sau badge cuối. */
+.role-cell {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
 }
 
 .row-actions {
   display: flex;
-  gap: 6px;
+  gap: var(--sp-2);
   justify-content: flex-end;
 }

@@ -1,3 +1,9 @@
+---
+kind: luat
+scope: core
+verified: 2026-09-06
+---
+
 # 7. Quan sát hệ thống (Observability) — vượt ra ngoài logging
 
 `TraceId` trong envelope response (đã có ở [01-core-components.md](01-core-components.md), #6) là bước đầu — nhưng để **thật sự tra được** "request này đi qua bao nhiêu module, chỗ nào chậm, chỗ nào lỗi" khi hệ thống lớn dần, cần thêm:
@@ -10,8 +16,23 @@
 
 **Health check nên làm NGAY, không đợi "trước khi lên production"** — khác 2
 mục còn lại (correlation ID xuyên Process, metrics) thật sự chưa cần khi còn
-1 process. Chi phí gần bằng 0 (`Program.cs` hiện chưa có dòng `HealthCheck`
-nào):
+1 process. Chi phí gần bằng 0:
+
+> ✅ **Đã làm, đối chiếu 2026-09-06**: đăng ký ở
+> `src/BE/PlatformManager.Api/Program.cs:204`, map ở
+> `src/BE/PlatformManager.Api/Program.cs:603` (`/health/live`),
+> `src/BE/PlatformManager.Api/Program.cs:607` (`/health/ready`) và
+> `src/BE/PlatformManager.Api/Program.cs:613` (`/health`).
+> Câu *"`Program.cs` hiện chưa có dòng `HealthCheck` nào"* ở bản trước của đoạn này
+> đã lạc hậu. Ba endpoint hiện có sẽ được **chặn ở nginx**, không công bố ra
+> Internet — xem [`../fe/17-phuc-vu-va-trien-khai.md`](../fe/17-phuc-vu-va-trien-khai.md) §6.3b.
+>
+> 🔄 **LẬT 2026-09-06.** Trích dẫn cũ là `Program.cs:104` — dòng đó **là một comment**
+> về `ApiBehaviorOptions`/model binding, không dính gì tới health check. Cổng
+> `check-docs.sh` §6 chỉ kiểm số dòng có nằm trong file, nên một citation trỏ sai
+> chỗ vẫn qua được. Đo lại bằng lệnh:
+> `grep -n "AddHealthChecks\|MapHealthChecks" src/BE/PlatformManager.Api/Program.cs`.
+
 
 ```csharp
 builder.Services.AddHealthChecks()
@@ -40,6 +61,10 @@ app.UseHangfireDashboard("/hangfire", new DashboardOptions
 });
 ```
 
+> ✅ **Đã làm, đối chiếu 2026-09-06:** `src/BE/PlatformManager.Api/Program.cs:549`,
+> filter thật ở `src/BE/PlatformManager.Api/Common/HangfireDashboardAuthFilter.cs:18`
+> (`httpContext.User.IsInRole(Roles.SuperAdmin)`).
+
 **Serilog — structured logging, nên làm sớm cùng đợt với health check** (rẻ,
 ích ngay, khác nhóm "chờ đủ traffic mới cần" của metrics/correlation ID):
 
@@ -58,6 +83,117 @@ FE hiện cho user khi lỗi hệ thống (xem
 [`fe/10-observability.md`](../fe/10-observability.md) §"traceId — cầu nối
 log FE ↔ log BE") — enrich sai/thiếu thì `traceId` user đưa cho support
 **không tra được gì**, coi như tính năng chưa hoàn thành dù Serilog đã chạy.
+
+## ✅ Quyết định người dùng 2026-08-31 — Serilog ghi file, giữ 7 ngày (ĐÃ THI CÔNG)
+
+> 🔄 **LẬT 2026-09-06.** Mục này mang nhãn `🚧` cho một việc **đã làm xong**. Serilog
+> có thật trong `src/BE/PlatformManager.Api/PlatformManager.Api.csproj:24`
+> (`Serilog.AspNetCore` 10.0.0), đăng ký ở
+> `src/BE/PlatformManager.Api/Program.cs:63` với `WriteTo.File` +
+> `rollingInterval: RollingInterval.Day` + `retainedFileCountLimit: 7`
+> (`src/BE/PlatformManager.Api/Program.cs:75`), và enrichment `TraceId` chạy ở
+> `src/BE/PlatformManager.Api/Common/TraceIdLogEnrichmentMiddleware.cs:24`, cắm vào
+> pipeline tại `src/BE/PlatformManager.Api/Program.cs:463`.
+> Bảng "Chuỗi đang khép kín theo hướng xấu" ngay dưới mô tả trạng thái **TRƯỚC** khi
+> thi công — giữ lại để thấy vì sao quyết định này ra đời, **không** phải hiện trạng.
+
+### Chuỗi đang khép kín theo hướng xấu (trạng thái TRƯỚC khi thi công, 2026-08-31)
+
+| # | Đang có | Ở đâu |
+|---|---|---|
+| 1 | Mọi response lỗi trả `traceId` về client | Vẫn đúng, nhưng **số dòng đã đổi** (đối chiếu 2026-09-06): `src/BE/PlatformManager.Api/Program.cs:375` (nhánh 429 `OnRejected`), `:403` (401 `OnRedirectToLogin`), `:416` (403 `OnRedirectToAccessDenied`). Trích dẫn cũ `:232`/`:246`/`:204` đã lạc — `:204` nay là `AddHealthChecks` |
+| 2 | FE hiện mã đó cho người dùng | [`../fe/10-observability.md`](../fe/10-observability.md) |
+| 3 | ~~**Không có nơi nào lưu log**~~ — **đã đóng 2026-09-06** | `grep -rn Serilog src/BE --include=*.csproj` nay trả `PlatformManager.Api.csproj:24`, không còn rỗng |
+
+Người dùng đọc một mã cho bộ phận hỗ trợ, và không ai tra được gì từ mã đó.
+
+Mục "Serilog" ngay trên **đã dự đoán đúng ca này** và gọi nó là *"điều kiện bắt buộc,
+không phải tuỳ chọn"*. Thực tế còn đi trước một bước: Serilog chưa từng được cài.
+
+### Chốt
+
+| # | Quyết định | Ghi chú |
+|---|---|---|
+| 1 | Serilog ghi **file xoay vòng theo ngày** | Đúng quy mô một tiến trình một máy — tra bằng `grep <traceId>` là ra, không cần dựng dịch vụ log |
+| 2 | Giữ **7 ngày** | Xem phần đánh đổi bên dưới |
+| 3 | Enrich mọi log entry bằng `HttpContext.TraceIdentifier` | Chính là điều kiện bắt buộc mục trên đã nêu — thiếu nó thì có log cũng không nối được với mã người dùng cầm |
+| 4 | Hạ mức log của `Microsoft.EntityFrameworkCore` xuống `Warning` | Xem bên dưới |
+
+### Vì sao quyết định 4 đi kèm, không phải tách riêng
+
+`appsettings.json` khai `LogLevel.Default: Information` và **không** khai riêng cho EF, nên
+EF ghi **mọi câu SQL** ở mức Information. Bật lưu log mà bỏ qua chỗ này thì mỗi request sinh
+hàng chục dòng SQL và sự kiện thật chìm trong đó — có log nhưng không dùng được, đúng hình
+dạng thất bại mà quyết định 1 đang đi sửa.
+
+Kiểm hiện trạng:
+
+```bash
+grep -n "EntityFrameworkCore" src/BE/PlatformManager.Api/appsettings.json   # PASS khi có dòng, mức Warning
+```
+
+> ⚠️ **Sửa 2026-08-31 sau khi thi công — mức log đặt ở section `Serilog`, KHÔNG phải `Logging:LogLevel`.**
+> `AddSerilog` tự đăng ký `AddFilter<SerilogLoggerProvider>(null, LogLevel.Trace)` — nó cố ý mở hết
+> bộ lọc của `Microsoft.Extensions.Logging` và nhận trách nhiệm lọc về phía mình. Đặt mức ở
+> `Logging:LogLevel` thì **không có tác dụng gì** (đã đo: log vẫn đầy dòng `[DBG]` của
+> `Microsoft.AspNetCore` dù appsettings khai `Warning`). Nay dùng `Serilog:MinimumLevel:Override`,
+> và section `Logging` đã bị gỡ khỏi cả hai file appsettings — giữ lại nó là tạo một nguồn sự thật
+> thứ hai không điều khiển được gì.
+
+Không liên quan tới rò rỉ dữ liệu: `EnableSensitiveDataLogging` **không được gọi ở mã
+nguồn sản phẩm** nên giá trị tham số không bị ghi ra. Nay có ArchTest canh thật —
+`src/BE/Tests/PlatformManager.ArchTests/BannedDependencyTests.cs:104`.
+
+```bash
+# PASS khi in ra 0 — giới hạn ở mã sản phẩm, KHÔNG tính Tests
+grep -rn "EnableSensitiveDataLogging" src/BE --include=*.cs | grep -v "/Tests/" | wc -l
+```
+
+> 🔄 **LẬT 2026-09-06.** Tiêu chí cũ là *"`grep -rn EnableSensitiveDataLogging src/BE
+> --include=*.cs` rỗng"*. Lệnh đó **không còn rỗng** — nó trả 7 dòng, tất cả nằm trong
+> `BannedDependencyTests.cs`, tức chính test **cấm** thứ này. Một tiêu chí PASS mà lần
+> chạy tới sẽ đỏ vì lý do ngược với ý định của nó thì không ai chạy lần thứ hai.
+
+### Đánh đổi của 7 ngày — và thứ bù cho nó
+
+7 ngày là **ngắn** cho sự cố báo muộn: người dùng thường không báo ngay, và một sự cố xảy ra
+trước kỳ nghỉ dài sẽ hết log trước khi có ai đi tìm.
+
+Chấp nhận được **vì ranh giới này**, và ranh giới này phải giữ đúng:
+
+| Câu hỏi | Trả lời từ đâu | Sống bao lâu |
+|---|---|---|
+| *"Ai đổi phân quyền, đổi lúc nào, trước đó là gì?"* | **Database** — trường vết + xoá mềm ([`../../quy-uoc/be-entity-domain.md`](../../quy-uoc/be-entity-domain.md) §"Quyết định người dùng 2026-08-31") | Vĩnh viễn |
+| *"Request mang mã `0HN...` hỏng ở đâu?"* | **Log file** | 7 ngày |
+
+Nghĩa là log **không phải** nơi giữ vết cho hành động nhạy cảm — đó là việc của database.
+Đừng để câu hỏi loại một trôi vào log rồi hết hạn cùng nó.
+
+### Đã thành — ✅ đối chiếu 2026-09-06
+
+| | Đã chốt sẽ thành | Đo được hôm nay |
+|---|---|---|
+| Thư viện log | Serilog, ghi file xoay vòng theo ngày | `Serilog.AspNetCore` ở `src/BE/PlatformManager.Api/PlatformManager.Api.csproj:24`; `WriteTo.File` + `RollingInterval.Day` ở `src/BE/PlatformManager.Api/Program.cs:71` |
+| Giữ 7 ngày | 7 file ngày | `retainedFileCountLimit: 7` — `src/BE/PlatformManager.Api/Program.cs:75` |
+| `traceId` trong log | Mọi entry mang `TraceId` khớp giá trị trả về client | `LogContext.PushProperty("TraceId", …)` — `src/BE/PlatformManager.Api/Common/TraceIdLogEnrichmentMiddleware.cs:24` |
+| Mức log EF | `Warning` | `Serilog:MinimumLevel:Override:Microsoft.EntityFrameworkCore` = `Warning` trong `src/BE/PlatformManager.Api/appsettings.json`; section `Logging` **đã gỡ** đúng như ghi chú ở trên |
+| Thư mục `logs/` trong git | Giữ nguyên bị chặn | `src/BE/.gitignore` có `logs/` ([`../../quy-uoc/repo-artifact.md`](../../quy-uoc/repo-artifact.md) §5) |
+
+> 🔄 **LẬT 2026-09-06.** Bảng này trước là *"Có thật hôm nay → sẽ thành"* và cả 3 ô
+> "có thật" đều mô tả trạng thái đã biến mất (*"chỉ console mặc định"*, *"không có log
+> để mà có"*, *"ghi mọi câu SQL"*). Bốn dòng cùng sai một chiều là dấu hiệu bảng chưa
+> được mở lại kể từ lúc thi công xong.
+
+### Nghiệm thu
+
+| # | Phép thử | PASS |
+|---|---|---|
+| 1 | Gọi một endpoint gây lỗi 500, lấy `traceId` trong response | `grep "<traceId>" logs/log-*.txt` ra **ít nhất một dòng** |
+| 2 | Gọi một endpoint bình thường rồi đếm dòng log sinh ra | Không có dòng SQL nào — chứng minh quyết định 4 đã áp |
+| 3 | Chạy qua ngày | File mới `log-<ngày>.txt` được tạo, file cũ giữ nguyên |
+
+Phép thử 1 là phép thử duy nhất chứng minh **toàn bộ chuỗi** hoạt động — cài Serilog xong mà
+quên enrich thì vẫn có log, vẫn có file, và vẫn không tra được gì.
 
 ## Liveness vs readiness — 2 câu hỏi khác nhau, gộp chung 1 endpoint gây sự cố thật
 
@@ -102,6 +238,12 @@ DB chậm giờ chỉ làm `/health/ready` chuyển Unhealthy (load balancer ng�
 traffic mới tới instance đó — đúng hành vi mong muốn), còn `/health/live`
 vẫn Healthy (process không bị restart oan).
 
+> ✅ **Đã tách, đối chiếu 2026-09-06.** Khuyến nghị này **đã vào code đúng như mẫu
+> trên**: tag `"live"`/`"ready"` khai ở `src/BE/PlatformManager.Api/Program.cs:205`
+> và `:206`, hai endpoint map ở `src/BE/PlatformManager.Api/Program.cs:603` và `:607`.
+> Đoạn "chưa khẩn cấp" bên dưới là **lý do lịch sử** của quyết định, không phải việc
+> còn tồn đọng.
+
 **Áp dụng vào PlatformManager:** hôm nay 1 process, chưa chạy sau
 orchestrator nào tự động restart theo health check — nên việc tách 2 endpoint
 **không khẩn cấp** như bản thân mục "Health check nên làm NGAY" ở trên. Nhưng
@@ -139,6 +281,12 @@ app.Use(async (ctx, next) =>
 });
 ```
 
+> 📌 **Hiện trạng 2026-09-06:** middleware thật
+> (`src/BE/PlatformManager.Api/Common/TraceIdLogEnrichmentMiddleware.cs:24`) mới enrich
+> **đúng `TraceId`** — chưa có `UserId`, chưa có `RequestPath`. Đây là khoảng cách đã
+> biết giữa `wiki-core/` (chuẩn nên có) và mã đang chạy, không phải phát hiện mới; ghi
+> ra đây để lượt review sau khỏi phải tự đoán.
+
 - `UserId` — `null` hợp lệ cho request chưa đăng nhập (`/login`, `/health`);
   đừng ép giá trị giả.
 - `Timestamp` (UTC) — Serilog tự thêm sẵn, không cần enrich tay, nhưng kiểm
@@ -149,7 +297,7 @@ app.Use(async (ctx, next) =>
   theo môi trường.
 
 **Cấm log dữ liệu nhạy cảm — không chỉ ở payload request.**
-[trien-khai/03-p2-platform-application.md](trien-khai/03-p2-platform-application.md)
+[../../../tham-khao-ngoai/vnr-successor/03-p2-platform-application.md](../../../tham-khao-ngoai/vnr-successor/03-p2-platform-application.md)
 §"`LoggingBehavior` — chi tiết nhỏ đáng sao chép" đã cấm log payload trong
 pipeline MediatR ("không log payload để tránh rò rỉ PII") — đúng nhưng chỉ
 chặn **một** cửa vào. Còn ít nhất 2 cửa khác cùng ghi vào hệ thống log tập

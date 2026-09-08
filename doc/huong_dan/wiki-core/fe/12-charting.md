@@ -1,10 +1,31 @@
+---
+kind: luat
+scope: core
+verified: 2026-09-06
+---
+
 # 12. Biểu đồ Dashboard
+
+> ## 📐 TOÀN BỘ FILE NÀY LÀ ĐÍCH ĐẾN — CHƯA THI CÔNG (đối chiếu 2026-09-06)
+>
+> **Không màn hình nào trong `src/FE` có biểu đồ, và `chart.js` không nằm trong
+> `src/FE/package.json`.** Hướng đã chốt (PrimeNG `p-chart`) vẫn giữ; mọi mẫu bên dưới là thứ
+> phải viết khi màn hình đầu tiên cần biểu đồ, **không** phải mô tả code đang chạy.
+>
+> ```bash
+> grep -rn "p-chart\|chart.js" src/FE/src src/FE/package.json   # hôm nay: 0 dòng
+> ```
 
 ## Hiện trạng
 
-`dashboard.html` vẽ đường xu hướng bằng `<canvas>` tay (không thư viện) —
-`DESIGN.md` §Chart Palette ghi "None — app has no charts" vì đây được coi
-là 1 hình vẽ đơn lẻ, không phải hệ chart có palette riêng.
+🔄 LẬT 2026-09-06: mục này trước đây viết *"`dashboard.html` vẽ đường xu hướng bằng `<canvas>`
+tay"*. Màn `dashboard` và component `TrendChart` đã gỡ **2026-08-29**, và `chart.js` đã gỡ khỏi
+`package.json` **2026-09-04** (lý do ghi tại chỗ, khối `//dependencies` trong
+`src/FE/package.json`: sau khi gỡ, 0 file trong `src/` và 0 gói nào trong `package-lock.json`
+phụ thuộc vào nó).
+
+Hiện trạng đúng: **không có biểu đồ nào.** Câu của `DESIGN.md` §Chart Palette — *"None — app has
+no charts"* — nay đúng theo nghĩa đen, không còn là ghi chú về một hình vẽ đơn lẻ.
 
 ## Đã CHỐT LẠI (2026-08-15) — `p-chart` của PrimeNG (Chart.js), không thêm `ng2-charts` riêng
 
@@ -16,11 +37,11 @@ việc. Vẫn giữ đúng ưu điểm đã chọn ban đầu: canvas-based (cù
 cách vẽ tay hiện tại), nhẹ hơn nhiều so với ECharts.
 
 ```bash
-npm install chart.js   # peer dependency của p-chart — primeng đã có sẵn phần trong package.json
+npm install chart.js   # peer dependency của p-chart — CẦN CÀI LẠI, đã gỡ 2026-09-04
 ```
 
 ```html
-<!-- modules/dashboard/components/trend-chart/trend-chart.html -->
+<!-- <feature>/components/trend-chart/trend-chart.html — chưa tồn tại -->
 <p-chart type="line" [data]="chartData()" [options]="chartOptions" />
 ```
 
@@ -52,6 +73,9 @@ Grid.
 
 ## Accessibility — canvas không đọc được bằng screen reader
 
+> Đây là **phần a11y thuộc chủ đề biểu đồ** — file chủ giữ nguyên ở đây. Điểm vào
+> chung cho a11y: [15-accessibility.md](15-accessibility.md).
+
 > Bổ sung 2026-08-24, đối chiếu thực hành ngành cho hệ thống tầm trung:
 > `p-chart` (và Chart.js nói chung) vẽ lên `<canvas>` — khác SVG, canvas
 > **không có cấu trúc DOM nào** để trình đọc màn hình bám vào. Với người
@@ -77,9 +101,15 @@ cho chart trang trí thuần):
 
 2. **Bảng dữ liệu thay thế**, ẩn bằng class ẩn-thị-giác-giữ-AT (không
    `display: none` hay `@if` — cả 2 cách đó xoá luôn khỏi DOM, screen reader
-   cũng bỏ qua theo). `@angular/cdk` (đã là dependency, xem
-   [13-performance.md](13-performance.md) §3) có sẵn class `cdk-visually-hidden`
-   qua mixin `a11y-visually-hidden` — include 1 lần trong stylesheet toàn cục:
+   cũng bỏ qua theo).
+
+   🔄 LẬT 2026-09-06: bản trước ghi `@angular/cdk` *"đã là dependency"* và dẫn sang
+   [13-performance.md](13-performance.md) §3 làm bằng chứng. **Chưa hề cài** — cùng câu sai này
+   từng xuất hiện ở ba file (`13-performance.md` §3, `05-component-library.md` §Tab order, và
+   đây), tất cả cùng trỏ vòng vào nhau. Dùng `cdk.a11y-visually-hidden()` **có** thêm một phụ
+   thuộc mới; nếu không muốn, tự viết class `.visually-hidden` trong `styles.scss` cũng đủ.
+
+   Mixin của CDK (khi đã cài) — include 1 lần trong stylesheet toàn cục:
 
 ```scss
 // styles.scss — include 1 lần

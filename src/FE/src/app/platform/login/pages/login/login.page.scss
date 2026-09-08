@@ -1,6 +1,25 @@
-// Toàn bộ style (.field/.field-input/.login-error/.field-row/.btn-block) đã ở global
+// Toàn bộ style (.field/.input-icon/.icon-btn/.login-error/.field-row/.btn-block) đã ở global
 // src/styles.scss (bắt buộc global vì content project qua <ng-content> của AuthCard — xem ghi
-// chú ở styles.scss). Không có style riêng nào cho component này.
+// chú ở styles.scss §9).
 :host {
   display: contents;
+}
+
+// Câu thay cho link "Quên mật khẩu?" đã chết (quyết định 2026-08-31 mục 5, Screens/05-auth.md).
+// Giữ ở component chứ không đưa lên global: nó là phần tử của RIÊNG màn này, không phải một mẫu
+// dùng lại. Kéo lên sát hàng "Ghi nhớ đăng nhập" vì hai dòng nói về cùng một khối lựa chọn —
+// `.field-row` đã có `margin-bottom: 20px` của riêng nó.
+.login-hint {
+  margin-top: calc(-1 * var(--sp-3));
+  margin-bottom: var(--sp-4);
+}
+
+// Nút đổi ngôn ngữ nằm DƯỚI form, tách bằng một đường kẻ mảnh — nó không phải một bước của việc
+// đăng nhập, nên không được trông như một trường của form. Giữ ở component (không đưa lên global)
+// vì đây là CHỖ ĐẶT của riêng màn này; bản thân nút thì ở `shared/components/language-switcher/`.
+.login-language {
+  display: block;
+  margin-top: var(--sp-5);
+  padding-top: var(--sp-4);
+  border-top: 1px solid var(--line);
 }

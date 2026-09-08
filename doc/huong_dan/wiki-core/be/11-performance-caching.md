@@ -1,3 +1,9 @@
+---
+kind: luat
+scope: core
+verified: 2026-09-06
+---
+
 # 11. Performance & Caching
 
 > Bổ sung 2026-08-18. Trước file này, "performance" ở BE chỉ tồn tại dưới
@@ -132,9 +138,16 @@ down" mà [01-core-components.md](01-core-components.md) #8 mô tả — .NET 9 
 
 Tối thiểu, trước khi sửa bất cứ thứ gì ở §2–§4:
 
-- Bật EF Core command logging ở môi trường dev (`LogTo` + `EnableSensitiveDataLogging`
-  **chỉ dev**) để **đếm số query thật/request** — con số này thường gây bất
-  ngờ hơn thời gian từng query.
+- Bật EF Core command logging ở môi trường dev (`LogTo`) để **đếm số query
+  thật/request** — con số này thường gây bất ngờ hơn thời gian từng query.
+
+  > ⚠️ **`EnableSensitiveDataLogging` nay bị ArchTest CẤM trong mã nguồn sản phẩm**
+  > (`src/BE/Tests/PlatformManager.ArchTests/BannedDependencyTests.cs:104`, đối chiếu
+  > 2026-09-06) — chính vì khuôn "bật tạm để debug rồi commit". Cần giá trị tham số
+  > lúc đo thì bật **cục bộ, không commit**, rồi gỡ; đừng thêm vào `DependencyInjection.cs`
+  > kể cả khi bọc trong `IsDevelopment()`, vì test quét mã nguồn chứ không quét môi trường.
+  > *(🔄 LẬT 2026-09-06: dòng này trước khuyên dùng `EnableSensitiveDataLogging` "chỉ dev" —
+  > làm theo hôm nay là `dotnet test` đỏ.)*
 - `EXPLAIN ANALYZE` cho query nghi ngờ nhất — xác nhận `Seq Scan` hay
   `Index Scan`, đừng suy từ việc "đã khai `HasIndex` rồi".
 - Ghi lại latency trước/sau vào chính file này (mục §7) — lần tối ưu sau sẽ
@@ -202,17 +215,17 @@ Nhóm A — sửa trước, rủi ro gần bằng 0, không cần hạ tầng m�
 | --- | --- | --- | --- |
 | **A0** | Permission check bắn **2 query DB mỗi request** có `[RequirePermission]` (`Roles` + `AnyAsync` trên `RolePermissions`); dữ liệu tí hon, gần như bất biến | `RequirePermissionFilter.cs:39-50` *(file không tồn tại trên working copy 2026-08-23)* | §4.3 — ứng viên cache |
 | **A1** | **Không có một `AsNoTracking()` nào trong toàn bộ `src/BE`** — mọi query đọc đều track | toàn repository | Q1 |
-| **A2** | Index `(CriteriaId, DateCreate)` không phục vụ được query lọc **chỉ theo `DateCreate`** → seq scan. `RolePermission` không có index trên `ResourceKey` | [`CriteriaAssessmentConfiguration.cs:53`](../../../../src/BE/Modules/DtiWeekly/PlatformManager.Modules.DtiWeekly.Infrastructure/Persistence/Configurations/CriteriaAssessmentConfiguration.cs) vs [`CriteriaAssessmentRepository.cs:73`](../../../../src/BE/Modules/DtiWeekly/PlatformManager.Modules.DtiWeekly.Infrastructure/Persistence/Repositories/CriteriaAssessmentRepository.cs) | Q2 |
-| **A3** | `GetAllDistinctAssessmentDatesAsync` kéo **toàn bộ** cột `DateCreate` về app rồi mới `Distinct()` trong C#; được gọi 2 lần/lần load dashboard | [`CriteriaAssessmentRepository.cs:110`](../../../../src/BE/Modules/DtiWeekly/PlatformManager.Modules.DtiWeekly.Infrastructure/Persistence/Repositories/CriteriaAssessmentRepository.cs) | Q3 |
-| **A4** | N+1: `GetListAsync` lặp `ToDtoAsync` → `GetRolesAsync` **1 query/user** (20 user/trang = 21 query) | [`UserAdminService.cs:29-33`](../../../../src/BE/Core/PlatformManager.Core.Infrastructure/Identity/UserAdminService.cs) | Q4 |
-| **A5** | Dashboard 1 lần load ≈ **10 round-trip**: `GetRecordsInRangeAsync` gọi 2 lần (kỳ hiện tại + kỳ trước), mỗi lần 5 round-trip con | [`AggregationService.cs:26-45`](../../../../src/BE/Modules/DtiWeekly/PlatformManager.Modules.DtiWeekly.Application/Dashboard/AggregationService.cs) | §3 |
-| **A6** | `GetPeriodsAsync` gọi `PeriodAggregateCalculator.Compute()` riêng cho **từng tuần và từng tháng** — 52 + 12 = **64 lần quét lại** cùng một list | [`AggregationService.cs:86-106`](../../../../src/BE/Modules/DtiWeekly/PlatformManager.Modules.DtiWeekly.Application/Dashboard/AggregationService.cs) | §3 |
+| **A2** | Index `(CriteriaId, CreatedAt)` không phục vụ được query lọc **chỉ theo `CreatedAt`** → seq scan. `RolePermission` không có index trên `ResourceKey` | ~~`CriteriaAssessmentConfiguration.cs:54` vs `CriteriaAssessmentRepository.cs:73`~~ *(xoá cùng module 2026-08-29)*; phần `RolePermission` vẫn còn hiệu lực | Q2 |
+| ~~**A3**~~ | `GetAllDistinctAssessmentDatesAsync` kéo **toàn bộ** cột `CreatedAt` về app rồi mới `Distinct()` trong C# | ~~`CriteriaAssessmentRepository.cs:110`~~ *(xoá cùng module 2026-08-29)* | Q3 — **giữ lại làm khuôn**: `Distinct()` sau khi vật chất hoá là lỗi lặp lại, không riêng file này |
+| **A4** | N+1: `GetListAsync` lặp `ToDtoAsync` → `GetRolesAsync` **1 query/user** (20 user/trang = 21 query) — **đã sửa 2026-08-29**, xem bảng trạng thái §6.3 | [`UserAdminService.cs`](../../../../src/BE/Core/PlatformManager.Core.Infrastructure/Identity/UserAdminService.cs) *(trích dẫn cũ `:29-33` đã lạc sau khi sửa)* | Q4 |
+| ~~**A5**~~ | Dashboard 1 lần load ≈ **10 round-trip**: `GetRecordsInRangeAsync` gọi 2 lần (kỳ hiện tại + kỳ trước), mỗi lần 5 round-trip con | ~~`AggregationService.cs:26-45`~~ *(xoá cùng module 2026-08-29)* | §3 — đo lại khi dựng dashboard mới |
+| ~~**A6**~~ | `GetPeriodsAsync` gọi `PeriodAggregateCalculator.Compute()` riêng cho **từng tuần và từng tháng** — 52 + 12 = **64 lần quét lại** cùng một list | ~~`AggregationService.cs:86-106`~~ *(xoá cùng module 2026-08-29)* | §3 — đo lại khi dựng dashboard mới |
 
 Nhóm B — chấp nhận được ở quy mô hiện tại, **theo dõi**, chưa sửa:
 
 | Mã | Nội dung | Vị trí | Điều kiện thành finding thật |
 | --- | --- | --- | --- |
-| **B1** | Phân trang + search chạy trong bộ nhớ (load hết rồi `Skip/Take`) | [`GetCriteriaListQuery.cs:57-60`](../../../../src/BE/Modules/DtiWeekly/PlatformManager.Modules.DtiWeekly.Application/Criteria/GetCriteriaListQuery.cs) | Khi số `Criteria` vượt ~vài trăm, hoặc grid chuyển sang liệt kê record lịch sử nhiều năm |
+| ~~**B1**~~ | Phân trang + search chạy trong bộ nhớ (load hết rồi `Skip/Take`) | ~~`GetCriteriaListQuery.cs:57-60`~~ *(xoá cùng module 2026-08-29)* | **Áp ngay từ đầu khi dựng lại grid**: phân trang phải xuống DB (`Skip/Take` trên `IQueryable`), đừng lặp lại |
 | **B2** | Menu load 4 query mỗi lần dựng sidebar | [`SysMenuRoleRepository.cs:29-45`](../../../../src/BE/Core/PlatformManager.Core.Infrastructure/Persistence/Repositories/SysMenuRoleRepository.cs) | Sau khi A0 xong — cùng bản chất (dữ liệu nhỏ, ghi hiếm), gộp chung đợt cache nếu đo thấy đáng |
 | ~~B3~~ | ✅ **Đã sửa 2026-08-24** — FE nay cache `GET /meta/menu` theo session, không còn gọi lại mỗi lần khởi tạo sidebar | `src/FE/src/app/core/menu/menu.service.ts` (bản cache; bản cũ không cache đã xoá) | Chi tiết + số đo: xem "Rà lần 3" bên dưới |
 
@@ -255,10 +268,16 @@ không đụng `Modules.DtiWeekly`:**
 > | A0 | `RequirePermissionFilter.cs` tồn tại thật; `PermissionChecker.cs:11` tự ghi "ĐÚNG 1 query... trước đây tách làm 2" — **đã sửa thật** |
 > | A1 (Core) | `RolePermissionRepository.cs` có `AsNoTracking` ×5 — **đã sửa thật** |
 > | A2 (Core) | Migration `20260818101335_AddRolePermissionResourceKeyIndex` tồn tại thật — **đã sửa thật** |
-> | A4 | `UserAdminService.cs:118-124` vẫn `foreach` gọi `GetRolesAsync` mỗi user — **CHƯA sửa**, nhãn "Xong (22→3)" 2026-08-18 bên dưới sai |
+> | A4 | `UserAdminService.cs:32-33` vẫn `foreach` gọi `ToDtoAsync` → `GetRolesAsync` (`:157`) mỗi user — **CHƯA sửa**, nhãn "Xong (22→3)" 2026-08-18 bên dưới sai |
 > | B2 | `SysMenuRoleRepository.cs` (`GetVisibleSysMenuIdsForRolesAsync`) vẫn đúng 4 `ToListAsync` — **CHƯA sửa**, nhãn "Xong (4→1)" 2026-08-18 bên dưới sai |
 >
 > Đã sửa lại nhãn A0/A1/A2/A4/B2 trong bảng dưới cho khớp kết quả này.
+>
+> **Cập nhật số dòng 2026-08-28** (kết luận không đổi, chỉ toạ độ): `GetRolesAsync`
+> trong `UserAdminService.cs` trôi từ `:144` xuống `:157` sau một thay đổi cùng
+> ngày, và `HasIndex` trong `CriteriaAssessmentConfiguration.cs` là `:54` chứ
+> không phải `:53`. Cả hai citation sai này nằm trong đoạn văn đã dán nhãn "đã
+> đối chiếu" — đúng lý do CLAUDE.md §8 mục 5 kiểm `file:dòng` bằng máy.
 
 > ### Rà lần 3 — 2026-08-24, B3 (menu cache FE) — SAU KHI WIRE XONG THẬT, bởi `frontend-expert`
 >
@@ -292,19 +311,41 @@ không đụng `Modules.DtiWeekly`:**
 
 | Mã | Trạng thái | Ghi chú |
 | --- | --- | --- |
-| A0 | ✅ Xong (2026-08-18, gộp 2 → 1 query) — xác minh lại 2026-08-24, `RequirePermissionFilter.cs` + `PermissionChecker.cs:11` tồn tại thật | KHÔNG cache — xem §6.2 mục 5 |
+| A0 | ✅ Xong (2026-08-18, gộp 2 → 1 query) — xác minh lại 2026-09-06: `src/BE/Core/PlatformManager.Core.Infrastructure/Permissions/RequirePermissionFilter.cs` tồn tại, và query gộp là **đúng một** `.AnyAsync(ct)` ở `src/BE/Core/PlatformManager.Core.Infrastructure/Permissions/PermissionChecker.cs:31` *(🔄 LẬT 2026-09-06: trích dẫn cũ `PermissionChecker.cs:11` trỏ vào dòng chú thích XML, không phải câu lệnh)* | KHÔNG cache — xem §6.2 mục 5 |
 | A1 | ✅ Xong **phần Core** (2026-08-18) — xác minh lại 2026-08-24, `RolePermissionRepository.cs` có `AsNoTracking` ×5 | Query đọc thuần trong `Core.*` đã có `AsNoTracking`; 2 chỗ **cố ý giữ tracking** (`RolePermissionRepository.ReplaceAllAsync`, `SysMenuRoleRepository.ReplaceAllAsync` — entity lấy ra để `RemoveRange` rồi `SaveChanges`). Repository của `Modules.*` **chưa** làm |
 
 > **`Modules.*` chưa có `AsNoTracking()` — HOÃN CÓ CHỦ ĐÍCH, không phải sót.**
-> Người dùng đang tập trung phát triển **core**, `src/BE/Modules/**` nằm ngoài
-> phạm vi cho tới khi core ổn định. Đừng báo lại đây như finding mới ở mỗi lượt
+> Người dùng đang tập trung phát triển **core**; toàn bộ tầng nghiệp vụ — khi đó
+> nằm ở `src/BE/Modules/`, thư mục **đã xoá 2026-09-08** — ngoài phạm vi cho tới
+> khi core ổn định. Đừng báo lại đây như finding mới ở mỗi lượt
 > review; cũng đừng "tiện tay" sửa hàng loạt — Q1 có ngoại lệ thật (entity lấy
 > ra để sửa rồi `SaveChanges` thì KHÔNG được thêm `AsNoTracking`), nên việc này
 > phải đọc kỹ từng call-site chứ không sed toàn bộ. Ghi nhận 2026-08-20, chuyển
 > vào đây 2026-08-21 khi bỏ thư mục `audit/`.
-| A2 | ✅ Xong **phần Core** (2026-08-18) — xác minh lại 2026-08-24, migration tồn tại thật | Migration `20260818101335_AddRolePermissionResourceKeyIndex`, script `doc/cau-truc-database.md` §2.1. Phần `CriteriaAssessment.DateCreate` thuộc Modules — **chưa** làm |
+>
+> 🔄 **LẬT 2026-09-06 — mục này nay VÔ HIỆU, giữ để khỏi ai mở lại.** Không còn
+> repository `Modules.*` nào để mà hoãn: module DtiWeekly đã gỡ 2026-08-29, và
+> hôm nay **không file `.cs` sản phẩm nào** nằm ngoài `Core/` + host (đối chiếu
+> 2026-09-08, lệnh phải in `0`):
+>
+> ```bash
+> find src/BE -name '*.cs' -not -path '*/obj/*' -not -path '*/bin/*' \
+>      -not -path 'src/BE/Core/*' -not -path 'src/BE/Tests/*' \
+>      -not -path 'src/BE/PlatformManager.Api/*' | wc -l
+> ```
+>
+> *(🔄 SỬA 2026-09-08: lệnh cũ là `find src/BE/Modules -type f …`. Thư mục
+> `src/BE/Modules/` đã xoá cùng ngày — `find` in lỗi ra **stderr** rồi trả rỗng,
+> nên "rỗng" nay không còn là bằng chứng của điều gì cả: nó sẽ rỗng y hệt kể cả
+> khi tầng nghiệp vụ được dựng lại ở `src/BE/Business/`. Lệnh mới loại trừ những
+> gì đã biết thay vì trỏ vào một thư mục có thể không tồn tại.)*
+>
+> Phần Core thì đã xong — `AsNoTracking` có mặt ở 4 file
+> (`grep -rl AsNoTracking src/BE/Core --include=*.cs`). Ngoại lệ Q1 nêu ở trên
+> **vẫn là luật sống** cho code mới.
+| A2 | ✅ Xong **phần Core** (2026-08-18) — xác minh lại 2026-09-06, index tồn tại thật | Index `IX_RolePermissions_ResourceKey_RoleId` — `src/BE/PlatformManager.Api/Persistence/Migrations/20260831165117_InitialCreate.cs:316`, khai ở `src/BE/Core/PlatformManager.Core.Infrastructure/Persistence/Configurations/RolePermissionConfiguration.cs:47`. Phần `CriteriaAssessment.CreatedAt` thuộc module đã xoá — không còn phạm vi. 🔄 **LẬT 2026-09-06**: ô này trước trỏ migration `20260818101335_AddRolePermissionResourceKeyIndex`, **file đó không còn tồn tại** (toàn bộ migration đã gộp lại thành `InitialCreate` ngày 2026-08-31); bản thân index thì vẫn còn |
 | A3 | ⛔ Ngoài phạm vi đợt này (Modules) | |
-| A4 | ❌ CHƯA XONG — nhãn "✅ Xong (22→3)" 2026-08-18 sai, xác minh lại 2026-08-24: `UserAdminService.cs:118-124` vẫn `foreach` gọi `GetRolesAsync` mỗi user | N+1 vẫn còn nguyên |
+| A4 | ✅ **Xong 2026-08-29** — đối chiếu lại 2026-09-06: role của **cả trang** lấy bằng đúng MỘT round-trip (`join db.UserRoles`/`db.Roles`) ở `src/BE/Core/PlatformManager.Core.Infrastructure/Identity/UserAdminService.cs:93`; test khoá hành vi `src/BE/Tests/PlatformManager.Core.IntegrationTests/Users/UserListRoleBatchingTests.cs` | Đường **một** user (`GetByIdAsync` → `ToDtoAsync`, `UserAdminService.cs:366`) vẫn gọi `GetRolesAsync` — **cố ý**, 1 user thì đúng 1 query, không phải N+1. 🔄 **LẬT 2026-09-06**: ô này còn ghi `❌ CHƯA XONG` cho việc đã đóng từ 2026-08-29 |
 | A5 | ⛔ Ngoài phạm vi đợt này (Modules) | Đo lại khi có dữ liệu `CriteriaAssessments` thật — lúc đo bảng này **rỗng**, số đo hiện tại không phản ánh A5/A6 |
 | A6 | ⛔ Ngoài phạm vi đợt này (Modules) | |
 | B1 | ⛔ Ngoài phạm vi đợt này (Modules) | |
@@ -339,13 +380,20 @@ Nhiều khả năng dừng được ở bước 4 — nếu vậy, bước 5–6
 
 ### 7.1 Đợt 1 — 2026-08-18, phạm vi Core (A0/A1/A2/A4/B2)
 
-**Cách đo.** EF command logging bật CHỈ ở Development
-([`Core.Infrastructure/DependencyInjection.cs`](../../../../src/BE/Core/PlatformManager.Core.Infrastructure/DependencyInjection.cs)
-— `LogTo` lọc riêng kênh `DbLoggerCategory.Database.Command` + `EnableSensitiveDataLogging`,
-bọc trong `IHostEnvironment.IsDevelopment()`). Đếm số dòng
+**Cách đo** *(mô tả giàn giáo đo của đợt 2026-08-18 — xem cảnh báo ngay dưới)*.
+EF command logging bật CHỈ ở Development trong
+`Core.Infrastructure/DependencyInjection.cs` — `LogTo` lọc riêng kênh
+`DbLoggerCategory.Database.Command` + `EnableSensitiveDataLogging`,
+bọc trong `IHostEnvironment.IsDevelopment()`. Đếm số dòng
 `RelationalEventId.CommandExecuted[20101]` phát sinh giữa 2 mốc quanh 1 request
 (bỏ request warm-up đầu tiên). Đăng nhập bằng cookie session thật, gọi qua
 `https://localhost:7168`.
+
+> 🔄 **LẬT 2026-09-06 — giàn giáo đo này KHÔNG còn trong code, đừng đi tìm.**
+> `grep -n "LogTo\|EnableSensitiveDataLogging" src/BE/Core/PlatformManager.Core.Infrastructure/DependencyInjection.cs`
+> trả **rỗng**: nó đã được gỡ sau đợt đo, và `EnableSensitiveDataLogging` nay còn bị
+> ArchTest cấm (§5). Muốn đo lại thì **dựng lại giàn giáo cục bộ rồi gỡ**, không commit.
+> Bản trước của đoạn này link thẳng vào `DependencyInjection.cs` như thể đoạn code còn ở đó.
 
 **Môi trường.** Database ĐO RIÊNG (`platformmanager_perf`) dựng từ chính 2 file
 `doc/cau-truc-database.sql` (nguồn cũ `doc/ERD/` đã xoá), KHÔNG dùng DB làm việc và KHÔNG
@@ -439,7 +487,14 @@ tiết dần lên. Giữ.
 
 Chạy thật trên DB đo, KHÔNG chỉ dựa vào build xanh:
 
-| Tình huống | Kỳ vọng | Kết quả |
+> 🔄 **LẬT 2026-09-06 — bảng này là BIÊN BẢN của lần đo 2026-08-18, không phải phép
+> thử chạy lại được hôm nay.** Bốn dòng `GET /api/criteria` trỏ vào một endpoint **đã
+> bị xoá** cùng module DtiWeekly ngày 2026-08-29 (`ls src/BE/PlatformManager.Api/Controllers/`
+> không có `CriteriaController`). Giữ nguyên vì nó ghi lại *kết luận* "thu hồi quyền có
+> hiệu lực ngay, không chờ TTL" — kết luận đó vẫn là căn cứ của quyết định KHÔNG cache
+> ở §6.2. Muốn đo lại thì phải chọn endpoint đang sống, đừng chạy y nguyên bảng này.
+
+| Tình huống | Kỳ vọng | Kết quả (đo 2026-08-18) |
 | --- | --- | --- |
 | Menu của SuperAdmin | có đủ `quan-tri`/`sys-user`/`phan-quyen` | ✅ đúng |
 | Menu của role `User` | **không** có `quan-tri`/`sys-user`/`phan-quyen`, vẫn có `dashboard`/`danh-muc`/`danh-muc-dti` (menu không gán role = mở cho mọi user) | ✅ đúng |
@@ -491,7 +546,7 @@ nhiều so với một lỗi rõ ràng ngay từ đầu.
   size khi số connection chạm trần thường xuyên, **không** tăng phòng hờ
   trước khi có bằng chứng.
 - Liên hệ trực tiếp với `Command Timeout = 500` (giây) đã cấu hình ở
-  [`04-p3-platform-persistence.md`](trien-khai/04-p3-platform-persistence.md)
+  [`04-p3-platform-persistence.md`](../../../tham-khao-ngoai/vnr-successor/04-p3-platform-persistence.md)
   — 1 command chạy chậm giữ connection tối đa 500s trước khi bị huỷ; pool
   quá nhỏ + timeout quá dài = cửa sổ nghẽn pool kéo dài, cả 2 số cần xét
   cùng nhau, không chỉnh riêng lẻ.

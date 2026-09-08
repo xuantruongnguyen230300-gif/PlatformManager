@@ -1,3 +1,9 @@
+---
+kind: luat
+scope: core
+verified: 2026-09-06
+---
+
 # 4. Design-token bridge — nguồn màu/spacing/radius duy nhất
 
 ## Thư viện component — Đã CHỐT LẠI (2026-08-15): PrimeNG
@@ -24,26 +30,39 @@ theme mặc định (`Aura`/`Lara`...) mà tự định nghĩa 1 Preset map th�
 token đã có, để giao diện vẫn đúng bản đã duyệt trong `doc/Design/`:
 
 ```ts
-// core/theme/platform-manager-preset.ts
+// core/theme/core-preset.ts — CƠ CHẾ ở core/, bảng màu do app truyền vào
 import { definePreset } from '@primeng/themes';
 import Aura from '@primeng/themes/aura';
 
-export const PlatformManagerPreset = definePreset(Aura, {
-  semantic: {
-    primary: { 500: '{brand}' },        // map vào --brand đã có trong styles.scss
-    colorScheme: {
-      light: {
-        surface: { 0: '{card}' },
-        text: { color: '{text}' },
+export interface ICorePalette {
+  readonly brand: string;
+  readonly card: string;
+  readonly text: string;
+  // ...các trường còn lại, soi gương :root trong styles.scss — đếm bằng lệnh ở dưới
+}
+
+export function createCorePreset(palette: ICorePalette) {
+  return definePreset(Aura, {
+    semantic: {
+      primary: { 500: palette.brand },  // map vào --brand đã có trong styles.scss
+      colorScheme: {
+        light: {
+          surface: { 0: palette.card },
+          text: { color: palette.text },
+        },
       },
     },
-  },
-});
+  });
+}
 ```
 
 ```ts
-// app.config.ts
-providePrimeNG({ theme: { preset: PlatformManagerPreset } })
+// app.config.ts — app khai bảng màu của CHÍNH NÓ rồi bơm vào
+export const APP_PALETTE: ICorePalette = {
+  brand: '#0f5bd7', card: '#ffffff', text: '#152033', // ...đủ MỌI trường của ICorePalette
+};
+
+providePrimeNG({ theme: { preset: createCorePreset(APP_PALETTE) } })
 ```
 
 Token hiện có (`--brand`, `--card`, `--text`, `--line`...) **không đổi tên,
@@ -52,28 +71,139 @@ màu song song tồn tại. Việc này làm 1 lần ở
 [trien-khai/02-f1-design-token.md](trien-khai/02-f1-design-token.md),
 không lặp lại cho mỗi component.
 
-## 2 nguồn phải luôn khớp nhau
+## Mọi nơi khai màu phải khớp nhau
 
 ```
-doc/Design/Frontend/PlatformManager/Tokens/*.md, tokens.json   ← tài liệu
-                    ↕ phải khớp
-src/FE/src/styles.scss  :root { --bg, --card, --fs-*, --sp-*, ... }  ← code thật chạy
+doc/Design/Frontend/PlatformManager/Tokens/*.md, tokens.json   ← NGUỒN
+                    ↓ code đuổi theo
+src/FE/src/styles.scss  :root { --bg, --card, --fs-*, --sp-*, ... }
+src/FE/src/app/app.config.ts  APP_PALETTE { brand, card, ... }   ← đừng quên chỗ này
+src/FE/src/index.html  <meta name="theme-color">                 ← chỉ --brand, xem dưới
 ```
 
-Quy tắc giống hệt BE ("1 luật = 1 nguồn"): **code là nguồn sự thật**, tài
-liệu mirror theo, không ngược lại (xem `doc/Design/CLAUDE.md` §Core
-Principle 4 — "Live source first"). Khi đổi theme/token: sửa `styles.scss`
-trước, rồi chạy `/design-extract-tokens` để đồng bộ lại `Tokens/*.md`.
+### Nơi thứ ba: `index.html` — ít người nhớ nhất, và người dùng nhìn thấy rõ nhất
 
-## Ngoại lệ một lần — giai đoạn F1
+`src/FE/src/index.html:8` khai `<meta name="theme-color" content="#0f5bd7">` — **chép đúng giá trị
+`--brand`**. Trình duyệt mobile lấy hex này tô thanh địa chỉ / thanh trạng thái. Đổi màu thương
+hiệu mà bỏ sót nó thì khung ứng dụng đổi màu còn viền hệ điều hành bao quanh vẫn giữ màu cũ — sai
+lệch nằm **bên ngoài** vùng Angular render, nên không `grep` nào trong `src/app/` chạm tới, và
+không ảnh chụp component nào bắt được.
 
-Quy tắc trên chỉ áp dụng được **khi đã có code**. Ở F1 của `src/FE` viết mới
-thì chưa có `styles.scss` nào để làm nguồn, nên chiều đi **ngược lại đúng một
-lần**: `DESIGN.md` → `styles.scss`. Từ sau F1 mới quay về chiều thường ngày.
+Để hex thô ở đây là **đúng chỗ**, không phải nợ kỹ thuật: `index.html` thuộc **host**, không thuộc
+CoreBase (ranh giới ở [../../../kien-truc-core-module.md](../../../kien-truc-core-module.md)
+§"Core giữ CƠ CHẾ, dự án cung cấp DỮ LIỆU"), nên nó được phép mang dữ liệu thương hiệu — y như
+`APP_PALETTE` trong `app.config.ts`. Vấn đề không phải hex nằm sai chỗ, mà là **nó chưa từng được
+ghi ở đâu**. Và một file HTML tĩnh thì không có cách nào đọc `var(--brand)`: `<meta>` được đọc
+trước khi CSS áp dụng, nên đây là chỗ bắt buộc phải chép tay.
 
-Vì sao không được lấy giá trị từ `src/FE` cũ — nợ tương phản WCAG đã sửa trong
-`DESIGN.md` nhưng chưa bao giờ vào code:
-[trien-khai/02-f1-design-token.md](trien-khai/02-f1-design-token.md).
+Phép thử — ba nơi phải cùng một hex, đếm bằng lệnh chứ đừng chép giá trị vào bảng nào khác
+(§6 `.claude/CLAUDE.md`):
+
+```sh
+grep -h -- '--brand:' src/FE/src/styles.scss
+grep -h "brand:" src/FE/src/app/app.config.ts
+grep -h 'name="theme-color"' src/FE/src/index.html
+# PASS: cả ba dòng in ra cùng MỘT mã hex.
+```
+
+> **Chú thích trong `src/` vẫn đang khai thiếu — ghi nhận 2026-09-03, chưa sửa.**
+> Khối chú thích “CHIỀU CẬP NHẬT” đầu `src/FE/src/styles.scss` (`grep -n 'CHIỀU CẬP NHẬT' src/FE/src/styles.scss`) và `src/FE/src/app/app.config.ts:61` (dòng *"Chiều cập nhật: `doc/Design/.../Tokens/*` → `styles.scss` **và** hằng số này"*) đều liệt kê **hai** nơi và không
+> nhắc `index.html`. Vẫn đúng, đối chiếu lại 2026-09-06.
+>
+> 🔄 LẬT 2026-09-06: trích dẫn cũ ở đây là `app.config.ts:55`. Dòng 55 nói về `NG0203` và lý do
+> phải truyền bảng màu bằng tham số thay vì `inject()` — **không liên quan** tới việc liệt kê
+> hai nơi. Gate `check-docs.sh` mục 6 chỉ kiểm số dòng có nằm trong file; trỏ đúng file nhưng
+> sai dòng thì nó vẫn xanh, còn người đi kiểm thì mở ra không thấy gì. Đây là mục chủ của chủ đề token (§5 `.claude/CLAUDE.md`) nên chỗ ghi đúng là ở
+> đây; hai chú thích kia cần trỏ về mục này ở lượt chạm `src/FE` kế tiếp. Không sửa ở lượt này để
+> tránh sửa `src/` ngoài phạm vi — nhưng ghi ra để nó không chìm.
+
+## Chiều — ĐÃ CHỐT LẠI 2026-08-27, XÁC NHẬN LẠI 2026-08-29: **`doc/Design/` là nguồn, code đuổi theo**
+
+> **Đảo so với bản trước.** Bản trước ghi *"code là nguồn sự thật, tài liệu
+> mirror theo"*. Chiều đó **không dùng được nữa** vì một lý do đã đo được, không
+> phải sở thích: giá trị đúng đang nằm ở tài liệu, còn code thì chưa bắt kịp —
+> mirror ngược sẽ **ghi đè giá trị hỏng lên tài liệu** và xoá mất một bản vá
+> tương phản đã tính toán cẩn thận.
+
+> **Xác nhận lại 2026-08-29 — chiều GIỮ NGUYÊN, nhưng lý do đã đổi.** Người dùng
+> chốt lại: `doc/Design/` là **nguồn**, code đuổi theo, còn
+> `doc/Design/Frontend/PlatformManager/Prototypes/index.html` chỉ là **bản tham
+> khảo trực quan** — nơi *xem* một thay đổi trông ra sao, không phải nơi ghi nó.
+>
+> Tiền đề của lần chốt 27/08 (*"giá trị đúng nằm ở tài liệu, code chưa bắt kịp"*)
+> **đã hết hiệu lực**: cả `styles.scss` lẫn bảng màu phía TypeScript vừa được
+> viết lại, nên code không còn đi sau. Kiểm bằng lệnh chứ đừng tin câu này:
+> `git log -1 --date=short -- src/FE/src/styles.scss` và
+> `git status --porcelain src/FE/src/styles.scss src/FE/src/app/app.config.ts`.
+>
+> Chiều vẫn giữ, nay vì lý do khác và bền hơn: **tài liệu là nơi đội CHỐT thiết
+> kế, không phải nơi chép lại code.** Nếu mirror ngược, `Tokens/*` chỉ còn là bản
+> sao của `styles.scss` — và một quyết định vừa chốt sẽ bị xoá lặng lẽ ở lần
+> trích xuất kế tiếp, không có gì báo lỗi.
+>
+> Hệ quả thi hành: một thay đổi xem thử ở prototype **chỉ có hiệu lực khi đã ghi
+> vào** `Tokens/*.md` + `tokens.json` + `DESIGN.md`. Việc trích xuất từ code
+> (`/design-inventory-ui`, `/design-extract-tokens`) vẫn chạy — nó **ghi nhận
+> hiện trạng**, không phải quyết định giá trị mới.
+
+Khi đổi theme/token: sửa `Tokens/*` + `tokens.json` + `DESIGN.md` trước, rồi
+đưa vào code. Sửa cả **hai** nơi phía code — `styles.scss` và hằng số
+`APP_PALETTE` trong `app.config.ts` (chỗ này khai lại **đủ bộ** màu cho ramp PrimeNG,
+`core/theme/core-preset.ts` chỉ nhận vào rồi dẫn xuất; đổi bảng màu mà bỏ qua nó
+thì CSS và component library render hai màu khác nhau, không có gì báo lỗi).
+
+Số trường là thứ **đếm được bằng lệnh**, đừng chép ra tài liệu
+([`../../../../.claude/CLAUDE.md`](../../../../.claude/CLAUDE.md) §6) —
+**tiêu chí PASS: hai lệnh in ra CÙNG một số**:
+
+```bash
+sed -n '/export interface ICorePalette/,/^}/p' src/FE/src/app/core/theme/core-preset.ts   | grep -cE '^\s+readonly '                      # số trường interface khai
+grep -cE "^\s+[a-zA-Z]+: '#" src/FE/src/app/app.config.ts   # số trường APP_PALETTE điền
+```
+
+> 🔄 **LẬT 2026-09-08 — ba chỗ trong file này ghi "10 màu", `ICorePalette` không còn 10 trường.**
+> `onPrimary` được thêm 2026-09-03 (ghi ngay trong JSDoc của chính trường đó), nhưng ba câu chép
+> tay con số thì không ai sửa cùng lượt — đúng khuôn §6 sinh ra để chặn. Nay thay bằng lệnh; con
+> số sẽ tự đúng ở lần thêm trường tiếp theo.
+
+> Từ 2026-09-02, các hằng số màu **không còn nằm trong `core/`**: chúng là dữ liệu
+> thương hiệu của dự án, `core/theme/core-preset.ts` chỉ giữ cơ chế dẫn xuất thang
+> màu (`mix`/`ramp`) và nhận bảng màu qua tham số. Xem
+> [../../../kien-truc-core-module.md](../../../kien-truc-core-module.md)
+> §"Core giữ CƠ CHẾ, dự án cung cấp DỮ LIỆU".
+
+### ✅ Code đã bắt kịp — 2 token contrast (đối chiếu 2026-08-28, xác nhận lại 2026-09-06)
+
+| Token | Giá trị | Trước | Đo lại sau khi sửa |
+|---|---|---|---|
+| `--warn` | `#965e08` | `#a8690a` (`3.88:1`) | **`4.66:1`** trên `--warn-bg` |
+| `--bad` | `#a02b2b` | `#b83232` (`3.89:1`) | **`4.79:1`** trên nền hover nút danger · `5.69:1` trên `--bad-bg` |
+
+Cả hai nay **đạt ngưỡng AA `4.5:1`** cho chữ badge 10px — mức đã chốt bắt buộc ở
+[15-accessibility.md](15-accessibility.md) §1. Sửa ở **hai** nơi: `styles.scss`
+và bảng màu phía TypeScript (nay là `APP_PALETTE` trong `app.config.ts`).
+
+Xác nhận lại 2026-09-06, cả hai nơi vẫn khớp — đừng chép giá trị đi chỗ khác, đọc bằng lệnh:
+
+```bash
+grep -n -- '--warn:\|--bad:' src/FE/src/styles.scss
+grep -n "warn:\|bad:" src/FE/src/app/app.config.ts
+```
+
+🔄 LẬT 2026-09-06 — hai chỗ sai trong đoạn này:
+
+- Câu cũ neo vào **`DESIGN.md:397`** cho lời khẳng định *"bản vá đã vào cả hai file"*. Dòng 397
+  của file đó là một khoá token (`text-emphasis-good`), **không** có câu nào như vậy. Trích dẫn
+  bịa số dòng — đúng loại lỗi `check-docs.sh` mục 6 sinh ra để bắt, và nó lọt vì số dòng vẫn
+  nằm trong file.
+- Đợt sửa 2 token này (2026-08-28) **đã bị một đợt rộng hơn thay thế**: `doc/Design/.../DESIGN.md`
+  §Colors ghi lần tính lại **2026-08-29** động tới tám giá trị bề mặt/đường viền. Bảng ở trên
+  vẫn đúng về `--warn`/`--bad`, nhưng đừng đọc nó như bản kê đầy đủ của lần cân contrast gần
+  nhất — nguồn cho việc đó là `Tokens/colors.md` § Contrast.
+
+> Ghi chú đọc `Tokens/colors.md`: cột `*(not shipped)*` là cột **dark mode** và
+> xuất hiện ở **mọi** dòng — nó **không** có nghĩa "giá trị này chưa vào code".
+> Bản trước của mục này đọc nhầm đúng chỗ đó.
 
 ## Quy tắc dùng token trong component
 
@@ -96,10 +226,14 @@ Vì sao không được lấy giá trị từ `src/FE` cũ — nợ tương ph�
   đẩy lên global cho "tiện" — global phình to là dấu hiệu thiếu kỷ luật, khó
   biết token nào còn được dùng.
 
-## Dark mode
+## Dark mode — hiện trạng
 
 **Chưa có** — prototype gốc không có toggle theme/`prefers-color-scheme`
-(xem `DESIGN.md` §Colors: "No dark mode exists"). Không tự thêm dark theme
+(xem `DESIGN.md` §Colors: "No dark mode exists"). Và nó đang được **tắt tường minh**, không chỉ
+là "chưa làm": `providePrimeNG({ theme: { options: { darkModeSelector: false } } })` trong
+`src/FE/src/app/app.config.ts` chặn hẳn auto dark-mode-selector của PrimeNG — thiếu dòng đó,
+PrimeNG tự đổi màu theo OS trong khi `styles.scss` thì không, và giao diện lệch làm đôi trên
+máy đang để dark mode (bổ sung 2026-09-06). Không tự thêm dark theme
 khi chưa có yêu cầu — nếu cần sau này, thêm set `dark` trong `tokens.json`
 (đã có cấu trúc W3C DTCG sẵn `global`/`light`/`dark`, chỉ đang để trống
 `dark`) trước, rồi mới đổi code.
@@ -111,7 +245,7 @@ quan là text/màu/mũi tên Unicode `↑`/`↓`). Nếu component mới cần i
 đây là quyết định mới — chọn 1 bộ (vd Angular Material Icons, hoặc SVG
 sprite riêng) và ghi vào `Icons.md`, không lặng lẽ trộn nhiều nguồn icon.
 
-## Dark mode — kiến trúc đã sẵn sàng, cơ chế switch thì chưa
+### Dark mode — kiến trúc đã sẵn sàng, cơ chế switch thì chưa
 
 > Bổ sung 2026-08-24, đối chiếu thực hành ngành cho hệ thống tầm trung: mục
 > "Dark mode" ở trên đúng khi nói `tokens.json` đã có sẵn 3 set
@@ -185,8 +319,17 @@ Cách chuẩn ngành xử lý đúng giới hạn này — biến SCSS + mixin, 
 build nhưng là chỗ **duy nhất** thật sự enforce được số breakpoint;
 `tokens.json` vẫn giữ vai trò tài liệu/Figma song song, không thay thế:
 
+> 📐 **ĐÍCH ĐẾN — CHƯA THI CÔNG (đối chiếu 2026-09-06).** `_breakpoints.scss` **chưa tồn tại**;
+> SCSS hiện tại vẫn gõ tay `@media (max-width: 980px)`. Nghĩa là đoạn "nhất quán bằng kỷ luật,
+> chưa bằng cơ chế" ở ngay trên mô tả đúng hiện trạng — mixin dưới đây là việc phải làm, không
+> phải việc đã làm:
+>
+> ```bash
+> find src/FE/src -name '_breakpoints.scss'      # hôm nay: không có kết quả
+> ```
+
 ```scss
-// core/theme/_breakpoints.scss
+// core/theme/_breakpoints.scss  (chưa tồn tại — đích đến)
 $breakpoint-tablet: 980px;   // khớp tokens.json breakpoint.tablet — sửa cả 2 khi đổi
 $breakpoint-mobile: 560px;   // khớp tokens.json breakpoint.mobile
 
@@ -201,7 +344,7 @@ $breakpoint-mobile: 560px;   // khớp tokens.json breakpoint.mobile
 ```
 
 - **2 nguồn (`tokens.json` + `_breakpoints.scss`) phải khớp tay** — chấp
-  nhận được ở quy mô này, đúng tinh thần mục "2 nguồn phải luôn khớp nhau"
+  nhận được ở quy mô này, đúng tinh thần mục "Mọi nơi khai màu phải khớp nhau"
   ở trên, chỉ khác: không có `grep`/`var()` nào ép được ở đây, người sửa
   phải tự nhớ sửa cả hai. Ghi comment tại chỗ để lần sau không ai chỉ sửa 1
   bên.
@@ -210,6 +353,10 @@ $breakpoint-mobile: 560px;   // khớp tokens.json breakpoint.mobile
   comment trỏ chéo, không phịa ra số thứ ba.
 
 ## Contrast/WCAG — đã sửa tay 1 lần, chưa có cơ chế chặn lần sau
+
+> Đây là **phần a11y thuộc chủ đề token** — file chủ giữ nguyên ở đây. Điểm vào
+> chung cho a11y (mức chuẩn phải đạt, checklist màn hình mới, các mục a11y không
+> thuộc chủ đề nào): [15-accessibility.md](15-accessibility.md).
 
 > Bổ sung 2026-08-24, đối chiếu thực hành ngành cho hệ thống tầm trung:
 > `tokens.json` (`light.color.warn`, `light.color.bad`) tự ghi lại 1 lần sửa
@@ -224,8 +371,12 @@ tính contrast ratio theo công thức WCAG (relative luminance), chạy trướ
 coi 1 token màu mới/sửa là hợp lệ — không cần Lighthouse/axe đầy đủ cho việc
 này, công thức đủ ngắn để tự viết:
 
+> 📐 **ĐÍCH ĐẾN — CHƯA THI CÔNG (đối chiếu 2026-09-06).** `scripts/` hiện chỉ có `fe-gate.sh`
+> và ba file `.sql`; script dưới đây **chưa được viết**. Nghĩa là câu "chưa có cơ chế chặn lần
+> sau" ở tiêu đề mục vẫn đúng nguyên. Kiểm bằng `ls scripts/`.
+
 ```js
-// scripts/check-token-contrast.mjs
+// scripts/check-token-contrast.mjs  (chưa tồn tại — đích đến)
 import { readFileSync } from 'node:fs';
 
 const tokens = JSON.parse(readFileSync('doc/Design/Frontend/PlatformManager/Tokens/tokens.json', 'utf8'));
@@ -279,9 +430,15 @@ xuyên qua Figma. Ở quy mô 5-15 dev, kiểm soát đúng mức là **quy trì
 không phải tool:
 
 - File Figma export ra được coi là **bản xem, không phải nguồn** — mọi thay
-  đổi giá trị token phải bắt đầu lại từ `styles.scss` (đúng chiều đã chốt ở
-  mục "2 nguồn phải luôn khớp nhau" trên), rồi chạy `/design-extract-tokens`,
-  rồi export lại — không sửa thẳng trong Figma rồi coi là xong.
+  đổi giá trị token phải bắt đầu lại từ `Tokens/*.md` + `tokens.json`, rồi mới vào code
+  (`styles.scss` **và** `APP_PALETTE`), rồi export lại — không sửa thẳng trong Figma rồi coi
+  là xong.
+
+  🔄 LẬT 2026-09-06: dòng này trước đây viết *"phải bắt đầu lại từ `styles.scss`"* và tự dẫn
+  chiếu là "đúng chiều đã chốt". **Ngược hẳn** §Chiều ngay trên cùng file — chiều đã chốt
+  2026-08-27 và xác nhận lại 2026-08-29 là `doc/Design/` **là nguồn**, code đuổi theo. Đây là
+  tàn dư của chiều cũ (*"code là nguồn, tài liệu mirror theo"*) sót lại trong đúng file đã đảo
+  nó, tức một file tự mâu thuẫn — ai đọc mục này trước sẽ làm ngược ai đọc §Chiều trước.
 - Vì không có cơ chế máy phát hiện lệch, đây là chỗ **duy nhất** trong toàn
   bộ luồng token mà tính đúng phụ thuộc hoàn toàn vào người, không phải
   lệnh `grep`/script — ghi nhận tường minh để không ai tưởng nhầm nó đã có

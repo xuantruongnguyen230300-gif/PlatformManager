@@ -1,9 +1,11 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, Signal, computed, inject, signal } from '@angular/core';
-import { Observable, catchError, map, of, shareReplay, tap, throwError } from 'rxjs';
-import { IApiResult } from '../http/api-result.model';
+import { TranslateService } from '@ngx-translate/core';
+import { Observable, catchError, map, of, shareReplay, tap } from 'rxjs';
+import { IApiResult, unwrapData } from '../http/api-result.model';
 import { CurrentUserService } from '../../core/auth/current-user.service';
 import { ICurrentUser } from '../../core/auth/current-user.model';
+import { ToastService } from '../toast/toast.service';
 import { IMenuItem, IMenuItemDto } from './menu-item.model';
 
 /**
@@ -47,6 +49,15 @@ function buildMenuTree(items: IMenuItem[]): IMenuItem[] {
 const ANONYMOUS_SESSION_KEY = '<anonymous>';
 
 /**
+ * Khoá dịch của câu báo "không tải được menu". Chuỗi viết trong `core/` không thuộc màn nào nên
+ * đoạn giữa lấy từ TÊN DỊCH VỤ chứa nó (`menu.service.ts` → `menu`) — cùng khuôn
+ * `shared.httpError.*` của `http-error.interceptor.ts`, xem
+ * doc/huong_dan/wiki-core/fe/08-i18n.md §Khuôn khoá dịch §2, đoạn "Chuỗi viết trong `shared/`
+ * hoặc `core/`".
+ */
+const MENU_LOAD_FAILED_KEY = 'shared.menu.loadFailed';
+
+/**
  * Khoá định danh PHIÊN đăng nhập mà một bản menu thuộc về. Gồm cả `Roles` vì BE lọc `SysMenuRole`
  * theo role — cùng 1 user nhưng role đổi thì menu cũng phải khác, không được dùng lại bản cũ.
  */
@@ -66,8 +77,9 @@ interface IMenuCacheEntry {
  * hard-code menu, luôn tải động theo role hiện tại (BE đã lọc `SysMenuRole` sẵn).
  *
  * CACHE (finding B3, doc/huong_dan/wiki-core/be/11-performance-caching.md §6.3): menu là dữ liệu
- * đọc-nhiều/ghi-hiếm nhưng `Sidebar` bị dựng lại mỗi lần app-shell bật/tắt (route `noShell` của
- * `login`/`doi-mat-khau`, xem `app.ts`) → trước đây bắn lại `GET /meta/menu` mỗi lần. Nay cache
+ * đọc-nhiều/ghi-hiếm nhưng `Sidebar` bị dựng lại mỗi lần app-shell bật/tắt (route khai
+ * `data: { noShell: true }` — hai màn auth, xem `app.ts`) → trước đây bắn lại `GET /meta/menu`
+ * mỗi lần. Nay cache
  * trong `signal()` theo đúng tiền lệ `MetadataService`
  * (doc/huong_dan/wiki-core/fe/11-grid-and-metadata.md) — CHƯA cần `signalStore()` vì state chỉ là
  * 1 danh sách đọc-nhiều, không có derive phức tạp (ngưỡng ở fe/03-state-management.md).
@@ -78,11 +90,26 @@ interface IMenuCacheEntry {
  *    đọc được khi đang là user B (rò rỉ thông tin phân quyền, không phải lỗi hiển thị nhỏ).
  * 2. `AuthService.login()/logout()` gọi `invalidate()` để xoá sớm khỏi bộ nhớ, không đợi tới lần
  *    `getMenu()` kế tiếp.
+ *
+ * ## Đường lùi — vì sao service NÀY nuốt lỗi, còn service nghiệp vụ thì không (chốt 2026-09-08)
+ *
+ * `getMenu()` KHÔNG BAO GIỜ đi ra nhánh `error`: hỏng thì nó toast một lần rồi trả `[]`. Đây là
+ * NGOẠI LỆ có điều kiện với luật chung ở doc/huong_dan/quy-uoc/fe-api-client.md §Đường lùi —
+ * cấp cho thành phần hạ tầng dùng chung mà hỏng nó không được phép chặn cả ứng dụng. Menu là
+ * khung điều hướng của mọi màn hình; ném lỗi ra từ đây nghĩa là mỗi nơi gọi (kể cả
+ * `menu.refresh().subscribe()` trần ở `platform/phan-quyen/pages/phan-quyen/phan-quyen.page.ts`)
+ * phải tự dựng lại cùng một handler, và quên một chỗ là một lỗi không ai bắt.
+ *
+ * Điều kiện đi kèm, KHÔNG được bỏ: lỗi phải **hiện ra đúng một lần** (toast) trước khi trả `[]`.
+ * Đây chính là chỗ khác khuôn cũ (toán tử `??` kèm một mảng rỗng dựng sẵn): khuôn đó cũng trả
+ * `[]`, nhưng không nói gì với ai.
  */
 @Injectable({ providedIn: 'root' })
 export class MenuService {
   private readonly http = inject(HttpClient);
   private readonly currentUserService = inject(CurrentUserService);
+  private readonly toast = inject(ToastService);
+  private readonly translate = inject(TranslateService);
 
   private readonly entry = signal<IMenuCacheEntry | null>(null);
 
@@ -128,7 +155,11 @@ export class MenuService {
     const isStillMine = (): boolean => this.inFlight !== null && this.inFlight.Token === token;
 
     const request$ = this.http.get<IApiResult<IMenuItemDto[]>>('/meta/menu').pipe(
-      map((res) => buildMenuTree((res.data ?? []).map(mapMenuItemDtoToModel))),
+      // `unwrapData` chứ KHÔNG toán tử `??` kèm một mảng rỗng dựng sẵn (khuôn cũ, đổi 2026-09-08):
+      // một envelope hỏng và một tài khoản không được cấp menu nào cho ra CÙNG một hình ảnh —
+      // sidebar rỗng — nên khuôn đó biến lỗi hạ tầng thành một câu trả lời trông hợp lệ. Xem
+      // doc/huong_dan/quy-uoc/fe-api-client.md §"cũng bị cấm — và đây là dạng nguy hiểm nhất".
+      map((res) => buildMenuTree(unwrapData(res).map(mapMenuItemDtoToModel))),
       tap((items) => {
         // Response của phiên CŨ về muộn (user đã logout/đăng nhập tài khoản khác trong lúc chờ)
         // KHÔNG được ghi đè cache của phiên hiện tại — hậu quả tuy nhẹ (lớp khoá phiên vẫn chặn
@@ -140,11 +171,24 @@ export class MenuService {
         // của phiên mới và làm nó bị gọi lại lần nữa.
         if (isStillMine()) this.inFlight = null;
       }),
-      // Lỗi KHÔNG được cache: xoá `inFlight` để lần gọi sau thử lại thật (sidebar hiện rỗng lúc
-      // này, `httpErrorInterceptor` đã lo toast) — không nuốt lỗi ở đây, nơi gọi tự quyết định.
+      // Đường lùi đặt NGAY TẠI ĐÂY, không lan lỗi ra nơi gọi — xem khối tài liệu của lớp ở trên
+      // (§"Đường lùi") để biết vì sao service này được phép, còn service nghiệp vụ thì không.
+      //
+      // Lỗi vẫn KHÔNG được cache: xoá `inFlight` để lần gọi sau thử lại thật. `entry` cũng không
+      // bị ghi — `tap` nằm TRƯỚC `catchError` nên nó không chạy ở nhánh này.
       catchError((err: unknown) => {
         if (isStillMine()) this.inFlight = null;
-        return throwError(() => err);
+
+        // "Hiện ra ĐÚNG MỘT LẦN": lỗi HTTP đã được `httpErrorInterceptor` biến thành toast rồi
+        // (hoặc cố ý im lặng — 401 phiên chết đang điều hướng về màn đăng nhập, thêm một toast
+        // "không tải được menu" chỉ là nhiễu). Toast của service này dành cho nhánh CÒN LẠI: lỗi
+        // sinh sau interceptor — envelope 200 nhưng thiếu `data` (`unwrapData` ném), mapper hỏng —
+        // vốn là nhánh trước đây không có tiếng nói nào.
+        if (!(err instanceof HttpErrorResponse)) {
+          this.toast.error(this.translate.instant(MENU_LOAD_FAILED_KEY) as string);
+        }
+
+        return of<IMenuItem[]>([]);
       }),
       shareReplay({ bufferSize: 1, refCount: false }),
     );

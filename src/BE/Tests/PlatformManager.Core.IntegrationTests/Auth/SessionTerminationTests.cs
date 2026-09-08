@@ -19,7 +19,7 @@ namespace PlatformManager.Core.IntegrationTests.Auth;
 /// nhất chứng minh được chính sách hoạt động là **request kế tiếp bằng chính cookie đó trả 401**
 /// (xem doc/huong_dan/wiki-core/be/02-identity-auth.md §"Cách chứng minh nó hoạt động thật").
 /// Mỗi test vì vậy luôn có cặp khẳng định: (1) hiệu ứng lên phiên đang chạy, (2) con dấu trong DB
-/// đổi/không đổi đúng như bảng luật ở .claude/rules/api-controller.md §"Chấm dứt phiên".
+/// đổi/không đổi đúng như bảng luật ở doc/huong_dan/quy-uoc/be-api-controller.md §"Chấm dứt phiên".
 ///
 /// Mỗi test method có host RIÊNG (xUnit dựng instance test class mới cho từng method) — CỐ Ý:
 /// policy rate limit "login" trong Program.cs là 5 request/phút, host dùng chung sẽ khiến test
@@ -36,8 +36,8 @@ namespace PlatformManager.Core.IntegrationTests.Auth;
 [Collection(PostgresCollection.Name)]
 public sealed class SessionTerminationTests : IAsyncLifetime
 {
-    private const string Password = "Test@12345";
-    private const string NewPassword = "Test@98765";
+    private const string Password = "Test@123456789";
+    private const string NewPassword = "Test@987654321";
 
     private readonly PostgresFixture _fixture;
     private readonly SessionTerminationFactory _factory;
@@ -123,7 +123,7 @@ public sealed class SessionTerminationTests : IAsyncLifetime
         Assert.Equal(newEmail, await ReadEmailAsync(victimId));
 
         // Ca NGƯỢC CHIỀU — chống "bump quá tay": đá người ta ra khỏi hệ thống vì bị sửa tên là
-        // thiệt hại không mua được gì (.claude/rules/api-controller.md §"Chấm dứt phiên" luật 1).
+        // thiệt hại không mua được gì (doc/huong_dan/quy-uoc/be-api-controller.md §"Chấm dứt phiên" luật 1).
         Assert.Equal(stampBefore, await ReadSecurityStampAsync(victimId));
         await AssertStatusAsync(HttpStatusCode.OK, victimClient.GetAsync("/api/auth/me"));
     }
@@ -251,8 +251,10 @@ public sealed class SessionTerminationTests : IAsyncLifetime
         return user.Id;
     }
 
-    /// <summary>Idempotent — host chạy ở Development nên CoreSeeder thường đã tạo sẵn, nhưng test
-    /// không được phụ thuộc vào việc seed có chạy thành công hay không.</summary>
+    /// <summary>Idempotent — PostgresFixture.SeedCoreAsync() đã tạo sẵn 3 role, nhưng test không
+    /// được phụ thuộc vào việc seed có chạy thành công hay không. (Trước 2026-09-01 câu này nói
+    /// "host chạy ở Development nên CoreSeeder đã tạo sẵn" — hàng rào IsDevelopment() đó không
+    /// còn, xem IntegrationTestHostEnvironment.)</summary>
     private async Task EnsureRolesAsync()
     {
         using var scope = _factory.Services.CreateScope();

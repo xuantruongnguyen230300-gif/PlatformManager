@@ -1,3 +1,6 @@
+// Thiết kế: doc/Design/Frontend/PlatformManager/Prototypes/index.html — "LỚP 3 · toast.scss" và
+// màn "Thư viện component" mục 15. `.toast-close` KHÔNG còn rule riêng ở đây: hình dạng nút lấy
+// hết từ `.icon-btn` toàn cục (src/styles.scss §3.2), class chỉ còn để đặt tên chỗ.
 .toast-stack {
   position: fixed;
   right: var(--sp-5);
@@ -6,66 +9,98 @@
   display: flex;
   flex-direction: column;
   gap: var(--sp-3);
-  max-width: min(360px, 90vw);
+  max-width: min(400px, 90vw);
 }
 
+// Bản trước chỉ là hộp trắng viền mảnh + vạch màu 4px — nổi lên giữa nền trắng của trang thì gần
+// như không thấy. Nay: icon tròn có màu, tiêu đề đậm, bóng đổ sâu để tách hẳn khỏi nội dung.
 .toast-item {
   display: flex;
   align-items: flex-start;
   gap: var(--sp-3);
   background: var(--card);
   border: 1px solid var(--line);
-  border-left: 4px solid var(--muted);
+  border-left: 5px solid var(--muted);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow);
-  padding: var(--sp-3) var(--sp-4);
+  box-shadow: var(--shadow-toast);
+  padding: var(--sp-4) var(--sp-5);
   font-size: var(--fs-sm);
   color: var(--text);
-  animation: toast-in 0.15s ease;
+  animation: toast-in 0.18s cubic-bezier(0.2, 0.9, 0.3, 1);
 
+  // Bốn mức khác nhau ở HAI chỗ cùng lúc — vạch trái và cặp nền/màu của icon tròn. Chỉ đổi vạch
+  // như bản cũ thì trên nền trắng gần như không phân biệt được mức độ.
   &.success {
     border-left-color: var(--good);
+
+    .toast-icon {
+      background: var(--good-bg);
+      color: var(--good);
+    }
   }
 
   &.error {
     border-left-color: var(--bad);
+
+    .toast-icon {
+      background: var(--bad-bg);
+      color: var(--bad);
+    }
   }
 
   &.warn {
     border-left-color: var(--warn);
+
+    .toast-icon {
+      background: var(--warn-bg);
+      color: var(--warn);
+    }
   }
 
   &.info {
     border-left-color: var(--brand);
+
+    .toast-icon {
+      background: var(--tonal-bg);
+      color: var(--tonal-ink);
+    }
   }
 }
 
-.toast-text {
-  flex: 1;
-  line-height: 1.4;
-}
-
-.toast-close {
-  border: 1px solid transparent;
-  background: transparent;
-  border-radius: var(--radius-sm);
-  color: var(--muted);
-  cursor: pointer;
-  flex: none;
+.toast-icon {
   width: 22px;
   height: 22px;
+  border-radius: var(--radius-pill);
+  flex: none;
   display: flex;
   align-items: center;
   justify-content: center;
+  font-size: 11px;
+  // Mức chưa gắn (không nên xảy ra vì `Severity` là union 4 giá trị) vẫn có hình dạng hợp lệ.
+  background: var(--surface-2);
+  color: var(--muted);
+}
 
-  &:hover {
-    background: var(--surface-2);
+.toast-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.toast-title {
+  font-weight: 800;
+  display: block;
+  margin-bottom: 2px;
+}
+
+.toast-text {
+  line-height: 1.45;
+  color: var(--muted);
+  display: block;
+
+  // Không có tiêu đề thì chính câu này LÀ thông điệp — để --muted khi nó đứng một mình sẽ làm
+  // nội dung quan trọng nhất trở thành chữ mờ nhất. Phần lớn toast hiện tại rơi vào nhánh này.
+  &:only-child {
     color: var(--text);
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--brand);
-    outline-offset: 2px;
   }
 }
 

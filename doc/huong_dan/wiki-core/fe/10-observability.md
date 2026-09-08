@@ -1,3 +1,9 @@
+---
+kind: luat
+scope: core
+verified: 2026-09-06
+---
+
 # 10. Observability phía client
 
 ## `traceId` — cầu nối log FE ↔ log BE
@@ -13,12 +19,38 @@ phải đoán theo thời gian/màn hình.
 `Đã có lỗi xảy ra. Mã tra cứu: ${apiResult.traceId}`
 ```
 
+> 📐 **CHƯA THI CÔNG (đối chiếu 2026-09-06).** `traceId` **có** trong model envelope
+> (`src/FE/src/app/core/http/api-result.model.ts`) và **có** được dùng một chỗ — câu lỗi của
+> `unwrapData()` khi envelope thiếu `data`. Nhưng **không màn hình nào hiện nó cho người dùng**:
+>
+> ```bash
+> grep -rn "traceId" src/FE/src/app --include=*.html    # hôm nay: 0 dòng
+> ```
+>
+> Nghĩa là hôm nay support **không** có mã để tra ngược log BE khi người dùng báo lỗi — đúng
+> khoảng trống mà mục này sinh ra để đóng. Khi làm: câu hiển thị phải đi qua bảng dịch
+> (`public/i18n/*.json`), không viết thẳng tiếng Việt vào template — cổng **G12** sẽ chặn.
+
 ## Log console — chỉ dev, không production
 
 `console.error` cho lỗi không mong đợi **chỉ** bật ở `environment.development.ts`
 (`environment.production: false`) — production build không log chi tiết lỗi
 ra console (tránh lộ traceId/stack ra người dùng cuối tò mò mở DevTools, dù
 đây không phải bí mật nhạy cảm, vẫn nên tối giản bề mặt lộ thông tin).
+
+> 📐 **CHƯA THI CÔNG (đối chiếu 2026-09-06).** Cờ `environment.production` **không được đọc ở
+> bất kỳ đâu** trong `src/FE/src/app`:
+>
+> ```bash
+> grep -rn "environment.production" src/FE/src/app    # hôm nay: 0 dòng
+> ```
+>
+> `GlobalErrorHandler` (`src/FE/src/app/core/errors/global-error.handler.ts:34`) gọi
+> `console.error(error)` **vô điều kiện**, và đó là lựa chọn có ghi lý do tại chỗ: người trực sự
+> cố cần thấy lỗi trong console và trong công cụ giám sát, đúng như `ErrorHandler` mặc định của
+> Angular vẫn làm. Nghĩa là luật ở mục này và code đang **nói ngược nhau**, chưa bên nào sai
+> hẳn — nó cần một quyết định, không phải một lần sửa lặng lẽ. Đừng bọc `if (!environment.production)`
+> vào đó mà không chốt lại mục này trước.
 
 ## Đã tới ngưỡng — Nhóm B trước đây, giờ nên làm
 
@@ -72,23 +104,35 @@ import { ApplicationConfig, ErrorHandler, provideBrowserGlobalErrorListeners } f
 
 export const appConfig: ApplicationConfig = {
   providers: [
-    provideBrowserGlobalErrorListeners(),
-    { provide: ErrorHandler, useClass: GlobalErrorHandler },
+    provideBrowserGlobalErrorListeners(),                  // 📐 chưa đăng ký, xem dưới
+    { provide: ErrorHandler, useExisting: GlobalErrorHandler },
     // ... các provider khác
   ],
 };
 ```
 
 ```ts
-// core/errors/global-error-handler.ts
-@Injectable()
+// core/errors/global-error.handler.ts
+@Injectable({ providedIn: 'root' })
 export class GlobalErrorHandler implements ErrorHandler {
   handleError(error: unknown): void {
-    if (!environment.production) console.error(error);   // xem §"Log console" trên
+    console.error(error);
     // gửi report — xem mục "Gửi lỗi FE về đâu" ngay dưới
   }
 }
 ```
+
+> ### 🔄 LẬT 2026-09-06 — ba chỗ lệch code thật, hai chỗ sinh lỗi im lặng
+>
+> | Bản trước | Thực tế (`src/FE/src/app/core/errors/global-error.handler.ts`) |
+> |---|---|
+> | File `core/errors/global-error-handler.ts` | Tên thật `global-error.handler.ts` (dấu chấm, không gạch nối) |
+> | `@Injectable()` trần + `useClass` | `@Injectable({ providedIn: 'root' })` + **`useExisting`** ở `app.config.ts:142`. `useClass` tạo **thể hiện thứ hai**: `App` inject thẳng `GlobalErrorHandler` để đọc signal `newVersionAvailable()`, nên dải "đã có phiên bản mới" sẽ không bao giờ hiện — build xanh, không test nào đỏ |
+> | `provideBrowserGlobalErrorListeners()` viết như thể đã đăng ký | **Chưa có** trong `app.config.ts`. Nghĩa là lỗi ném ngoài vùng Angular (`setTimeout` thô, promise reject không `await`) hiện **không** tới `ErrorHandler` — đúng lớp lỗi mà chính mục này nêu ra. Kiểm: `grep -rn "provideBrowserGlobalErrorListeners" src/FE/src` |
+>
+> **Và bản cài đặt thật làm thêm một việc mục này không nhắc:** nó nhận diện ca "bản build trên
+> máy chủ đã đổi" (`isChunkLoadError`) rồi bật một dải mời tải lại. Đó là chức năng chính của lớp
+> đó hôm nay — xem [17-phuc-vu-va-trien-khai.md](17-phuc-vu-va-trien-khai.md) §4.
 
 ## Gửi lỗi FE về đâu — không dừng ở toast cho user
 
@@ -99,6 +143,9 @@ export class GlobalErrorHandler implements ErrorHandler {
 > xảy ra" xong là hết việc của UI, nhưng nếu dừng ở đó thì không ai phía
 > dev/support biết lỗi vừa xảy ra trừ khi user tự report — chậm hơn nhiều
 > so với alert tự động, đúng khoảng trống mà Sentry được chọn để lấp ở trên.
+
+> 📐 **CHƯA THI CÔNG (đối chiếu 2026-09-06)** — `GlobalErrorHandler` hiện chỉ `console.error`,
+> không gửi báo cáo đi đâu. Không có Sentry, không có `POST /api/client-errors`.
 
 Bắt đầu bằng class tự viết ở mục trên (không phụ thuộc vendor, endpoint tự
 dựng); khi có ngân sách cho Sentry, chỉ cần đổi provider — không phải sửa

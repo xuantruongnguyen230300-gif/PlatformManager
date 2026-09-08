@@ -1,61 +1,105 @@
 ---
+kind: luat
+scope: du-an
+verified: 2026-09-06
 project: "PlatformManager"
 status: "draft"
-updated: "2026-08-22"
+updated: "2026-08-29"
 component: "Button"
-sources: ["src/FE/src/styles.scss", "src/FE/src/app/shared/components/topbar/topbar.html", "src/FE/src/app/platform/login/pages/login/login.page.html", "src/FE/src/app/platform/phan-quyen/pages/phan-quyen/phan-quyen.page.html", "src/FE/src/app/modules/danh-muc-dti/components/confirm-dialog/confirm-dialog.html"]
+sources:
+  - "src/FE/src/styles.scss"
+  - "src/FE/src/app/shared/components/topbar/topbar.html"
+  - "src/FE/src/app/shared/components/toolbar/toolbar.html"
+  - "src/FE/src/app/shared/components/confirm-dialog/confirm-dialog.html"
+  - "src/FE/src/app/platform/trang-chu/pages/trang-chu/trang-chu.page.html"
+  - "src/FE/src/app/platform/quan-tri-nguoi-dung/pages/quan-tri-nguoi-dung/quan-tri-nguoi-dung.page.html"
+  - "src/FE/src/app/platform/quan-tri-nguoi-dung/components/user-form-dialog/user-form-dialog.html"
+  - "src/FE/src/app/platform/phan-quyen/pages/phan-quyen/phan-quyen.page.html"
+  - "src/FE/src/app/platform/login/pages/login/login.page.html"
+  - "src/FE/src/app/platform/doi-mat-khau/pages/doi-mat-khau/doi-mat-khau.page.html"
 ---
 
 # Button
-**Description:** The labelled action trigger built on the global `.btn` class (`styles.scss:142-195`). It is a **fill-first tonal button**: no visible border, a pale brand tint as the default fill, and a full five-state treatment. It appears on all six routes — dialog footers, card titles, toolbars, the topbar and both auth forms.
+**Description:** The labelled action trigger built on the global `.btn` class (`src/FE/src/styles.scss` § 3.1). Since the 2026-08-29 redesign it is a **bordered tonal button**: a pale brand tint as the fill, a 1px `colors.line` edge, and a full five-state treatment. It appears on every shipped route — card titles, toolbars, dialog footers, the topbar and both auth forms.
+
+> **Citation policy.** Values below cite `src/FE/src/styles.scss` plus the **selector name**, not a line number. The file was rewritten on 2026-08-29 and its component library is still moving; a selector is stable evidence, a line number in a moving file is not.
 
 ## Anatomy
-Single-line text label, optionally preceded by a PrimeIcons `<i class="pi pi-…">` glyph (see `Icons.md`). Rounded rectangle: `rounded.sm` radius, `spacing.button-padding`, `typography.button-label` (`fs-sm`/700), `cursor:pointer`. Border is `1px solid transparent` **by design** — `styles.scss:143-146` records that the transparent border preserves the box model so hover/focus colour changes never shift layout by 1px. No fixed width; sizes to its label. Transition: `background .15s`, `box-shadow .15s`, `transform .1s` (`styles.scss:154`).
+Single-line text label, optionally preceded by a PrimeIcons `<i class="pi pi-…">` glyph (see `Icons.md`). Rounded rectangle: `border: 1px solid colors.line`, fill `colors.tonal-bg`, ink `colors.tonal-ink`, radius `rounded.sm`, padding `spacing.button-padding`, `typography.button-label`, `cursor: pointer`, `text-decoration: none`. No fixed width; it sizes to its label. Transition: background and box-shadow at `duration.fast`, transform at `duration.instant`.
+
+Two of those properties are new on 2026-08-29 and both are load-bearing:
+
+- **The border replaced a transparent one.** `.btn` used to declare `1px solid transparent` so hover colour changes would not shift layout. The new `colors.tonal-bg` fill separates from `colors.card` by only 1.45:1 — not enough to see a button edge — and darkening the fill to 3:1 would drop the dark-blue label below AA. The boundary therefore moved to the border, where it costs nothing. The source records the measurement inline.
+- **`text-decoration: none`.** `<a class="btn">` is how the app navigates with a button (`trang-chu.page.html` → `/doi-mat-khau`). Without the reset the anchor renders underlined and reads as a broken link.
 
 ## Variants
 
 | Variant | Classes | Key values | When to use |
 | --- | --- | --- | --- |
-| Default (tonal secondary) | `btn` | bg `colors.tonal-bg`, text `colors.tonal-ink`, transparent border (`styles.scss:146-148`) | Every labelled secondary action: dialog `Đóng`/`Huỷ`/`Sao chép`, `Import CSV/Excel`, history-row `Xem`, topbar `Đăng xuất` |
-| Primary | `btn primary` | bg + border-color `colors.brand`, text `colors.on-primary` (`styles.scss:156-159`) | The one primary action per context: `+ Thêm chỉ tiêu`, `+ Thêm người dùng`, `Xuất báo cáo`, `Lưu thay đổi`, `Lưu`, `In`, `Nhập dữ liệu`, `Đăng nhập`, `Đổi mật khẩu` |
-| Danger | `btn danger` | bg `colors.bad-bg`, text `colors.bad` (`styles.scss:168-170`) | Destructive confirmation only — the confirm-dialog's confirm action (`confirm-dialog.html:8`, label bound to `confirmLabel()`, passed `"Xoá"` from `danh-muc-dti.page.html:71`) |
-| Block modifier | `btn primary btn-block` | `width:100%`, `padding:11px`, `typography.button-block-label` (`fs-md`), centred flex, `gap:8px` (`styles.scss:599-607`) | Full-width form submit on the two auth screens only (`login.page.html:55`, `doi-mat-khau.page.html:58`) |
-| Icon-only modifier | `btn sidebar-hamburger` | `.btn` base + screen-local geometry in `topbar.scss` | The mobile drawer trigger holding only `pi pi-bars` (`topbar.html:3-12`) |
+| Default (tonal secondary) | `btn` | border `colors.line`, fill `colors.tonal-bg`, ink `colors.tonal-ink` | Every labelled secondary action: dialog `Huỷ`, toolbar `Xoá lọc`, topbar `Đăng xuất`, the home card's `Đổi mật khẩu` link |
+| Primary | `btn primary` | fill **and** border `colors.brand`, ink `colors.on-primary` | The one primary action per context: `+ Thêm người dùng`, `Áp dụng`, `Lưu thay đổi`, `Lưu`, `Đăng nhập`, `Đổi mật khẩu` |
+| Danger | `btn danger` | border `colors.danger-border`, fill `colors.bad-bg`, ink `colors.bad` | Destructive confirmation only — `ConfirmDialog`'s confirm action while `[confirmDanger]` is true |
+| Small | `btn sm` | padding `spacing.button-sm-padding`, `typography.button-sm-label`; everything else inherited | Row-level actions inside a table. **Declared in the shared library, no shipped call site today** — the one grid that ships uses ghost icon buttons instead |
+| Block | `btn primary btn-block` | `width: 100%`, padding `spacing.button-block-padding`, `typography.button-block-label`, centred flex, gap `spacing.sp-3` | Full-width form submit on the two auth screens |
+| Anchor | `a.btn` | identical box; `text-decoration: none` is what makes it read as a button | `trang-chu.page.html` — the only route into `/doi-mat-khau` when the account is not forced to change its password |
+| Disclosure summary | `details.filter > summary.btn` | `.btn` box plus `list-style: none`, `inline-flex`, gap `spacing.sp-2`, `user-select: none`; while `[open]` the summary flips to fill and border `colors.brand`, ink `colors.on-primary` | The toolbar's `Lọc` trigger |
+| Icon-only shell | `btn sidebar-hamburger` | `.btn` base plus screen-local geometry in `topbar.scss`; hidden above `spacing.breakpoint-tablet` | The mobile drawer trigger, holding only `pi pi-bars` |
 
-**Not variants of `.btn`** — two separate ghost button families exist and must not be folded in here: `.action-btn` (`styles.scss:213-253`, in-row grid actions) and `.cell-icon-btn` (`criteria-grid-table.scss:57-99`, inline cell-edit confirm/cancel). Both are deliberately transparent-by-default so dense grids are not flooded with tonal fill (`styles.scss:197-212`). They are indexed separately in `COMPONENTS.md`.
+**Not a variant of `.btn`.** The ghost icon-only family `.icon-btn` (`src/FE/src/styles.scss` § 3.2) is a separate component: transparent by default so a dense grid is not flooded with tonal fill. It absorbed five earlier one-off icon buttons on 2026-08-29 and is indexed separately in `COMPONENTS.md`.
 
 ## States
 <!-- Exactly these five rows, in this order — treatments as rendered by the shipped CSS. -->
 
 | State | Treatment |
 | --- | --- |
-| default | bg/text per variant above; `rounded.sm`; `spacing.button-padding`; `typography.button-label`; `border:1px solid transparent` |
-| hover | Default → bg `colors.tonal-bg-hover` + `box-shadow: 0 3px 10px rgba(23,39,67,.1)` (`styles.scss:177-180`). Primary → bg + border-color `colors.brand2` + `box-shadow: 0 8px 20px rgba(15,91,215,.35)` (`styles.scss:161-165`). Danger → bg `colors.bad-bg-hover` (`styles.scss:172-174`) |
-| focus | `outline: 2px solid colors.brand`, `outline-offset: 2px` — `:focus-visible` only, so keyboard focus shows the ring and mouse clicks do not (`styles.scss:182-185`) |
-| active | `transform: translateY(1px)` (`styles.scss:187-189`) |
-| disabled | `opacity: .5`, `cursor: not-allowed` (`styles.scss:191-194`). **Reachable and used** — `[disabled]` is bound on four `.btn`s: `login.page.html:55` and `doi-mat-khau.page.html:58` (`submitting()`), `phan-quyen.page.html:4` (`saving() \|\| loading()`), `csv-import-dialog.html:18` (`!selectedFile() \|\| importing()`). A fifth `[disabled]` binding exists on the permission matrix's checkboxes (`permission-matrix.html:25`), which is not a `.btn` |
+| default | Border, fill and ink per variant above; `rounded.sm`; `spacing.button-padding`; `typography.button-label`; `text-decoration: none` |
+| hover | Default → fill `colors.btn-hover-bg` plus `shadow.btn-hover`. Primary → fill and border `colors.brand2` plus `shadow.primary-hover`. Danger → fill `colors.danger-hover-bg`, border unchanged |
+| focus | `outline: 2px solid colors.brand`, `outline-offset: 2px` — `:focus-visible` only, so keyboard focus draws the ring and a mouse click does not |
+| active | `transform: translateY(1px)` |
+| disabled | `opacity: .5`, `cursor: not-allowed`. Declared on the base selector, so it reaches `.primary`, `.danger` and `.sm` alike. **Reachable and used** — `[disabled]` is bound on the two auth submits (`submitting()`), the permission-matrix save (`saving()` or `loading()`) and `ConfirmDialog`'s confirm action (`confirmDisabled()`) |
 
 ## Tokens Used
-- `colors.tonal-bg`, `colors.tonal-bg-hover`, `colors.tonal-ink`, `colors.brand`, `colors.brand2`, `colors.on-primary`, `colors.bad`, `colors.bad-bg`, `colors.bad-bg-hover`
+- `colors.tonal-bg`, `colors.btn-hover-bg`, `colors.tonal-ink`, `colors.line`, `colors.brand`, `colors.brand2`, `colors.on-primary`, `colors.bad`, `colors.bad-bg`, `colors.danger-hover-bg`, `colors.danger-border`
 - `rounded.sm`
-- `spacing.button-padding`, `spacing.button-block-padding`
-- `typography.button-label`, `typography.button-block-label`
+- `spacing.button-padding`, `spacing.button-sm-padding`, `spacing.button-block-padding`, `spacing.sp-2`, `spacing.sp-3`
+- `typography.button-label`, `typography.button-sm-label`, `typography.button-block-label`
+- `shadow.btn-hover`, `shadow.primary-hover`
+- `duration.instant` (transform), `duration.fast` (background, shadow)
+- Icons: PrimeIcons v7 — `pi-sign-in`, `pi-sign-out`, `pi-key`, `pi-bars`, `pi-filter`
 
-Both hover shadows and the `translateY(1px)` press offset are **literal values in the source**, not tokens — there is no elevation or motion scale (see `Tokens/spacing.md`).
+The `translateY(1px)` press offset is a literal with no token behind it — there is no motion-distance scale (`Tokens/spacing.md` § Motion).
 
 ## Reference markup
 
 ```html
 <!-- default tonal -->
-<button type="button" class="btn" (click)="dialogEl.close()">Huỷ</button>
+<button type="button" class="btn" (click)="onCancel()">{{ cancelLabel() }}</button>
 
-<!-- primary, with disabled binding -->
+<!-- primary, with disabled binding and a progress label -->
 <button type="button" class="btn primary" [disabled]="saving() || loading()" (click)="onSave()">
   {{ saving() ? 'Đang lưu…' : 'Lưu thay đổi' }}
 </button>
 
-<!-- danger (destructive confirm) -->
-<button type="button" class="btn danger" (click)="confirmed.emit(); dialogEl.close()">{{ confirmLabel() }}</button>
+<!-- danger or primary chosen at runtime by the confirm dialog -->
+<button
+  type="button"
+  class="btn"
+  [class.primary]="!confirmDanger()"
+  [class.danger]="confirmDanger()"
+  [disabled]="confirmDisabled()"
+  (click)="onConfirm()"
+>
+  {{ confirmLabel() }}
+</button>
+
+<!-- anchor styled as a button -->
+<a class="btn" routerLink="/doi-mat-khau"><i class="pi pi-key"></i> Đổi mật khẩu</a>
+
+<!-- disclosure summary styled as a button -->
+<summary class="btn">
+  <i class="pi pi-filter"></i> Lọc
+  @if (filterCount() > 0) { <span class="filter-count">{{ filterCount() }}</span> }
+</summary>
 
 <!-- block modifier, icon + label -->
 <button type="submit" class="btn primary btn-block" [disabled]="submitting()">
@@ -63,18 +107,28 @@ Both hover shadows and the `translateY(1px)` press offset are **literal values i
 </button>
 ```
 
-Sources: `src/FE/src/styles.scss:142-195` (base + variants + all five states), `src/FE/src/styles.scss:599-607` (`.btn-block`), `src/FE/src/app/shared/components/topbar/topbar.html:3-12,18-20`, `src/FE/src/app/platform/login/pages/login/login.page.html:55-57`, `src/FE/src/app/platform/doi-mat-khau/pages/doi-mat-khau/doi-mat-khau.page.html:58-60`, `src/FE/src/app/platform/phan-quyen/pages/phan-quyen/phan-quyen.page.html:4-6`, `src/FE/src/app/modules/danh-muc-dti/components/confirm-dialog/confirm-dialog.html:7-8`, `src/FE/src/app/modules/danh-muc-dti/components/csv-import-dialog/csv-import-dialog.html:17-20`, `src/FE/src/app/modules/dashboard/components/history-list/history-list.html:14`
+Sources: `src/FE/src/styles.scss` (§ 3.1 `.btn`, `.btn.primary`, `.btn.danger`, `.btn.sm`, `.btn-block`; § 6 `.filter > summary`, `.filter[open] > summary`), `src/FE/src/app/shared/components/topbar/topbar.html`, `src/FE/src/app/shared/components/topbar/topbar.scss` (`.sidebar-hamburger`), `src/FE/src/app/shared/components/toolbar/toolbar.html`, `src/FE/src/app/shared/components/confirm-dialog/confirm-dialog.html`, `src/FE/src/app/platform/trang-chu/pages/trang-chu/trang-chu.page.html`, `src/FE/src/app/platform/quan-tri-nguoi-dung/pages/quan-tri-nguoi-dung/quan-tri-nguoi-dung.page.html`, `src/FE/src/app/platform/quan-tri-nguoi-dung/components/user-form-dialog/user-form-dialog.html`, `src/FE/src/app/platform/phan-quyen/pages/phan-quyen/phan-quyen.page.html`, `src/FE/src/app/platform/login/pages/login/login.page.html`, `src/FE/src/app/platform/doi-mat-khau/pages/doi-mat-khau/doi-mat-khau.page.html`
 
 ## Do / Don't
 
-- ✅ One `btn primary` per context — the topbar, a card title bar and a dialog footer are each their own context and each carry one.
-- ✅ Reach for `btn danger` only for genuinely destructive confirmation; the shipped app uses it exactly once, on the delete confirm.
-- ✅ Keep the transparent border on every variant — dropping it makes hover/focus colour changes shift layout by 1px (`styles.scss:143-146`).
-- ✅ Bind `[disabled]` for in-flight submits and pair it with a label that swaps to a progress phrase (`Đang lưu…`, `Đang đăng nhập…`) — that is the shipped pattern in all five disabled call sites.
-- ❌ Don't give `.btn` a visible border or a grey fill — that reverts the deliberate fill-first decision at `styles.scss:21-27`.
-- ❌ Don't use `.btn` for icon-only actions inside a data grid — use `.action-btn`/`.cell-icon-btn`, which stay transparent so long lists are not flooded with colour.
-- ❌ Don't add a `.btn.success`/`.btn.warn` variant — only `primary` and `danger` ship.
+- ✅ One `btn primary` per context — the topbar, a card title bar, a toolbar and a dialog footer are each their own context and each carry one.
+- ✅ Keep the `colors.line` border on every variant. It is the only thing that gives the tonal fill a visible edge; removing it re-creates the 1.45:1 problem the 2026-08-29 pass was measured to fix.
+- ✅ Keep `text-decoration: none` when styling an `<a>` as a button, and use `routerLink` so navigation stays client-side.
+- ✅ Bind `[disabled]` for in-flight submits and pair it with a label that swaps to a progress phrase (`Đang lưu…`, `Đang đăng nhập…`) — that is the shipped pattern at every disabled call site.
+- ✅ Reach for `btn danger` only for genuinely destructive confirmation; `ConfirmDialog` selects it from `[confirmDanger]`, never by hand at the call site.
+- ❌ Don't use `.btn` for an icon-only action inside a data grid — use `.icon-btn`, which stays transparent so a long list is not flooded with colour.
+- ❌ Don't re-declare `.btn` in a component stylesheet. Every button in the app renders from this one rule; a local copy silently loses four of the five states, which is exactly the drift the 2026-08-29 consolidation removed.
+- ❌ Don't add a `.btn.success` or `.btn.warn` variant — only `primary` and `danger` ship.
 
 ## Normalize on redesign
-1. `.btn.primary:hover` and `.btn:hover` shadows, and the `translateY(1px)` press offset, are literal values with no token behind them — there is no elevation or motion scale to reference (`Tokens/spacing.md`).
-2. `.btn-block` is only ever combined with `primary`; a tonal or danger block button has no defined treatment should one be needed.
+1. **`.btn.sm` has no shipped call site.** It is a library variant waiting for the first table with row-level text actions. Keep it only if such a table lands; otherwise it is a spec for something nobody renders.
+2. **The `translateY(1px)` press offset is a bare literal.** Shadows and durations gained tokens in the 2026-08-29 pass (`shadow.*`, `duration.*`); motion *distance* still has none.
+3. **`.btn-block` is only ever combined with `primary`.** A tonal or danger block button has no defined treatment should one be needed.
+4. **`summary.btn` inherits the button box but not `:disabled`.** A `<summary>` cannot be disabled, so a filter trigger that must be unavailable has no shipped appearance.
+
+## Resolved in the 2026-08-29 redesign
+<!-- Items that used to sit in "Normalize on redesign" and were actually done. Kept, not deleted, so the history is not lost. -->
+1. **Invisible button boundary — resolved 2026-08-29.** `.btn` carried `1px solid transparent`; the tonal fill was the only edge, measuring 1.45:1 against `colors.card`. The border is now `colors.line` (3.00:1 on card, clearing WCAG 2.2 SC 1.4.11).
+2. **Underlined anchor buttons — resolved 2026-08-29.** `text-decoration: none` was added to `.btn` when `<a class="btn">` became the navigation pattern on the home screen.
+3. **No compact size — added 2026-08-29.** `.btn.sm` now exists for in-row actions (see Normalize #1 for its open question).
+4. **Untokenised hover shadows — resolved 2026-08-29.** Both `.btn` hover elevations are now named tokens (`shadow.btn-hover`, `shadow.primary-hover`) in `Tokens/tokens.json` and `DESIGN.md`.

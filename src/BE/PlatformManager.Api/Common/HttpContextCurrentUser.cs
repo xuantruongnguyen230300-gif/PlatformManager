@@ -6,7 +6,7 @@ namespace PlatformManager.Api.Common;
 /// <summary>
 /// Implement ICurrentUser đọc từ ClaimsPrincipal của cookie session hiện tại — đặt ở Api
 /// (composition root) vì phụ thuộc HttpContext, một khái niệm ASP.NET Core mà Application
-/// không được biết tới (xem .claude/rules/api-controller.md §Auth/Permission).
+/// không được biết tới (xem doc/huong_dan/quy-uoc/be-api-controller.md §Auth/Permission).
 /// </summary>
 public sealed class HttpContextCurrentUser(IHttpContextAccessor httpContextAccessor) : ICurrentUser
 {

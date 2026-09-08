@@ -12,6 +12,12 @@ public interface IRolePermissionRepository
     /// dict này = KHÔNG role nào được cấp (deny-by-default).</summary>
     Task<Dictionary<string, List<string>>> GetAssignedRoleNamesByResourceKeyAsync(CancellationToken ct);
 
-    /// <summary>Ghi đè TOÀN BỘ RolePermission theo ma trận gửi lên — UpdateResourcePermissionMatrixCommand.</summary>
+    /// <summary>Ghi đè TOÀN BỘ RolePermission theo ma trận gửi lên — UpdateResourcePermissionMatrixCommand.
+    /// Từ 2026-08-31 ghi đè bằng xoá MỀM (dòng cũ ở lại với <c>IsDeleted = true</c>), xem
+    /// doc/huong_dan/quy-uoc/be-entity-domain.md §"Quyết định người dùng 2026-08-31".</summary>
     Task ReplaceAllAsync(IReadOnlyDictionary<string, IReadOnlyCollection<string>> assignments, CancellationToken ct);
+
+    /// <summary>Token phiên bản của toàn bộ ma trận đang sống — cùng cơ chế và cùng bẫy với
+    /// <c>ISysMenuRoleRepository.GetVersionAsync</c>, xem <see cref="MatrixVersion"/>.</summary>
+    Task<string> GetVersionAsync(CancellationToken ct);
 }

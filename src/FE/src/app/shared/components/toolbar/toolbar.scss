@@ -1,0 +1,8 @@
+/* Component này CỐ Ý không có style riêng.
+   Mọi hình dạng của nó — `.toolbar`, `.input-icon`, `.filter`, `.filter-panel`, `.filter-chip`,
+   `.toolbar-sep`, `.toolbar-actions` — đã định nghĩa MỘT LẦN ở src/FE/src/styles.scss §6.
+   Khai lại ở đây là tạo bản sao thứ hai của cùng một component: hai bản sẽ lệch nhau ở lần sửa
+   kế tiếp, đúng tình trạng đã phải dọn ngày 2026-08-29.
+   Thêm nữa, nội dung bộ lọc và nhóm nút đi qua <ng-content>, mà style scoped KHÔNG xuyên qua
+   nội dung được project — rule viết ở đây cũng sẽ không có tác dụng lên chúng.
+   Cần một class dùng chung mới → bổ sung vào styles.scss (và prototype), không vá cục bộ. */

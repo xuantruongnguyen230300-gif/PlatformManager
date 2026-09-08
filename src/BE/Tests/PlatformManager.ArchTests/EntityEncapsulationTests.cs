@@ -5,22 +5,21 @@ using Xunit;
 namespace PlatformManager.ArchTests;
 
 /// <summary>
-/// Chỉ đúng 6 field kỹ thuật của BaseEntity được public set — mọi field nghiệp vụ của entity
-/// con phải private set + mutate qua method có tên nghiệp vụ (factory method pattern, xem
-/// .claude/rules/entity-domain.md). Quét CẢ Core.Domain (SysMenu/SysMenuRole) LẪN
-/// Modules.DtiWeekly.Domain (Criteria/CriteriaGroup/CriteriaAssessment/CriteriaEvidence) — thêm
-/// module mới thì thêm assembly vào <see cref="DomainAssemblies"/>. AppUser/AppRole (Identity)
+/// Chỉ 6 field kỹ thuật của BaseEntity được phép lộ setter public (`Id` là `init`, 5 field
+/// audit là `set`) — mọi field nghiệp vụ của entity con phải private set + mutate qua method
+/// có tên nghiệp vụ (factory method pattern, xem
+/// doc/huong_dan/quy-uoc/be-entity-domain.md). Hiện chỉ quét Core.Domain — thêm module nghiệp vụ
+/// mới thì thêm assembly Domain của nó vào <see cref="DomainAssemblies"/>. AppUser/AppRole (Identity)
 /// KHÔNG kế thừa BaseEntity nên không bị test này ràng buộc — đúng chủ đích thiết kế.
 /// </summary>
 public class EntityEncapsulationTests
 {
     private static readonly HashSet<string> AllowedPublicSetterNames =
-        ["Id", "UserCreate", "UserUpdate", "DateCreate", "DateUpdate", "IsDelete"];
+        ["Id", "CreatedBy", "UpdatedBy", "CreatedAt", "UpdatedAt", "IsDeleted"];
 
     private static readonly Assembly[] DomainAssemblies =
     [
         typeof(BaseEntity).Assembly,
-        typeof(PlatformManager.Modules.DtiWeekly.Domain.Entities.Criteria).Assembly,
     ];
 
     [Fact]
@@ -51,5 +50,33 @@ public class EntityEncapsulationTests
 
         Assert.True(violations.Count == 0,
             $"Entity nghiệp vụ có public setter ngoài 6 field kỹ thuật cho phép: {string.Join(", ", violations)}");
+    }
+
+    /// <summary>
+    /// <c>Id</c> nằm trong <see cref="AllowedPublicSetterNames"/> nên test trên MIỄN TRỪ nó hoàn
+    /// toàn — nghĩa là không có gì canh việc nó phải là <c>init</c> chứ không phải <c>set</c>.
+    /// Đổi <c>BaseEntity.Id</c> về <c>{ get; set; }</c> thì cả bộ test vẫn xanh (thử 2026-08-28,
+    /// finding F7), trong khi chính <c>init</c> là bất biến mà quyết định "BaseEntity sở hữu Id,
+    /// sinh một lần lúc khởi tạo" dựa vào.
+    ///
+    /// <para>Reflection không có khái niệm "init-only": C# mã hoá nó bằng modreq
+    /// <c>IsExternalInit</c> trên kiểu trả về của setter. Đó là lý do phải kiểm qua
+    /// <c>GetRequiredCustomModifiers()</c> thay vì một cờ nào đó của <c>SetMethod</c>.</para>
+    ///
+    /// <para>Canary (đã chạy 2026-08-28): tạm đổi <c>Id</c> sang <c>{ get; set; }</c> → test này
+    /// đỏ; khôi phục <c>init</c> → xanh.</para>
+    /// </summary>
+    [Fact(DisplayName = "BaseEntity.Id phải là init-only, không phải set")]
+    public void BaseEntityId_MustBe_InitOnly()
+    {
+        var idProperty = typeof(BaseEntity).GetProperty(nameof(BaseEntity.Id));
+        Assert.NotNull(idProperty);
+
+        var setter = idProperty!.SetMethod;
+        Assert.NotNull(setter);
+
+        Assert.Contains(
+            typeof(System.Runtime.CompilerServices.IsExternalInit),
+            setter!.ReturnParameter.GetRequiredCustomModifiers());
     }
 }

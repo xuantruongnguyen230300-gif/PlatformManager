@@ -1,8 +1,11 @@
 using System.Net;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
+using PlatformManager.Api.Permissions;
 using PlatformManager.Core.Application.Permissions;
 using PlatformManager.Core.Domain.Entities;
 using PlatformManager.Core.Infrastructure.Identity;
@@ -24,8 +27,9 @@ namespace PlatformManager.Core.IntegrationTests.Permissions;
 /// cross-cutting seam mới".
 ///
 /// Đo cả 2 chiều "trước" lẫn "sau" (đúng mẫu ở 02-identity-auth.md đã dẫn): role MỚI TẠO, CHƯA
-/// được cấp <see cref="ResourceKeys.Criteria"/> → gọi <c>GET /api/criteria</c>
-/// (<c>[RequirePermission(ResourceKeys.Criteria)]</c> trên <c>CriteriaController</c>) → PHẢI 403.
+/// được cấp <see cref="AppResourceKeys.Import"/> → gọi <c>GET /api/_test/permission-probe</c>
+/// (<see cref="PermissionSeamProbeController"/>, mang
+/// <c>[RequirePermission(AppResourceKeys.Import)]</c>) → PHẢI 403.
 /// Seed đúng <see cref="RolePermission"/> cho role đó → gọi lại BẰNG CHÍNH CÙNG 1 COOKIE → PHẢI
 /// 200. Chỉ assert 1 chiều (chỉ kiểm 403, hoặc chỉ kiểm 200) sẽ "pass" ngay cả khi endpoint luôn
 /// trả cùng 1 mã vì lý do khác hẳn (vd luôn 403 vì bug không liên quan, hoặc luôn 200 vì filter
@@ -34,7 +38,7 @@ namespace PlatformManager.Core.IntegrationTests.Permissions;
 [Collection(PostgresCollection.Name)]
 public sealed class RequirePermissionSeamTests : IAsyncLifetime
 {
-    private const string Password = "Test@12345";
+    private const string Password = "Test@123456789";
 
     private readonly PostgresFixture _fixture;
     private readonly WebApplicationFactory<Program> _factory;
@@ -46,7 +50,14 @@ public sealed class RequirePermissionSeamTests : IAsyncLifetime
         // PHẢI đặt trước khi host boot — xem IntegrationTestHostEnvironment.
         IntegrationTestHostEnvironment.Configure(fixture.ConnectionString);
 
-        _factory = new WebApplicationFactory<Program>();
+        // Nạp assembly test làm ApplicationPart để MVC thấy PermissionSeamProbeController.
+        // Filter đã đăng ký TOÀN CỤC ở Program.cs (options.Filters.Add<RequirePermissionFilter>())
+        // nên endpoint thăm dò vẫn đi qua đúng pipeline thật — đó chính là thứ test này đo.
+        _factory = new WebApplicationFactory<Program>()
+            .WithWebHostBuilder(builder => builder.ConfigureTestServices(services => services
+                .AddControllers()
+                .ConfigureApplicationPartManager(manager => manager.ApplicationParts
+                    .Add(new AssemblyPart(typeof(PermissionSeamProbeController).Assembly)))));
     }
 
     public Task InitializeAsync() => Task.CompletedTask;
@@ -54,7 +65,7 @@ public sealed class RequirePermissionSeamTests : IAsyncLifetime
     public async Task DisposeAsync() => await _factory.DisposeAsync();
 
     [Fact(DisplayName =
-        "Role chưa có RolePermission cho criteria.manage → GET /api/criteria trả 403; " +
+        "Role chưa có RolePermission cho import.manage → GET /api/_test/permission-probe trả 403; " +
         "seed đúng quyền rồi gọi lại CÙNG cookie → 200")]
     public async Task Endpoint_TogglesForbiddenToOk_AsRolePermissionIsGrantedMidSession()
     {
@@ -90,21 +101,21 @@ public sealed class RequirePermissionSeamTests : IAsyncLifetime
         var login = await client.PostAsJsonAsync("/api/auth/login", new { userName, password = Password });
         Assert.Equal(HttpStatusCode.OK, login.StatusCode);
 
-        // ── TRƯỚC: role vừa tạo KHÔNG có dòng RolePermission nào cho "criteria.manage" ──────
-        var before = await client.GetAsync("/api/criteria");
+        // ── TRƯỚC: role vừa tạo KHÔNG có dòng RolePermission nào cho "import.manage" ───────
+        var before = await client.GetAsync("/api/_test/permission-probe");
         Assert.Equal(HttpStatusCode.Forbidden, before.StatusCode);
 
         // ── Seed đúng RolePermission cho role đó (mô phỏng thao tác trên màn Phân quyền) ────
         await using (var db = _fixture.CreateDbContext())
         {
-            db.RolePermissions.Add(RolePermission.Create(roleId, ResourceKeys.Criteria));
+            db.RolePermissions.Add(RolePermission.Create(roleId, AppResourceKeys.Import));
             await db.SaveChangesAsync();
         }
 
         // ── SAU: CÙNG 1 cookie, gọi lại → 200. Không cache/TTL nào ở đường phân quyền, xem ────
         // doc/huong_dan/wiki-core/be/11-performance-caching.md §6.2 quyết định #5 — nếu có ai đó
         // sau này lỡ thêm cache mà quên invalidate, đúng bước này sẽ bắt được.
-        var after = await client.GetAsync("/api/criteria");
+        var after = await client.GetAsync("/api/_test/permission-probe");
         Assert.Equal(HttpStatusCode.OK, after.StatusCode);
     }
 

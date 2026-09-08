@@ -1,6 +1,6 @@
 // Wire shape của kết quả phân trang — BE trả `IApiResult<PagedResult<T>>` (PagedResult LỒNG
-// bên trong `data`, không phải envelope riêng, xem src/BE/.claude/rules/api-controller.md
-// §Envelope response "Quyết định có chủ đích: endpoint list/grid trả cùng envelope"). Camelcase
+// bên trong `data`, không phải envelope riêng, xem doc/huong_dan/quy-uoc/be-api-controller.md
+// §"Envelope response" — "Quyết định có chủ đích: endpoint list/grid trả cùng envelope"). Camelcase
 // theo đúng quy ước envelope mới — xem api-result.model.ts.
 // Shape chuẩn duy nhất cho MỌI endpoint list — xem
 // doc/huong_dan/quy-uoc/be-cqrs-handler.md §"Shape phân trang — CHỐT một bản duy nhất

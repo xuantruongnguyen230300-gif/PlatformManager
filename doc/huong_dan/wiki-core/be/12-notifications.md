@@ -1,16 +1,35 @@
+---
+kind: luat
+scope: core
+verified: 2026-09-06
+---
+
 # 12. Thông báo (Notification)
 
-> **Trạng thái: 🚧 ĐANG THI CÔNG — xác minh lại 2026-08-24, khác bản rà
-> 2026-08-23 bên dưới.** Working copy hiện tại (chưa commit) đã có
-> `Core.Application/Notifications/`, `Core.Infrastructure/Notifications/`
-> (`SmtpNotificationSender`, `SmtpOptions`) và trọn bộ
-> `Modules/DtiWeekly/.../Application/Import/` (`StartImportCommand`,
-> `ImportJobRunner`, `GetImportJobStatusQuery`...) + entity `ImportJob` +
-> migration `20260818090451_AddRolePermissionAndImportJob` — nghĩa là §0 và
-> bảng §4 dưới đây (viết khi seam **chưa tồn tại**) không còn mô tả đúng hiện
-> trạng. Chưa đối chiếu lại chi tiết implementation mới với các nguyên tắc
-> §3 (outbox, idempotency, template, opt-out) — **đọc hết trước khi sửa file
-> này hoặc viết thêm code**, đừng coi bảng "0 kết quả" ở §4 là còn đúng.
+> **Trạng thái: ⏸️ TẠM DỪNG CÓ CHỦ ĐÍCH — seam đã có, CHƯA ĐƯỢC BẬT
+> (đối chiếu source 2026-09-06).**
+>
+> | Mảnh | Hôm nay |
+> |---|---|
+> | `INotificationSender` + `NotificationRequest` + `INotificationTemplateRenderer` | ✅ có, `src/BE/Core/PlatformManager.Core.Application/Notifications/` |
+> | `SmtpNotificationSender` + `SmtpOptions` | ✅ có, `src/BE/Core/PlatformManager.Core.Infrastructure/Notifications/` |
+> | `AddNotificationInfrastructure()` | ✅ tồn tại, ❌ **không dòng nào gọi** — chủ đích, lý do ở `src/BE/PlatformManager.Api/Program.cs:177-185` |
+> | Consumer (handler/job nào gọi `SendAsync`) | ❌ **không có** |
+> | Hangfire | ✅ cấu hình đầy đủ (`Program.cs:164-175`), nhưng **0 job nghiệp vụ** dùng |
+> | `RecurringJob` / lịch biểu định kỳ | ❌ chưa có — mới chỉ fire-and-forget |
+>
+> Bật lên **sẽ làm app không khởi động được**: `SmtpOptions` dùng `ValidateOnStart()` và
+> `appsettings.json` chưa có section `Smtp` ⇒ `OptionsValidationException` ngay lúc boot, kéo
+> đỏ luôn toàn bộ integration test (chúng chạy host thật qua `WebApplicationFactory`).
+>
+> > **🔄 LẬT 2026-09-06 — banner cũ mô tả một working copy không còn tồn tại.** Bản
+> > 2026-08-24 ghi *"đã có … trọn bộ `Modules/DtiWeekly/.../Application/Import/`
+> > (`StartImportCommand`, `ImportJobRunner`, `GetImportJobStatusQuery`…) + entity `ImportJob`
+> > + migration `20260818090451_AddRolePermissionAndImportJob`"*. **Không thứ nào trong danh
+> > sách đó còn tồn tại**: module DtiWeekly gỡ 2026-08-29, và lịch sử migration được baseline
+> > lại 2026-08-31 thành một `20260831165117_InitialCreate` duy nhất. Nghĩa là banner cảnh báo
+> > "bảng §4 đã lạc hậu" thì đúng, nhưng bản thay thế nó cũng lạc hậu — và theo hướng nguy
+> > hiểm hơn: nó khai **có** những thứ **không có**.
 
 ## 0. Vì sao gỡ seam cũ thay vì giữ lại
 
@@ -112,9 +131,16 @@ Nội dung thông báo là thứ **người không biết lập trình** sẽ mu
 chuỗi vào code nghĩa là mỗi lần đổi câu chữ phải deploy lại.
 
 Tách template ra, tham số hoá bằng biến. Với ZNS thì đây là **bắt buộc**
-(template phải được Zalo duyệt trước khi dùng). Lưu ý phần i18n: xem
-`fe/08-i18n.md` — chuỗi do BE sinh thì **BE chịu trách nhiệm dịch**, không
-đẩy sang FE.
+(template phải được Zalo duyệt trước khi dùng).
+
+> 📖 Ai sở hữu câu chữ (email/ZNS/PDF là kênh **không có FE** ⇒ BE sở hữu):
+> đọc [`16-i18n-va-ma-loi.md`](16-i18n-va-ma-loi.md) §3.
+>
+> *Sửa 2026-09-03:* dòng cũ ở đây viết *"chuỗi do BE sinh thì BE chịu trách
+> nhiệm dịch"* và trỏ sang `fe/08-i18n.md`. Câu đó đúng cho **kênh này**, nhưng
+> đặt ở đây thì bị đọc thành luật chung cho mọi kênh — mà với kênh **có FE** thì
+> nó ngược hẳn (FE sở hữu câu chữ, BE chỉ trả mã). Ranh giới đầy đủ nay ở một
+> chỗ duy nhất, theo `.claude/CLAUDE.md` §5.
 
 > Bổ sung 2026-08-24, đối chiếu thực hành chuẩn ngành: tách template khỏi
 > code (vừa quyết ở trên) chưa tự động an toàn. Nếu template chèn thẳng dữ
@@ -237,27 +263,31 @@ Cách phát hiện bounce phụ thuộc kênh gửi:
 
 ## 4. Những mảnh dự kiến tái dùng — kiểm tồn tại TRƯỚC khi dựa vào
 
-> ### ⚠️ Bảng rà 2026-08-23 đã lạc hậu — rà lại 2026-08-24
->
-> Bảng 2026-08-23 (giữ bên dưới để biết lịch sử) kết luận cả 3 mảnh dưới đều
-> **chưa có**. Rà lại trên working copy 2026-08-24 (chưa commit) cho kết quả
-> khác hẳn — cả 3 mảnh coi là "chưa có" trước đây **giờ đã tồn tại thật**:
->
-> | Mảnh | Kiểm 2026-08-23 (lạc hậu) | Kiểm 2026-08-24 |
-> | --- | --- | --- |
-> | Hangfire | `grep -r Hangfire src/BE` = 0 | Cấu hình đầy đủ trong `Program.cs` (xem bảng dưới) |
-> | `StartImportCommand`, `ImportJobRunner`, `GetImportJobStatusQuery`, bảng `ImportJobs` | cả 4 = 0 | Cả 4 **tồn tại thật** trong `Modules/DtiWeekly/.../Application/Import/` + migration `20260818090451_AddRolePermissionAndImportJob` — chưa xác minh `ImportController` đã trả 202 hay còn đồng bộ |
-> | `AppUser` | có thật | vẫn có thật |
->
-> Vẫn giữ nguyên tắc: **kiểm sự tồn tại trước khi dựa vào** thay vì tin bảng
-> dưới đây theo mặt chữ — bảng dưới viết khi các mảnh này chưa tồn tại, nên
-> có thể đã lệch so với implementation thật hiện tại (interface, tên field...).
+> **Nguyên tắc của mục này không đổi: kiểm sự tồn tại bằng lệnh TRƯỚC khi dựa vào.** Bảng
+> dưới đã bị đổi hai lần vì lý do đó (2026-08-24 và 2026-09-06) — đừng tin mặt chữ, chạy lệnh.
 
-| Mảnh có sẵn | Ở đâu | Dùng làm gì |
+| Mảnh | Hôm nay (đối chiếu 2026-09-06) | Dùng làm gì |
 | --- | --- | --- |
-| **Hangfire đã cấu hình đầy đủ** | `PlatformManager.Api/Program.cs` (`UsePostgreSqlStorage`, `AddHangfireServer`, dashboard `/hangfire` khoá cứng `Roles.SuperAdmin`) | Chạy job gửi nền + job định kỳ. **Không cần dựng gì thêm.** |
-| **Khuôn mẫu job nền hoàn chỉnh** | `Modules/DtiWeekly/…/Application/Import/` — `StartImportCommand`, `ImportJobRunner`, `GetImportJobStatusQuery`, `ImportErrors`, bảng `ImportJobs` | **Bắt chước nguyên mẫu này.** Nó đã giải xong: job tự mở scope DI riêng, không có `HttpContext`, trạng thái lưu vào bảng, controller trả 202. |
-| **Nguồn người nhận** | `Core.Infrastructure/Identity/AppUser` | Email/tên người nhận |
+| **Hangfire đã cấu hình đầy đủ** | ✅ `PlatformManager.Api/Program.cs:164-175` (`UsePostgreSqlStorage`, `AddHangfireServer`, `AddBackgroundJobInfrastructure`), dashboard `/hangfire` khoá cứng `Roles.SuperAdmin` (`HangfireDashboardAuthFilter.cs:18`) | Chạy job gửi nền + job định kỳ. **Không cần dựng gì thêm.** |
+| **Seam enqueue** | ✅ `IBackgroundJobScheduler` (`Core.Application/Common/Interfaces/IBackgroundJobScheduler.cs:19`) — enqueue **qua đây**, không gọi thẳng `BackgroundJob.Enqueue` | Tầng Application không phụ thuộc Hangfire |
+| **Khuôn mẫu job nền hoàn chỉnh** | ❌ **không còn** — bản duy nhất từng tồn tại là đường Import của module DtiWeekly, xoá 2026-08-29 cùng module | Không có mẫu trong repo để chép; khuôn viết ra ở [`../../quy-uoc/be-cqrs-handler.md`](../../quy-uoc/be-cqrs-handler.md) §"Command chạy lâu → job nền" |
+| **Nguồn người nhận** | ✅ `Core.Infrastructure/Identity/AppUser` | Email/tên người nhận |
+
+Kiểm bằng lệnh (§6 của `.claude/CLAUDE.md`):
+
+```bash
+grep -rn "IBackgroundJobScheduler\|RecurringJob" src/BE --include=*.cs | grep -v /obj/
+```
+
+PASS hôm nay: chỉ thấy khai báo/hiện thực/đăng ký seam và **không dòng `RecurringJob` nào** —
+tức chưa job nghiệp vụ nào chạy trên Hangfire.
+
+> **🔄 LẬT 2026-09-06.** Bảng cũ dẫn `Modules/DtiWeekly/…/Application/Import/` làm *"khuôn mẫu
+> job nền hoàn chỉnh — bắt chước nguyên mẫu này"*, kèm câu *"controller trả 202"*. Hai vấn đề:
+> module đó đã bị xoá nên **không có gì để bắt chước**, và *"trả 202"* nay **trái quy ước** —
+> chốt 2026-09-05: pattern này trả **200** kèm `jobId` trong envelope, vì `HandleResult` không
+> có đường nào sinh ra 202 (xem [`../../quy-uoc/be-api-controller.md`](../../quy-uoc/be-api-controller.md)
+> §Dispatcher).
 
 > ⚠️ **`AppUser.Email` là NULLABLE, và có đường tạo user không hề có email.**
 > `UserLookupService.ResolveOrCreateByFullNameAsync` tạo user từ tên trong file
@@ -269,14 +299,17 @@ Cách phát hiện bounce phụ thuộc kênh gửi:
 
 | # | Use case | Độ khó | Tái dùng được gì |
 | --- | --- | --- | --- |
-| 1 | **Nhắc `Deadline` kỳ đánh giá DTI** — job định kỳ quét hạn sắp tới | Trung bình | Hangfire recurring job; cần thêm outbox + idempotency + digest (§3.2, §3.4) |
-| 2 | **Báo khi tài khoản bị khoá** — gắn vào `LockUserCommand` | Dễ nhất | Đường ghi đã có sẵn; đúng ca cần outbox vì nằm trong transaction nghiệp vụ |
-| 3 | **Báo khi job import chạy xong** | Dễ | Hạ tầng job + bảng trạng thái `ImportJobs` **đã có đủ**; chỉ thêm bước gửi ở cuối `ImportJobRunner` |
+| 1 | **Nhắc mốc hạn của dữ liệu nghiệp vụ** — job định kỳ quét hạn sắp tới | Trung bình | Hangfire recurring job; cần thêm outbox + idempotency + digest (§3.2, §3.4). ⚠️ Chưa có dữ liệu nghiệp vụ nào để quét (0 module) |
+| 2 | **Báo khi tài khoản bị khoá** — gắn vào `LockUserCommand` | Dễ nhất | ✅ Đường ghi **đã có thật** (`LockUserCommand` + `UserAdminService.LockAsync`, đã bọc transaction); đúng ca cần outbox vì nằm trong transaction nghiệp vụ |
+| 3 | **Báo khi job import chạy xong** | — | ❌ **Không còn khả thi**: đường Import và bảng `ImportJobs` đã xoá cùng module DtiWeekly 2026-08-29 |
 
-**Nếu cần chọn một để bắt đầu:** ứng viên **3**. Nó đã có sẵn gần hết hạ tầng,
-người nhận luôn là người vừa bấm nút (nên chắc chắn có danh tính), và không
-cần job định kỳ. Làm nó trước sẽ lộ ra mọi quyết định ở §2–§3 với chi phí
-thấp nhất.
+**Nếu cần chọn một để bắt đầu:** ứng viên **2** — nay là ứng viên duy nhất có đường ghi thật
+trong repo. Người nhận là một `AppUser` xác định, không cần job định kỳ, và nó ép ta giải
+đúng bài toán §3.1 (không gửi trong transaction nghiệp vụ) ngay từ ca đầu.
+
+> **🔄 LẬT 2026-09-06.** Bản trước khuyên bắt đầu bằng ứng viên **3** vì *"Hạ tầng job + bảng
+> trạng thái `ImportJobs` đã có đủ"*. Cả hai thứ đó đã biến mất 2026-08-29 — lời khuyên "bắt
+> đầu từ chỗ rẻ nhất" nay trỏ vào chỗ **đắt nhất** (phải dựng lại toàn bộ đường Import trước).
 
 ## 6. Đặt file ở đâu (theo layout v3)
 
@@ -289,10 +322,14 @@ Theo `doc/kien-truc-core-module.md` — v3 là đích đến đã chốt, đang 
 | Entity outbox + lịch sử gửi | `Core.Domain` + EF config ở `Core.Persistence` |
 | Job/handler **nghiệp vụ** kích hoạt thông báo | `Business.Application` / `Business.Infrastructure` |
 
-Ranh giới quan trọng: **`Core.*` không được biết về nghiệp vụ.** Job "nhắc
-`Deadline` của `CriteriaAssessment`" là **nghiệp vụ** → thuộc `Business.*`,
-chỉ gọi xuống interface ở `Core.Application`. Đặt nhầm nó vào `Core` là vi
-phạm luật đã có ArchTest canh.
+Ranh giới quan trọng: **`Core.*` không được biết về nghiệp vụ.** Một job "nhắc mốc hạn của
+entity nghiệp vụ X" là **nghiệp vụ** → thuộc `Business.*`, chỉ gọi xuống interface ở
+`Core.Application`. Đặt nhầm nó vào `Core` là vi phạm luật đã có ArchTest canh
+(`CoreSource_MustNotContain_BusinessNameStringLiteral`,
+`src/BE/Tests/PlatformManager.ArchTests/CoreMustNotKnowBusinessNameTests.cs:80`).
+
+> *(Sửa 2026-09-06: ví dụ cũ nêu đích danh `Deadline` của `CriteriaAssessment` — entity đó đã
+> xoá cùng module DtiWeekly 2026-08-29. Ranh giới thì không đổi, chỉ ví dụ là hết thật.)*
 
 ## 7. Bẫy đã gặp thật — cấu hình giả vẫn qua được validation
 

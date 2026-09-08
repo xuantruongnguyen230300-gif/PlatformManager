@@ -1,3 +1,9 @@
+---
+kind: luat
+scope: core
+verified: 2026-09-06
+---
+
 # 3. State management — `signal()` trước, `signalStore()` khi cần
 
 ## Nguyên tắc
@@ -13,7 +19,22 @@ NgRx/Akita chỉ để "có state management chuẩn". Chỉ thêm `@ngrx/signal
 | Cấp | Khi nào | Nơi khai |
 |---|---|---|
 | `signal()`/`computed()` trần | State cục bộ, chỉ 1 page dùng | Trực tiếp trong `pages/<feature>/<feature>.page.ts` |
-| `signalStore()` | ≥2 component/page cùng đọc/ghi, hoặc cần cache qua lại giữa các lần điều hướng | `modules/<feature>/state/<feature>.store.ts` |
+| `signalStore()` | ≥2 component/page cùng đọc/ghi, hoặc cần cache qua lại giữa các lần điều hướng | `<platform\|modules>/<feature>/state/<feature>.store.ts` |
+
+> 📐 **Cấp 2 CHƯA THI CÔNG (đối chiếu 2026-09-06) — và đó là ĐÚNG.** `@ngrx/signals` chưa có
+> trong `src/FE/package.json`, và không file `*.store.ts` nào tồn tại. Mọi state hiện dùng
+> `signal()` trần trong `pages/`, tức chưa màn nào chạm ngưỡng ở bảng trên. Đừng đọc mục này
+> như một khoảng trống cần lấp:
+>
+> ```bash
+> find src/FE/src -name '*.store.ts'    # hôm nay: 0 kết quả
+> ```
+>
+> Ca gần ngưỡng nhất đáng nêu vì nó **không** dùng store mà vẫn giải quyết được: menu sidebar
+> được nhiều nơi đọc và cần cache qua các lần điều hướng, nhưng `MenuService`
+> (`src/FE/src/app/core/menu/menu.service.ts`) làm bằng `signal()` + `shareReplay` + khoá cache
+> theo phiên. Hạ tầng toàn app thuộc `core/`, không phải state của feature — nên nó không rơi
+> vào bảng trên.
 
 ## Khuôn mẫu `signalStore()`
 
@@ -50,7 +71,14 @@ export const CriteriaStore = signalStore(
 > chuỗi Angular tự sinh (`"Http failure response for /api/…: 409 Conflict"`) — không
 > phải `message` nghiệp vụ trong envelope. Lấy nhầm là rơi đúng lỗi *"message bị thay
 > bằng câu chung chung"* mà [02-http-envelope.md](02-http-envelope.md) lấy làm lý do tồn
-> tại. `ApiHttpError` khai ở `core/http/` — xem file đó. *(Sửa 2026-08-23.)*
+> tại.
+>
+> 🔄 LẬT 2026-09-06: hai dòng mẫu trên ép kiểu sang **`ApiHttpError`**, và bản trước còn dặn
+> *"`ApiHttpError` khai ở `core/http/` — xem file đó"*. **Không có kiểu nào tên như vậy.** Kiểu
+> thật tên `IHttpErrorWithApiResult`, khai trong
+> `src/FE/src/app/core/http/api-result.model.ts`. Chép mẫu cũ ⇒ lỗi biên dịch. Cùng một cái tên
+> ma này từng sống ở [02-http-envelope.md](02-http-envelope.md) và đã gỡ cùng ngày.
+> *(Sửa 2026-08-23; lật lại 2026-09-06.)*
 
 ## Quy tắc cứng
 
@@ -152,8 +180,11 @@ schema giữa các tab nếu tab cũ chưa load lại code mới, và tốn hơn
 API với danh sách nhiều dòng) mà là báo **"đã đổi, tự load lại"** qua
 `BroadcastChannel`:
 
+> 📐 **ĐÍCH ĐẾN — CHƯA THI CÔNG (đối chiếu 2026-09-06).** `core/sync/` không tồn tại và không
+> nơi nào dùng `BroadcastChannel`. Đúng như mục này tự nói: chỉ làm khi có luồng thật cần.
+
 ```ts
-// core/sync/cross-tab-invalidate.service.ts
+// core/sync/cross-tab-invalidate.service.ts  (chưa tồn tại — đích đến)
 @Injectable({ providedIn: 'root' })
 export class CrossTabInvalidateService {
   private readonly channel = new BroadcastChannel('platform-manager-data-sync');

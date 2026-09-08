@@ -6,9 +6,9 @@ using PlatformManager.Core.Domain.Common;
 namespace PlatformManager.Core.Infrastructure.Persistence.Interceptors;
 
 /// <summary>
-/// Ghi UserCreate/UserUpdate/DateCreate/DateUpdate cho MỌI BaseEntity đang được
+/// Ghi CreatedBy/UpdatedBy/CreatedAt/UpdatedAt cho MỌI BaseEntity đang được
 /// SaveChanges — setter public chính là để interceptor này ghi được mà không cần
-/// reflection (xem .claude/rules/entity-domain.md §Base entity). Chạy trong
+/// reflection (xem doc/huong_dan/quy-uoc/be-entity-domain.md §Base entity). Chạy trong
 /// SavingChanges/SavingChangesAsync — TRƯỚC khi lệnh SQL thật sự được gửi đi.
 /// </summary>
 public sealed class AuditInterceptor(ICurrentUser currentUser, IDateTimeProvider clock) : SaveChangesInterceptor
@@ -39,18 +39,18 @@ public sealed class AuditInterceptor(ICurrentUser currentUser, IDateTimeProvider
             switch (entry.State)
             {
                 case EntityState.Added:
-                    entry.Entity.DateCreate = now;
-                    entry.Entity.UserCreate = userName ?? "system";
-                    // Set luôn DateUpdate/UserUpdate = DateCreate/UserCreate lúc tạo mới — không
+                    entry.Entity.CreatedAt = now;
+                    entry.Entity.CreatedBy = userName ?? "system";
+                    // Set luôn UpdatedAt/UpdatedBy = CreatedAt/CreatedBy lúc tạo mới — không
                     // để 2 cột này null cho tới lần Modified đầu tiên, tránh FE phải tự viết
-                    // `DateUpdate ?? DateCreate` ở mọi nơi hiển thị "lần sửa cuối" (xem
-                    // wiki-core/be/trien-khai/04-p3-platform-persistence.md §7.2).
-                    entry.Entity.DateUpdate = now;
-                    entry.Entity.UserUpdate = userName ?? "system";
+                    // `UpdatedAt ?? CreatedAt` ở mọi nơi hiển thị "lần sửa cuối".
+                    // Luật + lý do đầy đủ: doc/huong_dan/quy-uoc/be-entity-domain.md §Base entity.
+                    entry.Entity.UpdatedAt = now;
+                    entry.Entity.UpdatedBy = userName ?? "system";
                     break;
                 case EntityState.Modified:
-                    entry.Entity.DateUpdate = now;
-                    entry.Entity.UserUpdate = userName ?? "system";
+                    entry.Entity.UpdatedAt = now;
+                    entry.Entity.UpdatedBy = userName ?? "system";
                     break;
             }
         }

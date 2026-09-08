@@ -10,7 +10,14 @@ const importPlugin = require("eslint-plugin-import");
 // được import từ `core/`, `shared/`, `platform/`. Xem doc/kien-truc-core-module.md.
 //
 // Thêm module nghiệp vụ mới → chỉ cần thêm tên vào mảng này, KHÔNG cần viết tay 1 zone mới.
-const BUSINESS_MODULES = ["dashboard", "danh-muc-dti"];
+//
+// RỖNG từ 2026-08-29 — CÓ CHỦ ĐÍCH, không phải quên. Thư mục `src/app/modules/` hiện KHÔNG tồn
+// tại (2 module nghiệp vụ `dashboard` và `danh-muc-dti` đã bị gỡ). Để nguyên 2 tên đó ở đây tạo
+// ra zone trỏ vào thư mục không có thật: `import/no-restricted-paths` không phân giải nổi
+// `target` nên không chặn được gì, tức G8 là no-op nhưng vẫn TRÔNG như đang chạy — đúng kiểu
+// "gate xanh vì không kiểm gì cả". Thêm lại tên khi module nghiệp vụ đầu tiên ra đời.
+/** @type {string[]} */
+const BUSINESS_MODULES = [];
 
 const moduleBoundaryZones = BUSINESS_MODULES.map((moduleName) => ({
   target: `./src/app/modules/${moduleName}`,
@@ -79,23 +86,31 @@ module.exports = defineConfig([
       ],
     },
   },
-  {
-    // Gate G8 — chỉ áp cho module NGHIỆP VỤ (src/app/modules/**), không áp cho platform/ (màn
-    // Core không bị ràng buộc quy tắc này, xem doc/kien-truc-core-module.md).
-    files: ["src/app/modules/**/*.ts"],
-    plugins: { import: importPlugin },
-    // `no-restricted-paths` cần resolver phân giải được import specifier tương đối (`.ts`
-    // không có phần mở rộng) ra đường dẫn file thật — resolver "node" mặc định chỉ thử
-    // `.js`/`.json`, phải khai thêm `.ts` mới nhận diện đúng import nội bộ TypeScript.
-    settings: {
-      "import/resolver": {
-        node: { extensions: [".ts", ".js"] },
-      },
-    },
-    rules: {
-      "import/no-restricted-paths": ["error", { zones: moduleBoundaryZones }],
-    },
-  },
+  // Gate G8 — chỉ áp cho module NGHIỆP VỤ (src/app/modules/**), không áp cho platform/ (màn
+  // Core không bị ràng buộc quy tắc này, xem doc/kien-truc-core-module.md).
+  //
+  // Cả BLOCK bị bỏ hẳn khi chưa có module nghiệp vụ nào: schema của `import/no-restricted-paths`
+  // đòi `zones` có tối thiểu 1 phần tử, truyền mảng rỗng làm ESLint chết ngay lúc nạp config
+  // ("Invalid Options") — cả `ng lint` sẽ đỏ vì lý do không liên quan gì tới code.
+  ...(moduleBoundaryZones.length > 0
+    ? [
+        {
+          files: ["src/app/modules/**/*.ts"],
+          plugins: { import: importPlugin },
+          // `no-restricted-paths` cần resolver phân giải được import specifier tương đối (`.ts`
+          // không có phần mở rộng) ra đường dẫn file thật — resolver "node" mặc định chỉ thử
+          // `.js`/`.json`, phải khai thêm `.ts` mới nhận diện đúng import nội bộ TypeScript.
+          settings: {
+            "import/resolver": {
+              node: { extensions: [".ts", ".js"] },
+            },
+          },
+          rules: {
+            "import/no-restricted-paths": ["error", { zones: moduleBoundaryZones }],
+          },
+        },
+      ]
+    : []),
   {
     // Gate G9 — core/ là tầng đáy, không được import ngược lên shared/, platform/, modules/.
     files: ["src/app/core/**/*.ts"],

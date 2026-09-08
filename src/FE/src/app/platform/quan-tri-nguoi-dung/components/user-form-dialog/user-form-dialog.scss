@@ -1,6 +1,9 @@
-.required {
-  color: var(--bad);
-}
+/* Chỉ còn nhóm ô tick vai trò — thứ không có ở lớp dùng chung.
+   Đã gỡ (trùng lặp với styles.scss — xem báo cáo 2026-08-29):
+     - `.required`       → đã có `.required { color: var(--bad) }` ở LỚP 2.
+     - `.dialog-actions` → nay là class toàn cục; bản chép ở đây còn dùng 8px trần
+       (ngoài thang token) trong khi bản chung dùng `--sp-3`/`--sp-5`.
+   Ô tick dùng class toàn cục `.check` nên cũng không khai lại ở đây. */
 
 .role-checkboxes {
   display: flex;
@@ -11,15 +14,14 @@
 .role-checkbox {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--sp-2);
   font-size: var(--fs-sm);
   font-weight: 600;
   cursor: pointer;
 }
 
-.dialog-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 8px;
+/* Dòng "vai trò hệ thống được giữ nguyên" — chỉ đọc, nằm dưới nhóm ô tick.
+   Màu chữ lấy từ class `.muted` dùng chung ở styles.scss, không khai lại ở đây. */
+.role-preserved {
+  margin-top: var(--sp-2);
 }
