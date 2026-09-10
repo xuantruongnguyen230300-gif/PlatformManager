@@ -6,8 +6,12 @@ import { Routes } from '@angular/router';
 //
 // `platform/` = màn hình Core dùng lại được cho mọi sản phẩm (đăng nhập, đổi mật khẩu, quản trị
 // người dùng, phân quyền); `modules/` = module NGHIỆP VỤ — xem doc/kien-truc-core-module.md.
-// Hiện KHÔNG có module nghiệp vụ nào (DtiWeekly gỡ 2026-08-29 để xây lại), nên `modules/` trống
-// và `/trang-chu` là trang đích mặc định.
+//
+// `/trang-chu` VẪN là trang đích mặc định (đích của `''`, của `**`, và của mọi chuyển hướng "về
+// chỗ an toàn"). Dashboard DTI sẽ THAY nó theo chốt Q3 (spec/dashboard-dti/business-rules.md),
+// nhưng `modules/dashboard/` hôm nay mới là khung rỗng — hoán đổi bến an toàn của cả app để lấy
+// một trang trắng là làm hỏng đúng thứ không được hỏng. Lý do đầy đủ ghi tại chỗ trong
+// `modules/dashboard/dashboard.routes.ts`.
 export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'trang-chu' },
   {
@@ -30,6 +34,12 @@ export const routes: Routes = [
   {
     path: 'quan-tri/phan-quyen',
     loadChildren: () => import('./platform/phan-quyen/phan-quyen.routes').then((m) => m.PHAN_QUYEN_ROUTES),
+  },
+  // Màn NGHIỆP VỤ đầu tiên — đường dẫn `/danh-muc/dti` là chốt Q33 (spec/danh-muc-dti/ui-spec.md §2).
+  {
+    path: 'danh-muc/dti',
+    loadChildren: () =>
+      import('./modules/danh-muc-dti/danh-muc-dti.routes').then((m) => m.DANH_MUC_DTI_ROUTES),
   },
   { path: '**', redirectTo: 'trang-chu' },
 ];

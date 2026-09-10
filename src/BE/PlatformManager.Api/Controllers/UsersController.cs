@@ -1,7 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using PlatformManager.Api.Common;
+using PlatformManager.Core.Api;
 using PlatformManager.Core.Application.Common;
 using PlatformManager.Core.Application.Users;
 

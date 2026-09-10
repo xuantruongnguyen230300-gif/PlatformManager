@@ -48,8 +48,8 @@ public class CoreMustNotKnowBusinessNameTests
     /// Tên một schema SQL không phải là Core "biết tên" tầng nghiệp vụ để rẽ nhánh theo nó.</para>
     ///
     /// <para><b>Thu hẹp 2026-09-04 — lý do CHÍNH của miễn trừ này đã biến mất.</b> Lập luận trước
-    /// là: <c>PlatformManagerDbContext</c> sống ở <c>Core.Infrastructure</c> nên khi khối
-    /// <c>Business.*</c> dựng lại, EF sẽ TỰ SINH vào <c>Core.Infrastructure/Persistence/Migrations/</c>
+    /// là: <c>PlatformManagerDbContext</c> sống ở Core (khi đó: <c>Core.Infrastructure</c>) nên khi khối
+    /// <c>Business.*</c> dựng lại, EF sẽ TỰ SINH vào thư mục <c>Persistence/Migrations/</c> của Core
     /// các dòng <c>b.ToTable("…", "business")</c> và
     /// <c>migrationBuilder.EnsureSchema(name: "business")</c> — tức Core bị ép chứa literal đó.
     /// Theo chốt "migration thuộc host, Core ship .sql" (2026-09-04), EF nay sinh vào
@@ -140,12 +140,22 @@ public class CoreMustNotKnowBusinessNameTests
             "ĐỪNG nới luật cho xanh — làm thế là xoá đúng thứ luật này sinh ra để giữ.");
     }
 
-    /// <summary>3 project Core phải có mặt trong tập quét (dựng project Core thứ 4 thì thêm vào đây).</summary>
+    /// <summary>
+    /// Mọi project Core phải có mặt trong tập quét — dựng project Core mới thì thêm vào đây.
+    ///
+    /// <para>🛑 <b>DANH SÁCH LIỆT KÊ TAY.</b> Nó là bộ chặn "xanh mà không đo gì" (2/3) của luật
+    /// bên trên, nên bản thân nó mục ruỗng thì chính bộ chặn ngừng chặn: một project Core mới
+    /// không khai ở đây vẫn được QUÉT (tập file lấy theo thư mục <c>Core/</c>), nhưng nếu bộ liệt
+    /// kê file bỗng sót nó thì không còn gì báo động. <c>Core.Api</c> thêm 2026-09-09 (Q8),
+    /// <c>Core.Persistence</c> thêm 2026-09-10 cùng lượt tách nó khỏi <c>Core.Infrastructure</c>.</para>
+    /// </summary>
     private static readonly string[] ExpectedCoreProjects =
     [
         "PlatformManager.Core.Domain",
         "PlatformManager.Core.Application",
+        "PlatformManager.Core.Persistence",
         "PlatformManager.Core.Infrastructure",
+        "PlatformManager.Core.Api",
     ];
 
     /// <summary>Literal chắc chắn có thật trong Core: <c>modelBuilder.HasDefaultSchema("core")</c>.</summary>

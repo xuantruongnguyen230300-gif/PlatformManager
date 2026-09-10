@@ -10,6 +10,33 @@ export interface IDataGridPageChange {
 }
 
 /**
+ * Hai mép được ghim khi lưới cuộn ngang.
+ *
+ * Hợp đồng: `doc/Design/Frontend/PlatformManager/Components/DataTable.md`
+ * § Frozen edge columns, khối 🆕 CHỐT 2026-09-09.
+ *
+ * ## Vì sao là hai cờ, không phải danh sách cột
+ *
+ * Khối chốt để ngỏ KIỂU của input, kèm lý do: *"Designing a column API from a single example is
+ * the mistake the 2026-09-06 block refused to make; fix the signature when the DTI grid is built,
+ * against a real column list."* Danh sách cột thật đã có
+ * (`doc/Design/Frontend/PlatformManager/Screens/02-danh-muc-dti.md` § Layout Blueprint) và nó ghim
+ * ĐÚNG hai cột: cột `Mã` ở mép trái, cột `Hành động` ở mép phải. Lưới đó còn đổi giữa 13 và 14 cột
+ * tuỳ chế độ kỳ, trong khi *"the two frozen edges are the same columns either way"* — nên một API
+ * theo CHỈ SỐ cột sẽ buộc màn hình tự tính lại chỉ số mỗi lần số cột đổi, đúng loại phép tính lệch
+ * một đơn vị mà `onLazyLoad` bên dưới tồn tại để dập.
+ *
+ * Hai cờ mô tả thẳng cái hợp đồng nói: mép trái = cột ĐẦU, mép phải = cột CUỐI. Cần ghim nhiều
+ * hơn một cột mỗi mép thì đổi kiểu ở đây, khi có màn hình thật đòi nó.
+ */
+export interface IDataGridFrozenColumns {
+  /** Ghim cột ĐẦU vào mép trái — cột định danh dòng. */
+  readonly left?: boolean;
+  /** Ghim cột CUỐI vào mép phải — cột hành động (`alignFrozen="right"` của PrimeNG). */
+  readonly right?: boolean;
+}
+
+/**
  * Lưới bản ghi dùng chung — sở hữu KHUNG, không sở hữu CỘT.
  *
  * Ranh giới và lý do đầy đủ:
@@ -37,6 +64,23 @@ export interface IDataGridPageChange {
  * đi vào bằng `input()`, đi ra bằng `output()`. Luật ở
  * doc/huong_dan/wiki-core/fe/trien-khai/05-gate.md; cổng TỰ ĐỘNG cho G4 xếp lịch "Sau F4" và
  * chưa hiện thực hoá, nên không có gì bắt lỗi hộ khi ai đó lách.
+ *
+ * ## 🛑 Giới hạn đã biết — lưới này KHÔNG phát sắp xếp / lọc ra ngoài
+ *
+ * Output duy nhất là `pageChange`, và nó chỉ mang `page`/`pageSize`. `onLazyLoad` bên dưới nhận
+ * một `TableLazyLoadEvent` ĐẦY ĐỦ nhưng cố ý **vứt bỏ** `sortField` / `sortOrder` / `filters`.
+ *
+ * Đây KHÔNG phải thiếu sót chờ ai đó vá. Hai màn nghiệp vụ đầu tiên đã chốt sắp xếp/lọc nằm
+ * NGOÀI lưới: `spec/danh-muc-dti/ui-spec.md:178` (*"Không có ô sắp xếp ở màn này"*) và
+ * `spec/dashboard-dti/ui-spec.md:482` (*"Sắp xếp là việc của FE, không phải tham số API"*). Phần
+ * lọc thì `shared/components/toolbar/` đã lo (ô tìm kiếm + bảng lọc + chip). Mở thêm output khi
+ * chưa màn nào đòi là thiết kế API theo phỏng đoán — và một API đoán sai thì vẫn phải nuôi.
+ *
+ * **Màn hình thứ ba cần sort/filter phía SERVER thì đọc dòng này trước khi lắp**, không phải sau:
+ * việc phải làm là mở rộng có chủ đích cả ba tầng cùng lượt — `IDataGridPageChange` (hoặc một
+ * output thứ hai), `onLazyLoad`, và tham số của endpoint tương ứng — rồi ghi lại quyết định ở
+ * doc/huong_dan/wiki-core/fe/11-grid-and-metadata.md. Bật `p-table` sort ở template màn hình mà
+ * không đi qua đây sẽ chỉ sắp xếp ĐÚNG TRANG đang hiện, im lặng và sai.
  *
  * Component NÀY không nhận `localeId` — nó không định dạng ngày. Chỗ áp dụng đúng ranh giới đó
  * là `platform/quan-tri-nguoi-dung/components/user-grid-table/user-grid-table.ts`: ở đó
@@ -85,12 +129,45 @@ export class DataGrid {
   /** Thay câu rỗng mặc định. Để trống thì dùng `shared.grid.empty`. */
   readonly emptyTemplate = input<TemplateRef<unknown> | undefined>(undefined);
 
+  /**
+   * Ghim cột mép trái/mép phải chống lại cuộn ngang. Để trống = không ghim gì (hành vi của mọi
+   * lưới đang chạy hôm nay — lưới Người dùng có 5 cột vừa khung và **không được** bắt đầu ghim).
+   *
+   * Ghim đòi `[scrollable]="true"`; template dưới đây khai cứng `true` nên điều kiện đó luôn đủ.
+   *
+   * ## 🛑 Vì sao KHÔNG dùng directive `pFrozenColumn` — lệch có chủ đích so với hợp đồng
+   *
+   * `DataTable.md` § Frozen edge columns mô tả cơ chế là *"the component applies `pFrozenColumn`
+   * … internally"*. Cơ chế đó KHÔNG hiện thực hoá được dưới hợp đồng `TemplateRef` mà chính file
+   * đó chốt ngày 2026-09-06: `<th>`/`<td>` nằm trong template do MÀN HÌNH khai, nên Angular gắn
+   * directive theo `imports` của màn hình chứ không theo `imports` của component này. Đưa
+   * `pFrozenColumn` vào đây không chạm được tới ô nào, mà viết ở màn hình thì kéo `TableModule`
+   * ra khỏi `data-grid` — đúng ranh giới mà khối chốt sinh ra để giữ.
+   *
+   * Phần hợp đồng có thể quan sát được thì giữ nguyên và đó mới là phần quan trọng: màn hình xin
+   * ghim bằng `[frozenColumns]`, **không bao giờ** viết directive. Cơ chế bên trong là việc của
+   * component, đúng như khối chốt tự nói: *"The screen says which columns are pinned and to which
+   * edge; the component says how a pin is expressed."*
+   *
+   * Cách hiện thực thật: `data-grid.scss` đặt `position: sticky` cho ô đầu/ô cuối. Nó làm đúng
+   * việc `FrozenColumn` làm (đặt `position: sticky` + `left`/`right`), nhưng không phải đo bề rộng
+   * anh em bằng JavaScript sau mỗi lần vẽ vì mỗi mép chỉ có MỘT cột nên độ lệch luôn là 0.
+   */
+  readonly frozenColumns = input<IDataGridFrozenColumns | undefined>(undefined);
+
+  /**
+   * Output DUY NHẤT của lưới, và nó chỉ mang `page`/`pageSize`. Sắp xếp/lọc KHÔNG đi qua đây —
+   * xem §"Giới hạn đã biết" ở JSDoc của class trước khi định thêm output thứ hai.
+   */
   readonly pageChange = output<IDataGridPageChange>();
 
   /**
    * PrimeNG phát `first` (0-based) + `rows`; tầng gọi và API đều làm việc với trang 1-based.
    * Quy đổi Ở ĐÂY một lần thay vì để mỗi màn hình tự nhớ — đây đúng loại phép tính lệch một đơn
    * vị mà chép đi chép lại sẽ sai ở đâu đó.
+   *
+   * **Chỉ đọc `first` và `rows`.** `sortField`/`sortOrder`/`filters` của sự kiện bị bỏ qua CÓ
+   * CHỦ ĐÍCH — xem §"Giới hạn đã biết" ở JSDoc của class.
    */
   protected onLazyLoad(event: TableLazyLoadEvent): void {
     const size = event.rows ?? this.pageSize();

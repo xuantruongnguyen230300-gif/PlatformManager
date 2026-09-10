@@ -11,13 +11,22 @@ const importPlugin = require("eslint-plugin-import");
 //
 // Thêm module nghiệp vụ mới → chỉ cần thêm tên vào mảng này, KHÔNG cần viết tay 1 zone mới.
 //
-// RỖNG từ 2026-08-29 — CÓ CHỦ ĐÍCH, không phải quên. Thư mục `src/app/modules/` hiện KHÔNG tồn
-// tại (2 module nghiệp vụ `dashboard` và `danh-muc-dti` đã bị gỡ). Để nguyên 2 tên đó ở đây tạo
-// ra zone trỏ vào thư mục không có thật: `import/no-restricted-paths` không phân giải nổi
-// `target` nên không chặn được gì, tức G8 là no-op nhưng vẫn TRÔNG như đang chạy — đúng kiểu
-// "gate xanh vì không kiểm gì cả". Thêm lại tên khi module nghiệp vụ đầu tiên ra đời.
+// 🔄 ĐIỀN LẠI 2026-09-09 — hai module nghiệp vụ đã có thật trên đĩa (`src/app/modules/dashboard/`
+// và `src/app/modules/danh-muc-dti/`), nên G8 hết no-op và bắt đầu chặn thật.
+//
+// Lịch sử, giữ lại vì nó là lý do mảng này từng rỗng: từ 2026-08-29 tới 2026-09-08 thư mục
+// `src/app/modules/` KHÔNG tồn tại. Để nguyên 2 tên khi đó tạo ra zone trỏ vào thư mục không có
+// thật — `import/no-restricted-paths` không phân giải nổi `target` nên không chặn được gì, tức G8
+// là no-op nhưng vẫn TRÔNG như đang chạy, đúng kiểu "gate xanh vì không kiểm gì cả".
+//
+// 🛑 Mỗi tên ở đây PHẢI là một thư mục có thật dưới `src/app/modules/`. Một tên thừa không làm
+// ESLint đỏ, nó chỉ lặng lẽ dựng lại đúng cái no-op nói trên cho chính module đó.
+//
+// Cổng chỉ có hiệu lực THẬT khi có từ HAI module trở lên (một module không có gì để import chéo),
+// nhưng tên phải vào đây ngay từ module đầu tiên — module thứ hai sẽ do người khác thêm vào một
+// ngày khác. Xem doc/huong_dan/quy-uoc/fe-architecture.md §"Thêm một module nghiệp vụ mới" bước 3.
 /** @type {string[]} */
-const BUSINESS_MODULES = [];
+const BUSINESS_MODULES = ['dashboard', 'danh-muc-dti'];
 
 const moduleBoundaryZones = BUSINESS_MODULES.map((moduleName) => ({
   target: `./src/app/modules/${moduleName}`,

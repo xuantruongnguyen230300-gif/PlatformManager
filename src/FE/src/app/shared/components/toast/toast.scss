@@ -104,6 +104,13 @@
   }
 }
 
+// Hình dạng nút lấy hết từ `.btn.sm` toàn cục (src/styles.scss §3) — ở đây chỉ đặt nó xuống
+// dòng riêng dưới câu thông báo. Không khai màu/viền lại: một nút thử lại mang màu riêng của
+// toast là một quyết định thiết kế chưa ai chốt.
+.toast-action {
+  margin-top: var(--sp-3);
+}
+
 @keyframes toast-in {
   from {
     opacity: 0;

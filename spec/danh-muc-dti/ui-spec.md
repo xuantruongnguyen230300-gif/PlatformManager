@@ -1,660 +1,1494 @@
-# UI Spec — "Danh mục > DTI" (1 lưới: danh mục Chỉ tiêu + Đánh giá theo tuần)
+---
+kind: luat
+scope: du-an
+verified: chua-doi-chieu
+feature: "danh-muc-dti"
+status: "📐 ĐÍCH ĐẾN — CHƯA THI CÔNG"
+updated: "2026-09-09"
+---
 
-> ## ⚠️ CẬP NHẬT (2026-08-12, vòng phản hồi #5 — ĐÃ CHỐT) — gói bảng + phân trang trong 1 màn hình, sửa xung đột sticky 2 chiều
->
-> Vấn đề người dùng báo: `#gridPagination` nằm ở cuối bảng 62 dòng — với bảng cao hơn viewport, người
-> dùng phải **cuộn cả trang** xuống mới thấy được nút phân trang. Đã sửa trong
-> `doc/Prototype/danh-muc-dti.html`, chi tiết đầy đủ ở mục 6.11 (mới) — tóm tắt:
->
-> 1. **`#dtiGridCard`** (card chứa "Danh mục & Đánh giá theo tuần") đổi sang **flex column**, chiều cao
->    **CỐ ĐỊNH** (`height`, không phải `max-height`) **tính động bằng JS** (`updateGridCardHeight()`, đo
->    `getBoundingClientRect().top` thực tế thay vì hardcode `calc(100vh - Npx)` — vì phần phía trên card
->    đổi chiều cao tuỳ độ rộng màn hình). `.tablewrap` là **flex item duy nhất `flex:1;min-height:0`**,
->    chiếm hết phần còn lại của card; `.pagination` neo cố định cuối card, **luôn nhìn thấy** không cần
->    cuộn trang. **[FIX cùng ngày, sau khi người dùng gửi screenshot]** ban đầu dùng `max-height` — khiến
->    card TỰ CO LẠI theo nội dung ở trang cuối/ít dòng (vd 2 dòng còn lại), đẩy `.pagination` lên sát
->    ngay dưới dữ liệu, để lại khoảng trắng lớn trước footer, vị trí nhảy lên/xuống tuỳ số dòng. Đổi
->    sang `height` cố định: card LUÔN chiếm đúng chiều cao đã đo được bất kể `.tablewrap` có ít hay nhiều
->    dòng — khi ít dòng, `.tablewrap` (đã `flex:1;min-height:0`) tự giãn chiếm khoảng trống thừa thay vì
->    card co lại, giữ `.pagination` luôn neo đúng 1 vị trí cố định ở đáy card (giống hệt layout khi đủ
->    dòng). Hàm cũng đổi tên `updateGridCardMaxHeight()` → **`updateGridCardHeight()`** cho khớp ngữ
->    nghĩa mới.
-> 2. **`.tablewrap{overflow-y:auto}`** (đổi từ `visible`) — chỉ khi dữ liệu 1 trang (tối đa 50 dòng theo
->    lựa chọn phân trang) cao hơn phần không gian còn lại, **chỉ riêng phần thân bảng** mới có scrollbar
->    dọc riêng, KHÔNG phải cuộn cả trang web. `<thead>` vẫn `position:sticky;top:0` (đã có sẵn), nay thực
->    sự phát huy tác dụng dính trên khi cuộn dọc **bên trong** `.tablewrap` (trước đây scroll dọc xảy ra ở
->    cấp trang nên sticky top chỉ dính dưới `.topbar`, không phải trong khung bảng).
-> 3. **Sửa xung đột z-index sticky 2 chiều** (header dính trên + cột Mã/Hành động dính trái/phải, phát
->    sinh khi bật scroll dọc thật bên trong `.tablewrap`): trước đây cột "Hành động" (`z-index:3`) VÔ
->    TÌNH cao hơn header thường (`z-index:2`) → khi cuộn dọc+ngang đồng thời, cột "Hành động" của các
->    dòng cuộn lên đè xuyên thấu lên trên header. Tier chuẩn mới: **góc header `z-index:5`** (không đổi)
->    **> header thường `z-index:4`** (tăng từ 2) **> cột sticky body trái/phải `z-index:2`** (cột "Hành
->    động" giảm từ 3 xuống 2, ngang cột "Mã") **> ô thường** (mặc định).
-> 4. Các phần khác (banner hướng dẫn ngoài card, `.filters`, heading) **giữ nguyên vị trí bình thường**,
->    không nằm trong vùng cuộn — chỉ đánh dấu `flex:none` bên trong `#dtiGridCard` để nhường không gian
->    cho `.tablewrap`.
-> 5. `@media print{#dtiGridCard{height:auto!important;max-height:none!important}}` — tắt hẳn giới hạn
->    chiều cao khi in (`height:auto` reset về chiều cao tự nhiên, `max-height:none` giữ lại phòng hờ),
->    tránh cắt mất dòng (đi cùng `.tablewrap{overflow:visible}` đã có sẵn cho print).
->
-> **Vì sao dùng JS đo động thay vì `calc(100vh - Npx)` cố định như gợi ý ban đầu**: banner hướng dẫn
-> phía trên card (`.notice` ngoài `#dtiGridCard`) xuống dòng số lượng khác nhau tuỳ độ rộng màn hình
-> (nhiều dòng hơn ở `≤560px`), nên 1 con số px cố định sẽ đúng ở màn hình này nhưng sai ở màn hình khác.
-> `updateGridCardHeight()` đo `card.getBoundingClientRect().top` (vị trí thực tế đã bao gồm mọi thứ
-> phía trên, bất kể cao bao nhiêu) trừ cho `window.innerHeight`, có sàn an toàn `minHeight:280px` cho
-> viewport rất thấp — chạy lại khi `resize`/`orientationchange`. **Không cần** chạy lại mỗi lần
-> `renderGrid()` vì banner đọc-only `#dtiReadonlyBanner` nằm BÊN TRONG card, ẩn/hiện không đổi
-> `offsetTop` của card.
->
-> **Đã áp dụng thống nhất cho mọi breakpoint** (không tắt cơ chế ở mobile) — quyết định của
-> `frontend-expert`: cơ chế đo động tự thích ứng mọi độ rộng nên không có rủi ro vỡ layout riêng cho
-> mobile; hơn nữa vấn đề gốc (phải cuộn cả trang mới thấy phân trang) càng nghiêm trọng hơn trên mobile
-> (viewport thấp hơn, thường có thanh trình duyệt che thêm) nên giữ cơ chế bật xuyên suốt càng có lợi.
->
-> `dashboard.html` (bảng 62 chỉ tiêu DTI) **CHƯA áp dụng** cơ chế này ở vòng này — xem ghi chú cuối mục
-> 6.11 lý do và điều kiện nếu áp dụng sau.
+# UI Spec — Danh mục DTI
 
-> ## ⚠️ CẬP NHẬT (2026-08-12, vòng phản hồi #4 — ĐÃ CHỐT CHÍNH THỨC) — bộ lọc Năm/Kỳ, "Tất cả trong 1 năm", KHÔNG carry-forward, RULE READ-ONLY khi xem lịch sử
+> 📐 **ĐÍCH ĐẾN — CHƯA THI CÔNG.** Toàn bộ file này mô tả màn hình **sẽ dựng**.
+> Code cũ của màn bị xoá 2026-08-29.
 >
-> Người dùng đã chốt toàn bộ 4 câu hỏi mở nêu ở banner vòng #3 (bên dưới) qua `backend-expert`. Đây là
-> **bản chốt cuối cùng**, ghi đè mọi suy đoán/TODO trước đó về "Tất cả"/carry-forward/read-only:
+> **Hiện trạng FE, đối chiếu 2026-09-10** (bản trước của đoạn này nói `modules/`
+> *"không tồn tại"* — sai từ 2026-09-09): thư mục
+> `src/FE/src/app/modules/danh-muc-dti/` đã có, route `/danh-muc/dti` đã khai
+> (`src/FE/src/app/app.routes.ts:40`), nhưng đó là **KHUNG có chủ đích** — trang
+> chỉ có hàng tiêu đề và một câu nói rõ nó chưa xong, lý do ghi tại chỗ ở
+> `src/FE/src/app/modules/danh-muc-dti/pages/danh-muc-dti/danh-muc-dti.page.ts:7`.
+> **Không vùng nào, không trạng thái nào, không dialog nào dưới đây đã dựng** —
+> không dòng nào của file này được đọc như hiện trạng.
 >
-> 1. **KHÔNG carry-forward** — 1 kỳ không có thao tác (sửa/Import) cho 1 chỉ tiêu thì **loại hẳn** khỏi
->    mọi phép tính trung bình liên quan tới chỉ tiêu đó (không tính là giá trị cũ, không tính 0%). Cơ
->    chế: mỗi period (`draft`/`historyData[]` entry) có thêm field `touched` (map `{code:true}`) đánh
->    dấu chỉ tiêu nào **thực sự** được sửa/import trong CHÍNH kỳ đó — `blankValuesFromCatalog()` không
->    bao giờ copy `touched` từ `seedFrom`, chỉ `confirmEditCell()`/`importCsvFile()` mới ghi vào đây.
-> 2. **"Tất cả" = toàn bộ dữ liệu trong 1 NĂM được chọn** — Danh mục DTI có thêm `select#dtiYearFilter`
->    (chọn năm) + `select#dtiPeriodFilter` ("Tất cả (mới nhất trong năm)" hoặc 1 kỳ cụ thể đã lưu trong
->    năm đó). Mặc định "Tất cả" hiển thị **giá trị mới nhất theo touched-tracking** của mỗi chỉ tiêu
->    trong năm đang chọn (KHÔNG phải carry-forward — "mới nhất" nghĩa là kỳ gần nhất có `touched[code]`,
->    bỏ qua các kỳ chỉ mang giá trị kế thừa). Xem mục 6.9 (mới).
-> 3. **RULE READ-ONLY khi xem lịch sử — đã CHỐT chính thức** (không còn là đề xuất chờ xác nhận): grid
->    chỉ cho sửa (✓/✗ inline, Import CSV, "+Thêm chỉ tiêu"/Sửa/Xoá) khi đang xem đúng **"Tất cả" của
->    NĂM HIỆN TẠI** — mọi trạng thái khác (năm khác, hoặc đã thu hẹp về 1 kỳ cụ thể dù trong năm nay)
->    đều **CHỈ ĐỌC**, kèm banner `#dtiReadonlyBanner` giải thích. Lý do: việc ghi luôn nhắm vào "hôm
->    nay" bất kể đang xem gì — sửa khi đang xem dữ liệu quá khứ sẽ ghi nhầm vào sai ngày. Xem mục 6.10
->    (mới).
-> 4. **Tuần ISO (Thứ 2–CN)** và **không copy-forward `CriteriaEvidence`** — xác nhận đúng thiết kế cũ,
->    không có thay đổi UI nào (rule dữ liệu thuần backend).
->
-> Nguồn nghiệp vụ đầy đủ: `spec/danh-muc-dti/business-rules.md` mục 2.4/3 (bản viết lại của
-> `backend-expert`) — spec UI này không lặp lại công thức, chỉ mô tả UI/UX + trỏ ngược khi cần.
->
-> **Lưu ý quan trọng khi lên app thật**: "Tất cả" của 1 năm phía backend có thể trả về **nhiều bản ghi
-> `CriteriaAssessment`/1 `Criteria`** (mỗi bản ghi = 1 lần có thao tác trong năm), khác với giả định "1
-> dòng lưới = 1 chỉ tiêu = 1 giá trị" hiện tại. Quyết định UX của bản prototype này: **grid vẫn hiển
-> thị đúng 62 dòng (1 dòng/chỉ tiêu)**, mỗi dòng lấy giá trị của lần thao tác **gần nhất trong năm**
-> (không liệt kê phẳng từng lần sửa) — nếu sau này cần xem đầy đủ lịch sử chỉnh sửa của 1 chỉ tiêu
-> trong năm, đó là 1 màn hình/khu vực "chi tiết chỉ tiêu" riêng, chưa có trong scope hiện tại.
->
-> **Cập nhật (2026-08-12, vòng phản hồi #3 — mật độ hiển thị + phân trang + toolbar)**: người dùng
-> yêu cầu 4 nhóm điều chỉnh UI/UX bổ sung, tất cả đã áp dụng trong `doc/Prototype/danh-muc-dti.html`:
-> 1. **Mật độ hiển thị (compact)** — giảm font-size chung, kích thước sidebar, kích thước mọi nút
->    (kể cả Sửa/Xoá/✓/✗) qua 1 bộ token mới trong `:root` (`--fs-*`, `--sp-*`, `--radius-*`,
->    `--sidebar-w*`) — không đổi màu/token thương hiệu sẵn có. Xem mục 9 (Style thô) cập nhật.
-> 2. **Phân trang lưới** (10/20/50 dòng/trang, mặc định 20) thay cho hiện toàn bộ chỉ tiêu cuộn dọc
->    liên tục — xem mục 6.7 (mới).
-> 3. **Cuộn ngang** `.tablewrap{overflow-x:auto}` được xác nhận lại + **cột "Mã" sticky trái** và
->    **cột "Hành động" sticky phải** (luôn thấy nút Sửa/Xoá khi cuộn ngang) — xem mục 6.8 (mới).
-> 4. **Bỏ hẳn "Tạo kỳ mới từ kỳ gần nhất" + label "Đang sửa kỳ:" + dropdown chọn kỳ** — kỳ sẽ được
->    xác định theo `createdDate` thay vì tách kỳ riêng (mô hình dữ liệu do `backend-expert` chốt song
->    song, chưa ảnh hưởng slice UI này). **"Import CSV"/"+ Thêm chỉ tiêu" chuyển vào chung 1 hàng với
->    bộ lọc** (`input#gq`/`select#gGroupFilter`), ghim cố định bên phải qua
->    `.filters-actions{margin-left:auto}`. Xem mục 4 (Layout) và mục 6.2 (đã đổi) cập nhật đầy đủ.
->
-> Các mục dưới đây (bản chốt vòng #2) **vẫn còn hiệu lực** trừ khi bị đánh dấu rõ **"[ĐÃ ĐỔI vòng #3]"**
-> tại từng chỗ cụ thể — không viết lại toàn bộ tài liệu để tránh trùng lặp.
->
-> **Xác nhận từ `backend-expert` (cùng ngày, sau khi UI đã gỡ)**: việc bỏ hẳn dropdown "Đang sửa
-> kỳ"/nút "Tạo kỳ mới" ở mục 4 dưới đây **khớp đúng hướng model dữ liệu mới** — không còn entity
-> `AssessmentPeriod` tường minh, `CriteriaAssessment.CreatedAt` (cột audit chuẩn) nay **chính là**
-> "kỳ": mỗi lần sửa 1 ô/Import chỉ tác động **hôm nay** (update nếu đã có record hôm nay, tự
-> "copy-forward" 7 field từ record gần nhất rồi tạo mới nếu chưa có) — cơ chế server-side này thay
-> thế hoàn toàn ý nghĩa "Tạo kỳ mới", không cần hành động UI nào nữa. Xem `doc/ERD/ERD.md` mục "Kỳ
-> (tuần/tháng/năm) — khái niệm ngầm định" và `spec/danh-muc-dti/business-rules.md` mục 2.1/2.3 (do
-> `backend-expert` viết) để biết chi tiết đầy đủ — spec UI này không lặp lại rule dữ liệu, chỉ xác
-> nhận UI đã đúng hướng. **[ĐÃ CHỐT — xem banner vòng #4 phía trên]** 4 câu hỏi mở (#11–14 trong
-> `business-rules.md`: định nghĩa "Tất cả", quy ước tuần ISO, carry-forward, copy-forward
-> `CriteriaEvidence`) đã được người dùng chốt toàn bộ — không còn là câu hỏi mở.
->
-> **Cập nhật (2026-08-12, vòng phản hồi #2 — BẢN CHỐT)**: người dùng yêu cầu
-> bỏ hẳn cấu trúc 2 tab ("Chỉ tiêu" / "Đánh giá theo tuần") ở vòng đầu, gộp
-> lại thành **đúng 1 lưới (bảng) duy nhất** — mỗi hàng là 1 chỉ tiêu, vừa
-> hiển thị thông tin danh mục (Mã/Tên/Nhóm/Điểm tối đa) vừa hiển thị dữ liệu
-> đánh giá của **kỳ đang sửa** (Tự đánh giá/Thẩm định/Trạng thái/Phụ trách/
-> Hạn xử lý — chỉ đọc, từ Import; Tiến độ %/Ghi chú — **sửa trực tiếp
-> inline** ngay trong ô). Toàn bộ nội dung dưới đây phản ánh đúng cấu trúc
-> **1 lưới** đã hiện thực ở `doc/Prototype/danh-muc-dti.html` — **không còn
-> khái niệm tab nào** trong file.
->
-> Nguồn: `doc/Prototype/danh-muc-dti.html` (đọc toàn bộ CSS + 2 khối
-> `<script>`), đối chiếu `spec/danh-muc-dti/business-rules.md` (nguồn
-> nghiệp vụ đầy đủ, spec này **không lặp lại rule**, chỉ mô tả UI/UX và trỏ
-> ngược khi cần), `doc/ERD/ERD.md`, `doc/ERD/example_db_ver1.csv`.
->
-> **Bối cảnh phát sinh màn hình này**: Dashboard (`dashboard.html`) là
-> **read-only** — toàn bộ khả năng nhập liệu (CRUD danh mục chỉ tiêu, nhập/
-> import đánh giá theo tuần) tập trung **duy nhất** ở màn hình này. Cùng
-> sidebar shell với Dashboard (xem `spec/sidebar-menu/ui-spec.md` — nav item
-> "Danh mục" > "DTI"). Token màu/font/bo góc/shadow **tái dùng 100%** từ
-> `:root` của `dashboard.html`.
+> Chỗ nào trích `src/FE/src/styles.scss` hoặc `src/FE/src/app/app.routes.ts` là
+> Core **đang sống**, đã mở file đối chiếu ngày 2026-09-05.
 
-## 1. Tổng quan
+## 0. Nguồn và ranh giới của file này
 
-- **Mục đích**: 1 màn hình, **1 lưới**, gộp toàn bộ nhu cầu nhập liệu DTI:
-  - **Import CSV** (cách nhập **chính**) — nạp toàn bộ danh mục + đánh giá
-    cho 1 kỳ từ file theo mẫu `example_db_ver1.csv`.
-  - **"+ Thêm chỉ tiêu" / "Sửa" / "Xoá"** — CRUD danh mục `Criteria`
-    (Mã/Tên/Nhóm/Điểm tối đa) qua dialog.
-  - **Sửa trực tiếp trong lưới** (edit-per-cell) — chỉnh "Tiến độ %"/"Ghi
-    chú" của kỳ đang sửa, không cần mở form riêng.
-- **Vì sao cột "Tiến độ %" nằm trong lưới này dù không có trong CSV mẫu**:
-  `example_db_ver1.csv` không có cột % tiến độ tuần (chỉ có "Tự đánh giá"/
-  "Thẩm định" theo điểm số) — `ProgressPercent` là khái niệm chỉ tồn tại
-  trong logic JS gốc của `dashboard.html` (`DTI_ITEMS[].initialProgress`,
-  `draft.values`). Vì màn này giờ là nơi **duy nhất** để nhập/sửa dữ liệu
-  (Dashboard chỉ đọc), "Tiến độ %" **phải** có mặt và **sửa được** ở đây —
-  đúng yêu cầu người dùng.
-- **Người dùng**: giống Dashboard — cán bộ chuyên trách/đầu mối CĐS, không
-  có phân quyền trong prototype (permission CRUD `Criteria` còn là câu hỏi
-  mở, xem `business-rules.md` mục 4/5 câu #7).
-- **Lưu trữ ở bản prototype**: 100% phía client, `localStorage`, **3 key**
-  (không đổi so với thiết kế trước, chỉ đổi UI phía trên chúng):
-  - `dti_weekly_history_v2` / `dti_weekly_draft_v2` — **DÙNG CHUNG với
-    `dashboard.html`**. Mọi thay đổi ở lưới này (Import, sửa inline, "Tạo
-    kỳ mới") ghi thẳng vào đây, nên hiển thị ngay khi mở lại Dashboard.
-  - `platform_manager_criteria_catalog_v1` — danh mục `Criteria` (CRUD ở
-    lưới này), seed lần đầu từ 62 dòng `doc/ERD/example_db_ver1.csv`.
-  - Object period (`historyData[]`/`draft`) mở rộng thêm `selfScores`,
-    `verifiedScores`, `statuses`, `owners`, `deadlines`, `evidences` —
-    tương thích ngược với `dashboard.html` (chỉ đọc `.values`/`.notes`).
-- **Không còn nút "Lưu dữ liệu" tổng nào** — quyết định UX quan trọng nhất
-  của bản chốt này, xem mục 3 giải thích đầy đủ.
+| Câu hỏi | File chủ |
+| --- | --- |
+| Quy tắc nghiệp vụ (công thức, kỳ, import/export, hợp lệ hoá) | `spec/danh-muc-dti/business-rules.md` |
+| Đường dẫn, tham số, shape JSON của endpoint | `doc/contracts/danh-muc-dti.md` |
+| Layout blueprint + copy verbatim + iconography ở mức pixel | `doc/Design/Frontend/PlatformManager/Screens/02-danh-muc-dti.md` |
+| Hợp đồng từng component | `doc/Design/Frontend/PlatformManager/COMPONENTS.md` → `Components/*.md` |
+| Route, guard, thứ tự guard, state trên URL | `doc/huong_dan/quy-uoc/fe-routing-guard.md` |
+| Control flow, form, i18n, in ấn, token | `doc/huong_dan/quy-uoc/fe-ui-conventions.md` |
+| Tầng, mapper, casing DTO ↔ model | `doc/huong_dan/quy-uoc/fe-api-client.md` |
 
-## 2. Giới hạn đã biết của bản prototype tĩnh nhiều trang (không đổi)
+File này trả lời **đúng một** câu hỏi khác với các file trên: *"màn hình gồm
+những vùng nào, vùng nào dùng component nào, mỗi trạng thái hiển thị gì, và
+trường trên màn ứng với trường dữ liệu nào."* Không lặp lại công thức nghiệp vụ,
+không lặp lại shape JSON.
 
-Giống hệt bản trước — nhắc lại ngắn gọn, không lặp chi tiết:
+Nguồn giao diện đã được người dùng duyệt từng điểm: `doc/Design/Frontend/PlatformManager/Prototypes/index.html`,
+section `#screen-dti` (bắt đầu dòng 3236; CSS riêng của màn ở dòng 1647–1810).
+Đây là bản dựng để duyệt, **không** phải nguồn tri thức chính thức — sau khi
+`Screens/02-danh-muc-dti.md` được viết lại thì `doc/Design/` là nguồn.
 
-1. Danh mục `Criteria` (key riêng `platform_manager_criteria_catalog_v1`)
-   **không đồng bộ ngược** về `dashboard.html` (vẫn dùng `DTI_ITEMS` tĩnh,
-   không sửa logic gốc) — chỉ tiêu mới tạo ở lưới này sẽ không hiện trên
-   bảng 62 chỉ tiêu của Dashboard, dù dữ liệu đánh giá vẫn lưu đúng vào
-   `historyData` dùng chung.
-2. `route` trong `NavItem` hiện thực bằng `href` trỏ file tĩnh (không phải
-   `routerLink`/SPA navigation).
-3. Cột "Phụ trách" sau Import chỉ là text tự do hiển thị, chưa resolve
-   sang `AppUser` thật (câu hỏi mở #8, `business-rules.md`).
+## 1. Phạm vi màn
 
-## 3. UX quan trọng nhất — Sửa trực tiếp trong lưới (edit-per-cell), KHÔNG còn nút "Lưu dữ liệu"
+Một màn hình duy nhất, làm bốn việc:
 
-Đây là thay đổi UX lớn nhất so với bản 2-tab trước, cần hiểu rõ trước khi
-đọc phần Actions:
+1. **Đọc** danh mục chỉ tiêu DTI theo năm/kỳ, có tìm kiếm + lọc + phân trang.
+   Đọc được theo **tuần, tháng và cả năm**.
+2. **CRUD** bản thân chỉ tiêu (mã, tên, nhóm, điểm tối đa).
+3. **Nhập đánh giá theo TUẦN** — 6 trường trong dialog (Q9) + 2 trường sửa inline.
+4. **Import** file `.csv` / `.xlsx` / `.xls` chạy nền, có poll trạng thái và
+   bảng kết quả từng dòng.
 
-### 3.1. Vòng đời 1 lần sửa 1 ô ("Tiến độ %" hoặc "Ghi chú")
+⚠️ **Đọc và ghi KHÔNG cùng tập đơn vị kỳ** (Q37). Đọc được cả tuần/tháng/năm, nhưng
+ghi **chỉ theo tuần** — chọn tháng hoặc năm thì màn chuyển chỉ đọc (§5.5.1). Đây là
+điều bất đối xứng dễ bị "sửa cho nhất quán" nhất trong cả file; lý do ở §3.1.
+
+Ngoài phạm vi: xuất báo cáo (chỉ có ở Dashboard — Q13), biểu đồ, ô KPI tổng hợp.
+
+## 2. Route, quyền truy cập, state trên URL
+
+**Route đã chốt (Q33, người dùng chốt 2026-09-05): `/danh-muc/dti`.** Không còn là
+đề xuất. Đây là đường dẫn **lịch sử** của chính màn này trước khi bị gỡ, còn ghi ở
+`doc/Design/Frontend/PlatformManager/Components/Footer.md:92` và
+`doc/Design/Frontend/PlatformManager/DESIGN.md:492`; dùng lại thay vì đặt tên mới,
+và cùng khuôn hai cấp với `/quan-tri/nguoi-dung` của Core. Tầng:
+`modules/danh-muc-dti/` (nghiệp vụ, không phải `platform/`) theo
+`doc/kien-truc-core-module.md` §Nguyên tắc áp dụng khi thêm module mới.
+
+- Khai `loadChildren` **một dòng** vào `src/FE/src/app/app.routes.ts`. ✅ Dòng đó
+  ĐÃ CÓ THẬT từ lượt dựng khung 2026-09-09 — đối chiếu 2026-09-10:
+  `src/FE/src/app/app.routes.ts:40`; file **không** còn chỉ có route Core như bản
+  trước của gạch đầu dòng này ghi. Đếm bằng lệnh, đừng chép số:
+  `grep -c "loadChildren" src/FE/src/app/app.routes.ts`.
+- Guard khai trong `danh-muc-dti.routes.ts` của chính feature: **đúng hai cái**,
+  `authGuard → mustChangePasswordGuard` (`doc/huong_dan/quy-uoc/fe-routing-guard.md`
+  §6). 🛑 **KHÔNG có guard quyền trên route này** — chốt Q39 (2026-09-06). Quyền
+  ghi (Q27) không chặn ở tầng route mà chỉ ẩn affordance ghi trong màn; lý do đầy
+  đủ ở §5.6. *(Bản trước của dòng này khai `[guard quyền GHI]` ở vị trí thứ ba —
+  sai theo Q39.)*
+- `title` khai ở **cấp `Route`**, không đặt vào `data` — WCAG 2.4.2, có test canh
+  ở `src/FE/src/app/app.routes.spec.ts` (§2 quy tắc 3 của file routing).
+- Mục sidebar **không hardcode** — thêm bản ghi `SysMenus` + `SysMenuRoles` phía
+  BE (`doc/contracts/meta-menu.md`). 🛑 **Mục menu KHÔNG ẩn theo quyền ghi** (Q39):
+  ai đăng nhập cũng thấy và cũng vào được, chỉ khác nhau ở chỗ có nút sửa hay
+  không. `SysMenuRoles` vẫn tồn tại và vẫn là cơ chế chung của Core — điều này chỉ
+  nói rằng **màn này** không dùng nó để lọc theo quyền ghi DTI.
+
+**State lên URL** (`fe-routing-guard.md` §8 — quy ước này áp cho màn hình mới):
+`q` (từ khoá), `groupId`, `status`, `year`, `period`, `page`, `pageSize`. Đổi bộ
+lọc dùng `replaceUrl: true`. URL là nguồn sự thật; component đọc query param rồi
+mới gọi API, **không** giữ bản sao state song song. Ở lại trong signal: dữ liệu
+đã tải, cờ loading, dialog nào đang mở, bản nháp form chưa lưu.
+
+**Tham số lọc lạ trên URL (link cũ, gõ tay) — chốt Q62 (2026-09-10).** FE đưa **đúng
+tham số đó về mặc định** (§5.1), ghi lại URL bằng `replaceUrl: true`, **không** báo gì,
+và **không** gọi API với giá trị sai — việc làm sạch xảy ra **trước** lần gọi DM-2 đầu
+tiên. "Lạ" nghĩa là nằm ngoài miền của ô lọc: `status` ngoài bốn giá trị Q4 · `period`
+sai khuôn (`all` / `YYYY-Www` / `YYYY-MM`) · `groupId` không phải GUID hoặc không có
+trong danh sách DM-1 · `year` / `page` / `pageSize` không phải số nguyên hoặc ngoài miền
+(§7.2).
+
+- `fe-routing-guard.md` §8 **chưa có** quy ước cho ca này, nên luật ghi ở đây cho màn
+  này. Màn thứ hai cần đúng luật đó thì chuyển nó lên §8 kia rồi rút chỗ này còn một
+  dòng trỏ — đừng để hai bản.
+- **BE vẫn giữ** `CRITERIA.STATUS_INVALID` và `CRITERIA.ASSESSMENT_PERIOD_INVALID`
+  (`doc/contracts/danh-muc-dti.md` §Mã lỗi của DM-2): nơi gọi khác vẫn phải bị từ chối.
+  Q62 chỉ làm người dùng bình thường không bao giờ gặp hai mã đó.
+
+## 3. Layout theo vùng
+
+Khung ngoài là app shell (`Sidebar` + `Topbar` + `main` + `Toast`,
+`src/FE/src/app/app.html`) — màn hình không tự vẽ khung này.
+
+Trang bọc trong `.page-fill` (`src/FE/src/styles.scss` § `.page-fill`) để card chiếm hết
+chiều cao còn lại và **chỉ vùng lưới cuộn**; toolbar và hàng tiêu đề giữ
+`flex: none` nên không co lại trên viewport thấp. `.page-fill` là **nửa đầu** của
+chuỗi chiều cao; nửa sau là class `.grid-host` trên chính thẻ `<app-data-grid>` —
+thiếu nửa nào lưới cũng âm thầm về chiều cao nội dung (§3.2).
+
+| # | Vùng | Component (có trong COMPONENTS.md) | Class / hợp đồng | Ghi chú |
+| --- | --- | --- | --- | --- |
+| V1 | Khung trang | `Card` | `.card` — `styles.scss` § `.card` | `.dti-grid-card` là layout page-local kèm theo, không phải component |
+| V2 | Hàng tiêu đề | `Card` §Anatomy | `.title` — `styles.scss` § `.title` | `<h2>Danh mục DTI</h2>` + `<span class="muted" aria-live="polite">` với số chỉ tiêu (Q16 a + b) |
+| V3 | Băng thông báo (có điều kiện) | `NoticeBanner` | `.notice` — `styles.scss` § `.notice` | **Ba vai loại trừ nhau**, tối đa một băng render. Thứ tự ưu tiên: (a) "chưa import lần nào" — §5.3 (T9); (b) chỉ đọc vì chọn tháng/năm, **kèm cách thoát** — §5.5.1 (Q37); ~~(c) chỉ đọc vì không có quyền ghi~~ — **gỡ 2026-09-10 (Q51)**: thiếu quyền ghi thì **không có băng**, §5.6.1 (bản trước ghi "Bốn vai"); (d) nhắc kỳ đích khi kỳ đang chọn **không trùng nơi lời ghi sẽ rơi vào** — **hai** ca: một **tuần đã qua**, **và** `Tất cả` (mọi lời ghi vào **tuần hiện tại**, `spec/danh-muc-dti/business-rules.md` §5.3 bước 1) — §5.5. Chọn đúng **tuần hiện tại** thì hai thứ trùng nhau ⇒ **không có băng**. Lối đi tiếp luôn là **link chữ inline**, không phải nút (T11) |
+| V4 | Thanh công cụ | `Toolbar` | `.toolbar.no-print` — `styles.scss` § `.toolbar` | Xem §3.1 |
+| V5 | Lưới dữ liệu | `DataTable` qua `<app-data-grid class="grid-host">` (biến thể **ghim cột**) + `Table` | `.tablewrap` do **chính component** dựng; chiều cao theo chuỗi flex `page-fill` ⇄ `grid-host`, `scrollHeight="flex"` | Xem §3.2. Biến thể ghim cột do Q30 mở rộng hợp đồng — `Components/DataTable.md` § Variants |
+| V6 | Ô trạng thái trong lưới | `Badge` | `.badge.ok` / `.warn` / `.bad` / `.neutral` — `styles.scss` § `.badge` | Ánh xạ Q10 |
+| V7 | Ô chênh lệch trong lưới | `DeltaIndicator` | `.delta.up` / `.down` / `.flat` — `styles.scss` § `.delta` | Spec do AGENT A khôi phục 2026-09-05 |
+| V8 | Nút trong ô Hành động | `Button` | `.btn.sm` / `.btn.danger` — `styles.scss` § `.btn` | **Ẩn cả cột** khi không có quyền ghi (Q39, §5.6.1); `disabled` khi đang chọn tháng/năm (Q37, §5.5.1) |
+| V9 | Dialog Thêm/Sửa chỉ tiêu | `Dialog` + `FormRow` + `Input` + `Button` | `dialog.form-dialog` / `.form-row` / `.form-grid` — `styles.scss` § các mục cùng tên | Xem §3.3 |
+| V10 | Dialog Xác nhận xoá | `ConfirmDialog` | `dialog.confirm-dialog`, đúng **hai** nút | `src/FE/src/app/shared/components/confirm-dialog/` đã có sẵn |
+| V11 | Dialog Import | `Dialog` + `FormRow` + `Button` | `dialog.form-dialog` | Xem §3.4 |
+| V12 | Dialog Kết quả import | `Dialog` + `Button` | `dialog.form-dialog` | Xem §3.4 |
+
+**Class page-local, KHÔNG phải component** — liệt kê thẳng ra đây để không thứ
+nào ẩn đi: `.dti-grid-card` (flex column của trang, `doc/Design/Frontend/PlatformManager/Prototypes/index.html:1646`),
+`.cell-editable` / `.cell-edit` / `.progressInput` / `.noteInput` (ô sửa inline,
+`doc/Design/Frontend/PlatformManager/Prototypes/index.html:1662`), `.import-summary` (khối tóm tắt kết quả import,
+`doc/Design/Frontend/PlatformManager/Prototypes/index.html:1783`). Đây là cùng cách xử lý mà
+`doc/Design/Frontend/PlatformManager/Screens/06-trang-chu.md` dành cho `.lead` và
+`.facts`: ghi thẳng là markup của trang, không phát minh thành component. Chỉ
+promote lên `COMPONENTS.md` khi có màn thứ hai cần đúng thứ đó.
+
+### 3.1 Thanh công cụ — dùng NGUYÊN hợp đồng có sẵn, không dựng control mới
+
+Bắt buộc đúng bộ class này, đúng thứ tự DOM
+(`doc/Design/Frontend/PlatformManager/Components/Toolbar.md` §Anatomy):
 
 ```
-[Xem]  --click vào ô-->  [Sửa]  --bấm ✓ (hoặc Enter)-->  [Đã lưu, quay về Xem]
-                            |
-                            +---bấm ✗ (hoặc Esc)-------->  [Huỷ, quay về Xem — KHÔNG lưu gì]
+.toolbar.no-print
+├── .input-icon.search        → <i class="pi pi-search"> + <input type="search">
+├── details.filter
+│   ├── summary.btn           → "Lọc" + .filter-count (chỉ render khi > 0)
+│   └── .filter-panel
+│       ├── .form-row × 4     → Nhóm chỉ tiêu · Trạng thái · Năm đánh giá · Kỳ trong năm
+│       └── .filter-foot      → "Xoá lọc" (.btn) | "Áp dụng" (.btn.primary)
+├── .toolbar-sep
+├── .filter-chips             → .filter-chip × N, mỗi chip một .icon-btn gỡ điều kiện
+└── .toolbar-actions          → "Import CSV/Excel" (.btn) · "+ Thêm chỉ tiêu" (.btn.primary)
+                                 ẨN CẢ HAI khi không có quyền ghi (Q39, §5.6)
 ```
 
-1. **Trạng thái Xem (mặc định)**: ô hiển thị giá trị hiện tại dạng text
-   tĩnh (`<span class="cell-editable">`), có gạch chân nét đứt khi hover
-   (dùng màu `--brand`) + con trỏ `pointer` — gợi ý "bấm được".
-2. **Bấm vào ô** (`onclick="startEditCell(code, field)"`) → ô chuyển sang
-   **trạng thái Sửa**: text tĩnh được thay bằng `<input>` (giữ đúng class
-   `progressInput`/`noteInput` cũ để không phải viết lại style input) +
-   **2 icon nút cạnh input**: **✓** (xanh, viền `--good`, tooltip "Lưu") và
-   **✗** (đỏ, viền `--bad`, tooltip "Huỷ"). Input tự động `focus()` +
-   `select()` (chọn sẵn toàn bộ text) ngay khi vào chế độ Sửa.
-3. **Bấm ✓** (`onclick="confirmEditCell(code, field)"`, hoặc phím `Enter`
-   trong input): đọc giá trị input, ghi vào `draft` (`values[code]` ép kẹp
-   `[0,100]` nếu là Tiến độ %, hoặc `notes[code]` nguyên văn nếu là Ghi
-   chú), **lưu ngay lập tức** vào `historyData` (gọi `commitDraftToHistory()`
-   — xem mục 3.2), thoát chế độ Sửa, ô hiển thị lại giá trị MỚI.
-4. **Bấm ✗** (`onclick="cancelEditCell()"`, hoặc phím `Escape`): thoát chế
-   độ Sửa **mà không đọc/ghi giá trị input** — vì `draft` chưa từng bị sửa
-   ở bước này (chỉ đọc khi bấm ✓), "khôi phục giá trị cũ" đơn giản là
-   render lại đúng giá trị đang có trong `draft`, không cần lưu riêng một
-   bản "giá trị trước khi sửa" nào khác.
-5. **Chỉ 1 ô được sửa tại 1 thời điểm** (biến toàn cục `editingCell =
-   {code, field, original}`) — bấm vào ô khác trong khi đang sửa 1 ô sẽ
-   **tự động thoát** ô đang sửa dở (không lưu, giống bấm ✗) rồi mở ô mới,
-   vì `renderGrid()` render lại toàn bộ lưới mỗi lần gọi và chỉ 1 ô khớp
-   `editingCell` được vẽ ở chế độ Sửa.
+⚠️ **`.toolbar-sep` đứng TRƯỚC `.filter-chips`** — đây là thứ tự của component
+đang chạy (`src/FE/src/app/shared/components/toolbar/toolbar.html`, đối chiếu
+2026-09-05) và của `Toolbar.md` §Anatomy. Bản dựng để duyệt đặt chips trước sep;
+**bản dựng sai, không phải component**. Thứ tự này không đổi được từ ngoài: cả năm
+khối đều nằm trong template của `<app-toolbar>`, trang chỉ chiếu nội dung vào hai
+slot `[filter]` và `[actions]`.
 
-**✅ Đã fix (2026-08-12, verify bằng chrome-devtools-mcp phát hiện)**: bản
-đầu có nguy cơ ✗ không khôi phục đúng giá trị cũ nếu người dùng lỡ bấm
-nhầm ✓ (2 icon 26×26px cạnh nhau, dễ trúng nhầm khi test/dùng thực tế) —
-đã tăng kích thước icon lên 30×30px + gap 6px, **ẩn hẳn spin-arrow gốc**
-của `<input type=number>` (nguyên nhân khiến giá trị bị đổi ngoài ý muốn
-chỉ bằng 1 cú click, trước khi kịp bấm ✓/✗ — `::-webkit-inner/outer-spin-button{-webkit-appearance:none}`
-+ `-moz-appearance:textfield`, vẫn gõ số bình thường hoặc dùng phím
-lên/xuống bàn phím), và thêm guard trong `confirmEditCell()` (chỉ commit
-đúng ô đang thật sự ở `editingCell`, chặn lời gọi lạc/trễ). Cơ chế cốt lõi
-"✗ không đọc/ghi input" ở bước 4 phía trên **không đổi bản chất** — chỉ
-củng cố thêm để giảm rủi ro bấm nhầm mục tiêu.
+- **Dùng component `<app-toolbar>`** (`src/FE/src/app/shared/components/toolbar/`),
+  không tự viết lại `<div class="toolbar">`: `showSearch` = true, `hasFilter` =
+  true, `filterCount` = số điều kiện **đang áp**, bốn `.form-row` chiếu vào slot
+  `[filter]`, hai nút chiếu vào slot `[actions]`, `chips` = danh sách
+  `IToolbarChip`, `chipRemove` gỡ đúng một điều kiện.
+- **Nút gỡ chip theo đúng component**: một `.icon-btn` mang
+  `aria-label = "Bỏ lọc " + nhãn chip`, **không** có thuộc tính `title`, và ký
+  hiệu là icon `<i class="pi pi-times">` — không phải ký tự `×`. Bản dựng để
+  duyệt ghi `Gỡ điều kiện…` kèm `×`; copy đó **không tạo ra được** bằng
+  `<app-toolbar>` mà chính spec này bắt buộc dùng.
+- `searchAriaLabel` **phải** đặt lại thành `Tìm mã hoặc tên chỉ tiêu` — thanh
+  không có `<label>` nhìn thấy được, nên tên gọi khả truy cập chỉ đến từ input đó.
+- **Toolbar cố ý không debounce** (Toolbar.md §Component API) — mỗi trang tự chọn
+  độ trễ. Đây là gọi API server-side nên đặt debounce ở page; đề xuất 300 ms.
+- `filterApply` / `filterClear` phát **sau khi** panel đóng — trang refetch rồi
+  mới render, không để panel treo trên dữ liệu đã đổi.
+- **Không có ô sắp xếp** ở màn này (khác Dashboard). Thứ tự mặc định theo mã chỉ
+  tiêu.
+- **Cách đếm điều kiện — chốt T8 (2026-09-05): `.filter-count` chỉ đếm điều kiện
+  KHÁC MẶC ĐỊNH.** Một ô luôn có giá trị mà giá trị đó là mặc định thì **không**
+  phải một điều kiện người dùng đã đặt.
 
-### 3.2. Vì sao KHÔNG còn nút "Lưu dữ liệu" — mỗi ✓ tự lưu ngay
+  | Ô | Mặc định | Có tính vào `.filter-count` không |
+  | --- | --- | --- |
+  | Nhóm chỉ tiêu | rỗng (tất cả) | chỉ khi đã chọn một nhóm |
+  | Trạng thái | rỗng (tất cả) | chỉ khi đã chọn một trạng thái |
+  | Năm đánh giá | **năm hiện tại** | **không** — trừ khi chọn năm khác |
+  | Kỳ trong năm | `Tất cả` | **không** — trừ khi chọn một kỳ cụ thể |
 
-**[QUYẾT ĐỊNH UX của `frontend-expert`, người dùng chỉ yêu cầu bỏ tab +
-thêm UX ✓/✗, không nói rõ có giữ nút "Lưu dữ liệu" tổng hay không — đây là
-suy luận hợp lý nhất theo tinh thần yêu cầu]:**
+  Cùng luật đó áp cho `.filter-chips`: chip chỉ hiện cho điều kiện **thật sự khác
+  mặc định**, nên số chip luôn bằng `.filter-count`. Hệ quả cụ thể: bản dựng để
+  duyệt hiện `.filter-count` = **2** cho {Nhóm, Năm=2026} — **bản dựng sai**, đúng
+  phải là **1** (chỉ Nhóm). Không có điều kiện nào khác mặc định thì `.filter-count`
+  **không render** và hàng chip trống.
 
-- Từ "✓ (xác nhận lưu)" trong mô tả yêu cầu đã hàm ý: bấm ✓ = **lưu thật**,
-  không phải "tạm ghi vào bộ nhớ chờ bấm 1 nút Lưu tổng khác sau". Giữ thêm
-  1 nút "Lưu dữ liệu" riêng sẽ **mâu thuẫn ngữ nghĩa** với chữ ✓ (lưu) đã
-  có trên từng ô — người dùng bấm ✓ xong tưởng đã lưu nhưng thực ra chưa,
-  dễ mất dữ liệu nếu quên bấm nút Lưu tổng rồi rời trang.
-- Lưới giờ có tính chất "bảng dữ liệu trực tiếp" (spreadsheet-style admin
-  grid) — nhất quán với cách "Sửa" chỉ tiêu (dialog) đã **lưu ngay khi bấm
-  "Lưu chỉ tiêu"** trong dialog, không có bước xác nhận tổng nào khác. Áp
-  dụng cùng triết lý cho ô Tiến độ %/Ghi chú.
-- Hệ quả kỹ thuật: mỗi lần ✓ gọi `commitDraftToHistory()` — hàm này **upsert
-  toàn bộ snapshot `draft` hiện tại** vào `historyData` theo `draft.date`
-  (giống hệt `saveWeek()` gốc của `dashboard.html`, chỉ đổi tên + gọi tự
-  động thay vì qua nút). Vì vậy **mỗi lần sửa xong 1 ô, toàn bộ kỳ đang sửa
-  đã là dữ liệu "chính thức"** — không có khái niệm "nháp chưa lưu" nào
-  tồn tại lâu dài trên trang này nữa (khác hẳn `draft` khái niệm cũ ở
-  `dashboard.html`, nơi "nháp" có thể tồn tại nhiều bước trước khi bấm "Lưu
-  tuần này").
-- **Nút "Tạo kỳ mới từ kỳ gần nhất"** (vẫn giữ, xem mục 4.2) theo cùng
-  triết lý: bấm là **lưu ngay** (tạo `AssessmentPeriod` mới = ngày hôm nay,
-  copy `values` từ kỳ gần nhất) — không phải "tạo nháp chờ Lưu".
-- **Import CSV** vốn đã lưu ngay từ thiết kế trước (không đổi) — nay nhất
-  quán với toàn bộ phần còn lại của trang.
+  Ngoại lệ cố ý: kỳ đích vẫn hiện thường trực ở nơi khác khi nó **không trùng** kỳ
+  đang chọn — nhưng đó là **băng nhắc kỳ đích** V3 (§5.5), không phải một chip lọc.
+  Hai thứ trả lời hai câu hỏi khác nhau ("tôi đã lọc gì" ≠ "tôi đang ghi vào kỳ
+  nào") nên không gộp. ⚠️ Điều kiện của băng **không** phải "kỳ đang chọn ≠ tuần
+  hiện tại": ở chế độ `Tất cả` thì `.filter-count` = 0, không chip nào, kỳ đang chọn
+  cũng **không** là một tuần — vậy mà băng **vẫn phải hiện** (§5.5). Đọc điều kiện
+  theo kỳ đích, đừng đọc theo ô lọc.
 
-## 4. Layout
+Ô **Kỳ trong năm** liệt kê **cả tuần lẫn tháng**, mỗi mốc ghi rõ khoảng ngày
+(Q12), cộng một option `all`. Ô này có **hai** vai, và vai thứ hai là mới từ Q20:
+nó vừa lọc dữ liệu đang xem, vừa **chọn kỳ đích cho mọi lời ghi** (§5.5).
 
-**[ĐÃ ĐỔI vòng #3]** Đã **bỏ hẳn** `.toolbar` (Import CSV/+ Thêm chỉ tiêu đứng riêng) và
-`section.weekbar` (label "Đang sửa kỳ:"/`select#periodSelect`/btn "Tạo kỳ mới từ kỳ gần nhất") —
-hợp nhất Import/Thêm vào cùng hàng `.filters` của lưới, ghim phải:
+🛑 **Vai thứ hai chỉ hoạt động với TUẦN — chốt Q37 (2026-09-06).** Nhập liệu của hệ
+thống này là **theo tuần**; tháng và năm là **tổng hợp tự tính**, không phải đơn vị
+nhập. Ô lọc vẫn liệt đủ cả tuần lẫn tháng, nhưng lựa chọn quyết định bảng **sửa
+được hay chỉ đọc**:
 
-```
-.sidebar                    → "DTI" (con của "Danh mục") active
-.topbar → .logo "Danh mục" + subtitle, không action nào trong topbar
+| Chọn gì ở `Kỳ trong năm` | Bảng | Kỳ đích của lời ghi |
+| --- | --- | --- |
+| Một **tuần** (`YYYY-Www`) | **sửa được** | chính tuần đó |
+| `Tất cả` (`all`) | **sửa được** | **tuần hiện tại** (Q26 + Q37) |
+| Một **tháng** (`YYYY-MM`) | **CHỈ ĐỌC** | — không có |
+| Cả năm (nếu ô có option đó) | **CHỈ ĐỌC** | — không có |
 
-main (max-width 1600px)
-  .notice           → giải thích: Import CSV là cách nhập chính, sửa inline
-                       Tiến độ %/Ghi chú, CRUD chỉ tiêu qua "+ Thêm"/Sửa/Xoá
+⚠️ **Bảng trên còn một điều kiện nữa: KỲ ĐÍCH PHẢI NẰM TRONG NĂM ĐANG LỌC** — chốt
+T15 (2026-09-06). Điều kiện này chỉ cắn vào **đúng một ô** của bảng trên:
 
-  .card#dtiGridCard [ID MỚI vòng #5 — display:flex;flex-direction:column, height CỐ ĐỊNH tính động bằng
-                      JS (không phải max-height — xem lý do fix ở banner đầu file), xem mục 6.11]
-    .title h2 "Danh mục & Đánh giá theo tuần" + #gridCountText          } flex:none — giữ nguyên vị trí
-    .filters (no-print): #gq (tìm) + #gGroupFilter (select 6 nhóm)      } bình thường, không nằm trong
-                         + .filters-actions{margin-left:auto} → label.btn "Import CSV"  } vùng cuộn
-                           (input file .csv, hidden) + btn.primary "+ Thêm chỉ tiêu"     }
-                         [ĐÃ ĐỔI vòng #3 — trước đây 2 nút này nằm trong .toolbar riêng phía trên]
-    .muted            → ghi chú mẫu cột + giới hạn .csv/.xlsx (trước nằm trong .toolbar, nay 1 dòng
-                        riêng ngay dưới .filters)                                        } flex:none
-    .tablewrap → table[min-width:1900px] → thead (12 cột, xem mục 5) → tbody#gridBody
-                 [ĐÃ ĐỔI vòng #3] cột "Mã" sticky trái + cột "Hành động" sticky phải — xem mục 6.8
-                 [ĐÃ ĐỔI vòng #5] flex:1;min-height:0;overflow-y:auto — CHỈ khối này cuộn dọc riêng khi
-                 dữ liệu 1 trang cao hơn phần còn lại của card, xem mục 6.11
-    .pagination#gridPagination [MỚI vòng #3] → chọn số dòng/trang (10/20/50) + Trước/Sau — xem mục 6.7
-                 [ĐÃ ĐỔI vòng #5] flex:none, neo cố định cuối card — luôn nhìn thấy, không cần cuộn trang
+| `Năm đánh giá` | `Kỳ trong năm` | Kỳ đích | Có nằm trong năm đang lọc? | Bảng |
+| --- | --- | --- | --- | --- |
+| năm hiện tại | một tuần | tuần đó | ✔ | **sửa được** |
+| năm hiện tại | `Tất cả` | tuần hiện tại | ✔ | **sửa được** |
+| **năm cũ** (2025) | **một tuần của 2025** | tuần đó | ✔ | **sửa được** |
+| **năm cũ** (2025) | **`Tất cả`** | tuần hiện tại (**2026**) | ✘ | **CHỈ ĐỌC** |
 
-  .footer → ghi chú localStorage dùng chung với Dashboard
+**Chỉ lối tắt `Tất cả` bị chặn, không phải cả năm cũ.** Ca hỏng là `Năm = 2025` +
+`Kỳ = Tất cả`: theo Q26 lối tắt này ghi vào **tuần hiện tại**, mà tuần hiện tại
+thuộc **2026** — một năm người dùng **không nhìn thấy ở đâu trên màn**. Họ đang xem
+số của 2025, sửa một dòng, và tin rằng bản ghi đi vào 2025. Cột `Kỳ của số liệu`
+cũng không cứu được, vì T14 đã bỏ năm khỏi chuỗi hiển thị (§3.2.2 luật c) — theo
+lập luận "mọi dòng đều thuộc năm đang lọc", một lập luận **chỉ đúng khi đọc**.
 
-dialog#criteriaDialog     → form Thêm/Sửa chỉ tiêu (Mã/Tên/Nhóm/Điểm tối đa)
-dialog#confirmDialog      → xác nhận chung (dùng cho Xoá chỉ tiêu)
-dialog#importResultDialog → kết quả Import CSV
-```
+🛑 **Chọn một tuần cụ thể của năm cũ thì VẪN SỬA ĐƯỢC** — khẳng định lại bằng Q41
+(2026-09-10). Nhập bù kỳ đã qua là quyết
+định đã chốt ở Q20 và T15 **không** lật nó. Khác biệt giữa hai ca là kỳ đích **có
+hiện trên màn hình hay không**: chọn `Tuần 33/2025` thì kỳ đích chính là thứ người
+dùng vừa chọn; chọn `Tất cả` thì kỳ đích là một tuần của năm khác, không xuất hiện
+ở đâu.
 
-**[MỚI vòng #3] Vì sao bỏ hẳn "Đang sửa kỳ"/"Tạo kỳ mới" thay vì chỉ ẩn tạm**: người dùng xác nhận
-kỳ sẽ được xác định theo `createdDate` của bản ghi (ngày import/thêm mới), không còn khái niệm
-`AssessmentPeriod` tách rời do người dùng tự "tạo kỳ mới". `backend-expert` đang chốt model dữ liệu
-song song (sẽ báo qua `SendMessage` khi xong) — cho tới lúc đó, `draft`/`historyData` trong
-localStorage **vẫn giữ nguyên cơ chế cũ phía dưới UI** (chỉ gỡ phần UI điều khiển kỳ), lưới luôn hiển
-thị/sửa vào kỳ **gần nhất đã lưu** (hoặc kỳ trống hôm nay nếu chưa từng có) — giống hệt hành vi mặc
-định trước đây, chỉ khác là người dùng không còn cách nào chuyển sang xem kỳ khác hay tạo kỳ mới thủ
-công từ màn này nữa. `fillPeriodSelect()`/`onPeriodSelectChange()`/`newPeriodFromLatest()` giữ nguyên
-trong JS (theo đúng quy ước đã có của file — xem các hàm dead code khác như `loadDraftForDate()` ở
-`dashboard.html`), `fillPeriodSelect()` đổi thành no-op an toàn (không còn phần tử DOM để cập nhật).
+*(Bản trước của mục này ghi điều kiện là "`Năm đánh giá` phải là năm hiện tại" và
+kết luận `Năm = 2025` chỉ đọc **bất kể** ô kỳ. Câu đó **quá tay** — áp nguyên văn
+thì `Tuần 33/2025` cũng bị khoá, tức lật luôn Q20. Sửa 2026-09-06 theo bản hợp đồng
+đã chốt.)*
 
-**Ghi chú kiến trúc component (khi build Angular)**: 1 lưới map thành 1
-feature `modules/danh-muc-dti/` — `pages/danh-muc-dti/danh-muc-dti.page.ts`
-(smart, giữ `draft`/`catalog` state, gọi service) điều phối các component
-con: `criteria-grid-table` (dumb, nhận `rows`/`editingCell`, phát sự kiện
-`cellEditStart`/`cellEditConfirm`/`cellEditCancel`/`edit`/`delete`),
-`criteria-form-dialog`, `confirm-dialog`, `csv-import-dialog`,
-`period-picker` (dropdown "Đang sửa kỳ"). Logic edit-per-cell (mục 3) nên
-tách thành 1 `EditableCellComponent` dumb tái dùng cho cả 2 cột (Tiến độ %/
-Ghi chú) thay vì lặp code — điểm khác biệt với bản HTML prototype (nơi 2
-hàm `renderProgressCell`/`renderNoteCell` viết riêng cho đơn giản).
+Ca bị chặn xử lý **giống hệt** ca chọn tháng (cùng khuôn: kỳ đích không xác định
+được từ thứ đang nhìn thấy): affordance ghi `disabled`, dải băng V3 nêu cách thoát
+(§5.5.1). Mã lý do là `PERIOD_OUT_OF_YEAR` (§7.1a).
 
-## 5. Cột của lưới (12 cột)
+**Vì sao chặn tháng thay vì "cho nhập rồi tự quy đổi":** một tháng phải được neo
+vào một ngày để ra kỳ đích, và mọi cách neo đều sai ở đâu đó. Neo `Tháng 8/2026`
+vào 31/08 thì tuần ISO của ngày đó là **tuần 36** — nghĩa là người dùng nhập một
+con số *tháng 8* và hệ thống ghi nó thành *tuần 36*, mà tuần 36 có tới 5 ngày nằm
+trong **tháng 9**. Cột `Kỳ của số liệu` sẽ hiển thị đúng cái điều vô lý đó
+(§3.2.2), và không có cách nào viết một dòng chữ giải thích cho hợp lý. Chặn ở
+tầng lựa chọn là cách duy nhất làm câu "nhập cho đúng kỳ đang chọn" luôn đúng.
 
-| # | Cột | Nguồn | Sửa được? |
+Xuất báo cáo **không** bị ràng buộc này: `mode=month` vẫn chạy bình thường vì
+export là **đọc tổng hợp**, không phải ghi (`spec/dashboard-dti/ui-spec.md` §4).
+
+> 📖 Định dạng nhãn kỳ (quy tắc + 4 khuôn chuỗi): file chủ là
+> `spec/dashboard-dti/business-rules.md` §Quy tắc kỳ. Không chép khuôn ra đây.
+
+### 3.2 Lưới
+
+Lưới dùng component dùng chung **`<app-data-grid>`**
+(`src/FE/src/app/shared/components/data-grid/`) — đó là **nơi DUY NHẤT khai
+`p-table`** trong app (kiểm: `grep -rl "TableModule" src/FE/src/app`). Trang
+**không** import `TableModule`, **không** tự dựng `<p-table>`, **không** tự viết
+`.tablewrap`: `[lazy]`, `[paginator]`, `[scrollable]`, `scrollHeight="flex"` và khung
+`.tablewrap` đều nằm **bên trong** component (`Components/DataTable.md`
+§ Reference markup và § Do / Don't).
+
+Trang truyền vào: `rows` · `loading` · `totalCount` · `page` · `pageSize` ·
+`dataKey="CriteriaId"` · `minWidth` (tổng `min-width` của bộ cột) ·
+`headerTemplate` / `bodyTemplate` / `emptyTemplate`; và nghe `pageChange`
+(**1-based**, `{ page, pageSize }`). `rowsPerPageOptions` là input **có sẵn mặc
+định** `[10, 20, 50]` — màn này dùng đúng bộ đó nên **không truyền lại**. Vì `.tablewrap` thuộc component nên cái bẫy
+`.scroll` (`Components/DataTable.md` § Do / Don't — đặt `.scroll` làm header cuộn
+mất và nhốt paginator vào vùng cuộn) **không còn là chỗ trang có thể làm sai**.
+
+🛑 **Chiều cao lưới đi theo chuỗi flex, KHÔNG theo token `--grid-h` — sửa
+2026-09-09.** `Components/DataTable.md` § Tokens Used chốt *"`dimension.grid-h` is
+**not** used by this component any more — `scrollHeight="flex"` hands sizing to the
+`page-fill` ⇄ `grid-host` flex chain"*, và § Normalize mục 6 ghi rõ binding
+`scrollHeight="var(--grid-h)"` *"no longer exists"*. Hai việc phải làm **cùng
+lúc**:
+
+| Đặt ở đâu | Class |
+| --- | --- |
+| Trang (§3, đã có) | `.page-fill` |
+| Chính thẻ `<app-data-grid>` | **`.grid-host`** |
+
+Quên `.grid-host` thì lưới **âm thầm quay về chiều cao nội dung** — không lỗi biên
+dịch, không test nào bắt (`Components/DataTable.md` § Normalize mục 6). *(Bản trước
+của file này đặc tả `scrollHeight="var(--grid-h)"` ở ba chỗ — mục này, hàng V5 của
+bảng vùng, và §6 Responsive; cả ba đều tả một binding không còn tồn tại. Quyết định
+2026-09-09: sửa spec theo component, không sửa component theo spec.)*
+
+**Số dòng mỗi trang mặc định là 10** (Q19) — bằng lưới `Quản trị người dùng`. Ba
+lựa chọn `[10, 20, 50]` giữ nguyên. Không đặt một mặc định khác cho lưới này:
+`Components/DataTable.md` § Normalize ghi rõ *"Only page size 10 ships"* sau khi
+repo dọn đúng chuyện hai lưới hai mặc định ngày 2026-08-29, và đặt 20 ở đây là
+tái tạo lại đúng thứ vừa dọn xong.
+
+**KHÔNG có dòng `Hiển thị 1–10 trong 62 bản ghi`** (Q16 c): hợp đồng `DataTable`
+không khai `showCurrentPageReport`. Số lượng đã nằm ở `.title` (V2), và ở đó nó
+mang `aria-live="polite"` nên sau khi lọc, trình đọc màn hình vẫn có bằng chứng
+rằng bộ lọc đã chạy (`doc/huong_dan/wiki-core/fe/15-accessibility.md` §3a).
+
+> 📖 **Bảng cột** — số cột, thứ tự, header verbatim, `min-width` từng cột: file chủ
+> là `doc/Design/Frontend/PlatformManager/Screens/02-danh-muc-dti.md`
+> § Layout Blueprint. Không chép bảng ra đây. Bộ cột **đã đổi ngày 2026-09-05**:
+> Q31 thêm một cột, nên đọc bản mới của file chủ chứ đừng nhớ theo bản cũ.
+
+Bốn điều thuộc về file này chứ không thuộc bảng cột, nên ghi ở đây:
+
+- `.num` (`styles.scss` § `.num`) cho mọi cột số — canh phải + `tabular-nums`, để
+  hàng đơn vị thẳng cột giữa các dòng.
+- **Đúng hai cột sửa inline**: `Tiến độ %` và `Minh chứng/Ghi chú` (Q9). Mọi cột
+  khác chỉ đọc trong lưới.
+- Tổng `min-width` của bộ cột vượt xa bề rộng khả dụng → lưới **cuộn ngang** trên
+  gần như mọi màn hình. Đó là tiền đề của cả hai mục dưới đây.
+- Cột `Kỳ của số liệu` **hiện/ẩn theo chế độ** (Q31) — xem §3.2.2. Đây là cột duy
+  nhất của lưới không phải lúc nào cũng có mặt.
+
+#### 3.2.1 Ghim cột — `Mã` bên trái, `Hành động` bên phải (Q30)
+
+**Chốt 2026-09-05.** Lưới ghim **hai** cột: `Mã` ở mép trái, `Hành động` ở mép
+phải. Mọi cột còn lại cuộn ngang ở giữa.
+
+Lý do là hành vi thật của màn, không phải trang trí: bộ cột rộng hơn hẳn viewport
+nên cuộn ngang là chuyện thường ngày, mà hai cột người dùng cần **cùng lúc** —
+"dòng này là chỉ tiêu nào" (`Mã`) và "bấm sửa ở đâu" (`Hành động`) — lại nằm ở hai
+đầu đối diện. Cuộn tới cuối để bấm `Sửa` thì mất dấu mình đang ở dòng nào; đó đúng
+là ca hỏng mà ghim cột sinh ra để chặn.
+
+⚠️ **Đây là MỞ RỘNG HỢP ĐỒNG `DataTable`, không phải bản vá riêng màn này.** Ghim
+cột được khai thành **biến thể chung** của component ở
+`doc/Design/Frontend/PlatformManager/Components/DataTable.md` § Variants. File này
+**chỉ tuyên bố màn Danh mục dùng biến thể đó và ghim cột nào** — không định nghĩa
+lại cơ chế, không đặt tên class riêng, không copy giá trị `min-width` sang đây.
+
+✅ **Ghim cột khai qua input `frozenColumns` của `<app-data-grid>` — chốt
+2026-09-09, và input đó ĐÃ CÓ THẬT trong component đang chạy (đối chiếu
+2026-09-10: `src/FE/src/app/shared/components/data-grid/data-grid.ts:139`).**
+Màn này chỉ việc khai `[frozenColumns]` ở call site — không phải mở rộng
+component trước rồi mới dựng màn. Tên, kiểu và hành vi chính xác của input thuộc
+`Components/DataTable.md` § Variants — file này chỉ nói **hai cột nào** bị ghim.
+
+🛑 **KHÔNG đặt `pFrozenColumn` ở call site.** `pFrozenColumn` và `alignFrozen` là
+directive của `TableModule`; dùng chúng trong `headerTemplate` / `bodyTemplate` của
+trang buộc **trang** phải import `TableModule`, đúng thứ luật *"`data-grid` là nơi
+duy nhất khai `p-table`"* (§3.2) cấm. Hai luật này va nhau, và cách gỡ đã chốt là
+**giữ luật, mở hợp đồng component**: trang khai *cột nào bị ghim* qua input,
+component chịu trách nhiệm gắn directive lên đúng ô.
+
+Ba hệ quả giao diện thuộc về màn này:
+
+- Cột `Mã` đã là cột đầu và `Hành động` đã là cột cuối trong bảng cột của file chủ
+  — ghim **không** đổi thứ tự cột, chỉ đổi hành vi cuộn.
+- `Hành động` mang `.no-print` khi in (§6); cột bị ghim vẫn phải biến mất trên bản
+  in như trước, ghim không phải lý do giữ nó lại.
+- Ở mốc ≤ 560px, hai cột ghim ăn gần hết bề rộng khả dụng. Kiểm bằng mắt trên
+  viewport hẹp nhất trước khi coi là xong; nếu không còn chỗ cho cột giữa thì đó là
+  vấn đề của hợp đồng `DataTable`, báo về `DataTable.md`, đừng tự tắt ghim ở đây.
+
+#### 3.2.2 Cột `Kỳ của số liệu` — hiện có điều kiện, và tự đổi sau khi lưu (Q31)
+
+**Chốt 2026-09-05, bổ sung luật (c) ngày 2026-09-06.** Lưới có thêm cột `Kỳ của số
+liệu`, cho biết **giá trị đang hiển thị trên dòng này thuộc kỳ nào**. Ba luật đi
+kèm, cả ba đều bắt buộc:
+
+**(a) Cột chỉ render khi `Kỳ trong năm` = `Tất cả`.**
+
+| Chế độ | Cột `Kỳ của số liệu` | Vì sao |
+| --- | --- | --- |
+| `Kỳ trong năm` = một kỳ cụ thể | **không render** | mọi dòng cùng một kỳ, và kỳ đó đã hiện ở ô lọc, ở chip và ở băng V3 — cột chỉ tốn chỗ trong một lưới vốn đã phải cuộn ngang |
+| `Kỳ trong năm` = `Tất cả` | **render** | `all` là phép chiếu "bản ghi mới nhất trong năm", nên mỗi dòng có thể đến từ một kỳ khác nhau. Không có cột này thì lưới hiện 62 con số trông như cùng một kỳ trong khi chúng không phải |
+
+Ẩn/hiện cột là thay đổi cấu trúc bảng, không phải `visibility: hidden`: dùng
+`@if` quanh cả `<th>` lẫn `<td>` để số cột của header và của body luôn khớp nhau.
+Đổi chế độ kéo theo đổi số cột → `colspan` của dòng rỗng trong `emptyTemplate` (§5.3) phải
+tính theo số cột **đang render**, không hardcode.
+
+**(b) Sau khi lưu, ô đó tự đổi sang TUẦN HIỆN TẠI.**
+
+Đây không phải hiệu ứng phụ, nó là **phản hồi trực quan** của Q26: ở chế độ `Tất
+cả`, lời ghi rơi vào **tuần hiện tại** chứ không ghi đè kỳ cũ đang hiển thị. Người
+dùng vừa sửa một dòng đang hiển thị số của tuần 31 và thấy ô kỳ nhảy từ
+`27/07 – 02/08` sang `31/08 – 06/09` biết ngay hai điều: bản ghi mới đã được tạo cho
+tuần này, và số của tuần 31 **vẫn còn nguyên**.
+
+*(Bản trước của mục này ghi "kỳ hiện tại". Sau Q37 chỉ còn một đơn vị nhập nên nói
+thẳng là **tuần** — "kỳ" để mở khả năng nó là tháng, và khả năng đó đã bị đóng.)*
+
+- Giá trị mới lấy **từ response** của lời ghi (§7.3 nhánh sửa, §7.4 — response là một
+  dòng lưới đầy đủ; **thêm mới** thì từ lần tải lại lưới, Q49), không phải do FE tự
+  đặt bằng đồng hồ máy khách. Đồng hồ máy khách
+  sai múi giờ hoặc lệch ngày là đủ để ô này nói dối đúng vào lúc nó quan trọng nhất.
+- Áp cho **cả hai** đường ghi: dialog `Sửa chỉ tiêu` (V9) và hai ô sửa inline.
+- Ở chế độ một **tuần** cụ thể, cột không render nên luật (b) không có gì để làm —
+  kỳ đích chính là tuần đang xem và không có gì đổi.
+- Ở chế độ **tháng/năm** thì không có lời ghi nào để mà đổi: bảng chỉ đọc (Q37,
+  §3.1), và cột cũng không render.
+
+**(c) Chuỗi trong ô: CHỈ khoảng ngày, bỏ số tuần — chốt Q38 (2026-09-06),
+dấu gạch theo T14 (2026-09-06).**
+
+| | Giá trị |
+| --- | --- |
+| Hiển thị | `10/08 – 16/08` |
+| **Không** hiển thị | `Tuần 33`, `Tuần 33/2026`, và năm |
+| Bề rộng cột | **110px** |
+| Ô rỗng (chưa có bản ghi đánh giá nào trong năm) | `—` |
+
+⚠️ **Có khoảng trắng quanh dấu gạch** — `10/08 – 16/08`, không phải `10/08–16/08`.
+Chốt T14. Q38 bỏ **số tuần**, và chỉ số tuần: nó **không** lật quy ước dấu gạch của
+T5, vốn áp cho toàn sản phẩm. Bề rộng **không** phải căn cứ để lệch ở đây — cả hai
+bản đều vừa 110px, nên đổi dấu gạch chỉ đơn thuần tạo ra khuôn thứ năm mà không đổi
+lấy được gì. *(Bản trước của bảng này ghi `10/08–16/08` — sai theo T14.)*
+
+⚠️ **Đây là NGOẠI LỆ có chủ đích so với Q12**, và phải được ghi vào § Normalize của
+`Screens/02-danh-muc-dti.md` để lần dọn dẹp sau không có ai "sửa cho nhất quán".
+Q12 quy định mọi chỗ hiển thị kỳ đều ghi **cả tên kỳ lẫn khoảng ngày**; ở riêng ô
+này bỏ tên kỳ vì hai lý do cộng lại:
+
+1. **Cột hẹp.** Đây là cột thứ 14 trong một lưới vốn đã phải cuộn ngang (§3.2.1);
+   `Tuần 33 · 10/08 – 16/08` cần gần gấp đôi 110px.
+2. **Không còn gì để phân biệt.** Tên kỳ trong khuôn Q12 tồn tại để nói *đơn vị*
+   của kỳ là tuần hay tháng. Sau Q37 **mọi dòng trong cột này đều là tuần**, nên
+   chữ "Tuần" lặp lại 62 lần mà không mang thêm thông tin nào.
+
+Ngoại lệ dừng ở **đúng ô này**, và nó hẹp hơn bản trước tưởng. Bốn khuôn nhãn kỳ
+của `spec/dashboard-dti/business-rules.md` §Quy tắc kỳ **không đổi**, và mọi chỗ
+hiển thị kỳ khác trên màn — ô lọc, chip, băng V3, tiêu đề dialog V9 — vẫn theo Q12
+đầy đủ.
+
+So với khuôn gần nhất là hàng Lịch sử trên Dashboard (`10/08 – 16/08/2026`, T5), ô
+này khác **đúng một điều**:
+
+| | Hàng Lịch sử (T5) | Ô `Kỳ của số liệu` |
+| --- | --- | --- |
+| Khoảng trắng quanh dấu gạch | có | **có** — giống, theo T14 |
+| Năm | có | **BỎ** |
+
+Bỏ năm là an toàn vì mọi dòng trong lưới đều thuộc **năm đang lọc** ở ô `Năm đánh
+giá`, và năm đó hiện thường trực trên toolbar — lặp lại nó 62 lần trong một cột
+110px không thêm thông tin nào.
+
+**Sửa inline — đúng 2 trường** (Q9). Kích hoạt bằng **bấm đúp**; phần tử mang
+`tabindex="0"` + `role="button"` + `title` mô tả thao tác. `Enter`/`Space` mở ô
+sửa, `Enter` lưu, `Escape` huỷ — ràng buộc a11y số 2 của
+`doc/huong_dan/wiki-core/fe/15-accessibility.md` §4: mọi thao tác làm được bằng
+chuột phải làm được bằng bàn phím. Bản duyệt đã có viền focus 2px `--brand` cho
+`.cell-editable:focus-visible`.
+
+### 3.3 Dialog "Thêm / Sửa chỉ tiêu" — 10 trường, 2 nhóm
+
+`Dialog` biến thể `form-dialog` (`width: min(560px, 92vw)`), tiêu đề `Thêm chỉ
+tiêu` / `Sửa chỉ tiêu`, đóng bằng nút `Đóng` ở `.title` và bằng phím `Escape`.
+
+**Nhóm 1 — bản thân chỉ tiêu** (4 trường, đều bắt buộc, đánh dấu `.required`):
+
+| Trường | Control | Ràng buộc hiển thị |
+| --- | --- | --- |
+| `Mã` | `input`, `maxlength="20"`, placeholder `vd 1.1` | Mã có thể **3 cấp** (`4.22.11`) — không ràng buộc regex 2 cấp |
+| `Tên chỉ tiêu` | `textarea` | |
+| `Nhóm` | `select` | 6 nhóm, nạp từ API |
+| `Điểm tối đa` | `input[type=number]`, `min=0.01`, `step=0.01` | |
+
+`Nhóm` và `Điểm tối đa` nằm cùng một `.form-grid` (2 cột).
+
+**Nhóm 2 — đánh giá theo kỳ** (6 trường Q9, đều không bắt buộc):
+
+| Trường | Control | Bố cục |
+| --- | --- | --- |
+| `Tự đánh giá` | `input[type=number]`, `min=0`, `step=0.01` | `.form-grid` cùng `Thẩm định` |
+| `Thẩm định` | `input[type=number]`, `min=0`, `step=0.01` | |
+| `Trạng thái` | `select`, 4 giá trị Q4 | `.form-grid` cùng `Hạn xử lý` |
+| `Hạn xử lý` | `input[type=date]` | |
+| `Phụ trách` | `select`, mặc định `— Chưa phân công —`; danh sách người dùng nạp từ `GET /api/users` — xem ghi chú dưới bảng | một hàng riêng |
+| `Minh chứng/Ghi chú` | `textarea` | một hàng riêng, **một ô text duy nhất** (Q5) |
+
+**Nguồn dữ liệu ô `Phụ trách` — TÁI DÙNG `GET /api/users`, chốt 2026-09-09.** Trước
+lượt này, không contract nào khai nguồn danh sách cho ô đó; nay **không cần endpoint
+mới** — dùng lại endpoint đã có của màn `Quản trị người dùng`.
+
+> 📖 Đường dẫn, tham số và shape: `doc/contracts/users.md` § `GET /api/users`.
+> Không chép shape sang đây.
+
+Bốn điều thuộc về giao diện, và chỉ có bấy nhiêu:
+
+- **Quyền khớp sẵn theo cấu hình đã chốt.** `UsersController` chặn
+  `[Authorize(Roles = SuperAdmin,Admin)]`
+  (`src/BE/PlatformManager.Api/Controllers/UsersController.cs:14`), mà Q36 chốt lần
+  seed đầu cấp key DTI cho **`Admin` và chỉ `Admin`**
+  (`spec/danh-muc-dti/business-rules.md` §6.5) — nên người mở được dialog này đúng là
+  người gọi được endpoint. Ai không có quyền ghi thì **không thấy dialog** (§5.6.1).
+  ⚠️ Sự trùng khớp đó đến từ **dữ liệu seed**, không phải một ràng buộc được cưỡng
+  chế: cấp key DTI cho một vai khác `Admin` qua màn phân quyền là đủ để ô này nhận
+  `403` trong khi phần còn lại của dialog chạy bình thường. Xử lý như lỗi tải một ô
+  chọn — ô `disabled` kèm câu giải thích tại chỗ, **không** đóng dialog và **không**
+  chặn lưu bốn trường danh mục.
+- **Option mặc định `— Chưa phân công —` mang giá trị rỗng**, nghĩa là *không phân
+  công ai*. Mapper quy nó về đúng giá trị mà DM-4 quy định cho ca không có người phụ
+  trách (`doc/contracts/danh-muc-dti.md`, `ownerId` ở §7.3) — **không** gửi chuỗi rỗng.
+- **Nhãn hiển thị là họ tên** (`fullName` của `UserDto`), không phải tên đăng nhập —
+  cột `Phụ trách` của lưới cũng hiện `ownerName` (§7.1), hai chỗ phải đọc giống nhau.
+- **Danh sách có phân trang và có trần** — đừng giả định một lời gọi lấy hết. Số
+  người dùng vượt trần thì ô phải cho tìm kiếm (tham số `searchText` của cùng
+  endpoint) thay vì lặng lẽ cắt cụt danh sách; luật trần thuộc `doc/contracts/users.md`.
+
+`Chênh lệch` **không xuất hiện** trong dialog — nó là trường tính, chỉ hiển thị ở
+lưới. `Tiến độ %` cũng không có trong dialog — sửa inline (Q9).
+
+**Một nút `Lưu chỉ tiêu` = MỘT lời gọi.** Bốn trường danh mục và object
+`assessment` sáu trường đi chung một request `PUT /api/criteria/{id}` (hoặc
+`POST /api/criteria` khi thêm mới) — CONTRACT DM-4 đã chốt như vậy 2026-09-05, và
+lý do là của giao diện: tách đôi tạo ra cửa sổ hỏng nửa vời, trong đó tên chỉ tiêu
+đã đổi trong khi dialog đang báo lỗi phần đánh giá.
+
+`assessment` **vắng mặt** ≠ `assessment` có mọi trường rỗng: cái đầu nghĩa là
+"không đụng tới dữ liệu đánh giá", cái sau là "xoá trắng dữ liệu đánh giá". Form
+phải phân biệt được hai ca đó, đừng để mapper tự dựng object rỗng cho vui.
+
+Lỗi từ server hiện ở `.form-error` (`styles.scss` § `.form-error`) ngay trên
+`.dialog-actions`. `.dialog-actions` (`styles.scss` § `.dialog-actions`) chứa `Huỷ` (`.btn`) và
+`Lưu chỉ tiêu` (`.btn.primary`).
+
+Sau khi lưu, **hai nhánh khác nhau** (Q49, chốt 2026-09-10):
+
+| Nhánh | Response | FE làm gì |
+| --- | --- | --- |
+| **Sửa** — `PUT /api/criteria/{id}` (DM-4) | `CriteriaRowDto` — cùng shape một dòng lưới | **thay đúng dòng đó tại chỗ**, không gọi lại danh sách |
+| **Thêm** — `POST /api/criteria` (DM-3) | `CriteriaDto` — **không** phải dòng lưới | **tải lại lưới** (DM-2) theo state đang có trên URL (§2) |
+
+Vì sao thêm mới phải tải lại: vị trí của dòng mới do **sắp xếp và phân trang phía server**
+quyết — trang đang xem có thể không chứa nó. FE tự chèn là FE tự sắp, tức dựng nguồn sự thật
+thứ hai cho thứ tự dòng.
+
+> 🔄 **LẬT 2026-09-10 (Q49).** Bản trước ghi *"Response trả về cùng shape với một dòng của
+> lưới, nên đóng dialog xong FE thay đúng dòng đó tại chỗ"* cho **cả** thêm lẫn sửa. Sai với
+> nhánh thêm: DM-3 trả `CriteriaDto`. Hợp đồng giữ nguyên; spec sửa theo.
+
+### 3.4 Import — 2 dialog nối tiếp
+
+**Dialog Import** — tiêu đề `Import CSV/Excel`, một `.form-row` chứa
+`<input type="file" accept=".csv,.xlsx,.xls">`, một dòng `.muted` hiện tên file
+đã chọn, `.dialog-actions` = `Huỷ` · `Nhập dữ liệu` (`.btn.primary`).
+
+Import là thao tác **chạy dài**: `POST /api/import` trả `jobId` rồi FE **poll**
+`GET /api/import/{jobId}`. Cách gọi và ràng buộc bắt buộc kèm theo nằm ở
+`doc/huong_dan/quy-uoc/fe-api-client.md` §"Long-running operation — poll pattern"
+— đọc trước khi viết dòng gọi đầu tiên. Trong lúc `Pending`/`Running`: nút `Nhập
+dữ liệu` `disabled`, dialog **không** đóng, và tiến trình phải được thông báo qua
+vùng `aria-live` (a11y §4 mục 4).
+
+**Dialog Kết quả import** — mở khi job `Succeeded`. Khối `.import-summary` gồm
+một câu tổng hợp (tổng số dòng, số thành công `.ok`, số lỗi `.err`, số chỉ tiêu
+tự tạo mới) rồi một `<ul>`, mỗi lỗi một `<li class="err">`: số dòng (`rowNumber`) +
+câu FE dựng từ bảng dịch của `code`, ráp `messageParams` vào. Mã chỉ tiêu là **tham
+số** `Code`, không phải trường riêng, và có mã lỗi không mang nó
+(`IMPORT.ROW_CODE_MISSING`). Đóng dialog → lưới **refetch**.
+
+> 🔄 **Sửa 2026-09-10 — theo shape đã chốt 2026-09-09.** Bản trước ghi khuôn
+> `Dòng {số dòng} — mã "{mã}": {thông điệp}`, trong đó `{thông điệp}` là câu BE ghép sẵn.
+> Hợp đồng đã gỡ `message` khỏi `errors[]` (`doc/contracts/danh-muc-dti.md` DM-7 bước 2):
+> mỗi phần tử chỉ còn `{ rowNumber, code, messageParams }`. Chuỗi verbatim của từng mã
+> **chưa chốt** — thuộc `Screens/02-danh-muc-dti.md` § Copy, không định nghĩa ở đây.
+
+Job `Failed` (lỗi hạ tầng) **không** mở dialog kết quả — hiện `Toast` lỗi. Ranh
+giới này thuộc contract: lỗi từng dòng đi vào `result.errors`, job crash đi vào
+`status: "Failed"` (`doc/contracts/danh-muc-dti.md`).
+
+## 4. Hành động
+
+| Hành động | Điểm vào | Kết quả | Ghi chú |
 | --- | --- | --- | --- |
-| 1 | Mã | `catalog[].Code` | Qua dialog "Sửa" (cột 12) |
-| 2 | Tên | `catalog[].Name` | Qua dialog "Sửa" |
-| 3 | Nhóm | `catalog[].GroupId` + `groupName()` | Qua dialog "Sửa" |
-| 4 | Điểm tối đa | `catalog[].MaxScore` | Qua dialog "Sửa" |
-| 5 | Tự đánh giá | `draft.selfScores[code]` | **Không** — chỉ Import ghi đè (xem `business-rules.md` mục 2.2) |
-| 6 | Thẩm định | `draft.verifiedScores[code]` | **Không** — chỉ Import |
-| 7 | Trạng thái | `draft.statuses[code]` (badge `bwork` trung tính — KHÔNG phải badge tính động `statusFor()` của Dashboard, xem lưu ý ở mục 6) | **Không** — chỉ Import |
-| 8 | Phụ trách | `draft.owners[code]` (text tự do) | **Không** — chỉ Import; xem giới hạn mục 2 #3 |
-| 9 | Hạn xử lý | `draft.deadlines[code]` | **Không** — chỉ Import |
-| 10 | **Tiến độ %** | `draft.values[code]` | **Có** — sửa inline (mục 3) |
-| 11 | **Ghi chú** | `draft.notes[code]` | **Có** — sửa inline (mục 3) |
-| 12 | Hành động | — | `action-btn` "Sửa" (mở dialog CRUD) + "Xoá" |
+| Tìm kiếm | `.input-icon.search` | refetch về trang 1 | debounce 300 ms, `replaceUrl` |
+| Lọc | `details.filter` → `Áp dụng` | refetch về trang 1 | `.filter-count` + `.filter-chips` cập nhật |
+| Gỡ một điều kiện | `.icon-btn` (`pi-times`) trên `.filter-chip` | refetch về trang 1 | `aria-label = "Bỏ lọc " + nhãn chip` — §3.1 |
+| Xoá toàn bộ lọc | `Xoá lọc` | refetch về trang 1 | không xoá từ khoá tìm kiếm |
+| Đổi trang / số dòng | paginator của `DataTable` | refetch | server-side, `[lazy]` |
+| Thêm chỉ tiêu 🔒 | `+ Thêm chỉ tiêu` | mở V9 rỗng | |
+| Sửa chỉ tiêu 🔒 | `Sửa` trên hàng | mở V9 đã điền | |
+| Xoá chỉ tiêu 🔒 | `Xoá` trên hàng | mở V10 → xoá | thông điệp nêu **mã + tên**; xem ghi chú dưới |
+| Sửa `Tiến độ %` 🔒 | bấm đúp ô `Tiến độ %` | ghi đè **cả hai** trường inline | FE tự kẹp `[0,100]` trước khi gửi |
+| Sửa `Minh chứng/Ghi chú` 🔒 | bấm đúp ô `Minh chứng/Ghi chú` | ghi đè **cả hai** trường inline | |
+| Import 🔒 | `Import CSV/Excel` | V11 → poll → V12 | |
 
-## 6. Actions
+🔒 = **hành động ghi**, và cả năm điểm vào của chúng chịu **ba** điều kiện độc lập,
+phải cùng đúng thì mới dùng được:
 
-### 6.1. Tìm kiếm / lọc theo nhóm — `input#gq` / `select#gGroupFilter`
+| # | Điều kiện | Không thoả thì | Mã lý do (§7.1a) | Chốt |
+| --- | --- | --- | --- | --- |
+| 1 | Người dùng có quyền ghi DTI | **ẨN** điểm vào | `NO_WRITE_PERMISSION` | Q39, §5.6.1 |
+| 2 | `Kỳ trong năm` là **tuần** hoặc `Tất cả` | **`disabled`** điểm vào | `PERIOD_NOT_WEEKLY` | Q37, §5.5.1 |
+| 3 | **Kỳ đích nằm trong năm đang lọc** | **`disabled`** điểm vào | `PERIOD_OUT_OF_YEAR` | T15, §5.5.1 |
 
-Filter real-time (`oninput`/`onchange`), không phân biệt hoa/thường, khớp
-`Code + ' ' + Name`. Chỉ ảnh hưởng hiển thị, không đổi dữ liệu.
+FE **không tự đánh giá ba điều kiện này** — đọc `canWrite` / `isEditable` /
+`editBlockedBy` ở cấp màn (§7.1a). Bảng trên là để hiểu *vì sao*, không phải để
+hiện thực lại.
 
-### 6.2. ~~Đổi "kỳ đang sửa"~~ — [ĐÃ BỎ khỏi UI vòng #3, xem mục 4]
+🛑 **Đừng gộp ba điều kiện thành một cờ `readonly`.** Chúng chia làm hai nhóm với
+hai cách hiển thị và hai câu nói khác nhau, và ranh giới là *người dùng có tự thoát
+được không*:
 
-Nội dung dưới đây **chỉ còn giá trị tài liệu lịch sử** (hành vi gốc trước khi bỏ) — `select#periodSelect`
-không còn tồn tại trong DOM:
+| | Nghĩa | Hiển thị | Người dùng thoát bằng cách |
+| --- | --- | --- | --- |
+| Điều kiện 1 | **"không phải của bạn"** | `hidden` | không tự thoát được — phải được cấp quyền |
+| Điều kiện 2 và 3 | **"không phải lúc này"** | `disabled` | đổi bộ lọc: chọn một tuần, hoặc quay về năm hiện tại |
 
-- Danh sách các kỳ **đã lưu** (sort giảm dần theo ngày, hiển thị
-  `dd/mm/yyyy · xx.x%` — cùng định dạng `select#savedWeeks` cũ của
-  Dashboard). Chọn 1 kỳ → nạp toàn bộ dữ liệu kỳ đó vào `draft`, render lại
-  lưới — cột 5–11 đổi theo đúng dữ liệu của kỳ vừa chọn.
-- **Mặc định khi mở trang (vẫn đúng, không đổi)**: kỳ **gần nhất đã lưu** (không phải "hôm nay")
-  — nếu chưa từng có kỳ nào, mới dùng kỳ trống ngày hôm nay.
-- **Không có date picker tự do** ở màn này (khác `input#weekDate` cũ của
-  `dashboard.html` — đã bỏ theo đúng yêu cầu "không cần date picker riêng
-  nữa vì đã bỏ tab") — chỉ chọn trong số kỳ **đã tồn tại**.
+Điều kiện 2 và 3 **loại trừ nhau** với bộ mã hôm nay — `PERIOD_OUT_OF_YEAR` chỉ sinh
+khi `period = "all"`, `PERIOD_NOT_WEEKLY` chỉ khi kỳ là tháng — nên khi có quyền,
+`editBlockedBy` mang **tối đa một** mã. Dải băng V3 vẫn đọc **cả mảng** (§7.1a ràng
+buộc 2), không viết `[0]`.
 
-### 6.3. ~~"Tạo kỳ mới từ kỳ gần nhất"~~ — [ĐÃ BỎ khỏi UI vòng #3, xem mục 4]
+> 🔄 **LẬT 2026-09-10 (Q48).** Bản trước ghi *"Điều kiện 2 và 3 **cộng dồn chứ không
+> thay nhau** — `editBlockedBy` có thể mang cả hai mã cùng lúc"*. Sai theo bất biến ở
+> `doc/contracts/danh-muc-dti.md` DM-2 mục 3.
 
-Nội dung dưới đây **chỉ còn giá trị tài liệu lịch sử**:
+⚠️ Đừng đọc điều kiện 3 thành *"năm cũ thì cấm"*: `Năm = 2025` + `Kỳ = Tuần 40/2025`
+**vẫn sửa được** (kỳ đích nằm trong 2025). Chỉ `Năm = 2025` + `Kỳ = Tất cả` mới
+trượt, vì lối tắt đó ghi vào tuần hiện tại của **2026**. Xem bảng 4 dòng ở §3.1.
 
-- Tạo 1 kỳ mới `date = hôm nay`, copy `values`/`notes`/5 field Import từ kỳ
-  gần nhất (hoặc trống nếu chưa có kỳ nào) — **lưu ngay** (không phải nháp,
-  xem mục 3.2), cập nhật `select#periodSelect`, render lại lưới.
-- Hàm `newPeriodFromLatest()` vẫn còn nguyên vẹn trong JS (dead code, không còn phần tử nào gọi) —
-  cùng quy ước với các hàm dead code khác trong dự án (vd `loadDraftForDate()`/`saveWeek()` ở
-  `dashboard.html`).
+🛑 **Mọi hành động ghi đều ghi vào TUẦN ĐANG CHỌN** (Q20 + Q37), không phải vào
+"hôm nay" — và khi ô `Kỳ trong năm` đang ở `Tất cả` thì kỳ đích là **tuần hiện
+tại** (Q26), không phải kỳ của dòng đang hiển thị. Xem §5.5 và §7.4b; đây là ràng
+buộc mạnh nhất của màn hình này và nó chi phối cả năm dòng 🔒 ở trên.
 
-### 6.4. "Import CSV" — giữ nguyên rule mapping, chỉ đổi nơi render sau import
+📌 **Sau mỗi lời ghi thành công ở chế độ `Tất cả`, ô `Kỳ của số liệu` của dòng đó
+đổi sang tuần hiện tại** (Q31 luật b, §3.2.2). Không phải một hành động riêng của
+người dùng, nhưng là **thay đổi nhìn thấy được** mà cả năm dòng 🔒 đều gây ra — nên
+phải kiểm nó cùng lúc với việc kiểm giá trị đã lưu, đừng coi là hiệu ứng phụ tự
+khắc đúng.
 
-Hành vi/mapping **không đổi** so với thiết kế trước (xem
-`business-rules.md` mục 2.2 và phần code `parseCsv()`/`importCsvFile()`)
-— chỉ khác điểm cuối: sau khi import xong, gọi `renderGrid()` +
-`fillPeriodSelect()` (lưới hợp nhất) thay vì `renderCriteriaTable()`/
-`renderAssessmentAll()` (2 tab cũ đã bỏ). Tóm tắt nhanh (chi tiết đầy đủ ở
-bản trước, không lặp lại toàn bộ):
+⚠️ **Câu xác nhận xoá KHÔNG được đổi theo dữ liệu của hàng.** CONTRACT DM-5 chốt
+BE là nơi quyết xoá cứng hay xoá mềm, và FE chỉ đọc `hardDeleted` trong response
+để chọn **thông báo sau khi xoá**. Đừng đoán trước bằng `AssessmentId` để đổi câu
+hỏi: trường đó chỉ phản ánh **kỳ đang xem**, không phản ánh lịch sử nhiều năm —
+bản cũ làm đúng như vậy và câu xác nhận sai trong đúng ca người dùng cần nó đúng
+nhất.
 
-- `PeriodDate` = ngày hệ thống lúc import (không có cột ngày trong mẫu).
-- Ghi đè toàn bộ snapshot của kỳ trùng ngày (upsert).
-- `Code` lạ → tự động tạo `Criteria` mới; nếu "Nhóm" cũng lạ → bỏ qua dòng,
-  báo lỗi, không tự tạo nhóm.
-- Cross-check "Chênh lệch" → cảnh báo không chặn.
-- Kết quả hiện `dialog#importResultDialog` (thành công/cảnh báo/lỗi từng
-  dòng).
+Mọi hành động ghi thành công → `Toast` xác nhận, và hàng/lưới cập nhật lại **từ
+response**, không tự sửa state cục bộ rồi coi như xong.
 
-### 6.5. "+ Thêm chỉ tiêu" / "Sửa" / "Xoá" — CRUD `Criteria` (không đổi so với thiết kế trước)
+## 5. Trạng thái
 
-Giữ nguyên toàn bộ hành vi đã thiết kế (dialog form Mã/Tên/Nhóm/Điểm tối
-đa, validate theo `business-rules.md` mục 1.1/1.2, xoá có xác nhận qua
-`dialog#confirmDialog` với 2 nhánh hard/soft-delete theo mục 1.3) — chỉ
-khác điểm re-render cuối cùng gọi `renderGrid()` (1 lưới) thay vì 2 hàm
-render tách biệt của bản 2-tab cũ. Không lặp lại chi tiết rule ở đây, xem
-bản đặc tả gốc trong `business-rules.md`.
+### 5.1 Mặc định
+Năm = năm hiện tại, kỳ = `Tất cả (mới nhất trong năm)`, không lọc nhóm/trạng
+thái, không từ khoá, trang 1, **10 dòng/trang** (Q19). Hai ô sửa inline **bật**.
 
-### 6.6. Sửa "Tiến độ %" / "Ghi chú" inline — xem mục 3 (đã mô tả đầy đủ UX)
+Năm hệ quả của trạng thái mặc định mà người thi công hay bỏ sót — cả năm đều đến
+từ việc **mặc định là chế độ `Tất cả`**:
 
-### 6.7. [MỚI vòng #3] Phân trang lưới — `#gridPagination`
+- **Băng V3 CÓ hiện ngay ở trạng thái mặc định** (§5.5, chốt 2026-09-09): `Tất cả`
+  là một trong hai ca có băng nhắc kỳ đích, vì lời ghi rơi vào **tuần hiện tại**
+  trong khi mỗi dòng đang hiện số của một kỳ khác nhau. Đây là **đường đi phổ biến
+  nhất** của màn, nên băng đó là thứ người dùng thấy gần như mọi lần vào — không
+  phải một ca biên. Đừng dựng nó như thông báo chỉ hiện khi có gì bất thường.
+- **Cột `Kỳ của số liệu` CÓ render** ở trạng thái mặc định (§3.2.2 luật a). Nghĩa là
+  bộ cột người dùng thấy đầu tiên là bộ **đầy đủ**, không phải bộ rút gọn — và mỗi
+  ô đọc `10/08 – 16/08` chứ không phải `Tuần 33` (Q38 + T14, luật c).
+- **`.filter-count` không render** — cả bốn ô lọc đều ở mặc định (T8, §3.1).
+- **Bảng SỬA ĐƯỢC** (nếu có quyền ghi): mặc định thoả **cả ba** điều kiện của §4 —
+  `Tất cả` nằm ở nhánh sửa-được của Q37, và `Năm` đang là năm hiện tại nên T15 cũng
+  thoả. Đổi **một** trong hai ô đó là rơi sang chỉ đọc (§5.5.1).
+- **Lời ghi rơi vào tuần hiện tại** (Q26 + Q37, §5.5), và mỗi lần lưu thì ô kỳ của
+  dòng đó đổi theo (§3.2.2 luật b). Đây là đường đi phổ biến nhất của màn hình,
+  không phải ca biên — kiểm nó trước, đừng để lại sau cùng.
 
-- Thay cho hiện toàn bộ chỉ tiêu đã lọc trong 1 lần cuộn dọc liên tục: `renderGrid()` giờ cắt `arr`
-  đã lọc/sort theo `gridPage`/`gridPageSize` (`gridPage=1, gridPageSize=20` mặc định) trước khi map ra
-  `<tr>`. `#gridCountText` đổi format thành `"start–end/total chỉ tiêu (tổng N)"` (N = tổng toàn bộ
-  `activeCatalog()`, không phụ thuộc lọc/trang).
-- Control: `select` chọn số dòng/trang — 3 mức cố định **10/20/50** (frontend-expert tự chọn theo giá
-  trị phổ biến, không phải yêu cầu chính xác từ người dùng) — `onchange="changeGridPageSize(this.value)"`
-  (đổi `pageSize`, reset về trang 1). 2 nút "‹ Trước"/"Sau ›" (`changeGridPage(p)`, tự `disabled` ở biên
-  trang đầu/cuối) + text "Trang X/Y" ở giữa.
-- **Reset về trang 1** mỗi khi: đổi từ khoá tìm kiếm/nhóm (`onGridFilterChange()` — thay thế trực tiếp
-  `oninput`/`onchange` cũ vốn gọi thẳng `renderGrid()`), sau khi Import CSV thành công (dữ liệu đổi
-  nhiều). **Không** reset khi bấm ✓/✗ sửa 1 ô (giữ nguyên trang đang xem sau khi lưu 1 dòng).
-- Rỗng (`total===0`): `#gridPagination` render chuỗi rỗng (ẩn hẳn control phân trang), giống hành vi
-  "không hiện thông báo phân trang khi bảng trống".
+### 5.2 Đang tải
+Mặt nạ loading của `p-table` **bên trong `<app-data-grid>`** (`[loading]`), do preset PrimeNG vẽ — app không tự
+style. Toolbar **không** bị khoá, trừ khi đang có thao tác ghi. Không dựng
+skeleton riêng: hợp đồng `DataTable` đã có sẵn mặt nạ, thêm cái thứ hai là hai
+ngôn ngữ loading trên cùng một màn hình.
 
-### 6.8. [MỚI vòng #3] Cuộn ngang + cột sticky (Mã trái, Hành động phải)
+🛑 **Màn này KHÔNG tự dựng lớp phủ đang tải** (Q34, 2026-09-05). Quyết định Q34 —
+"làm mờ vùng số liệu + vòng quay nhỏ" — chỉ áp cho **Dashboard**, vì Dashboard
+không có `p-table` bọc số liệu của nó. Ở đây lớp phủ đã có sẵn trong hợp đồng
+`DataTable` và Core đang dùng nó qua `[loading]`, nên tự dựng thêm một lớp nữa là
+hai cơ chế loading chồng lên nhau trên cùng một lưới. Trạng thái đang tải của
+Dashboard: `spec/dashboard-dti/ui-spec.md` §5.2.
 
-- **Cuộn ngang**: `.tablewrap{overflow-x:auto}` (đổi từ `overflow:auto` — tường minh hoá trục cuộn,
-  hành vi không đổi bản chất nhưng đã kiểm tra lại theo phản hồi người dùng báo "chưa cuộn ngang
-  được" — `table` vẫn giữ `min-width:1900px` ép rộng hơn khung nhìn khi màn hình hẹp).
-- **Cột "Hành động" (cuối bảng) sticky phải**: `position:sticky;right:0` + `background` trùng màu nền
-  dòng (`#fff` dòng lẻ, `#f8fafc` dòng chẵn/`th`, `var(--bg)` khi hover — khớp đúng 3 trạng thái nền có
-  sẵn của `tbody tr`) + `box-shadow` nhẹ bên trái để phân tách trực quan với vùng đang cuộn qua bên
-  dưới nó. Đáp ứng đúng yêu cầu "cố định dòng sửa xoá... chỉ cho dịch ngang các dòng còn lại" — nút
-  Sửa/Xoá (`.action-btn`) luôn nhìn thấy được bất kể cuộn tới đâu.
-- **Cột "Mã" (đầu bảng) cũng sticky trái** (`position:sticky;left:0`) — bổ sung theo gợi ý "có thể cân
-  nhắc" trong yêu cầu, giúp định vị đúng dòng đang xem trong lúc cuộn ngang qua các cột giữa.
-- `z-index` phân lớp: `th` (header) cao nhất (`5`) để luôn nổi trên cả nội dung cuộn dọc lẫn 2 cột
-  sticky ngang; `td` sticky (`2`/`3`) cao hơn `td` thường (không sticky, mặc định `0`) nhưng thấp hơn
-  `th`.
+### 5.3 Rỗng
+Hai ca **khác nhau**, và chốt T9 (2026-09-05) làm chúng khác nhau **cả về nơi
+hiển thị**, không chỉ về câu chữ:
 
-### 6.9. [MỚI vòng #4, ĐÃ CHỐT] Bộ lọc Năm + Kỳ trong năm — `select#dtiYearFilter` / `select#dtiPeriodFilter`
+| Ca | Điều kiện | Hiển thị ở đâu |
+| --- | --- | --- |
+| **Lọc không khớp** | có ít nhất một điều kiện khác mặc định, hoặc có từ khoá | `emptyTemplate` truyền vào `<app-data-grid>` — một ô `.muted` `colspan` hết bảng |
+| **Chưa import lần nào** | không điều kiện nào khác mặc định, không từ khoá, tổng số chỉ tiêu = 0 | **`NoticeBanner`** đặt trên lưới (cùng chỗ với V3), **không** phải dòng trống trong bảng |
 
-- **`select#dtiYearFilter`** (`onchange="onDtiYearFilterChange()"`): liệt kê mọi năm có dữ liệu (suy từ
-  `historyData[].date`) + năm hiện tại (luôn có mặt dù chưa có dữ liệu). Đổi năm → nạp lại
-  `select#dtiPeriodFilter` theo năm mới (`fillDtiPeriodFilter()`), reset về "Tất cả", reset trang 1.
-- **`select#dtiPeriodFilter`** (`onchange="onDtiPeriodFilterChange()"`): option đầu cố định `"Tất cả
-  (mới nhất trong năm)"` (value `__ALL__`), theo sau là từng kỳ đã lưu **trong năm đang chọn** (sort
-  giảm dần theo ngày, hiển thị `dd/mm/yyyy`).
-- **Nguồn dữ liệu hiển thị theo lựa chọn** (`resolveRowData(code)` trong JS):
-  - **"Tất cả"**: với mỗi chỉ tiêu, tìm kỳ **gần nhất trong năm có `touched[code]===true`**
-    (`latestTouchedPeriodInYear()`) — dùng giá trị của kỳ đó cho cột 5–11. Không tìm thấy → mọi cột
-    hiện `"—"` (chỉ tiêu chưa từng có thao tác trong năm đang chọn).
-  - **1 kỳ cụ thể**: đọc thẳng dữ liệu của đúng ngày đó; nếu chỉ tiêu không `touched` trong đúng ngày
-    này (vd bản ghi tồn tại nhưng không có trong `touched` — dữ liệu cũ trước khi có touched-tracking
-    coi như đã touched, xem `isTouchedDti()`), cột Tiến độ %/Ghi chú hiện `"—"` thay vì giá trị kế thừa.
-- **Không đổi việc sửa inline ghi vào đâu**: `confirmEditCell()` luôn ghi vào `draft` (kỳ hôm nay) —
-  bộ lọc Năm/Kỳ chỉ đổi HIỂN THỊ, không đổi đích ghi. Vì vậy chỉ cho phép sửa khi đang xem đúng trạng
-  thái mà "hiển thị" và "đích ghi" trùng nhau — xem mục 6.10 (rule read-only).
-- Import CSV (`gridPage=1` + nạp lại `fillDtiYearFilter()`/`fillDtiPeriodFilter()` sau khi import
-  thành công) và mỗi lần ✓ commit 1 ô (`commitDraftToHistory()`) đều làm mới 2 dropdown này để phản
-  ánh kỳ vừa ghi (hôm nay) nếu nó là ngày mới chưa từng xuất hiện trong danh sách.
+**Vì sao ca thứ hai chuyển sang `NoticeBanner`** (T9): một dòng `.muted` nằm giữa
+khung bảng trống trông như "bảng đang lỗi", và nó **không dẫn đi đâu được**. Ca này
+là màn hình **đầu tiên** người dùng thật thấy khi hệ thống mới triển khai, và lúc
+đó có đúng **một** việc làm được — nhập dữ liệu vào. Băng phải trỏ thẳng tới nút
+`Import CSV/Excel` ở `.toolbar-actions` (V4) và nêu cả lối thứ hai là
+`+ Thêm chỉ tiêu`. Đây là đối xứng của Q32 bên Dashboard: chỗ nào rỗng vì **chưa có
+việc gì xảy ra** thì dùng băng có lối đi tiếp, chỗ nào rỗng vì **bộ lọc hẹp** thì
+dùng thông điệp trong bảng.
 
-### 6.10. [MỚI vòng #4, ĐÃ CHỐT CHÍNH THỨC bởi `backend-expert` + người dùng] Rule read-only khi xem lịch sử
+- **Lối đi tiếp là LIÊN KẾT CHỮ inline trong thân băng, không phải nút** — chốt T11
+  (2026-09-06). Hợp đồng `NoticeBanner` khai `a` inline (§ Anatomy: ink theo mức độ
+  nghiêm trọng, weight 700, gạch chân khi hover) nhưng **không có slot cho nút có
+  nhãn**. Mở rộng hợp đồng chỉ để đặt một cái nút là đi ngược đúng yêu cầu "dùng lại
+  component có sẵn". *(Bản trước của mục này viết `không chứa được nút` như một
+  khiếm khuyết và ngụ ý cần nút — T11 chốt ngược lại: link inline là đủ và là cách
+  đúng.)*
+- Băng dùng biến thể **mặc định** (thông tin), không phải `.warn` / `.bad` — chưa
+  import lần nào không phải lỗi, không phải cảnh báo.
+  (`doc/Design/Frontend/PlatformManager/Components/NoticeBanner.md` § Variants.)
+- Khi băng hiện, lưới **vẫn render** với đủ header và một câu rỗng ngắn trong `emptyTemplate` —
+  không ẩn bảng đi, vì header là thứ cho người dùng biết file import cần những cột
+  nào.
+- Băng và hai vai kia của V3 **loại trừ nhau trên thực tế**: chưa có chỉ tiêu nào
+  thì không có gì để ghi vào tuần nào, và cũng không có gì để chỉ-đọc. Nếu nhiều
+  điều kiện cùng đúng thì thứ tự ưu tiên là **rỗng → chỉ đọc vì bộ lọc (Q37/T15) →
+  nhắc kỳ đích**: cái trên nói việc cần làm trước cái dưới. *(🔄 LẬT 2026-09-10: bản
+  trước ghi `Q37/Q39` — Q51 gỡ vai thiếu quyền khỏi băng.)*
+- Khi không có quyền ghi (Q39), băng rỗng **bỏ hai lối đi** vì cả hai đều đã bị ẩn —
+  lúc đó nó chỉ còn là câu thông báo. Đừng trỏ tới một nút không tồn tại.
+- `colspan` tính theo **số cột đang render**, nhớ rằng cột `Kỳ của số liệu` chỉ có
+  ở chế độ `Tất cả` (§3.2.2).
 
-Không còn là đề xuất chờ xác nhận (khác banner vòng #3 cũ) — đây là hành vi bắt buộc:
+Chuỗi verbatim của cả hai ca thuộc `Screens/02-danh-muc-dti.md` § Copy (AGENT A) —
+không chép sang đây.
 
-- **Điều kiện "editable" (duy nhất 1 trạng thái)**: `isViewingCurrentPeriod()===true`, tức
-  `dtiPeriodFilter.value==='__ALL__'` **VÀ** `dtiYearFilter.value===`năm hiện tại. Đây cũng là trạng
-  thái **mặc định khi mở trang**.
-- **Mọi trạng thái khác** (chọn năm khác, HOẶC thu hẹp về 1 kỳ cụ thể dù vẫn trong năm nay) →
-  **CHỈ ĐỌC toàn bộ**:
-  - `#dtiReadonlyBanner` (`.notice`) hiện: `"Đang xem dữ liệu lịch sử — chỉ đọc. Quay lại 'Tất cả (mới
-    nhất trong năm)' của năm hiện tại để chỉnh sửa."`.
-  - `#dtiFiltersActions` (label "Import CSV" + btn "+ Thêm chỉ tiêu") **ẩn hẳn** (`display:none`).
-  - Ô "Tiến độ %"/"Ghi chú" mỗi dòng render dạng **text tĩnh** (không có `cell-editable`/click
-    affordance) thay vì span có thể bấm — `renderProgressCell(code, v, editable)` /
-    `renderNoteCell(code, note, editable)` nhận thêm tham số `editable` quyết định nhánh render.
-  - Cột "Hành động" mỗi dòng hiện `"—"` (muted) thay vì 2 nút Sửa/Xoá.
-- **Lý do (không phải chọn tuỳ hứng UX)**: việc ghi dữ liệu (`confirmEditCell()`/Import) luôn nhắm vào
-  **"hôm nay"** bất kể đang xem kỳ/năm nào (xem mục 6.9) — nếu vẫn cho sửa khi đang hiển thị dữ liệu
-  của 1 ngày/năm khác, người dùng sẽ tưởng đang sửa đúng bản ghi đang nhìn thấy nhưng thực ra ghi đè
-  vào sai ngày → rule read-only là **bắt buộc về mặt đúng đắn dữ liệu**, không phải tinh chỉnh giao
-  diện.
-- **Không ảnh hưởng gì tới Dashboard** (`dashboard.html`) — Dashboard vốn đã 100% read-only từ trước
-  (không có action nào để giới hạn thêm).
+### 5.4 Lỗi
+- Lỗi HTTP chung do `httpErrorInterceptor` bắt và bắn `Toast`; màn hình không tự
+  dựng lại thông điệp.
+- Lỗi **hợp lệ hoá** khi lưu dialog → `.form-error` trong dialog, dialog **không**
+  đóng, input sai gắn `aria-invalid` + `aria-describedby` (a11y §4 mục 3).
+- Lỗi khi lưu inline → hoàn nguyên giá trị ô về giá trị trước đó **và** hiện
+  `Toast`; không để ô hiển thị giá trị chưa lưu như thể đã lưu.
+- Job import `Failed` → `Toast`, dialog import đóng, lưới **không** refetch.
 
-### 6.11. [MỚI vòng #5, ĐÃ CHỐT] Gói bảng + phân trang trong 1 màn hình — `#dtiGridCard`
+Hai mã lỗi của contract cần **cách hiển thị riêng**, không gộp vào toast lỗi chung:
 
-- **Vấn đề gốc**: `.tablewrap` có `overflow-x:auto;overflow-y:visible` — scroll dọc thật sự xảy ra ở cấp
-  **trang** (`body`), không phải trong khung bảng. Với bảng 62 dòng (hoặc tối đa 50 dòng/trang ở
-  `gridPageSize=50`), chiều cao bảng thường vượt viewport → `#gridPagination` (nằm ngay sau
-  `.tablewrap`) bị đẩy xuống dưới nếp gấp, người dùng phải cuộn cả trang mới thấy.
-- **Cơ chế mới**: `#dtiGridCard{display:flex;flex-direction:column;min-height:0}` +
-  `#dtiGridCard>.title,>.notice,>.filters,>.muted,>.pagination{flex:none}` (giữ chiều cao tự nhiên) +
-  `#dtiGridCard>.tablewrap{flex:1;min-height:0}` (chiếm hết phần còn lại — `min-height:0` bắt buộc,
-  thiếu dòng này flex item mặc định không co nhỏ hơn nội dung, làm hỏng cơ chế overflow). Chiều cao của
-  `#dtiGridCard` được set bằng JS qua `card.style.height` (**CỐ ĐỊNH, không phải `max-height`** — xem lý
-  do fix bên dưới), không khai báo trong CSS tĩnh.
-- **`updateGridCardHeight()`** (cuối `<script>` đầu, gọi trong `init()` + `resize`/`orientationchange`):
-  ```js
-  const top = card.getBoundingClientRect().top;
-  card.style.height = Math.max(280, window.innerHeight - top - 16) + 'px';
-  ```
-  `280px` = sàn an toàn cho viewport rất thấp (điện thoại nằm ngang); `16px` = khoảng chừa dưới cùng.
-- **[FIX cùng ngày vòng #5, sau screenshot người dùng] Vì sao `height` chứ không phải `max-height`**:
-  bản đầu dùng `card.style.maxHeight` — với `max-height`, chiều cao thật của box = `min(nội dung,
-  max-height)`, nên khi trang hiện tại ít dòng (vd trang cuối chỉ còn 2 dòng), card TỰ CO LẠI theo nội
-  dung thay vì giữ đúng khoảng đã tính, đẩy `.pagination` lên sát ngay dưới dữ liệu và để lại khoảng
-  trắng lớn phía dưới trước khi tới `.footer` — vị trí `.pagination` nhảy lên/xuống tuỳ số dòng đang
-  hiển thị. Đổi sang `height` cố định buộc card LUÔN chiếm đúng chiều cao đã đo được bất kể
-  `.tablewrap` bên trong có ít hay nhiều dòng; khi ít dòng, `.tablewrap` (đã `flex:1;min-height:0`) tự
-  giãn lấp đầy khoảng trống thừa thay vì để card co lại — `.pagination` nhờ vậy luôn neo đúng 1 vị trí
-  cố định ở đáy card, giống hệt bố cục khi đủ dòng.
-- **`.tablewrap{overflow-y:auto}`** (đổi từ `visible`) — khi nội dung 1 trang cao hơn không gian còn lại
-  của card, **chỉ `.tablewrap` cuộn dọc riêng** (giữ nguyên `overflow-x:auto` cho cuộn ngang, không đổi).
-  `<thead th>{position:sticky;top:0}` (đã có từ trước) nay dính đúng vào top của **khung cuộn nội bộ**
-  này thay vì dính dưới `.topbar` ở cấp trang.
-- **Sửa xung đột z-index sticky 2 chiều** (phát sinh vì trước đây scroll dọc chưa từng thực sự kích hoạt
-  bên trong `.tablewrap` nên bug tiềm ẩn không lộ ra): tier mới —
-  - Góc header (`th:first-child`, `th:last-child`, vừa dính top vừa dính left/right): `z-index:5`.
-  - Header thường (`th`, chỉ dính top): `z-index:4` (tăng từ `2`).
-  - Cột sticky body (`td:first-child` "Mã", `td:last-child` "Hành động", chỉ dính left/right):
-    `z-index:2` (cột "Hành động" **giảm từ `3` xuống `2`** — đây là nguyên nhân gốc gây đè xuyên thấu, vì
-    `3 > 2` khiến nó nổi trên cả header thường khi 2 hướng cuộn cùng lúc).
-  - Ô thường: mặc định (auto/0), thấp nhất.
-- **Print**: `@media print{#dtiGridCard{height:auto!important;max-height:none!important}}` — bỏ giới hạn
-  chiều cao khi in (đi cùng `.tablewrap{overflow:visible}` đã có sẵn), tránh in thiếu dòng.
-- **Không đổi** hành vi phân trang (mục 6.7) hay cột sticky trái/phải (mục 6.8) — chỉ đổi CƠ CHẾ CUỘN
-  bao quanh chúng, số liệu/UX của từng control giữ nguyên 100%.
-- **`dashboard.html` (bảng 62 chỉ tiêu DTI) CHỦ ĐỘNG KHÔNG áp dụng cơ chế này ở vòng #5** (đã đánh giá
-  kỹ, không phải bỏ sót): kỹ thuật đo `getBoundingClientRect().top` tại thời điểm tải trang chỉ đúng khi
-  card nằm ngay gần đỉnh trang (đúng trường hợp `danh-muc-dti.html`, chỉ dưới 1 banner hướng dẫn) —
-  card bảng 62 chỉ tiêu ở `dashboard.html` nằm SAU `weekbar` + 5 thẻ KPI + 2 card "Tiến độ theo nhóm"/
-  "Biểu đồ xu hướng", tổng chiều cao các khối này thường đã vượt 1 màn hình, nên đo tại thời điểm tải
-  trang (scroll=0) sẽ ra số quá lớn, khiến card bị kẹp về sàn an toàn tối thiểu 1 cách tuỳ tiện — áp
-  nguyên xi công thức này vào sẽ làm bảng co nhỏ giả tạo, tệ hơn hiện trạng. Chi tiết đầy đủ + điều
-  kiện áp dụng đúng (đo tại thời điểm card cuộn tới đầu viewport, không phải lúc tải trang) — xem banner
-  "ĐÁNH GIÁ VÒNG PHẢN HỒI #5" đầu `spec/dashboard-dti-weekly/ui-spec.md`.
+| Mã lỗi | Khi nào gặp | Hiển thị |
+| --- | --- | --- |
+| `CRITERIA.ASSESSMENT_CONFLICT` (409) | người khác vừa sửa cùng bản ghi đánh giá của cùng kỳ | Không im lặng ghi đè. Báo rõ dữ liệu đã đổi, tải lại đúng dòng đó, **giữ nguyên** giá trị người dùng vừa gõ ở đâu đó để họ nhập lại được — mất chữ vừa gõ là cách nhanh nhất khiến người ta ngừng tin màn hình |
+| `CRITERIA.DUPLICATE_CODE` (409) | mã trùng khi thêm/sửa | `.form-error` trong dialog, focus về ô `Mã` |
 
-## 7. States
+`version` (token optimistic concurrency) đọc từ dòng lưới và **gửi lại** ở cả
+dialog lẫn sửa inline — đó là thứ duy nhất làm `ASSESSMENT_CONFLICT` phát hiện
+được. Bỏ nó đi thì mọi lần ghi đều thắng, và lỗi mất dữ liệu sẽ im lặng. Q20 làm
+`version` **quan trọng hơn trước**, không kém đi: khi nhiều người cùng được sửa
+lại một kỳ đã qua, hai lời ghi vào cùng một bản ghi là chuyện thường chứ không
+còn là ca hiếm.
 
-- **Ô đang sửa (edit mode)**: input + 2 icon ✓/✗ luôn hiện đồng thời (không
-  ẩn icon nào) — không có trạng thái "đang sửa nhưng chưa hiện nút lưu".
-- **Validate khi bấm ✓ cho Tiến độ %**: ép kẹp `[0,100]` im lặng (giống
-  hệt rule cũ `setProgress()`), không hiện thông báo lỗi riêng — giá trị
-  ngoài khoảng tự động bị kẹp về biên trước khi lưu.
-- **Ghi chú rỗng**: hiển thị `"— bấm để ghi chú"` màu muted ở trạng thái
-  Xem (khác hẳn ô Tiến độ % luôn có giá trị số, không bao giờ "rỗng").
-- **Lưới rỗng** (bộ lọc không khớp gì): 1 hàng `colspan=12` "Không có chỉ
-  tiêu nào khớp bộ lọc."
-- **Chưa có kỳ nào lưu**: `select#periodSelect` chỉ có 1 option
-  "<ngày hôm nay> (chưa lưu)"; toàn bộ cột 5–9 hiện "—"; cột Tiến độ %
-  mặc định `0%` cho mọi chỉ tiêu.
-- **Xoá chỉ tiêu**: luôn qua `dialog#confirmDialog`, nội dung động theo 2
-  nhánh (hard/soft) — không dùng `alert()` xác nhận kiểu cũ.
-- **Kết quả Import**: luôn hiện `dialog#importResultDialog` (kể cả khi
-  toàn bộ dòng lỗi) — không có trường hợp import "âm thầm" không phản hồi.
-- **Không có**: loading state (đồng bộ hoàn toàn, không gọi mạng); nút
-  "Lưu dữ liệu" tổng nào (xem mục 3.2 lý do bỏ hẳn).
+> `CRITERIA.ASSESSMENT_READONLY_PERIOD` **đã bị bỏ** theo Q20 — không còn kỳ nào
+> bị khoá ghi, nên không còn lỗi này để hiển thị. Bản trước của mục này có nó.
 
-## 8. Responsive
+### 5.5 Nhập cho tuần đã qua — hành vi đã chốt (Q20 + Q26 + Q37)
 
-Dùng lại đúng breakpoint `560px` đã có. Sidebar/topbar/drawer kế thừa 100%
-từ `spec/sidebar-menu/ui-spec.md`, không lặp lại.
+**Người dùng chọn TUẦN, rồi nhập cho đúng tuần đó.** Không có tuần nào "chỉ đọc"
+vì đã cũ, không có khái niệm "Live", và lời ghi **không** rơi vào ngày hôm nay.
 
-- `≤560px`: `main`/`.topin` giảm padding còn `10px`; `.card` giảm padding
-  còn `12px`; `.weekbar>*` giãn đều `flex:1`.
-- Bảng lưới có `min-width:1900px` (12 cột, rộng hơn cả bảng Dashboard
-  1200px lẫn bản "Đánh giá theo tuần" cũ 1500px vì gộp thêm 4 cột
-  Mã/Tên/Nhóm/Điểm tối đa vào cùng 1 bảng) — cuộn ngang qua
-  `.tablewrap{overflow-x:auto}`, cùng hành vi đã biết, không phải thiếu sót.
-  Ô đang sửa (input + 2 icon) vẫn nằm gọn trong độ rộng cột "Tiến độ %"/
-  "Ghi chú" nhờ `.cell-edit{display:flex}` + `input{flex:1;min-width:0}`.
-- **[MỚI vòng #5]** Cơ chế "gói bảng + phân trang trong 1 màn hình" (mục 6.11) **áp dụng thống nhất ở
-  mọi breakpoint**, không tắt riêng cho `≤560px` — vì được tính động bằng JS
-  (`updateGridCardHeight()`, chạy lại khi `resize`) nên tự thích ứng đúng với mọi độ rộng, kể cả khi
-  banner hướng dẫn phía trên xuống nhiều dòng hơn ở mobile (làm `card.getBoundingClientRect().top` lớn
-  hơn — JS đo lại chính xác, không cần `calc()` riêng theo breakpoint). Sàn an toàn `minHeight:280px`
-  áp dụng chung cho mọi viewport rất thấp (kể cả điện thoại nằm ngang). Chiều cao là `height` **CỐ
-  ĐỊNH** (không phải `max-height` — xem lý do fix ở banner đầu file) nên card giữ nguyên kích thước dù
-  trang hiện tại có bao nhiêu dòng, ở mọi breakpoint.
-- `@media print`: ẩn `.sidebar`, `.filters`, `.no-print`;
-  `#dtiGridCard{height:auto!important;max-height:none!important}`
-  **[MỚI vòng #5]** tắt hẳn giới hạn chiều cao khi in — tái dùng đúng rule `.tablewrap{overflow:visible}`
-  đã có.
+| Điều | Hành vi |
+| --- | --- |
+| Kỳ đích khi đang chọn **một tuần** | **chính tuần đó**, gửi tường minh trong request |
+| Kỳ đích khi đang ở `Tất cả` | **tuần hiện tại** (Q26 + Q37) — xem bảng dưới |
+| Sửa được ở tuần nào | **mọi tuần**, kể cả tuần của năm cũ |
+| Chọn **tháng** hoặc **năm** ở ô `Kỳ trong năm` | **KHÔNG ghi được** — bảng chỉ đọc (Q37), xem §5.5.1 |
+| Năm cũ + `Tất cả` (kỳ đích rơi ra ngoài năm đang lọc) | **KHÔNG ghi được** — bảng chỉ đọc (T15), xem §5.5.1 |
+| Năm cũ + **một tuần của năm đó** | **GHI ĐƯỢC** — kỳ đích nằm trong năm đang lọc |
+| Cột `Hành động`, nút `.toolbar-actions`, hai ô inline | bật theo `canWrite` / `isEditable` ở **cấp màn** (§7.1a), không suy lại từ bộ lọc |
 
-## 9. Style thô
+🛑 **"Kỳ đã qua" ≠ "tháng".** Hai thứ này dễ bị gộp và chúng ngược nhau: tuần **đã
+qua** thì sửa được (Q20), còn **tháng** thì không sửa được kể cả tháng này (Q37).
+Điều bị chặn là **đơn vị**, không phải **thời điểm**.
 
-**[MỚI vòng #3] Token mật độ hiển thị (compact)** — bổ sung vào `:root` (cả 2 file, cùng giá trị để
-đồng bộ), áp dụng qua `var()` ở mọi selector liên quan thay vì hardcode rải rác:
+🛑 **"Năm đã qua" cũng KHÔNG bị chặn — chỉ lối tắt `Tất cả` của năm cũ bị.** T15
+chặn đúng ca `Năm ≠ năm hiện tại` **kèm** `Kỳ = Tất cả`, vì lối tắt đó ghi vào tuần
+hiện tại của năm nay. Sửa dữ liệu tuần 40 của 2025 thì vẫn làm được như thường: đặt
+`Năm = 2025`, chọn **đúng tuần 40** ở ô `Kỳ trong năm` — lúc đó kỳ đích tường minh,
+nằm trong năm đang xem, và không có gì để đoán sai.
 
-```
---fs-xs:11px   --fs-sm:12px   --fs-base:13px   --fs-md:14px   --fs-lg:15px
---sp-1:4px  --sp-2:6px  --sp-3:8px  --sp-4:10px  --sp-5:14px
---radius-sm:7px  --radius-md:9px
---sidebar-w:220px  --sidebar-w-collapsed:60px   (giảm từ 260px/72px)
-```
+*(Bản trước của mục này nói `Năm = 2025` chỉ đọc **bất kể** ô kỳ. Sai — nó lật Q20.
+Sửa 2026-09-06; điều kiện đúng là **kỳ đích nằm trong năm đang lọc**, §3.1.)*
 
-Áp dụng: `body{font-size:var(--fs-base)}` (từ mặc định trình duyệt ~16px); `.btn`/`.action-btn` giảm
-padding + font-size (`.action-btn` còn `4px 6px`/`--fs-xs`); `.cell-icon-btn` (✓/✗) giảm từ 30×30px
-xuống **24×24px** (vẫn giữ nguyên toàn bộ cơ chế chống bấm nhầm ở mục 3.1 — chỉ đổi kích thước, không
-đổi hành vi); `.badge` giảm còn `3px 6px`/`10px`; sidebar (`.sidebar-brand`/`.sidebar-navitem`/
-`.sidebar-toggle`/icon SVG) giảm đồng bộ theo `--sidebar-w*`. **Không đổi** bất kỳ token màu/thương
-hiệu nào (`--brand`/`--good`/`--warn`/`--bad`/...).
+**Ca `Tất cả` — chốt Q26 (2026-09-05).** `all` **không phải một kỳ**, nó là phép
+chiếu "bản ghi mới nhất của mỗi chỉ tiêu trong năm". Câu hỏi "ghi vào đâu" từng để
+mở; nay đã có đáp án:
 
-Class mới thuần layout (không
-phải token màu), bổ sung so với thiết kế 2-tab cũ:
+| Câu hỏi | Chốt Q26 |
+| --- | --- |
+| Có chặn ghi khi đang ở `Tất cả` không? | **KHÔNG.** Mọi control ghi vẫn bật |
+| Có hỏi lại người dùng trước khi lưu không? | **KHÔNG.** Không dialog xác nhận kỳ, không bước trung gian |
+| Lời ghi rơi vào kỳ nào? | **Tuần hiện tại** — tuần ISO chứa ngày hôm nay (Q37 làm câu này chỉ còn một nghĩa) |
+| Có ghi đè kỳ cũ đang hiển thị trên dòng đó không? | **KHÔNG.** Số của kỳ cũ giữ nguyên; đây là một bản ghi mới cho tuần hiện tại |
 
-- `.cell-editable` — text tĩnh có thể bấm để sửa (gạch chân nét đứt màu
-  `--brand` khi hover, `outline` `--brand` khi `:focus-visible` — hỗ trợ cả
-  chuột và bàn phím, `tabindex="0"` + `onkeydown` Enter để mở edit mode).
-- `.cell-edit` — flex container chứa input + 2 icon khi ở edit mode
-  (`gap:6px`, tăng từ `4px` sau đợt fix bấm nhầm — xem mục 3.1).
-- `.cell-icon-btn.ok` / `.cell-icon-btn.cancel` — nút tròn nhỏ **30×30px**
-  (tăng từ 26×26px sau đợt fix), màu `--good`/`--bad` tương ứng, viền phái
-  sinh nhạt (`#bfe3d2`/`#f3caca` — cùng công thức tint nhạt đã dùng ở
-  `.bdone`/`.bstall`), không phát minh màu mới ngoài palette sẵn có.
-- `.progressInput::-webkit-outer/inner-spin-button{-webkit-appearance:none}`
-  + `-moz-appearance:textfield` — **ẩn spin-arrow gốc** của `<input
-  type=number>` (bổ sung sau đợt fix, xem mục 3.1): arrow gốc trình duyệt
-  quá nhỏ, dễ đổi giá trị ngoài ý muốn chỉ bằng 1 cú click lạc — người dùng
-  vẫn gõ số hoặc dùng phím mũi tên lên/xuống trên bàn phím khi input đang
-  focus, chỉ ẩn phần UI chuột dễ bấm nhầm.
-- Đã **bỏ hẳn** `.tabs`/`.tab-btn` (không còn khái niệm tab trong CSS lẫn
-  HTML).
-- **[MỚI vòng #3]** `.pagination`/`.pg-btn`/`.pg-info` — control phân trang (mục 6.7), dùng lại
-  `--line`/`--bg`/`--muted` sẵn có, không phát minh màu mới. `.filters-actions` — cụm 2 nút Import/Thêm
-  ghim phải trong hàng `.filters` (mục 4), chỉ `margin-left:auto`, không thêm màu/token mới. Sticky
-  cột Mã/Hành động (mục 6.8) dùng nền `#fff`/`#f8fafc`/`var(--bg)` đã có sẵn theo đúng 3 trạng thái nền
-  hiện tại của dòng bảng, không phát minh giá trị mới.
-- **[MỚI vòng #5]** `#dtiGridCard` — id mới (không phải class, vì chỉ 1 thẻ duy nhất trong trang) gắn
-  thêm cạnh `.card` sẵn có, thuần layout (`display:flex;flex-direction:column`), không đổi
-  màu/border/shadow/padding kế thừa từ `.card`. Không thêm token màu/spacing mới nào cho cơ chế viewport-
-  fit — chỉ dùng `flex`/`min-height:0`/`overflow-y:auto` (thuộc tính layout) + `height` **cố định** set
-  qua JS (`updateGridCardHeight()`, mục 6.11 — không phải `max-height`, xem lý do fix ở banner đầu
-  file). z-index sticky 2 chiều chỉnh lại số (`2`→`4` cho `th` thường,
-  `3`→`2` cho `td:last-child`) — không đổi màu nền `#f8fafc`/`#fff`/`var(--bg)` đã dùng cho các ô sticky.
+Điểm dễ hiểu sai nhất nằm ở hai hàng cuối, nên nói thẳng: người dùng nhìn thấy số
+của tuần 31 trên dòng đó và sửa nó, nhưng cái được ghi là **giá trị mới của tuần
+hiện tại**, không phải sửa lại tuần 31. Hai chuyện đó cho ra hai lịch sử khác hẳn
+nhau, và không có gì trên màn hình phân biệt được chúng — **trừ** cột `Kỳ của số
+liệu` (§3.2.2). Đó chính là lý do Q31 tồn tại, và là lý do cột đó **bắt buộc** ở
+chế độ `Tất cả` chứ không phải tuỳ chọn cho đẹp.
 
-## 10. Câu hỏi còn mở (kế thừa từ `business-rules.md`, không tự chốt thêm)
+Ba điều giao diện **phải** làm cho đúng, vì Q20 + Q26 làm cái giá của việc nhầm kỳ
+cao hơn hẳn:
 
-Không đổi so với bản thiết kế trước — xem `spec/danh-muc-dti/business-rules.md`
-mục 5, không lặp lại. Bổ sung duy nhất 1 điểm phát sinh từ vòng phản hồi
-này:
+1. **Kỳ đích phải nhìn thấy được ngay tại chỗ đang gõ.** Người dùng chọn `Tuần
+   31` từ tháng trước rồi cuộn xuống sửa 20 dòng — không được để họ tin là đang
+   sửa tuần này. Tối thiểu: kỳ đang chọn hiện thường trực trên `.filter-chip`, và
+   dialog `Sửa chỉ tiêu` (V9) nêu kỳ đích trong tiêu đề hoặc ngay dưới nó.
+2. **Ở chế độ `Tất cả`, dialog V9 nêu kỳ đích là TUẦN HIỆN TẠI**, không phải kỳ của
+   dòng đang mở. Lấy nhãn tuần hiện tại từ `GET /api/dashboard/periods` (§7.2),
+   đừng tự suy ra bằng đồng hồ máy khách.
+3. **Sau khi lưu ở chế độ `Tất cả`, ô `Kỳ của số liệu` của dòng đó đổi sang tuần
+   hiện tại** — luật (b) của §3.2.2. Đây là xác nhận duy nhất người dùng nhận được
+   rằng bản ghi rơi vào tuần nào, nên không được bỏ qua vì "chỉ là một ô hiển thị".
 
-11. **[MỚI] Việc bỏ nút "Lưu dữ liệu" tổng, để mỗi ✓ tự lưu ngay, là suy
-    luận UX của `frontend-expert`** (mục 3.2) — chưa phải câu người dùng
-    xác nhận trực tiếp bằng văn bản dạng "có/không giữ nút Lưu tổng". Nếu
-    sau này người dùng muốn có 1 bước xác nhận tổng trước khi ghi (vd để
-    review nhiều thay đổi cùng lúc trước khi commit), đây là điểm cần
-    quay lại thiết kế, không phải lỗi triển khai.
-12. **[ĐÃ CHỐT, xem banner vòng #4 đầu file]** 4 câu hỏi #11–14 cũ (định nghĩa "Tất cả", carry-forward,
-    tuần ISO, copy-forward `CriteriaEvidence`) — không còn mở, xem `business-rules.md` mục 2.4/3 bản
-    mới nhất của `backend-expert`.
-13. **[CÒN MỞ, không chặn]** Cách trình bày "Tất cả trong 1 năm" khi backend trả về nhiều bản ghi/1
-    chỉ tiêu trong cùng năm (mỗi lần sửa = 1 record) — quyết định UX hiện tại (mục 6.9) là **thu gọn về
-    1 dòng/chỉ tiêu, lấy giá trị lần thao tác gần nhất**, không liệt kê phẳng từng lần sửa. Nếu sau này
-    cần xem đầy đủ audit trail 1 chỉ tiêu trong năm, cần thiết kế thêm màn "chi tiết chỉ tiêu" — chưa
-    có trong scope hiện tại, không phải thiếu sót.
-14. **[CÒN MỞ, không chặn]** Bộ lọc "1 kỳ cụ thể trong năm" ở `select#dtiPeriodFilter` hiện chỉ liệt kê
-    theo **ngày đã lưu** (không nhóm theo tuần/tháng như gợi ý "tương tự tinh thần Dashboard" trong yêu
-    cầu gốc) — quyết định thu hẹp phạm vi có chủ đích của `frontend-expert` để kịp giao trong vòng #4,
-    vì điều kiện kích hoạt read-only chỉ cần phân biệt "Tất cả của năm hiện tại" vs "bất kỳ trạng thái
-    thu hẹp nào khác" (đã đủ đúng dù không có UI nhóm theo tuần/tháng). Có thể bổ sung nhóm theo
-    tuần/tháng ở vòng sau nếu người dùng cần.
+Hai hệ quả **ngoài giao diện** mà file này chỉ ghi nhận, không định nghĩa — luật
+thuộc `spec/danh-muc-dti/business-rules.md` §Quy tắc ghi:
+
+- **Báo cáo đã xuất có thể lệch về sau.** Một file `.xlsx` xuất tuần 31 hôm nay
+  không còn khớp dữ liệu tuần 31 sau khi có người sửa lại kỳ đó. Đây là hệ quả đã
+  được chấp nhận của Q20, không phải lỗi.
+- **Phải truy được ai sửa kỳ nào, lúc nào.** Dùng trường audit của `BaseEntity`
+  đang có.
+
+`NoticeBanner` ở **V3 đổi nghĩa**: nó không còn là dải "lịch sử — chỉ đọc" (khái
+niệm đó đã bị Q20 xoá), mà là dải **nhắc kỳ đích** — để người dùng biết chắc mình
+đang nhập cho tuần nào.
+
+**Điều kiện hiện băng — HAI ca, chốt 2026-09-09:** băng hiện khi **kỳ đang nhìn
+thấy không trùng nơi lời ghi sẽ rơi vào**.
+
+| `Kỳ trong năm` | Lưới đang hiện số của | Lời ghi rơi vào | Băng V3 |
+| --- | --- | --- | --- |
+| **tuần hiện tại** | tuần hiện tại | tuần hiện tại | **KHÔNG** — hai thứ trùng nhau |
+| **một tuần đã qua** | chính tuần đó | chính tuần đó | **CÓ** — nhắc rằng đang nhập cho tuần cũ |
+| **`Tất cả`** | **mỗi dòng một kỳ khác nhau** | **tuần hiện tại** | **CÓ** — thêm 2026-09-09 |
+
+🛑 **Ca `Tất cả` mới là ca nguy hiểm hơn, và nó từng bị bỏ sót.** Ở ca tuần đã qua,
+thứ người dùng nhìn và thứ họ ghi **vẫn là một kỳ** — băng chỉ nhắc kỳ đó không phải
+tuần này. Ở `Tất cả` thì khác hẳn: `all` là phép chiếu "bản ghi mới nhất trong năm"
+nên dòng này hiện số của tuần 29, dòng kia của tuần 33, mà **mọi** lời ghi đều rơi
+vào **tuần hiện tại** (`spec/danh-muc-dti/business-rules.md` §5.3 bước 1: `period =
+"all"` ⇒ kỳ đích là tuần ISO chứa hôm nay). Người dùng sửa một dòng đang hiện số của
+tuần 29 và giá trị đi vào tuần 33 — không có gì trên màn nói ra, vì đây là ca **hợp
+lệ theo thiết kế** nên **không mã lỗi nào chặn**.
+
+Đây đúng là cơ chế T15 đã mô tả — *"bộ chọn kỳ nói 'ghi được', còn lệnh ghi thì đi
+chỗ khác"* (`spec/danh-muc-dti/business-rules.md` §5.3, khối T15) — chỉ khác ở chỗ
+T15 là bản **xuyên năm** nên chặn được bằng `400
+CRITERIA.ASSESSMENT_PERIOD_OUT_OF_YEAR`, còn bản **trong cùng năm** thì hợp lệ. Vì
+vậy **dải băng là chỗ duy nhất báo được**, không phải một lời nhắc cho đẹp.
+
+Hai thứ khác cũng nói về kỳ đích ở ca `Tất cả` và **không thay** được băng: dialog V9
+nêu kỳ đích (mục 2 ngay trên) chỉ hiện khi đã mở dialog — không cứu được **sửa
+inline**; còn cột `Kỳ của số liệu` (§3.2.2 luật b) chỉ đổi **sau khi** đã lưu. Băng là
+thứ duy nhất nói **trước**.
+
+Chuỗi verbatim của cả hai ca thuộc `Screens/02-danh-muc-dti.md` § Copy — không định
+nghĩa ở đây.
+
+### 5.5.1 Bộ lọc đưa bảng về CHỈ ĐỌC — hai ca (Q37 + T15)
+
+**Chốt 2026-09-06.** Hai ca **khác nhau về nguyên nhân nhưng giống hệt nhau về cách
+xử lý**, nên gộp vào một mục:
+
+| Ca | Mã (§7.1a) | Điều kiện | Thoát bằng cách |
+| --- | --- | --- | --- |
+| **Q37** | `PERIOD_NOT_WEEKLY` | `Kỳ trong năm` là **tháng** hoặc cả năm | **tuỳ năm (Q60)**: năm hiện tại → chọn một **tuần**, hoặc `Tất cả`; **năm cũ** → **chỉ** chọn một **tuần cụ thể**, vì `Tất cả` của năm cũ chỉ đọc (T15). *(🔄 LẬT 2026-09-10: bản trước ghi "chọn một tuần, hoặc `Tất cả`" cho mọi năm.)* |
+| **T15** | `PERIOD_OUT_OF_YEAR` | kỳ đích **không nằm trong năm đang lọc** — thực tế là ca `năm cũ` + `Tất cả` | chọn một **tuần cụ thể của năm đang xem**, hoặc quay về năm hiện tại |
+
+Cả hai **khác hẳn** trạng thái chỉ-đọc-vì-thiếu-quyền ở §5.6.1 — nguyên nhân khác,
+lối thoát khác, nên **không gộp thành một nhánh template**:
+
+| | Chỉ đọc vì bộ lọc (Q37 + T15) | Chỉ đọc vì không có quyền ghi (Q39) |
+| --- | --- | --- |
+| Nguyên nhân | lựa chọn của chính người dùng | tài khoản không được cấp key |
+| Người dùng tự thoát được không | **CÓ** — đổi bộ lọc | **KHÔNG** — phải được cấp quyền |
+| Affordance ghi | **hiện nhưng `disabled`** — *"không phải lúc này"* | **ẩn hẳn** — *"không phải của bạn"* |
+| Có dải nhắc không | **CÓ**, và dải phải nêu cách thoát | **KHÔNG** — Q51 (2026-09-10), khẳng định Q39. *(🔄 LẬT: bản trước ghi "có, nhưng chỉ để giải thích".)* |
+
+**Vì sao `disabled` chứ không ẩn:** người dùng này **có** quyền ghi và sẽ ghi ngay
+sau đây; ẩn nút đi rồi hiện lại khi họ đổi ô lọc là làm toolbar nhảy và làm người
+ta tưởng mình vừa mất quyền. `disabled` giữ nút ở nguyên chỗ và nói "chưa phải
+lúc". Ngược lại, người không có quyền (§5.6) sẽ **không bao giờ** dùng được nút đó,
+nên để nó nằm đấy mãi mãi chỉ là mời gọi vào ngõ cụt.
+
+**Bốn affordance bị `disabled`** — đúng bằng bộ ở §5.6, không hơn: `+ Thêm chỉ
+tiêu`, `Import CSV/Excel`, nút `Sửa`/`Xoá` trên hàng, và hai ô sửa inline (bấm đúp
+không mở ô sửa, và ô mất `tabindex="0"` + `role="button"` để bàn phím không rơi vào
+một control không làm gì).
+
+**Lối thoát phải nói rõ trong V3, và phải nói ĐÚNG cái đang hỏng.** Dải băng không
+được chỉ báo "chỉ đọc" — nó phải nói **làm gì để sửa được**, và nguồn của câu đó là
+mảng `editBlockedBy` (§7.1a): **một dòng cho mỗi mã**, theo đúng thứ tự mảng. Một
+câu chung chung kiểu "chọn lại bộ lọc để sửa" bắt người dùng thử từng ô.
+
+**`NO_WRITE_PERMISSION` KHÔNG sinh dòng băng nào** (Q51, 2026-09-10). Khi thiếu quyền,
+mảng chỉ có đúng mã đó (§7.1a), nên ca thiếu quyền **không có băng** — §5.6.1 ràng
+buộc 4. "Một dòng cho mỗi mã" ở trên chỉ nói về hai mã lọc.
+
+**Câu băng của ca `PERIOD_OUT_OF_YEAR` (năm cũ + `Tất cả`) đã duyệt NGUYÊN VĂN**
+(Q50, 2026-09-10). File chủ của câu đó là `Screens/02-danh-muc-dti.md` § Copy — không
+chép sang đây.
+
+Ca `Năm = 2025` + `Kỳ = Tháng 8` cho **đúng** `["PERIOD_NOT_WEEKLY"]` (Q48) — **một**
+dòng băng. Cái vấp của nó là **nối tiếp**: đổi riêng đơn vị kỳ thành `Tất cả` thì
+trượt tiếp `PERIOD_OUT_OF_YEAR`. Lối thoát một bước là **một tuần cụ thể của 2025**
+(Q41). **Q60 (2026-09-10) đóng chỗ này:** dòng băng của `PERIOD_NOT_WEEKLY` gợi ý thoát
+**tuỳ năm đang xem** — năm hiện tại: *chọn một tuần hoặc `Tất cả`*; năm cũ: **chỉ** *chọn
+một tuần cụ thể* (hàng Q37 của bảng đầu mục). Mã vẫn do server trả; FE chỉ chọn **câu** theo
+ô `Năm đánh giá`, không tự suy điều kiện ghi (§7.1a ràng buộc 1). Chuỗi verbatim của cả hai
+biến thể thuộc `Screens/02-danh-muc-dti.md` § Copy — không chép sang đây.
+
+> 🔄 **LẬT 2026-09-10 (Q48).** Bản trước ghi ca này là *"lý do mảng phải mang
+> **nhiều** phần tử"* và bảo nêu cả hai mã cùng lúc. Hợp đồng không bao giờ trả hai
+> mã đó cùng nhau.
+
+**Cột `Kỳ của số liệu` render hay không tuỳ ca** — nó chỉ phụ thuộc chế độ kỳ
+(§3.2.2 luật a), không phụ thuộc trạng thái chỉ đọc:
+
+| Ca | Cột `Kỳ của số liệu` |
+| --- | --- |
+| Q37 (chọn tháng) | **không render** — không phải chế độ `Tất cả` |
+| T15 (`Năm = 2025` + `Kỳ = Tất cả`) | **CÓ render** — vẫn là chế độ `Tất cả` |
+
+Ca T15 là chỗ duy nhất cột này xuất hiện trên một bảng chỉ đọc. Nó vẫn có ích: nó
+cho biết mỗi dòng đến từ tuần nào của 2025. Nhưng nó **không** nói dòng đó thuộc năm
+nào — T14 đã bỏ năm khỏi chuỗi. Đó chính là lý do T15 chặn ghi thay vì cho ghi rồi
+trông chờ cột này cảnh báo.
+
+### 5.6 Quyền
+
+Chưa đăng nhập → `/dang-nhap?returnUrl=/danh-muc/dti`. Còn cờ
+`mustChangePassword` → `/doi-mat-khau`. **Hết. Không có nhánh thứ ba** — thiếu
+quyền ghi thì vẫn vào được (Q39, §5.6.1).
+
+**Quyền ghi — chốt Q27 (2026-09-05): MỘT permission-key DTI duy nhất.**
+
+| Câu hỏi | Chốt |
+| --- | --- |
+| Bao nhiêu key cho màn này | **một** — dùng chung cho thêm / sửa / xoá / sửa inline / import |
+| Có tách "sửa kỳ hiện tại" ≠ "sửa kỳ cũ" không | **KHÔNG.** Ai có key thì sửa được **mọi kỳ**, kể cả kỳ đã qua |
+| Có khái niệm "chốt kỳ" / "khoá kỳ" không | **KHÔNG tồn tại** ở bất kỳ tầng nào |
+| Tên key | do `doc/contracts/danh-muc-dti.md` khai theo quy ước permission-key đang có — FE đọc từ đó, **không tự đặt** |
+
+Hệ quả giao diện, và chỉ có bấy nhiêu:
+
+- Màn hình **không** có ma trận bật/tắt theo từng kỳ. Không dựng logic "tuần này
+  sửa được, tuần kia không" — nó không tồn tại. Bản trước của spec này còn dấu vết
+  đó qua khái niệm "Live"; Q20 đã xoá khái niệm, Q27 đóng nốt câu hỏi quyền.
+- **Quyền đọc từ CẤP MÀN, không phải từng dòng** (§7.1a, chốt 2026-09-06):
+  `canWrite` quyết **ẩn**, `isEditable` quyết **`disabled`**, `editBlockedBy` cho
+  biết lý do. FE không suy diễn lại từ `year`/`period`/tên vai trò. *(Bản trước ghi
+  `isEditable` là trường của dòng — sai kể từ khi DM-2 chốt lại.)*
+
+Ẩn affordance theo quyền **không thay** cho kiểm quyền phía BE — hai lớp độc lập
+(`fe-routing-guard.md` §5). Q27 rút gọn câu hỏi *ai* được ghi xuống một key,
+**không** rút gọn số lớp phải kiểm: BE vẫn phải từ chối lời ghi của người không có
+key, kể cả khi FE đã ẩn hết nút.
+
+### 5.6.1 Không có quyền ghi — vào được, chỉ đọc (Q39)
+
+**Chốt 2026-09-06.** Người không có key DTI **vẫn vào được** `/danh-muc/dti` và
+thấy đầy đủ dữ liệu; chỉ khác là không có gì để bấm.
+
+| Thứ | Có quyền ghi | KHÔNG có quyền ghi |
+| --- | --- | --- |
+| Vào được route | có | **có** — không guard, không redirect |
+| Mục sidebar | hiện | **hiện** — không ẩn theo quyền |
+| Xem lưới, tìm kiếm, lọc, phân trang | có | **có** |
+| Xuất báo cáo *(ở màn Dashboard)* | có | **có** |
+| `+ Thêm chỉ tiêu` (`.toolbar-actions`) | hiện | **ẨN** |
+| `Import CSV/Excel` (`.toolbar-actions`) | hiện | **ẨN** |
+| `Sửa` / `Xoá` trong cột `Hành động` | hiện | **ẨN** |
+| Sửa inline hai ô | bật | **TẮT** |
+
+**Vì sao không chặn route** — lý do là phép đo, không phải sở thích: Dashboard ở
+`/trang-chu` đã hiện **đủ 62 chỉ tiêu** cho mọi người đăng nhập (Q21, bảng chi tiết
+9 cột ở V5 của `spec/dashboard-dti/ui-spec.md`). Chặn màn Danh mục vì thế **không
+giấu được số liệu nào** — nó chỉ tạo ra một chuyển hướng khó hiểu tới một trang có
+cùng dữ liệu. Khác biệt thật giữa hai màn là **có nút sửa hay không**, nên đó đúng
+là chỗ quyền được thi hành.
+
+Bốn ràng buộc thi công:
+
+1. **ẨN, không `disabled`.** Người này không bao giờ dùng được các nút đó, nên một
+   nút xám nằm mãi ở đấy chỉ là ngõ cụt. Ngược lại với ca chỉ-đọc-vì-chọn-tháng
+   (§5.5.1), nơi nút **phải** `disabled` chứ không ẩn — hai ca, hai cách xử lý, và
+   bảng so sánh ở §5.5.1 là chỗ giữ sự khác biệt đó.
+2. **Cột `Hành động` ẩn CẢ CỘT khi không còn nút nào trong đó** — đừng để lại một
+   cột trống chiếm chỗ trong lưới đã phải cuộn ngang. Cột này đang bị ghim bên phải
+   (§3.2.1); bỏ cột đi thì chỉ còn **một** cột ghim, và đó là cấu hình hợp lệ của
+   biến thể chứ không phải ca cần xử lý riêng.
+3. **Ô sửa inline mất luôn ngữ nghĩa control**: bỏ `tabindex="0"`, bỏ
+   `role="button"`, bỏ `title` mô tả thao tác. Chỉ chặn sự kiện bấm đúp là để lại
+   một ô mà bàn phím Tab vẫn dừng vào và trình đọc màn hình vẫn đọc là "nút" —
+   đúng dạng lỗi a11y mà `doc/huong_dan/wiki-core/fe/15-accessibility.md` §4 gọi
+   tên.
+4. **Không dựng trạng thái rỗng riêng, và KHÔNG có dải băng giải thích** (Q51,
+   chốt 2026-09-10, khẳng định Q39). Trang vẫn là trang bình thường, đầy dữ liệu;
+   khác biệt duy nhất là không có gì để bấm. Không có quyền ghi là **cấu hình tài
+   khoản** — không phải lỗi, không phải cảnh báo, và cũng không phải thứ người dùng
+   tự làm gì được, nên một dải băng ở đây không dẫn đi đâu.
+
+   > 🔄 **LẬT 2026-09-10 (Q51).** Bản trước ghi *"Nếu cần một dòng giải thích thì đó là
+   > `NoticeBanner` ở V3 với biến thể mặc định"*, và bảng vùng §3 xếp nó thành một vai của
+   > V3. Gỡ cả hai. Băng rỗng vì chưa import (§5.3) **không** bị ảnh hưởng: băng đó hiện
+   > cho mọi người, người thiếu quyền chỉ thấy nó mất hai lối đi.
+
+FE lấy quyền từ đâu, và trường nào của API phản ánh nó — thuộc
+`doc/contracts/danh-muc-dti.md` (AGENT B khai trong cùng vòng 2026-09-06). FE
+**không** tự suy quyền từ tên vai trò.
+
+## 6. Responsive
+
+Ba mốc, đều là mốc **đang có sẵn** trong Core — không đặt mốc mới.
+
+| Mốc | Hành vi |
+| --- | --- |
+| ≥ 981px | Sidebar cố định; `main` giới hạn `--container-max-width`; lưới cuộn ngang khi tổng `min-width` của bộ cột vượt bề rộng khả dụng |
+| ≤ 980px | `.shell-content` bỏ `margin-left`, sidebar thành drawer mở bằng hamburger ở topbar |
+| ≤ 560px | `styles.scss` § `@media (max-width: 560px)` (khối mở đầu bằng `.toolbar .search`) — `.input-icon.search` chiếm trọn hàng; mọi con trực tiếp của `.toolbar` nhận `flex:1` **trừ** `.filter` và `.filter-chips`; `.toolbar-actions` mất `margin-left:auto`, chiếm trọn hàng; `.toolbar-sep` ẩn; `.filter-panel` co còn `min(320px, 86vw)`. cùng mốc đó, `.form-grid` rớt về **1 cột**, nên 3 cặp trường của V9 xếp dọc. Dialog rộng `min(560px, 92vw)` |
+
+Chiều cao vùng cuộn **KHÔNG** lấy từ token `--grid-h` (sửa 2026-09-09, §3.2): nó
+đến từ chuỗi flex `.page-fill` ⇄ `.grid-host` ⇄ `scrollHeight="flex"`, nên lưới co
+theo chiều cao khả dụng **thật** của viewport — kể cả khi thanh địa chỉ trình duyệt
+di động thu vào/nhả ra. `--grid-h` / `--grid-h-min` vẫn còn sống, nhưng chỉ cho
+`.tablewrap.scroll` thuần (`Components/Table.md`), **không** dùng ở màn này.
+
+**Hai cột ghim (Q30) là ràng buộc responsive, không chỉ là hiệu ứng cuộn.** Ở mốc
+≤ 560px, `Mã` + `Hành động` chiếm phần lớn bề rộng khả dụng và phần cuộn ở giữa co
+lại theo. Kiểm bằng mắt trên viewport hẹp nhất trước khi coi là xong; hết chỗ thì
+báo về `Components/DataTable.md` § Variants, **không** tự tắt ghim riêng cho màn
+này — tắt một chỗ là biến biến thể chung trở lại thành bản vá riêng, đúng thứ Q30
+vừa gỡ bỏ.
+
+**Bộ cột ≤ 560px còn phụ thuộc chế độ kỳ** (§3.2.2): ở `Tất cả` có thêm cột
+`Kỳ của số liệu`, ở một kỳ cụ thể thì không. Đừng đo bề rộng bằng một chế độ rồi
+kết luận cho cả hai.
+
+**In ấn** (`fe-ui-conventions.md` §"In ấn"): `.toolbar` mang `.no-print`;
+paginator, cột `Hành động`, mọi dialog và `Toast` cũng phải `.no-print`. Không ép
+chiều cao cố định cho bảng khi in — để trình duyệt ngắt trang tự nhiên, nghĩa là
+`@media print` phải gỡ `max-height` của vùng cuộn. Quy tắc `@media print` đặt tập
+trung ở `styles.scss` (§ `@media print`), không rải vào từng component.
+
+## 7. Ánh xạ trường UI ↔ trường dữ liệu
+
+**Casing** (`fe-api-client.md` §"Quy tắc casing"): DTO giữ **nguyên xi**
+`camelCase` server trả về; model app `PascalCase` + prefix `I`; mapper đặt trong
+`services/` của feature và là **nơi duy nhất** casing đổi.
+
+⚠️ **Hệ quả của casing đã chốt mà mapper phải xử lý:** trường `null` **không ra
+dây** — nó **vắng mặt** khỏi JSON (`doc/contracts/danh-muc-dti.md` §0). Một chỉ
+tiêu chưa có đánh giá không trả `"selfScore": null`, nó **không có khoá
+`selfScore`**. Mapper phải đọc "vắng mặt" và "null" như nhau, và mọi ô trong bảng
+7.1 mang dấu `?` đều rơi vào ca này.
+
+Cột "DTO" dưới đây bám CONTRACT DM-2, trạng thái **AGREED** 2026-09-05 — nếu tên
+trường đổi thì card là nguồn chốt, bảng này đuổi theo.
+
+### 7.1 Hàng lưới (`GET /api/criteria`)
+
+| Cột UI | DTO (camelCase) | Model app (PascalCase) | Kiểu | Ghi chú |
+| --- | --- | --- | --- | --- |
+| *(khoá hàng)* | `criteriaId` | `CriteriaId` | guid | `dataKey` của `p-table` |
+| Mã | `code` | `Code` | string | ≤ 20 ký tự, có thể 3 cấp |
+| Tên | `name` | `Name` | string | |
+| Nhóm | `groupName` (+ `groupCode`, `groupId`) | `GroupName` / `GroupCode` / `GroupId` | string / guid | hiển thị **`{groupCode}. {groupName}`** — vd `1. Hạ tầng và Nền tảng số` (Q42, `spec/danh-muc-dti/business-rules.md` §1.6); `groupId` dùng cho bộ lọc |
+| Điểm tối đa | `maxScore` | `MaxScore` | number | > 0 |
+| Tự đánh giá | `selfScore` | `SelfScore` | number \| null | null → `—` |
+| Thẩm định | `verifiedScore` | `VerifiedScore` | number \| null | null → `—` |
+| Chênh lệch | `diff` | `Diff` | number \| null | **TÍNH** = **Thẩm định − Tự đánh giá** (Q25, đổi chiều 2026-09-05). FE **không** tự tính lại khi BE đã trả. Màu: dương → `.delta.up` (xanh), âm → `.delta.down` (đỏ), 0 → `.delta.flat` (xám) |
+| Trạng thái | `status` | `Status` | string \| null | 4 giá trị Q4 |
+| Phụ trách | `ownerName` (+ `ownerId`) | `OwnerName` / `OwnerId` | string \| null | null → `—` |
+| Hạn xử lý | `deadline` | `Deadline` | date \| null | hiển thị `dd/MM/yyyy` |
+| Tiến độ % | `progressPercent` | `ProgressPercent` | number \| null | sửa inline, kẹp `[0,100]` |
+| Minh chứng/Ghi chú | `note` | `Note` | string \| null | sửa inline, **một ô text** (Q5) |
+| Kỳ của số liệu | *(trường kỳ của dòng — xem ghi chú dưới bảng)* | *(theo tên trường DTO)* | string? | **THÊM 2026-09-05 (Q31).** Chỉ render khi `period = "all"` (§3.2.2). Đọc-only. Hiển thị **chỉ khoảng ngày** `10/08 – 16/08` (Q38 + T14), 110px. `null`/vắng mặt (chỉ tiêu chưa có bản ghi đánh giá nào trong năm) → `—` |
+| *(không hiển thị)* | `assessmentId`, `assessmentDate` | `AssessmentId`, `AssessmentDate` | guid? \| date? | định danh bản ghi đánh giá của kỳ; **không** dùng để đoán trước xoá cứng/mềm |
+| *(không hiển thị)* | `version` | `Version` | string? | token optimistic concurrency — gửi lại khi ghi (§5.4) |
+
+🛑 **`isEditable` KHÔNG còn là trường của dòng** — chuyển lên **cấp màn** ngày
+2026-09-06, xem §7.1a. Bản trước của bảng này có nó ở đây và ghi *"FE đọc PER
+ROW"*; **cả hai đều sai** kể từ khi DM-2 chốt lại. Đừng đi tìm nó trong `items[]`.
+
+⚠️ **`Kỳ của số liệu` cần một trường DTO mà CONTRACT DM-2 chưa khai lúc file này
+được viết.** Q31 yêu cầu API trả **kỳ của từng dòng** ở chế độ `all`; AGENT B khai
+trường đó vào DM-2 trong cùng vòng 2026-09-05. Ba ràng buộc FE phụ thuộc vào, ghi
+ra để đối chiếu khi card về:
+
+- Trường phải mang **định danh kỳ** (`"YYYY-Www"` / `"YYYY-MM"`), không phải một
+  ngày. `assessmentDate` đã có sẵn nhưng **không dùng được** cho việc này: một ngày
+  không tự nói nó thuộc tuần ISO nào, và bắt FE quy ngày → kỳ là dựng nguồn sự thật
+  thứ hai cho đúng phép tính mà `spec/dashboard-dti/business-rules.md` §Quy tắc kỳ
+  đang giữ.
+- Nhãn hiển thị thì FE dựng từ định danh kỳ theo khuôn chung — **trừ khi** DM-2
+  chọn trả sẵn nhãn như `periodLabel` của Dashboard (§7.2 của
+  `spec/dashboard-dti/ui-spec.md`). Card là nguồn chốt, bảng này đuổi theo.
+- Ở `period` = một kỳ cụ thể, trường có thể vắng mặt — cột không render nên FE
+  không được coi sự vắng mặt đó là lỗi dữ liệu.
+
+`totalCount` không nằm trong hàng — nó là trường của `PagedList` bọc ngoài
+(`{ items, page, pageSize, totalCount }`), và đi vào **hai** chỗ: caption ở `.title`
+(V2) và `[totalRecords]` của paginator. Với `period = "all"` nó đếm **chỉ tiêu**,
+không đếm bản ghi đánh giá — đó chính là lý do caption đọc được là `62 chỉ tiêu`.
+
+### 7.1a Ba trường quyền ghi — CẤP MÀN, nằm cạnh `items`
+
+**Chốt 2026-09-06.** Ba trường này ở **cùng cấp với `items`** trong response của
+`GET /api/criteria`, **không** nằm trong từng dòng:
+
+| Trường | Kiểu | Nghĩa |
+| --- | --- | --- |
+| `canWrite` | bool | Người dùng **có quyền ghi DTI** hay không (điều kiện 1 của §4). Chỉ phụ thuộc tài khoản, không phụ thuộc bộ lọc |
+| `isEditable` | bool | **Cả ba** điều kiện của §4 cùng đúng ⇒ ghi được **ngay bây giờ, với bộ lọc hiện tại** |
+| `editBlockedBy` | string[] | Danh sách mã lý do đang chặn. **Luôn có mặt** — ghi được thì là `[]`, không phải `null` |
+
+**Vì sao lên cấp màn:** cả ba điều kiện đều thuộc **request**, không thuộc dòng —
+quyền là của tài khoản, đơn vị kỳ và năm là của bộ lọc. Không dòng nào trong cùng
+một response có thể khác dòng nào, nên một bản sao trên mỗi dòng vừa thừa **vừa vô
+dụng đúng ở ca cần nó nhất**: lưới **rỗng** (ca T9) không có dòng nào để đọc, mà
+`+ Thêm chỉ tiêu` và `Import CSV/Excel` vẫn phải quyết ẩn hay hiện. Đây là lỗ hổng
+từng ghi ở §9 và nay đã đóng.
+
+**`canWrite` là trường duy nhất dùng để ẨN.** `isEditable` dùng để `disabled`. Đừng
+hoán đổi — đó đúng là ranh giới `hidden` ≠ `disabled` của §4.
+
+#### Ba mã của `editBlockedBy` — thứ tự cố định
+
+| # | Mã | Nghĩa | Giao diện |
+| --- | --- | --- | --- |
+| 1 | `NO_WRITE_PERMISSION` | tài khoản không có key ghi DTI (Q39) | **ẩn** affordance ghi (§5.6.1) |
+| 2 | `PERIOD_NOT_WEEKLY` | `Kỳ trong năm` là tháng hoặc cả năm (Q37) | **`disabled`** + nhắc chọn tuần (§5.5.1) |
+| 3 | `PERIOD_OUT_OF_YEAR` | kỳ đích **không nằm trong năm đang lọc** (T15) | **`disabled`** + nhắc đổi bộ lọc (§5.5.1) |
+
+**Mảng luôn theo đúng thứ tự trên**, nên FE render tuần tự mà không phải sắp lại.
+
+**Luật số phần tử — không đối xứng, và cố ý:**
+
+| Trạng thái | `editBlockedBy` |
+| --- | --- |
+| Không có quyền ghi | **đúng MỘT** phần tử: `["NO_WRITE_PERMISSION"]` |
+| Có quyền, mọi điều kiện đạt | `[]` |
+| Có quyền, có điều kiện trượt | **MỌI** điều kiện đang trượt, theo thứ tự — với bộ mã hôm nay tối đa **một** (Q48) |
+
+Hai vế đó có lý do khác nhau, đừng "sửa cho nhất quán":
+
+- **Không có quyền ⇒ chỉ một mã.** Hai mã kia là lời mời *"đổi bộ lọc rồi sẽ ghi
+  được"* — mời một người vĩnh viễn không ghi được đi đổi bộ lọc là dẫn họ vào ngõ
+  cụt. Người này còn **không nhìn thấy** affordance nào để mà bật.
+- **Có quyền ⇒ liệt kê hết.** Với bộ mã hôm nay "hết" là **tối đa một** mã — hai mã
+  lọc loại trừ nhau (Q48). Luật giữ nguyên để một điều kiện thứ tư về sau không đổi
+  cách FE đọc mảng. *(🔄 LẬT 2026-09-10: bản trước dẫn ca `Năm = 2025` + `Kỳ = Tháng 8`
+  như ca trả hai mã — ca đó chỉ trả `["PERIOD_NOT_WEEKLY"]`.)*
+
+**Ba ràng buộc thi công:**
+
+1. **FE KHÔNG tự suy lại ba điều kiện** từ `year` / `period` / tên vai trò. Đọc
+   `canWrite`, `isEditable`, `editBlockedBy` và làm theo. Tự suy là dựng nguồn sự
+   thật thứ hai cho một luật đã đổi ba lần trong hai ngày.
+2. **Mảng phải xử lý được nhiều phần tử.** Đừng viết `editBlockedBy[0]` — dải băng
+   V3 nêu **mọi** thứ đang chặn (§5.5.1).
+3. **Mã lạ không được làm mở khoá.** Gặp mã chưa biết thì vẫn coi là bị chặn (vì
+   `isEditable` đã `false`) và hiện một câu chung; **không** bỏ qua rồi bật control.
+   Bỏ sót theo hướng an toàn, không theo hướng cho ghi.
+
+Response của **DM-4** (dialog) và **DM-6** (sửa inline) **không còn** `isEditable` —
+chúng trả một dòng lưới, mà `isEditable` nay không thuộc dòng. Sau khi lưu, trạng
+thái ghi **không đổi** (bộ lọc và quyền không đổi vì một lời ghi), nên FE **giữ
+nguyên** ba trường cấp màn đang có; chỉ refetch danh sách mới nạp lại chúng.
+
+### 7.2 Bộ lọc → tham số
+
+| Điều khiển UI | Query param API | Query param URL | Giá trị |
+| --- | --- | --- | --- |
+| Ô tìm kiếm | `search` | `q` | chuỗi tự do; khớp Mã **hoặc** Tên, không phân biệt hoa/thường và **không phân biệt dấu** (Q47 — server so với cột chuẩn hoá; kiểu khớp: tên chứa chuỗi, mã khớp theo đoạn — Q59; cả hai ở `spec/danh-muc-dti/business-rules.md` §1.2) — FE không tự bỏ dấu trước khi gửi |
+| Nhóm chỉ tiêu | `groupId` | `groupId` | guid; rỗng = tất cả. Mỗi option hiện **`{code}. {name}`** từ DM-1 — vd `1. Hạ tầng và Nền tảng số` (Q42) |
+| Trạng thái | `status` | `status` | đúng 1 trong 4 chuỗi tiếng Việt nguyên văn của Q4; rỗng = tất cả |
+| Năm đánh giá | `year` | `year` | int; mặc định = năm hiện tại. Năm cũ **vẫn sửa được** nếu chọn một tuần cụ thể; chỉ `năm cũ` + `Tất cả` mới chỉ đọc (T15, §3.1) |
+| Kỳ trong năm | `period` | `period` | `all` (mặc định) \| `YYYY-Www` \| `YYYY-MM` |
+| Paginator | `page`, `pageSize` | `page`, `pageSize` | 1-based; mặc định `pageSize = 10` (Q19), trần 200; ô chọn hiện {10, 20, 50} |
+
+⚠️ `status` sai giá trị → **400**, server **không** âm thầm bỏ lọc. Nghĩa là ô lọc
+trạng thái chỉ được phát đi đúng bốn chuỗi đó — đừng gửi mã rút gọn kiểu `chua` /
+`dang` / `xong` mà bản dựng dùng cho thuộc tính `value` của `<option>`. Nếu muốn
+giữ mã rút gọn trên URL cho gọn thì mapper phải quy đổi trước khi gọi API.
+
+⚠️ **`year` + `period` ở đây mang HAI vai** (Q20): vừa là điều kiện lọc của lưới,
+vừa là **kỳ đích của mọi lời ghi** (§7.3, §7.4). Trước Q20 chúng chỉ có vai thứ
+nhất, còn lời ghi luôn rơi vào hôm nay — đừng mang giả định cũ đó theo.
+
+> 📖 Quy tắc kỳ (tuần ISO thứ Hai → Chủ nhật, tháng dương lịch, cách quy một
+> `period` về khoảng ngày, và định dạng nhãn kỳ): file chủ là
+> `spec/dashboard-dti/business-rules.md` §Quy tắc kỳ.
+
+Nguồn danh sách năm/kỳ: `GET /api/dashboard/periods` (CONTRACT DB-3, **AGREED**),
+gọi qua service **dùng chung** đặt ở `shared/services/` vì cả hai màn DTI cùng
+dùng — quy tắc "≥2 feature dùng thì không còn ở `modules/<feature>/`"
+(`doc/huong_dan/quy-uoc/fe-architecture.md`).
+
+### 7.3 Dialog Thêm/Sửa → payload
+
+**Một** request cho cả dialog — `POST /api/criteria` (thêm) hoặc
+`PUT /api/criteria/{id}` (sửa). **Không có query param**; **kỳ đích** đi trong
+thân request ở `assessment.period` (Q20, CONTRACT DM-4).
+
+| Nhóm trường dialog | Vị trí trong payload |
+| --- | --- |
+| Mã / Tên / Nhóm / Điểm tối đa | phẳng ở gốc: `code`, `name`, `groupId`, `maxScore` |
+| *(không phải trường của form)* | `assessment.period` — **kỳ đích**, bắt buộc khi có `assessment`; **nguyên giá trị** ô `Kỳ trong năm`, kể cả `"all"` (Q40, §7.4b) |
+| *(không phải trường của form)* | `assessment.year` — giá trị ô `Năm đánh giá`; **bắt buộc khi `assessment.period = "all"`** (T15), server bỏ qua khi `period` là một tuần |
+| Tự đánh giá / Thẩm định / Trạng thái / Phụ trách / Hạn xử lý / Minh chứng | trong object lồng `assessment`: `selfScore`, `verifiedScore`, `status`, `ownerId`, `deadline`, `note`, kèm `version` |
+
+Object lồng chứ không phải sáu trường phẳng trộn lẫn, vì hai nhóm ghi vào **hai
+bảng khác nhau** với vòng đời khác nhau — và vì `assessment` **vắng mặt** phải
+phân biệt được với `assessment` có mọi trường rỗng (xoá trắng dữ liệu đánh giá).
+
+Response: **sửa** (`PUT`) trả một dòng lưới đầy đủ (cùng shape §7.1) → thay dòng tại chỗ;
+**thêm** (`POST`) trả `CriteriaDto`, không phải dòng lưới → **tải lại lưới** (Q49, §3.3).
+*(🔄 LẬT 2026-09-10: bản trước ghi mọi response của dialog đều là một dòng lưới.)*
+
+### 7.4 Sửa inline → payload
+
+`PUT /api/criteria/{id}/assessment`, **không có query param**; `period` là trường
+thân request và là **kỳ đích** (Q20, CONTRACT DM-6).
+
+🛑 **FE LUÔN gửi CẢ HAI trường**, kể cả khi người dùng chỉ sửa một — lấy giá trị
+hiện tại của trường còn lại từ dòng đang có trong bộ nhớ. Ngữ nghĩa của endpoint
+là `PUT` **ghi đè cả hai**, nên bỏ trống một trường sẽ **null-hoá** trường đó.
+Gửi kèm `version`.
+
+| Trường | Payload |
+| --- | --- |
+| *(không phải trường của ô sửa)* | `period` — **kỳ đích**, bắt buộc; **nguyên giá trị** ô `Kỳ trong năm`, kể cả `"all"` (Q40, §7.4b) |
+| *(không phải trường của ô sửa)* | `year` — giá trị ô `Năm đánh giá`; **bắt buộc khi `period = "all"`** (T15), server bỏ qua khi `period` là một tuần |
+| Tiến độ % | `progressPercent` — FE kẹp `[0,100]` trước khi gửi |
+| Minh chứng/Ghi chú | `note` |
+
+Response cũng là một dòng lưới đầy đủ → thay dòng tại chỗ, không refetch danh sách.
+
+### 7.4b Ô `Kỳ trong năm` → `period` + `year` của lời ghi — FE gửi NGUYÊN, SERVER quy đổi (Q40)
+
+> 🔄 **LẬT 2026-09-10 (Q40).** Bản trước của mục này nói ngược hợp đồng ở ba chỗ: *"cả ba
+> endpoint đều **từ chối `"all"`** (`400 CRITERIA.ASSESSMENT_PERIOD_INVALID`)"*; bảng quy đổi
+> *"`Tất cả` → định danh TUẦN hiện tại — **FE thay thế trước khi gửi**"*; và ràng buộc 3
+> *"**`"all"` không bao giờ được ra dây**"*. Hợp đồng đã **nhận** `"all"` từ Q26 (2026-09-05)
+> và quy nó về tuần ISO chứa hôm nay **ở server** (`doc/contracts/danh-muc-dti.md` DM-4, khối
+> Q26). Q40 chốt: **hợp đồng thắng** — lịch ISO nằm ở **một** chỗ, là BE.
+
+Cả §7.3, §7.4 và import (§7.5) gửi **cùng** một cặp giá trị, lấy thẳng từ bộ lọc:
+
+| Ô `Kỳ trong năm` đang chọn | `period` gửi đi | `year` gửi kèm |
+| --- | --- | --- |
+| một **tuần** (`YYYY-Www`) | **chính nó** | không bắt buộc — năm đã nằm trong chuỗi tuần; gửi thì server bỏ qua |
+| `Tất cả` (`all`) | **`"all"` nguyên văn** | **bắt buộc** = giá trị ô `Năm đánh giá` (T15) |
+| một **tháng** (`YYYY-MM`) hoặc cả năm | **không có lời ghi nào để gửi** — bảng chỉ đọc (Q37, §5.5.1) | — |
+
+Server làm hai việc mà FE **không** làm: quy `"all"` về tuần ISO chứa hôm nay, và kiểm T15
+bằng `year` (`year` ≠ năm hiện tại ⇒ `400 …PERIOD_OUT_OF_YEAR`). FE biết lời ghi rơi vào tuần
+nào **sau** khi lưu, qua `assessmentPeriod` / `assessmentPeriodLabel` của response (§3.2.2
+luật b) — không đoán trước.
+
+Sau Q37, `period` gửi đi chỉ có hai dạng: `YYYY-Www` hoặc `"all"`. Một `YYYY-MM` ra dây là
+dấu hiệu điều kiện chỉ-đọc ở §5.5.1 đã bị bỏ sót ở đâu đó, không phải một ca cần quy đổi
+thêm — **đừng** viết nhánh quy tháng về tuần cho "chắc". Lý do ở §3.1: mọi cách neo tháng vào
+một tuần đều sai.
+
+Ba ràng buộc thi công:
+
+1. **Dựng cặp `{ period, year }` ở đúng MỘT chỗ** — một hàm trong `services/` của feature,
+   ba đường ghi cùng gọi. Sau Q40 hàm này không còn quy đổi gì, nhưng vẫn phải là một chỗ:
+   ba bản sao là ba cơ hội để một đường quên `year` khi `"all"` — đường đó nhận `400` validate
+   trong khi hai đường kia chạy.
+2. **FE không tự tính tuần hiện tại cho lời ghi, không tự so năm trước khi gửi.** T15 là
+   việc của server; ở FE nó chỉ hiện ra qua `isEditable` / `editBlockedBy` (§7.1a) — control
+   đã `disabled` thì không có lời ghi nào để gửi.
+3. **`YYYY-MM` không bao giờ ra dây** (Q37) — giữ nguyên từ bản trước.
+
+> **Ghi chú lịch sử — ràng buộc cũ của mục này: bài học còn, cơ chế đã khác.**
+>
+> - *"Không lấy tuần hiện tại từ đồng hồ máy khách"* (ràng buộc 2 cũ). Bài học — máy khách
+>   lệch ngày hoặc lệch múi giờ vào đêm Chủ nhật là đủ để lời ghi rơi sang tuần khác — **nay
+>   được thoả tự động**: FE không tính tuần nào cả, server quyết theo đồng hồ của nó. Đó chính
+>   là lý do Q40 chọn server. Bài học vẫn áp cho chỗ **hiển thị** kỳ đích trước khi lưu (tiêu đề
+>   V9, băng V3 — §5.5 mục 2): nhãn tuần hiện tại vẫn đọc từ `GET /api/dashboard/periods`,
+>   không từ đồng hồ máy khách.
+> - *"Chưa nạp xong danh sách kỳ mà bấm lưu thì chặn ở FE"* và *"khi thay `all` bằng tuần hiện
+>   tại, kiểm năm khớp trước khi gửi"* — **hết đối tượng**: lời ghi không còn cần danh sách
+>   kỳ, và FE không còn thay gì.
+
+### 7.5 Import
+
+| UI | Endpoint / trường |
+| --- | --- |
+| Chọn file | `POST /api/import`, `multipart/form-data`, **field tên `file`**, chấp nhận `.csv` `.xlsx` `.xls` (Q6) → trả `{ jobId }` với HTTP **200** (không phải 202) |
+| Kỳ đích của cả file | field `period` **bắt buộc**, đi cùng `multipart` (Q20) — **nguyên giá trị** ô `Kỳ trong năm`: một tuần `YYYY-Www` hoặc `"all"` (Q40, §7.4b). Server quy `"all"` về **tuần hiện tại** (Q26) và lưu tuần đã quy đổi vào job (Q45, `spec/danh-muc-dti/business-rules.md` §1.5) — không phải "kỳ của từng dòng trong file". Đang chọn tháng thì không có lời ghi nào (Q37). *(🔄 LẬT 2026-09-10: bản trước ghi "luôn là một tuần `YYYY-Www`", tức FE tự quy `all` — sai theo Q40.)* |
+| Năm đang xem | field `year`, đi cùng `multipart` — **bắt buộc khi `period = "all"`** (T15); server bỏ qua khi `period` là một tuần |
+| Đang chạy | `GET /api/import/{jobId}` → `status` ∈ `Pending` / `Running` / `Succeeded` / `Failed` |
+| Câu tổng hợp | `result.totalRows`, `result.successCount`, `result.errorCount`, `result.criteriaCreatedCount` |
+| Danh sách lỗi | `result.errors[]` = `{ rowNumber, code, messageParams? }` — **không** có `message`: câu người dùng đọc do FE dựng từ bảng dịch của `code` với `messageParams` (hợp đồng vá 2026-09-09, `doc/contracts/danh-muc-dti.md` DM-7 bước 2). *(Bản trước ghi `{ rowNumber, code?, message }` — shape cũ.)* |
+| Lỗi hạ tầng | `errorMessage` khi `status = "Failed"` (khi đó `result` **vắng mặt**) |
+
+📌 **Nhật ký của import phải ghi ĐÚNG người nạp file, không phải `"system"`**
+(Q35). Đây là hành vi đã chốt, nhưng nó **phụ thuộc một hạng mục Core chưa làm** và
+là **điều kiện tiên quyết** trước khi bật import — mô tả đầy đủ (hiện trạng, ba
+bước cần làm, phần nào của Core phải mở rộng) ở
+`spec/danh-muc-dti/business-rules.md` §Import. Không mô tả lại ở đây.
+
+Phần thuộc về giao diện, và chỉ có bấy nhiêu: **V12 không hiển thị tên người
+nạp** — dấu vết đó nằm ở trường audit của bản ghi, không phải ở dialog kết quả. FE
+**không** gửi kèm tên/ID người dùng trong `multipart` để "giúp" BE ghi nhật ký:
+danh tính lấy từ phiên đăng nhập ở phía server, và một trường do máy khách gửi lên
+thì máy khách sửa được.
+
+`rowNumber` là **số dòng trong chính file người dùng gửi**, dòng 1 là header — câu
+lỗi trên V12 phải in đúng số đó để người dùng mở file ra sửa được ngay. Đừng đánh
+số lại theo thứ tự dòng dữ liệu.
+
+Lỗi ở **bước 1** (trước khi có `jobId`) hiển thị ngay trong V11, không mở V12:
+`IMPORT.FILE_MISSING` · `IMPORT.FILE_EMPTY` · `IMPORT.FORMAT_UNSUPPORTED` ·
+`IMPORT.FILE_TOO_LARGE`, tất cả `400`. Lưu ý `FORMAT_UNSUPPORTED` có thể xảy ra
+với file **đúng phần mở rộng** — server nhận diện định dạng bằng magic byte, nên
+một file `.xlsx` đổi tên từ thứ khác vẫn bị từ chối. Thông điệp phải nói theo
+hướng "nội dung file không phải CSV/Excel", không phải "sai đuôi file".
+
+File import mang 11 cột, khớp header `spec/danh-muc-dti/dti-mau-an-danh-62-dong.csv`. Ánh xạ
+cột → trường và luật xử lý dòng lỗi thuộc `spec/danh-muc-dti/business-rules.md`
+§Import, không lặp lại ở đây.
+
+⚠️ **Cột `Chênh lệch` trong file BA gửi sẽ NGƯỢC DẤU với cột `Chênh lệch` trên
+lưới** (Q25, 2026-09-05). Không phải lỗi import: `diff` là **trường tính**, hệ
+thống tự tính lại theo `Thẩm định − Tự đánh giá` và **không đọc** cột đó từ file.
+Nhưng giao diện phải lường trước câu hỏi của người dùng — ai mở file gốc ra đối
+chiếu với màn hình sẽ thấy `1.4` là `+5,00` trong file và `−5,00` trên lưới. Nếu
+V12 hoặc `Screens/02-danh-muc-dti.md` § Copy có nhắc tới cột này thì phải nói rõ
+đây là chiều tính mới, không phải dữ liệu bị sai.
+
+🛑 **Sau import, cột `Tiến độ %` để TRỐNG** (Q24) — người dùng tự nhập, hệ thống
+**không** suy ra từ `Tự đánh giá / Điểm tối đa`. Hệ quả phải nói thẳng với người
+dùng ngay tại V12, vì nếu không nó trông y hệt một lỗi:
+
+> Thanh tiến độ theo nhóm và biểu đồ trên Dashboard vẽ theo `Tiến độ %` (Q11).
+> Nên **ngay sau khi import xong, Dashboard sẽ trống / 0%** cho tới khi có người
+> nhập `Tiến độ %`. Đây là hành vi **đã được người dùng chấp nhận**, không phải
+> lỗi nhập liệu và không phải lỗi import.
+
+Vì vậy dialog Kết quả import (V12) phải nêu bước tiếp theo, không chỉ báo "xong":
+sau câu tổng hợp, thêm một dòng nói rằng còn phải nhập `Tiến độ %` thì Dashboard
+mới có số. Chuỗi verbatim thuộc `Screens/02-danh-muc-dti.md` § Copy.
+
+## 8. Chuỗi hiển thị và i18n
+
+✅ **Hạ tầng i18n ĐÃ CÓ và đang chạy** (đối chiếu source 2026-09-05):
+
+| Có gì | Ở đâu |
+| --- | --- |
+| `@ngx-translate/core` + `@ngx-translate/http-loader` trong `dependencies` | `src/FE/package.json` — kiểm: `grep -n 'ngx-translate' src/FE/package.json` |
+| Bảng dịch `vi` + `en` có nội dung thật | `src/FE/public/i18n/vi.json`, `src/FE/public/i18n/en.json` |
+| Nhóm khoá **DỰ ÁN** — tách khỏi nhóm Core bằng FILE (bổ sung, đối chiếu 2026-09-10) | `src/FE/public/i18n-app/vi.json`, `src/FE/public/i18n-app/en.json` — nhánh `danh-muc-dti.*` đã có từ lượt dựng khung 2026-09-09. 📖 Ranh giới hai nhóm: `doc/huong_dan/wiki-core/fe/08-i18n.md` §Khuôn CoreBase |
+| Cơ chế nạp + đổi ngôn ngữ tại chỗ + đặt `<html lang>` + nhãn PrimeNG | `src/FE/src/app/core/i18n/core-i18n.ts` |
+| Test canh khuôn khoá, parity `vi`↔`en`, parity tham số `{{…}}` | `src/FE/src/app/app-i18n.spec.ts` |
+
+Nghĩa là **chuỗi mới ở màn này phải đi qua khoá dịch ngay từ đầu**, không viết
+literal rồi hẹn bọc sau. Ba ràng buộc, cả ba đều là thứ **không đỏ lúc biên dịch**:
+
+- **Khoá VIẾT HOA phải LỒNG hai cấp.** `ngx-translate` coi dấu chấm là ký tự phân
+  cấp, nên khoá phẳng chứa dấu chấm **tra không trúng** và thư viện **không báo
+  lỗi** — nó trả về chính chuỗi khoá, và người dùng đọc được tên khoá giữa giao
+  diện. Có test canh.
+- **Thêm khoá là thêm ở CẢ `vi` lẫn `en`**, kèm đúng bộ tham số `{{…}}`. Thiếu một
+  bên nghĩa là người dùng ngôn ngữ kia đọc câu của ngôn ngữ khác qua fallback.
+- **Mỗi câu là một chuỗi trọn vẹn có chỗ cắm tham số.** Cấm nối chuỗi bằng `+` để
+  ghép câu (thông điệp xác nhận xoá dựng từ mã + tên là ca điển hình), và cấm tự
+  chọn số ít/số nhiều bằng `if` — caption `{n} chỉ tiêu` là **một** chuỗi có tham
+  số đếm.
+
+> 📖 Khuôn khoá dịch và cách khai một khoá mới: `doc/huong_dan/wiki-core/fe/08-i18n.md`.
+
+⚠️ **Hai file luật đang mô tả sai hiện trạng này** — nêu ra để người có thẩm quyền
+sửa, tôi không tự sửa: `doc/huong_dan/wiki-core/fe/08-i18n.md` § Điểm xuất phát và
+`doc/huong_dan/quy-uoc/fe-ui-conventions.md` §i18n vẫn dặn *"chưa bọc chuỗi nào
+ngay bây giờ vì thư viện chưa cài"*. Ai đọc hai file đó rồi dựng màn hình mới sẽ
+viết literal tiếng Việt trên một hạ tầng dịch đã sẵn sàng, và khối lượng rà lại
+chỉ tăng lên.
+
+Copy verbatim từng chuỗi thuộc `Screens/02-danh-muc-dti.md` (AGENT A); không chép
+sang đây — §5 của `.claude/CLAUDE.md`, một chủ đề một file chủ.
+
+## 9. Cần chốt — KHÔNG tự quyết
+
+Vòng 2026-09-05 (Q25–Q34, T7–T9) đóng **bảy** mục; vòng 2026-09-06 (Q35–Q39,
+T10–T15 + hợp đồng DM-2 cuối vòng) đóng nốt **hai** mục nữa. Vòng **2026-09-09** chốt
+thêm bốn điều (chiều cao lưới · cách ghim cột · nguồn ô `Phụ trách` · điều kiện hiện
+băng V3 — bốn hàng cuối của bảng dưới) và mở **một** mục mới, mục 4 dưới đây. Danh
+sách còn lại đúng những gì thật sự chưa có đáp án:
+
+1. ~~**`showCurrentPageReport`.**~~ **CHỐT 2026-09-06: giữ TẮT.** Lý do quyết định
+   không phải hợp đồng mà là **thông tin đã có sẵn trên màn**: `.title` đang mang
+   `62 chỉ tiêu` kèm `aria-live="polite"` — vừa là con số nhìn thấy, vừa là con số
+   trình đọc màn hình đọc lên sau mỗi lần lọc. Bật thêm dòng `Hiển thị 1–10 trong 62`
+   là viết con số đó lần thứ hai, và một con số viết hai chỗ là một con số có thể
+   tự mâu thuẫn với chính nó.
+
+   Lý do thứ hai vẫn giữ nguyên giá trị: bật lại là **mở rộng hợp đồng `DataTable`**
+   và phải áp cho **cả** lưới `Quản trị người dùng`. ⚠️ Q30 vừa mở rộng hợp đồng đó
+   một lần (ghim cột) — đừng đọc thành tiền lệ. Q30 mở rộng vì **hai** lưới đều sẽ
+   cần khi bộ cột rộng; cái này chỉ một màn muốn, và đó chính là khác biệt.
+
+2. ~~**Trường DTO cho cột `Kỳ của số liệu`**~~ — **ĐÃ KHỚP 2026-09-06.** CONTRACT
+   DM-2 khai `assessmentPeriod` (`"YYYY-Www"` — tuần ISO) và `assessmentPeriodLabel`
+   (chuỗi BE dựng sẵn). Sau Q37, `assessmentPeriod` **luôn** là một tuần, không bao
+   giờ là `"YYYY-MM"`. Ba ràng buộc FE ở §7.1 đã khớp; không còn việc phải đối chiếu.
+
+3. ~~**API truyền "vì sao không sửa được" như thế nào.**~~ — **ĐÃ ĐÓNG
+   2026-09-06.** DM-2 chuyển `isEditable` lên **cấp màn** và thêm `canWrite` +
+   `editBlockedBy` bên cạnh `items` (§7.1a). Cả hai lỗ hổng đều được giải quyết bởi
+   cùng một thay đổi: `canWrite` là nguồn cấp màn nên **lưới rỗng vẫn quyết được**
+   ẩn hay hiện hai nút, và `editBlockedBy` mang **mã lý do** nên giao diện phân biệt
+   được `hidden` với `disabled` và nêu đúng thứ đang chặn. Không còn chặn thi công
+   §5.5.1 hay §5.6.1.
+
+4. **Hai file mô tả cùng khe V3 bằng hai taxonomy khác nhau — cần người duyệt hợp
+   nhất, ĐỪNG tự gộp.** Ghi nhận 2026-09-09:
+
+   > **ĐÓNG MỘT PHẦN 2026-09-10 bằng Q51.** Chỗ lệch mà Q51 giải quyết là cột cuối của bảng
+   > dưới — vai *"không có quyền ghi"*: người thiếu quyền **không** có dải băng, nên vai đó
+   > đã gỡ khỏi hàng V3 (§3) và hai file nay cùng không có nó. Phần còn lại — hai file chia
+   > khe băng theo **hai trục** khác nhau — **vẫn mở**, chưa hợp nhất; danh sách mục mở của cả
+   > cụm ở `spec/danh-muc-dti/business-rules.md` §8.1. Bảng dưới giữ nguyên như lúc ghi nhận.
+
+   | | Phân vai theo trục | Có vai "không có quyền ghi" (Q39) |
+   | --- | --- | --- |
+   | File này (§3, hàng V3) | *chưa import · chỉ đọc vì kỳ · chỉ đọc vì quyền · nhắc kỳ đích* | **có** |
+   | `doc/Design/Frontend/PlatformManager/Screens/02-danh-muc-dti.md` § Layout Blueprint | **bộ lọc**: năm cũ (T15) · tháng (Q37) · tuần đã qua · mặc định | **không** |
+
+   Hai cách chia không ánh xạ 1-1: một bên hỏi *"vì sao có băng"*, bên kia hỏi *"bộ
+   lọc đang ở đâu"*. Hợp nhất là quyết định về **taxonomy dùng chung cho cả hai
+   file**, không phải việc sửa chữ ở một chỗ — nên nó nằm ở đây thay vì được một
+   agent tự quyết. Cho tới lúc đó: file này là nguồn cho **điều kiện hiện băng**,
+   `Screens/…` là nguồn cho **chuỗi verbatim** (§5).
+
+> **Đã chốt, không còn là câu hỏi mở** — ghi lại để người đọc bản trước không mang
+> theo giả định cũ. **Bốn hàng cuối là của vòng 2026-09-09**; các hàng trên thuộc hai
+> vòng 2026-09-05 và 2026-09-06:
+>
+> | Từng là câu hỏi mở | Chốt |
+> | --- | --- |
+> | Dialog gửi 1 hay 2 request | **Một** request, object `assessment` lồng — DM-4 (§7.3) |
+> | Sửa inline là PATCH hay PUT | `PUT` **ghi đè cả hai** trường — DM-6 (§7.4) |
+> | `pageSize` mặc định | **10** — Q19 (§3.2). *Bản trước của dòng này ghi 20 — sai.* |
+> | `Tiến độ %` khởi tạo khi import | **Để trống**, người dùng tự nhập — Q24 (§7.5) |
+> | Sửa được dữ liệu kỳ đã qua không | **Được** — Q20 (§5.5). Khái niệm "Live" và lỗi `ASSESSMENT_READONLY_PERIOD` đã bỏ |
+> | Ai được **xem** Dashboard | Mọi người đăng nhập — Q21 (§5.6) |
+> | Export có theo bộ lọc | **Có** — Q23, thuộc màn Dashboard |
+> | Tên thư mục spec | `spec/danh-muc-dti/` + `spec/dashboard-dti/` (2026-09-05); ba chỗ trỏ tên cũ đã sửa |
+> | **Ghi khi `Kỳ trong năm` = `Tất cả`** | **Rơi vào KỲ HIỆN TẠI** — Q26 (§5.5, §7.4b). Không chặn ghi, không hỏi lại, không ghi đè kỳ cũ đang hiển thị |
+> | **Quyền GHI của màn này** | **MỘT permission-key DTI**, áp cho **mọi kỳ** kể cả kỳ đã qua — Q27 (§5.6). Không tách theo kỳ, không có "chốt kỳ" |
+> | **Cột đóng băng** | **CÓ** — `Mã` trái + `Hành động` phải, và là **biến thể chung** của `DataTable` chứ không phải bản vá riêng màn — Q30 (§3.2.1) |
+> | **Cột `Kỳ của số liệu`** | **THÊM**, chỉ hiện ở chế độ `Tất cả`, và tự đổi sang tuần hiện tại sau khi lưu — Q31 (§3.2.2) |
+> | **Route của màn** | **`/danh-muc/dti`** — Q33 (§2) |
+> | **Màu của `Chênh lệch`** | Công thức đổi thành **`Thẩm định − Tự đánh giá`**; dương → xanh, âm → đỏ, 0 → xám — Q25 (§7.1). Chiều mới làm màu **khớp ý nghĩa nghiệp vụ**: bị bác điểm ra số âm màu đỏ |
+> | **Cách đếm điều kiện lọc** | Chỉ đếm điều kiện **khác mặc định** → `{Nhóm, Năm=2026}` ra **1**, không phải 2 — T8 (§3.1) |
+> | **Danh mục rỗng vì chưa import lần nào** | **`NoticeBanner`** trỏ tới nút Import, không phải dòng trống trong bảng — T9 (§5.3) |
+> | **Nhập được theo đơn vị kỳ nào** | **CHỈ TUẦN.** Chọn tháng/năm ⇒ bảng chỉ đọc, affordance ghi `disabled`, dải băng nêu cách thoát — Q37 (§3.1, §5.5.1). Export `mode=month` **vẫn chạy** |
+> | **Cột `Kỳ của số liệu` hiển thị chuỗi gì** | **Chỉ khoảng ngày** `10/08 – 16/08` — bỏ số tuần (Q38) và bỏ năm, nhưng **giữ khoảng trắng quanh dấu gạch** của T5 (T14). §3.2.2 luật c |
+> | **Không có quyền ghi thì thấy gì** | **Vào được, chỉ đọc.** Ẩn `+ Thêm chỉ tiêu` / `Import` / `Sửa` / `Xoá`, tắt sửa inline; **không** chặn route, **không** ẩn mục menu — Q39 (§5.6.1) |
+> | **Dải băng dùng nút hay link** | **Link chữ inline** — T11 (§5.3). Hợp đồng `NoticeBanner` không có slot nút, và mở rộng nó chỉ để có một cái nút là đi ngược yêu cầu dùng lại component sẵn có |
+> | **Dấu gạch trong cột `Kỳ của số liệu`** | **CÓ khoảng trắng**: `10/08 – 16/08` — T14 (§3.2.2 luật c). Q38 bỏ **số tuần**, không lật quy ước dấu gạch T5 của toàn sản phẩm; cả hai bản đều vừa 110px nên bề rộng không phải căn cứ để lệch |
+> | **Kỳ đích rơi ra ngoài năm đang lọc** | **Bảng CHỈ ĐỌC** — T15 (§3.1, §5.5.1), xử lý giống ca chọn tháng của Q37. Thực tế chỉ cắn vào ca `năm cũ` + `Tất cả`: lời ghi rơi vào tuần hiện tại của **2026**, một năm không hiện ở đâu trên màn. `năm cũ` + **một tuần của năm đó** thì **vẫn sửa được** (Q20 không bị lật). Điều kiện ghi vì thế có **ba** vế, không phải hai |
+> | **FE đọc quyền ghi ở đâu** | **CẤP MÀN**, cạnh `items`: `canWrite` (⇒ ẩn) · `isEditable` (⇒ `disabled`) · `editBlockedBy` (mảng mã lý do, luôn có mặt) — DM-2 chốt lại 2026-09-06 (§7.1a). **KHÔNG** còn là trường của dòng, và DM-4/DM-6 **không** trả nó nữa |
+> | **Chiều cao lưới** | **Chuỗi flex `page-fill` ⇄ `grid-host` + `scrollHeight="flex"`** — 2026-09-09 (§3.2, §6). Token `--grid-h` **không** dùng cho lưới này. Spec sửa theo component đang chạy, không sửa component theo spec |
+> | **Cách ghim cột về mặt kỹ thuật** | ✅ **Input `frozenColumns` của `<app-data-grid>`** — chốt 2026-09-09, input ĐÃ CÓ THẬT trong component (đối chiếu 2026-09-10: `src/FE/src/app/shared/components/data-grid/data-grid.ts:139`); §3.2.1. **Không** đặt `pFrozenColumn` ở call site: nó buộc trang import `TableModule`, phá luật *"`data-grid` là nơi duy nhất khai `p-table`"*. Giữ luật, mở hợp đồng component |
+> | **Nguồn dữ liệu ô `Phụ trách`** | **Tái dùng `GET /api/users`** — 2026-09-09 (§3.3). Không thêm endpoint mới; quyền khớp sẵn (Q36 seed key DTI cho `Admin`, `UsersController` gate `SuperAdmin`/`Admin`). Shape ở `doc/contracts/users.md`, không chép sang đây |
+> | **Khi nào băng V3 nhắc kỳ đích hiện ra** | **HAI ca**: một **tuần đã qua**, **và** chế độ **`Tất cả`** — 2026-09-09 (§5.5). Ca `Tất cả` là ca bị bỏ sót và nguy hiểm hơn: mỗi dòng hiện số của một kỳ khác nhau trong khi **mọi** lời ghi rơi vào **tuần hiện tại** (`spec/danh-muc-dti/business-rules.md` §5.3 bước 1), và vì nó **hợp lệ theo thiết kế** nên không mã lỗi nào chặn — băng là chỗ duy nhất báo được. Cùng cơ chế T15 đã tả, chỉ khác là bản trong cùng năm. Chọn đúng **tuần hiện tại** thì **không** có băng. Hệ quả: băng hiện ngay ở trạng thái mặc định (§5.1) |

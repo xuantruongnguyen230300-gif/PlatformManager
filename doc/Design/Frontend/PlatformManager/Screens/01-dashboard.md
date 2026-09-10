@@ -4,7 +4,7 @@ scope: du-an
 verified: khong-ap-dung
 project: "PlatformManager"
 status: "target — not built"
-updated: "2026-09-08"
+updated: "2026-09-10"
 flow: "DTI Dashboard"
 screens: ["DTI Dashboard"]
 source_routes: ["/trang-chu"]
@@ -14,23 +14,33 @@ source_routes: ["/trang-chu"]
 
 > # 📐 ĐÍCH ĐẾN — CHƯA THI CÔNG
 >
-> **This screen does not exist in `src/FE`.** The route and the business module
-> behind it were removed on 2026-08-29 and the rebuild has not started. Everything
-> below is a **design to be built**, approved by the product owner on 2026-09-04
-> and 2026-09-05, not a record of running code.
+> **The screen is not built. Part of what it composes now is.**
+> 🔄 **SỬA 2026-09-10.** The previous revision said *"This screen does not exist
+> in `src/FE` … the rebuild has not started"* and told the reader to expect no
+> `src/FE/src/app/modules` directory at all. That stopped being true on 2026-09-09.
+> What is on disk, checked 2026-09-10:
 >
-> Confirm that for yourself before treating any line here as current:
+> | Built | Still to build |
+> | --- | --- |
+> | `src/FE/src/app/modules/dashboard/components/` — `kpi-tile`, `progress-bar`, `trend-chart`, `history-row`, each with a `.spec.ts` beside it | every region that composes them: the period toolbar, the KPI row, the two-column region, the detail table, the history panel |
+> | `dashboard.page.ts`, a **deliberate skeleton** carrying a title and one "under construction" line (`src/FE/src/app/modules/dashboard/pages/dashboard/dashboard.page.ts:8-10`) | the page itself |
+> | `dashboard.routes.ts`, **deliberately not wired into `app.routes.ts`** — swapping the app's safe-landing route for an empty page is the thing being avoided (`src/FE/src/app/modules/dashboard/dashboard.routes.ts:8-16`) | the swap onto `/trang-chu` (Q3 / Q18) |
+>
+> Everything below is still a **design to be built**, approved by the product owner
+> on 2026-09-04 and 2026-09-05, not a record of a running screen. Check rather than
+> trust the table:
 >
 > ```bash
 > grep -cE '^\s+loadChildren:' src/FE/src/app/app.routes.ts   # routed screens today
-> ls src/FE/src/app/modules 2>/dev/null                       # expect: no such directory
+> ls src/FE/src/app/modules/dashboard/components              # the four built components
+> grep -n 'CHƯA KHAI' src/FE/src/app/modules/dashboard/dashboard.routes.ts
 > ```
 >
-> **No `file:line` citation into `src/FE` appears anywhere in this file for the
-> DTI parts**, because the files they would point at do not exist. Where a Core
-> element genuinely still ships — the app shell, the global component layer — it
-> is cited by **identifier**, per `doc/Design/CLAUDE.md` § Neo trích dẫn vào
-> `styles.scss`.
+> **`file:line` citations into `src/FE` are now possible for the component layer**
+> and are used where they hold. For the regions and the page, which do not exist,
+> none appears — there is nothing to point at. Core elements that ship (the app
+> shell, the global component layer) are cited by **identifier**, per
+> `doc/Design/CLAUDE.md` § Neo trích dẫn vào `styles.scss`.
 >
 > **This file replaces a historical one.** The previous revision carried a
 > historical-document banner describing the `/dashboard` screen as it shipped
@@ -95,15 +105,24 @@ directly — no dialog, no preview. Every write lives on the DTI catalogue
 > **Shell:** the app shell — skip link + `Sidebar` + `Topbar` + `main` + `Toast`
 > (`src/FE/src/app/app.html:16-39`), rendered because this route will not set
 > `data.noShell`. `../DESIGN.md` → Layout describes this shell.
-> **Sources:** `Prototype/index.html` § `#screen-dashboard` — the prototype the
-> product owner approved point by point on 2026-09-04 and 2026-09-05, and the
-> **only** source for this screen's layout and copy;
-> `doc/Design/Frontend/PlatformManager/Prototypes/index.html` for the component
-> CSS it reuses; `spec/DTI_CanGiuoc_2026-08-11.csv` for every figure;
+> **Sources:** `doc/Design/Frontend/PlatformManager/Prototypes/index.html`
+> § `#screen-dashboard` — the prototype the product owner approved point by point on
+> 2026-09-04 and 2026-09-05, the **only** source for this screen's layout and copy,
+> and the same file that declares the component CSS it reuses. **Repointed
+> 2026-09-10**: this line used to name the prototype twice, once by a path that lived
+> **outside** the repo, so no second reader could open the half that mattered
+> (`doc/Design/Frontend/PlatformManager/Prototypes/README.md` § In-repo master).
+> **Every figure on this screen is read off that prototype.** They were computed from
+> the BA's August 2026 spreadsheet, which is deliberately outside this repo (root `.gitignore`), so it is named here and not cited as a path. The in-repo sample
+> `spec/danh-muc-dti/dti-mau-an-danh-62-dong.csv` is a **different** 62-row dataset — it backs shape claims in this
+> folder, never these figures.
 > `src/FE/src/styles.scss` and `src/FE/src/app/shared/components/{sidebar,topbar,toast}/`
 > for the live Core layer this screen composes;
-> `Prototype/mau-xuat-bao-cao_Tuan-33-2026.xlsx` and
-> `Prototype/mau-xuat-bao-cao_Thang-8-2026.xlsx` for the export layout.
+> `doc/Design/Frontend/PlatformManager/Prototypes/mau-xuat-bao-cao_Tuan-33-2026.xlsx` and
+> `doc/Design/Frontend/PlatformManager/Prototypes/mau-xuat-bao-cao_Thang-8-2026.xlsx` for the export layout — anonymised
+> copies built 2026-09-10 by rewriting **only** the data rows of the originals, so the
+> sheet name, the identification block, the column widths, the header fill and the
+> `TỔNG CỘNG` row are the originals'.
 > API contract → `doc/contracts/dashboard.md`; business rules →
 > `spec/dashboard-dti/business-rules.md` (both being rewritten in parallel on
 > 2026-09-05 — if either disagrees with this file, that is a conflict to raise,
@@ -132,7 +151,7 @@ directly — no dialog, no preview. Every write lives on the DTI catalogue
 - **KPI row** — `app-kpi-summary` → `<section class="kpis">`, a `repeat(5, 1fr)` grid with `spacing.sp-4` gap, holding five `KpiTile`. Contents and tones in [`../Components/KpiTile.md`](../Components/KpiTile.md) § The five tiles
 - **Two-column region** — `.layout`, a `1.15fr 0.85fr` grid with `spacing.sp-5` gap and `margin-top: spacing.sp-5`; each child is a `Card` laid out as a flex column so its body fills the remaining height (§ `#screen-dashboard .layout`)
   - **Left card** — `.title` row (`<h2>Tiến độ theo nhóm</h2>` + `<span class="muted">Tuần hiện tại</span>`) over `app-group-progress-list`: six `ProgressBar` rows, one per criteria group. See [`../Components/ProgressBar.md`](../Components/ProgressBar.md)
-  - **Right card** — `.title` row (`<h2>Biểu đồ tiến độ hàng tuần</h2>` + `<span class="muted">Tiến độ chung</span>`) over `TrendChart`, lazy-loaded behind a viewport boundary with a `.chart-skeleton` placeholder reserving its full height. See [`../Components/TrendChart.md`](../Components/TrendChart.md), which since decision T7 on 2026-09-05 has **nothing open** — the last question, the month-mode x axis, is settled. What it still carries is a hand-off rather than a decision: `chart.js` has to return to `src/FE/package.json` before this region can be built
+  - **Right card** — `.title` row (`<h2>Biểu đồ tiến độ hàng tuần</h2>` + `<span class="muted">Tiến độ chung</span>`) over `TrendChart`, lazy-loaded behind a viewport boundary with a `.chart-skeleton` placeholder reserving its full height. See [`../Components/TrendChart.md`](../Components/TrendChart.md), which since decision T7 on 2026-09-05 has **nothing open** — the last question, the month-mode x axis, is settled. That hand-off is closed too: `chart.js` returned to `src/FE/package.json` on 2026-09-09 (`src/FE/package.json:68` — `^4.5.0`) and `TrendChart` is built against it, importing PrimeNG's `ChartModule` and `chart.js` types at `src/FE/src/app/modules/dashboard/components/trend-chart/trend-chart.ts:4-5` (checked 2026-09-10). What is missing is the region that hosts the component, not its dependency — an earlier revision of this line still asked for the package to be added back. **Week mode plots twelve weeks, ending at the week being viewed** — 🔄 LẬT 2026-09-10 (Q54); the approved prototype draws six. The twelve tick labels, and the rule for fitting them on the axis (duyệt 2026-09-10, Q54), are in [`../Components/TrendChart.md`](../Components/TrendChart.md) § The x axis changed on 2026-09-05
 - **Detail table** — `app-criteria-table` → `<section class="card criteria-table-card">` with `margin-top: 16px` (a literal, § `app-criteria-table .criteria-table-card`)
   - `.title` row — `<h2>62 chỉ tiêu DTI</h2>` + `<span class="muted">62/62 chỉ tiêu</span>`. The right-hand count is the same contract the Core user grid uses; see [`02-danh-muc-dti.md`](./02-danh-muc-dti.md) § Layout Blueprint for why it stays
   - `Toolbar` — **the same contract as the catalogue screen**, no new controls, and in the DOM order the shipped component actually renders (`src/FE/src/app/shared/components/toolbar/toolbar.html`): `.input-icon.search` (fixed 260px) → `<details class="filter">` → `.toolbar-sep` → `.filter-chips` → `.toolbar-actions`. The filter panel holds **two** `.form-row` conditions — `Nhóm chỉ tiêu` and `Trạng thái` — over a `.filter-foot`; the sort `<select>` sits in `.toolbar-actions`, because sorting is not a filter condition. The approved state shows **no** `.filter-count` and **no** `.filter-chip`, matching the unfiltered `62/62 chỉ tiêu` in the title.
@@ -143,7 +162,7 @@ directly — no dialog, no preview. Every write lives on the DTI catalogue
     | --- | --- | --- | --- |
     | 1 | `Mã` | left, 5% | bold criteria code — three levels are possible (`4.22.11`), not just two |
     | 2 | `Chỉ tiêu` | left, 26% | full criterion name |
-    | 3 | `Nhóm` | left, 13% | group label, e.g. `1. Hạ tầng và Nền tảng số` |
+    | 3 | `Nhóm` | left, 13% | group label as `Code. Name`, e.g. `1. Hạ tầng và Nền tảng số` — decision **Q42**, 2026-09-10 (§ Copy → Group names) |
     | 4 | `Điểm tối đa` | `.num`, 8% | integer |
     | 5 | `Tự đánh giá` | `.num`, 9% | decimal, Vietnamese comma |
     | 6 | `Thẩm định` | `.num`, 9% | decimal |
@@ -177,8 +196,10 @@ directly — no dialog, no preview. Every write lives on the DTI catalogue
 
 <!-- Verbatim shipped strings — typos and mixed languages included — with localization key and file:line source. -->
 
-The app HAS an i18n layer: `@ngx-translate/core` v18 reading `src/FE/public/i18n/vi.json`
-and `en.json` (`doc/huong_dan/wiki-core/fe/08-i18n.md`). Every string below is therefore the
+The app HAS an i18n layer: `@ngx-translate/core` v18 reading **two** key groups split by
+folder — Core at `src/FE/public/i18n/`, project at `src/FE/public/i18n-app/`
+(`doc/huong_dan/wiki-core/fe/08-i18n.md` § Khuôn CoreBase). This screen is business, so its
+keys belong to the **project** group. Every string below is therefore the
 **Vietnamese rendering of a key that must be allocated when this screen is built** — the
 Localization key column reads `key TBA` because this screen has never shipped, not because the
 copy may be inlined. Pasting a Vietnamese literal into a template fails the build:
@@ -188,15 +209,22 @@ copy may be inlined. Pasting a Vietnamese literal into a template fails the buil
 bash scripts/fe-gate.sh
 ```
 
-PASS = the G12 section reports no hits. Each row below needs a `dashboard.*` key in `vi.json` and an
-English sibling in `en.json` before the markup can pass.
+PASS = the G12 section reports no hits. Each row below needs a `dashboard.*` key in
+`src/FE/public/i18n-app/vi.json` and an English sibling in `src/FE/public/i18n-app/en.json`
+before the markup can pass.
 
 🔄 **SỬA 2026-09-08.** The previous revision of this paragraph said *"No i18n layer exists in
 the app"* and instructed hardcoding. It was already false when written — the i18n layer landed
 2026-09-05 — and following it would have failed G12.
 
+🔄 **SỬA 2026-09-10.** The two paragraphs above named the **Core** bundle
+`src/FE/public/i18n/vi.json`. The project bundle landed 2026-09-09 and already carries a
+`dashboard` group (`src/FE/public/i18n-app/vi.json:9-28`), so a key added to the Core bundle
+would go in the wrong file. The rows below still read `key TBA`: the only keys allocated so far
+belong to the skeleton page, not to this design.
+
 Source for every DTI row is
-`Prototype/index.html` § `#screen-dashboard`; the region is named instead of a line
+`doc/Design/Frontend/PlatformManager/Prototypes/index.html` § `#screen-dashboard`; the region is named instead of a line
 number, because line numbers in a 5500-line prototype renumber silently.
 
 | Element | Verbatim copy | Localization key | Source region |
@@ -217,17 +245,17 @@ number, because line numbers in a 5500-line prototype renumber silently.
 | Export button `title`, no filter applied | `Tải file Excel (.xlsx) của kỳ đang xem — Tuần 33/2026 (10/08 – 16/08/2026)` | — (composed) | `.toolbar-actions` |
 | Export button `title`, **filters applied** | `Tải file Excel (.xlsx) — CHỈ các chỉ tiêu đang lọc (7/62)` | — (composed) | `.toolbar-actions` — settled 2026-09-06 |
 | "All periods" chip, when that option is chosen | `Tất cả · 2026` in a `.badge.warn` | — (composed) | `app-period-toolbar`, currently a disabled branch |
-| KPI labels and captions | five rows | key TBA | see [`../Components/KpiTile.md`](../Components/KpiTile.md) § The five tiles |
+| KPI labels and captions | five rows; **tiles 1 and 2 change label with the period mode** (decision Q52, 2026-09-10) | key TBA | see [`../Components/KpiTile.md`](../Components/KpiTile.md) § The five tiles and § Tiles 1 and 2 follow the period mode — that file is the master for both |
 | KPI values in the post-import state | `—` · `—` · `0` · `0` · `26/62` (tiles 1–5, in order) | — (composed) | decision T12; the labels stay as above, only the values change. § States |
 | First-run banner — nothing imported | `Chưa có dữ liệu DTI nào. Vào Danh mục DTI để nhập file hoặc thêm chỉ tiêu đầu tiên.` (`Danh mục DTI` is the link) | key TBA | **Written by this spec 2026-09-05; not drawn in the prototype.** § States |
 | Post-import banner — no `Tiến độ %` yet | `Đã có 62 chỉ tiêu, nhưng chưa chỉ tiêu nào có Tiến độ %. Thanh tiến độ theo nhóm và biểu đồ sẽ hiện ngay khi có số liệu. Nhập Tiến độ % tại Danh mục DTI.` (count composed; `Danh mục DTI` is the link) | — (composed) | **Written by this spec 2026-09-05 for decision Q32; not drawn in the prototype.** § States |
 | Loading — accessible name on the busy overlay | `Đang tải số liệu…` | key TBA, on `aria-label` | **Written by this spec 2026-09-05 for decision Q34; not drawn in the prototype.** § States |
 | Group panel heading | `Tiến độ theo nhóm` | key TBA | `.layout` left card |
 | Group panel caption | `Tuần hiện tại` | key TBA | `.layout` left card |
-| Group names | `1. Hạ tầng và Nền tảng số` · `2. Nhân lực số` · `3. An toàn thông tin, an ninh mạng` · `4. Hoạt động chính quyền số` · `5. Hoạt động Kinh tế số` · `6. Hoạt động Xã hội số` | — (server values) | `app-group-progress-list` |
+| Group names | `1. Hạ tầng và Nền tảng số` · `2. Nhân lực số` · `3. An toàn thông tin, an ninh mạng` · `4. Hoạt động chính quyền số` · `5. Hoạt động Kinh tế số` · `6. Hoạt động Xã hội số` | — (composed from the server's `Code` + `Name`) | `app-group-progress-list`. **Decision Q42, 2026-09-10** confirms this form: `Code. Name`, where `Code` is `"1"`…`"6"` in the order the template file lists the groups and `Name` is that file's `Nhóm` string with no prefix. The in-repo sample `spec/danh-muc-dti/dti-mau-an-danh-62-dong.csv` carries exactly these six names, unprefixed and in this order (measured 2026-09-10) |
 | Chart panel heading | `Biểu đồ tiến độ hàng tuần` | key TBA; reads `hàng tháng` in month mode | `.layout` right card |
 | Chart panel caption | `Tiến độ chung` | key TBA | `.layout` right card |
-| Chart accessible label | `Biểu đồ đường tiến độ chung theo tuần, từ tuần 28 đến tuần 33 năm 2026` | — (composed) | `app-trend-chart` |
+| Chart accessible label | `Biểu đồ đường tiến độ chung theo tuần, từ tuần 22 đến tuần 33 năm 2026` | — (composed) | `app-trend-chart`. 🔄 LẬT 2026-09-10 (Q54): the window is twelve weeks, so the prototype's `từ tuần 28` is stale. The wording across a year boundary waits on `doc/contracts/dashboard.md` § CONTRACT DB-1 |
 | Chart placeholder while loading | `Đang tải biểu đồ…` | key TBA | `.chart-skeleton`, currently a resolved branch |
 | Detail table heading | `62 chỉ tiêu DTI` | — (composed) | `app-criteria-table` `.title` |
 | Detail table count | `62/62 chỉ tiêu` | — (composed, `aria-live`) | `app-criteria-table` `.title` |
@@ -268,6 +296,35 @@ the select options without spaces and the history row and chart axis with them.
 The spaced form wins on legibility and on being the more common of the two. The
 strings above are written in that form; the prototype is the side that needs
 syncing (§ Normalize on redesign).
+
+#### Error codes → copy — duyệt 2026-09-10 (Q56)
+
+> 📐 **ĐÍCH ĐẾN — CHƯA THI CÔNG.** Câu chữ đã được người dùng **duyệt nguyên văn 2026-09-10 (Q56)**; chưa màn nào dựng. Written for decision Q56 from the
+> codes in `doc/contracts/dashboard.md` (§ Mã lỗi của DB-1 and § CONTRACT DB-4). **None of
+> these keys exists in `src/FE/public/i18n-app/`** today, and nothing here ships before the
+> product owner approves it.
+
+The BE sends a `businessCode` and the FE uses it **as the translation key itself**, nested
+by domain, in the project bundle `src/FE/public/i18n-app/{vi,en}.json`
+(`doc/huong_dan/wiki-core/fe/08-i18n.md` § 1 — Mã lỗi BE dùng THẲNG làm khoá), so the key
+column below is the code. The code left in it reaches the user as a `Toast` from the shell
+— this screen has no in-page error surface (§ States → error).
+
+| Code | Where it shows | Proposed copy (vi) | `messageParams` |
+| --- | --- | --- | --- |
+| `DASHBOARD.EXPORT_MODE_UNSUPPORTED` | toast, after `Xuất báo cáo` | `Chưa xuất được báo cáo cho chế độ Tất cả (cả năm). Chọn một tuần hoặc một tháng rồi bấm Xuất báo cáo.` | the contract's template carries `{Mode}`; the proposed sentence does not need it |
+
+- 🔄 **LẬT 2026-09-10 (Q62):** `DASHBOARD.MODE_INVALID` and `DASHBOARD.STATUS_INVALID` were
+  rows of this table, because a stale or hand-edited link could carry a bad `mode` or
+  `status`. Q62 has the page reset an unknown URL value to its default, rewrite the URL and
+  never call the API with the bad value — silently — so neither code can reach a user, and
+  both left the table.
+- **`EXPORT_MODE_UNSUPPORTED` is a safety net.** In `Tất cả` mode the button is already
+  disabled (`spec/dashboard-dti/ui-spec.md` § 4), so the toast appears only if a request
+  gets past that.
+- **Left out:** a malformed `date`/`year` (binder `ValidationError`, not a catalog code) and
+  the HTTP fallbacks — 403, 404, 429, offline — whose copy is Core's
+  ([`05-auth.md`](./05-auth.md) § Copy).
 
 ### States
 
@@ -350,7 +407,10 @@ syncing (§ Normalize on redesign).
   settles that import leaves `Tiến độ %` **blank** for the user to fill in, and
   decision Q11 has the group bars and the trend line drawn from `Tiến độ %`. So
   right after an import the catalogue is full and this screen is still largely
-  empty: six progress bars at 0 and a trend line with nothing to plot. **The product
+  empty: six **empty** progress bars — no fill and no figure, because a group's
+  progress is *absent* rather than `0` (`spec/dashboard-dti/business-rules.md` §1.1,
+  and [`../Components/ProgressBar.md`](../Components/ProgressBar.md) § Variants →
+  `Awaiting data`) — and a trend line with nothing to plot. **The product
   owner has accepted this behaviour; it is not a defect and must not be "fixed" by
   silently deriving a progress figure.**
 
@@ -358,7 +418,7 @@ syncing (§ Normalize on redesign).
   "nothing has been imported" and "62 criteria exist but nobody has recorded
   progress" call for different sentences and lead to different next actions. The
   detail table is fully populated in this state — every score column has values —
-  which is what makes an all-zero group panel above it look broken unless the copy
+  which is what makes an empty group panel above it look broken unless the copy
   explains it.
 
   The figures the approved prototype draws (74,3% · 51,8% · … · 82,1%) are
@@ -373,16 +433,18 @@ syncing (§ Normalize on redesign).
 
   > `Đã có 62 chỉ tiêu, nhưng chưa chỉ tiêu nào có Tiến độ %. Thanh tiến độ theo nhóm và biểu đồ sẽ hiện ngay khi có số liệu. Nhập Tiến độ % tại Danh mục DTI.`
 
-  The count is composed from the response, not hardcoded — `62` is the figure in
-  `spec/DTI_CanGiuoc_2026-08-11.csv` and it is what the approved prototype shows
-  everywhere else on this screen. `Danh mục DTI` is the route out, the same inline `a`
+  The count is composed from the response, not hardcoded — `62` is the row count of
+  the in-repo sample dataset `spec/danh-muc-dti/dti-mau-an-danh-62-dong.csv` (measured 2026-09-10) and it is what the approved
+  prototype shows everywhere else on this screen. `Danh mục DTI` is the route out, the same inline `a`
   child as in the state above, and settled the same way by decision T11.
 
   **What each KPI tile reads in this state — settled by decision T12, 2026-09-06.**
   The *rule* (what each tile is computed from) is owned by
   `spec/dashboard-dti/business-rules.md`; the table below records only what the screen
   shows. Labels are verbatim from
-  [`../Components/KpiTile.md`](../Components/KpiTile.md) § The five tiles.
+  [`../Components/KpiTile.md`](../Components/KpiTile.md) § The five tiles, in week
+  mode; in month and year mode tiles 1 and 2 take the labels in that file's § Tiles 1
+  and 2 follow the period mode (Q52).
 
   | # | Tile | Right after import | Why |
   | --- | --- | --- | --- |
@@ -396,11 +458,16 @@ syncing (§ Normalize on redesign).
   import landed, so the screen reads as *"the data is in, the progress is not"* rather
   than as a failed import with a full table underneath it by coincidence. T12 also
   settles the tension the prototype contained: tile 1's sub-caption
-  `Bình quân gia quyền theo điểm (thật: 787,84/960)` describes the **populated** state,
-  not this one.
+  `Bình quân Tiến độ %, gia quyền theo Điểm tối đa` describes the **populated** state,
+  not this one. That caption was itself corrected on **2026-09-09** — the earlier
+  wording, `Bình quân gia quyền theo điểm (thật: 787,84/960)`, named a ratio of scores
+  rather than the quantity the tile computes, and the parenthetical was a prototype
+  provenance annotation that does not ship;
+  [`../Components/KpiTile.md`](../Components/KpiTile.md) § The five tiles holds the
+  decision.
 
   ⚠️ **Both banner strings are written by this spec on 2026-09-05, not read off the
-  prototype.** `Prototype/index.html` § `#screen-dashboard` draws neither state — Q32
+  prototype.** `doc/Design/Frontend/PlatformManager/Prototypes/index.html` § `#screen-dashboard` draws neither state — Q32
   and the first-run copy both postdate its approval.
 - **error:** a failed aggregate request surfaces through the app's global HTTP
   error handling as a `Toast` in the shell. This screen authors no in-page error
@@ -480,7 +547,7 @@ Prerequisites, once the screen is built:
 | Screenshot path | Status | Capture instructions |
 | --- | --- | --- |
 | `Assets/Screenshots/dashboard/dashboard--desktop-1440.png` | **blocked — screen not built** | Landing route @ 1440×900, full page, sidebar expanded, week mode, a period with data selected, no filter applied. This is the one shot that must exist. |
-| `Assets/Screenshots/dashboard/dashboard--no-progress--desktop-1440.png` | blocked — screen not built | Same @ 1440×900 **immediately after an import, before anyone enters `Tiến độ %`** — a full detail table above six 0% group bars and an empty chart (§ States). This is the state every deployment passes through and the one most likely to be mistaken for a bug, so it is worth capturing early. |
+| `Assets/Screenshots/dashboard/dashboard--no-progress--desktop-1440.png` | blocked — screen not built | Same @ 1440×900 **immediately after an import, before anyone enters `Tiến độ %`** — a full detail table above six **empty** group bars — no fill and no figure, which is what the shipped component renders when a group's progress is absent (`src/FE/src/app/modules/dashboard/components/progress-bar/progress-bar.html:19-23`) — and an empty chart (§ States). ⚠️ **SỬA 2026-09-10**: this cell used to ask for *"six 0% group bars"*, the one rendering that component deliberately refuses. This is the state every deployment passes through and the one most likely to be mistaken for a bug, so it is worth capturing early. |
 | `Assets/Screenshots/dashboard/dashboard--empty--desktop-1440.png` | blocked — **name already taken** by a capture of the deleted build | The existing file of this name shows the pre-retirement screen. Move or rename it before capturing the new empty state, or the two will be silently confused. |
 | `Assets/Screenshots/dashboard/dashboard--month-mode--desktop-1440.png` | on demand | Same @ 1440×900 with `Tháng` selected — the only shot showing the month period label, the month select and the `Th.1 … Th.12` x axis. |
 | `Assets/Screenshots/dashboard/dashboard--mobile-390.png` | on demand | @ 390×844 — the only shot showing the five-tiles-in-one-column artefact and the single-column `.layout`. |
@@ -489,9 +556,9 @@ Prerequisites, once the screen is built:
 
 <!-- Screen-local quirks ONLY here — sections 1-6 stay as-shipped. A quirk that spans components belongs in the component's own spec (`Components/<Name>.md` → Normalize on redesign), not here. -->
 
-**One divergence from the prototype is left, and it is not the four this section
-used to list.** An earlier revision named Q22, T1, T2 and T5. Re-measured against
-`Prototype/index.html` § `#screen-dashboard` on 2026-09-05, after the prototype's own
+**Two divergences from the prototype are left — the second added 2026-09-10 by Q54 — and
+neither is one of the four this section used to list.** An earlier revision named Q22, T1, T2 and T5. Re-measured against
+`doc/Design/Frontend/PlatformManager/Prototypes/index.html` § `#screen-dashboard` on 2026-09-05, after the prototype's own
 sync pass: the Q22 items **have since been applied** — the filter panel holds two
 conditions and the sort select two options, each change carrying a
 `SỬA 2026-09-05 (Q22)` comment — so that pair was a true divergence at the time it was
@@ -502,7 +569,8 @@ catalogue screen only.
 
 | Still divergent | The spec says | Decision | Check |
 | --- | --- | --- | --- |
-| The date-range dash written both ways — `10/08–16/08` in the period value box and the period selects, `10/08 – 16/08` in the history rows and the chart axis | the spaced form everywhere | T5 | `grep -c '[0-9]/[0-9][0-9]–[0-9]' Prototype/index.html` — PASS = 0; every hit today is in this screen's region |
+| The date-range dash written both ways — `10/08–16/08` in the period value box and the period selects, `10/08 – 16/08` in the history rows and the chart axis | the spaced form everywhere | T5 | `grep -c '[0-9]/[0-9][0-9]–[0-9]' doc/Design/Frontend/PlatformManager/Prototypes/index.html` — PASS = 0, and it is not 0 today. ⚠️ **Not every hit is in this screen's region** — at least one sits in a comment up in the CSS layer, so use the section-scoped form instead of the whole-file count: `awk '/id="screen-dashboard"/,/id="screen-nguoi-dung"/' doc/Design/Frontend/PlatformManager/Prototypes/index.html \| grep -c '[0-9]/[0-9][0-9]–[0-9]'`. Corrected 2026-09-10; the previous cell claimed every hit was in-region |
+| The trend chart's week window — six x-axis labels (weeks 28–33) and an accessible label reading `từ tuần 28` | twelve weeks, ending at the week being viewed | Q54 | `grep -c 'y="208">' doc/Design/Frontend/PlatformManager/Prototypes/index.html` counts the x-axis tick labels — PASS = 12; it read 6 on 2026-09-10 |
 
 Three things this spec describes are **not in the prototype at all**, and they are
 additions rather than drift: the two first-run banners (Q32 and its first-run twin)
@@ -523,7 +591,10 @@ Screen-local quirks, unchanged:
 
 <!-- Decisions this file must NOT make on its own. Raised 2026-09-05, emptied 2026-09-06 by T10, T11 and T12. -->
 
-**Nothing is open on this screen.** The three items raised on 2026-09-05 — what draws
+**One proposal waits for the product owner** — the error-code copy (Q56, § Copy → Error
+codes → copy). The trend-axis label fit opened the same day was approved on 2026-09-10
+(Q54, [`../Components/TrendChart.md`](../Components/TrendChart.md)). Apart from that,
+nothing is open on this screen. The three items raised on 2026-09-05 — what draws
 the loading spinner, whether the first-run banners carry a link or a button, and how
 many KPI tiles read `—` right after an import — were all answered on 2026-09-06 and
 have moved into the table below.
@@ -556,3 +627,7 @@ redesign carries the reason each could age badly.
 | What draws the loading spinner | **PrimeNG's `p-progressSpinner`** — T10, 2026-09-06. Chrome PrimeNG paints, like the paginator and the `p-table` mask, so **no new row in `COMPONENTS.md`** and no new token | § States → loading |
 | Whether the first-run banners carry a link or a button | **An inline link** — T11. The `.notice` contract has no labelled-button slot and is not being widened for one action | § States, § Copy |
 | What each KPI tile reads right after an import | **`—` · `—` · `0` · `0` · the real `Hoàn thành` count** — T12 | § States; rule owned by `spec/dashboard-dti/business-rules.md` |
+| How a group is labelled | **`Code. Name`** — `1. Hạ tầng và Nền tảng số`; `Code` `"1"`…`"6"` in template-file order, `Name` the file's `Nhóm` string unprefixed — Q42, 2026-09-10 | § Copy → Group names |
+| Who writes the week-mode x-axis labels | **The backend**, as ready-made date ranges; the week code stays as the identity key and the frontend does no ISO-week arithmetic — Q43, 2026-09-10 | [`../Components/TrendChart.md`](../Components/TrendChart.md) § The x axis |
+| What the trend series carries for a period with no data | **The period itself, with `value: null`** — every period up to the current one, so the line breaks in the right place — Q44, 2026-09-10 | [`../Components/TrendChart.md`](../Components/TrendChart.md) § Anatomy |
+| How many weeks the trend chart shows in week mode | **Twelve, ending at the week being viewed** — Q54, 2026-09-10. How the labels fit was approved the same day (Q54); what happens at a year boundary is DB-1's to define | [`../Components/TrendChart.md`](../Components/TrendChart.md) § The x axis changed on 2026-09-05 |

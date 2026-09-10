@@ -178,7 +178,7 @@ while IFS=: read -r f ln p; do
   [ -e "$p" ] && continue
   bad "$f:$ln  trích dẫn  $p"
   n=$((n+1))
-done < <(grep -rnoP '(?<![\w./-])(?:src|doc|spec|scripts)/[A-Za-z0-9_./-]+\.(?:cs|ts|scss|html|md|json|sql|dbml|sh)\b' doc .claude spec --include='*.md' 2>/dev/null)
+done < <(grep -rnoP '(?<![\w./-])(?:src|doc|spec|scripts)/[A-Za-z0-9_./-]+\.(?:cs|ts|scss|html|md|json|sql|dbml|sh|csv|xlsx)\b' doc .claude spec --include='*.md' 2>/dev/null)
 [ "$n" -eq 0 ] && ok "mọi đường dẫn được trích dẫn đều tồn tại"
 
 # ---------------------------------------------------------------- §4a2
@@ -225,17 +225,25 @@ else
     case "$HIST_LINES" in *" $f:$ln "*) continue ;; esac
     case "$HIST_STRIKE" in *" $f:$ln "*) continue ;; esac
     case "$p" in *'/.../'*) continue ;; esac
-    # Prototype/ — người dùng chốt 2026-09-08: thư mục ĐỐI CHIẾU RIÊNG, cố ý
-    # ngoài repo. Miễn trừ khai tường minh ở đây thay vì để `[ -e ]` tình cờ cho
-    # qua. Hệ quả phải nói thẳng: 36 citation đó không ai ngoài người dùng kiểm
-    # được, nên mọi khẳng định dựa vào chúng vẫn là chưa xác minh với người khác.
-    case "$p" in Prototype/*) continue ;; esac
+    # 🔄 GỠ 2026-09-10 — miễn trừ `Prototype/*` đã bị xoá, KHÔNG khôi phục.
+    #
+    # Nó được mở 2026-09-08 với lý do "thư mục ĐỐI CHIẾU RIÊNG, cố ý ngoài repo",
+    # kèm câu tự thú ngay tại chỗ: "36 citation đó không ai ngoài người dùng kiểm
+    # được". Tiền đề đó hết đúng khi bản prototype ẩn danh được đưa VÀO repo
+    # (doc/Design/Frontend/PlatformManager/Prototypes/index.html) — mọi trích dẫn
+    # nay trỏ được vào bằng chứng ai cũng mở được.
+    #
+    # Bài học đắt hơn lý do: cùng một lớp lỗi "trích thứ ngoài repo" đã xuất hiện
+    # BA lần — fixture test .csv, prototype .html, file mẫu .xlsx — và cả ba lần
+    # cổng đều im lặng, hai lần vì thiếu phần mở rộng trong regex, một lần vì
+    # chính miễn trừ này. Một miễn trừ khai tường minh vẫn là một lỗ hổng; nó chỉ
+    # khác ở chỗ có người ký tên.
     [ -n "${TRACKED[$p]:-}" ] && continue
     [ -e "$p" ] || continue        # không tồn tại thì §4a đã báo, đừng báo hai lần
     [ -n "${SEEN[$p]:-}" ] && continue
     SEEN["$p"]="$f:$ln"
     CAND="$CAND$p"$'\n'
-  done < <(grep -rnoP '(?<![\w./-])(?:src|doc|spec|scripts|Prototype)/[A-Za-z0-9_./-]+\.(?:cs|ts|scss|html|md|json|sql|dbml|sh)\b' doc .claude spec --include='*.md' 2>/dev/null)
+  done < <(grep -rnoP '(?<![\w./-])(?:src|doc|spec|scripts|Prototype)/[A-Za-z0-9_./-]+\.(?:cs|ts|scss|html|md|json|sql|dbml|sh|csv|xlsx)\b' doc .claude spec --include='*.md' 2>/dev/null)
 
   if [ -n "$CAND" ]; then
     while IFS= read -r p; do

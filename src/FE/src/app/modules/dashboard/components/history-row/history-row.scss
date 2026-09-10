@@ -1,0 +1,17 @@
+/* Nguồn: doc/Design/Frontend/PlatformManager/Components/HistoryRow.md § Anatomy.
+
+   Cột 1 rộng 150px — chốt T3 (2026-09-05). Lưới gốc là `100px 1fr 90px 70px`, sinh ra hồi ô 1 chỉ
+   chứa MỘT ngày (`16/08/2026`); quyết định Q12 đổi ô đó thành cả KHOẢNG ngày và 100px không chứa
+   nổi. HistoryRow.md § Anatomy là nơi DUY NHẤT giữ con số 150px — đừng chép nó sang chỗ khác.
+
+   Nút `Xem` không khai lại ở đây: `.btn` (đủ 5 trạng thái) nằm ở styles.scss §3. */
+
+:host {
+  display: grid;
+  grid-template-columns: 150px 1fr 90px 70px;
+  gap: var(--sp-3);
+  align-items: center;
+  padding: var(--sp-2);
+  border-bottom: 1px solid var(--line);
+  font-size: var(--fs-xs);
+}

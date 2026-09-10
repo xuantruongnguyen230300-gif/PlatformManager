@@ -4,7 +4,7 @@ scope: du-an
 verified: 2026-09-06
 project: "PlatformManager"
 status: "draft"
-updated: "2026-09-08"
+updated: "2026-09-09"
 component: "Card"
 sources: ["src/FE/src/styles.scss", "src/FE/src/app/platform/phan-quyen/pages/phan-quyen/phan-quyen.page.html"]  # 2 nguồn dưới modules/dashboard/ đã xoá 2026-08-29 cùng module DtiWeekly
 ---
@@ -124,7 +124,7 @@ chạy: class `.kpi` và component `app-group-progress-list` đều không còn 
 <div class="card kpi">
   <div class="label">Tiến độ chung tuần này</div>
   <div class="value">82,1%</div>
-  <div class="sub">Bình quân gia quyền theo điểm</div>
+  <div class="sub">Bình quân Tiến độ %, gia quyền theo Điểm tối đa</div>
 </div>
 ```
 

@@ -142,9 +142,9 @@ câu và bỏ sót nửa số dòng vì nửa kia sinh ra trong phiên ngôn ng�
 do, **mã lỗi không bao giờ được dịch** — nó là định danh, không phải câu.
 
 **Nêu đích danh để người sau không dọn nhầm:** ba lời gọi `e.Description` trong
-`src/BE/Core/PlatformManager.Core.Infrastructure/Persistence/CoreSeeder.cs` (đối chiếu
+`src/BE/Core/PlatformManager.Core.Persistence/CoreSeeder.cs` (đối chiếu
 2026-09-05: `:218`, `:247`, `:259` — tìm lại bằng
-`grep -n 'e.Description' src/BE/Core/PlatformManager.Core.Infrastructure/Persistence/CoreSeeder.cs`)
+`grep -n 'e.Description' src/BE/Core/PlatformManager.Core.Persistence/CoreSeeder.cs`)
 là **log cho người vận hành**, **KHÔNG** phải điểm rò ra người
 dùng. **Đừng đụng.** Bốn điểm rò thật liệt ở §4(c).
 
@@ -178,7 +178,7 @@ hiện tại; đừng đọc nó thành hiện trạng — hiện trạng nằm 
 > làm được đúng chữ đó — `ErrorDescriptor` thuộc `Core.Application`
 > (`quy-uoc/be-architecture.md` liệt nó trong nội dung project đó), còn
 > `Core.Domain` bị cấm phụ thuộc bất cứ thứ gì, luật này **cưỡng chế bằng máy** ở
-> `src/BE/Tests/PlatformManager.ArchTests/LayerDependencyTests.cs:47`. Kéo
+> `src/BE/Tests/PlatformManager.ArchTests/LayerDependencyTests.cs:61`. Kéo
 > `ErrorDescriptor` xuống Domain thì phải kéo theo `ErrorCode` — mà `ErrorCode`
 > theo thiết kế *"giá trị enum CHÍNH LÀ mã HTTP"*, tức nhét HTTP vào Domain.
 >
@@ -404,7 +404,7 @@ FE đã sở hữu câu chữ (§3).
 
 ```bash
 grep -rn 'Select(e => e.Description)' src/BE/Core/PlatformManager.Core.Infrastructure/Identity | grep -v '//'
-grep -rn 'Select(e => e.Description)' src/BE/Core/PlatformManager.Core.Infrastructure/Persistence/CoreSeeder.cs
+grep -rn 'Select(e => e.Description)' src/BE/Core/PlatformManager.Core.Persistence/CoreSeeder.cs
 ```
 
 Không có ca đối chứng thì một lần "dọn cho sạch" sẽ nuốt luôn 3 dòng log, và mất
@@ -423,7 +423,7 @@ mát đó **không lộ ra** cho tới lần đầu có sự cố seed cần đ�
 ### 5.1 KHÔNG bật `RequestLocalization` / `.resx` / `IStringLocalizer` ở BE
 
 Đo 2026-09-05: `CultureInfo` xuất hiện **hai lần** trong cả `src/BE`, và **cả hai** đều là
-`InvariantCulture` — `src/BE/PlatformManager.Api/Program.cs:364` (giá trị `Retry-After`) và
+`InvariantCulture` — `src/BE/PlatformManager.Api/Program.cs:407` (giá trị `Retry-After`) và
 `MessageParamPolicy.Stringify` (§10.4). Lần thứ hai là **do §10 thi công**; nó không phá điều
 mục này bảo vệ, và nghiệm thu đã sửa để đo đúng thứ đó — xem hộp giải trình bên dưới.
 *(Bản trước ghi "đúng một lần … `Program.cs:337`"; số dòng đó cũng đã trôi từ trước đợt này.)*
@@ -474,7 +474,7 @@ hữu câu chữ. Một dòng hôm nay, hai nguồn câu chữ mãi mãi — đ�
 trước 2026-09-03 nhận `(string to, string subject, string body, CancellationToken ct)` — tức là
 **chuỗi đã dựng xong**. Không có tham số locale, và `AppUser` **không có cột
 ngôn ngữ** (đối chiếu
-`src/BE/Core/PlatformManager.Core.Infrastructure/Identity/AppUser.cs`
+`src/BE/Core/PlatformManager.Core.Persistence/Identity/AppUser.cs`
 2026-09-03). Kênh email là kênh **không có FE**, nên BE sở hữu câu chữ (§3) — mà
 để dựng đúng câu, BE cần **cả hai** thứ đang thiếu: biết khoá nào, và biết ngôn
 ngữ nào.
@@ -486,7 +486,7 @@ ngữ nào.
 | `SendAsync(string to, string subject, string body, ct)` | ✅ Nhận **một record request**: `src/BE/Core/PlatformManager.Core.Application/Notifications/INotificationSender.cs:20`, record ở `src/BE/Core/PlatformManager.Core.Application/Notifications/NotificationRequest.cs:48` (`To` + `TemplateKey` + `Parameters` + `Locale`) |
 | Không có ai biến khoá thành câu | ✅ Seam mới, **host cấp, Core tiêu thụ**: `src/BE/Core/PlatformManager.Core.Application/Notifications/INotificationTemplateRenderer.cs:27`. `src/BE/Core/PlatformManager.Core.Infrastructure/Notifications/SmtpNotificationSender.cs:30` dựng câu qua seam đó rồi mới gửi |
 | `AppUser` không có cột ngôn ngữ | 🚧 **VẪN CHƯA CÓ** — đây là đổi lược đồ DB, không nằm trong "sửa 2 file", nên **chưa làm** và cần người dùng chốt. Xem ghi chú ngay dưới bảng |
-| **0 consumer** — `src/BE/PlatformManager.Api/Program.cs:177` ghi rõ seam này cố ý chưa đăng ký | ✅ Vẫn 0 consumer, nên việc đổi không phá ai. Ghi chú "bật khi nào" ở `src/BE/PlatformManager.Api/Program.cs:190` nay liệt **hai** dòng đăng ký bắt buộc, không phải một. *(Hai neo sửa 2026-09-05: bản trước ghi `:162` và `:175`, cả hai đã trôi.)* |
+| **0 consumer** — `src/BE/PlatformManager.Api/Program.cs:220` ghi rõ seam này cố ý chưa đăng ký | ✅ Vẫn 0 consumer, nên việc đổi không phá ai. Ghi chú "bật khi nào" ở `src/BE/PlatformManager.Api/Program.cs:228` nay liệt **hai** dòng đăng ký bắt buộc, không phải một. *(Hai neo sửa 2026-09-05: bản trước ghi `:162` và `:175`, cả hai đã trôi.)* |
 
 **Mốc "miễn phí" này chỉ có hôm nay.** Đổi chữ ký một interface 0 consumer là
 sửa 2 file. Sau consumer đầu tiên, nó là việc di trú. Bước này **độc lập** với
@@ -523,7 +523,7 @@ Nhưng hôm nay **không có nguồn nào** để lấy giá trị đó. Ba lự
 
 Việc này **không chặn** bước đổi chữ ký (0 consumer), nhưng nó chặn **consumer
 đầu tiên** — và nó phải được trả lời ở đúng dòng gọi đầu tiên, không trôi qua im
-lặng. Ghi chú tương ứng nằm tại `src/BE/PlatformManager.Api/Program.cs:190`.
+lặng. Ghi chú tương ứng nằm tại `src/BE/PlatformManager.Api/Program.cs:228`.
 
 ## 7. Thứ tự thi công — pha sửa code theo bảng này
 

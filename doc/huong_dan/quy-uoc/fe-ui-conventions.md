@@ -1,7 +1,7 @@
 ---
 kind: luat
 scope: core
-verified: 2026-09-06
+verified: 2026-09-09
 ---
 
 # UI Conventions — src/FE
@@ -100,10 +100,21 @@ viện."* Thư viện **đã cài** (`@ngx-translate/core` v18), nợ đó **đ�
 lên với đúng những chuỗi mà câu cũ cho phép để trần. Ai còn đọc câu cũ sẽ viết màn hình mới
 không bọc rồi không hiểu vì sao cổng đỏ.
 
-Luật hiện hành: **mọi câu người dùng đọc đến từ `src/FE/public/i18n/<code>.json`.** Kể cả
+Luật hiện hành: **mọi câu người dùng đọc đến từ một file bảng dịch.** Kể cả
 `title` của route — nó là **khoá dịch**, không phải câu; viết thẳng tiếng Việt vào đó thì tiêu
 đề tab và tiêu đề topbar là hai chỗ duy nhất trên màn hình không đổi khi bấm sang English, và
 không có gì báo.
+
+🛑 **HAI thư mục bảng dịch, không phải một — chọn đúng thư mục trước khi thêm khoá.** Khoá dùng
+được cho mọi sản phẩm dựng trên nền tảng đi vào `src/FE/public/i18n/`; khoá của riêng sản phẩm
+này (mọi màn `modules/`) đi vào `src/FE/public/i18n-app/`. Đặt nhầm thì không gì đỏ hôm nay —
+nó chỉ hiện ra vào ngày tách CoreBase, dưới dạng một nền tảng mang theo chuỗi của dự án cũ.
+Danh sách nguồn, thứ tự ghép và lý do: [file chủ](../wiki-core/fe/08-i18n.md) §Khuôn CoreBase
+(đối chiếu 2026-09-09).
+
+⚠️ **Spec của màn `modules/` phải cấp `CORE_I18N` cho TestBed** — `useTranslationsInTest()` lấy
+danh sách nguồn từ đó; không cấp thì nó chỉ nạp nhóm CoreBase và spec đỏ với thông điệp dạng
+`Expected 'danh-muc-dti.title' to be 'Danh mục DTI'`.
 
 ## In ấn — quy ước `.no-print` đang tồn tại, nay được ghi lại
 

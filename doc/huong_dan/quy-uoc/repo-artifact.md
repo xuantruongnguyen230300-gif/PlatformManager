@@ -70,7 +70,7 @@ Ba nhóm **không bao giờ** được commit:
 
 Secret của môi trường thật đi qua User Secrets hoặc biến môi
 trường; các khoá cụ thể và cách đặt ghi ở
-`src/BE/Core/PlatformManager.Core.Infrastructure/Persistence/BootstrapOptions.cs`.
+`src/BE/Core/PlatformManager.Core.Persistence/BootstrapOptions.cs`.
 
 ### 1.1 Máy mới clone về cần tạo gì (thêm 2026-09-08)
 
@@ -87,7 +87,7 @@ Hai khoá phải tự đặt trước khi API chạy được:
 
 Thêm `Bootstrap:SuperAdminPassword` + `Bootstrap:AdminPassword` **chỉ khi** chạy lệnh
 seed (`--seed`); đường chạy phục vụ bình thường không cần
-([`Program.cs:126`](../../../src/BE/PlatformManager.Api/Program.cs) truyền
+([`Program.cs:88`](../../../src/BE/PlatformManager.Api/Program.cs) truyền
 `requireBootstrapOptions: isSeedRun`).
 
 Hai cách đặt, chọn một — cả hai đều nằm **ngoài** repo:

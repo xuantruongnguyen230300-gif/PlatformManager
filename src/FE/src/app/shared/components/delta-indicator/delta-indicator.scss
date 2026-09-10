@@ -1,0 +1,9 @@
+/* Chỉ ĐÚNG một dòng, và đó là chủ đích.
+   `.delta`, `.delta.up`, `.delta.down`, `.delta.flat` nằm ở src/FE/src/styles.scss §5 — lớp màu
+   TOÀN CỤC dùng chung giữa bảng chi tiết của Dashboard và lưới Danh mục DTI. Khai lại ở đây là
+   tạo bản sao thứ hai của cùng một quyết định màu; hai bản sẽ lệch nhau ở lần sửa kế tiếp, đúng
+   tình trạng đã phải dọn ngày 2026-08-29.
+   Hợp đồng: doc/Design/Frontend/PlatformManager/Components/DeltaIndicator.md § Anatomy. */
+:host {
+  display: inline-block;
+}

@@ -5,7 +5,7 @@ namespace PlatformManager.ArchTests;
 
 /// <summary>
 /// <b>Luật:</b> mọi class kế thừa <see cref="SaveChangesInterceptor"/> trong
-/// <c>PlatformManager.Core.Infrastructure</c> phải xuất hiện trong một lời gọi
+/// <c>PlatformManager.Core.Persistence</c> phải xuất hiện trong một lời gọi
 /// <c>AddInterceptors(...)</c> — tức phải được NỐI VÀO <c>DbContext</c>, không chỉ được đăng ký
 /// trong DI container.
 ///
@@ -51,7 +51,7 @@ public class InterceptorWiringTests
         // Chặn "pass rỗng": reflection trả rỗng thì mọi assert dưới vô nghĩa.
         Assert.True(interceptors.Count > 0,
             "Không tìm thấy class nào kế thừa SaveChangesInterceptor trong các assembly sản phẩm ⇒ test này " +
-            "không đo gì. Nguyên nhân thường gặp: assembly PlatformManager.Core.Infrastructure không nạp được " +
+            "không đo gì. Nguyên nhân thường gặp: assembly PlatformManager.Core.Persistence không nạp được " +
             "(kiểm ProductAssemblies.All), hoặc interceptor đã chuyển sang một base khác " +
             "(IInterceptor/IDbCommandInterceptor) — khi đó mở rộng DeclaredInterceptorTypes, ĐỪNG xoá test.");
 

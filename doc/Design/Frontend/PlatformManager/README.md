@@ -4,7 +4,7 @@ scope: du-an
 verified: 2026-09-08
 project: "PlatformManager"
 status: "draft"
-updated: "2026-09-08"
+updated: "2026-09-10"
 title: "PlatformManager"
 group: "Frontend"
 stack: "Angular 20 (standalone + Signals), PrimeNG + PrimeIcons v7, SCSS"
@@ -58,8 +58,10 @@ The 2026-08-29 redesign was decided there and has since landed in `src/FE`:
 the pre-redesign one. `Screens/` was refreshed in two waves: `03`, `04`, `05-auth` and `06` were rewritten against
 live code (last on **2026-09-06**, after the i18n layer landed), and `01`/`02` were rewritten on
 **2026-09-05** as **target** specs for the DTI rebuild — designs approved from
-`Prototype/index.html`, describing screens that do not exist in `src/FE` yet.
-`COMPONENTS.md` gained five 📐 rows the same day for the components those two screens compose.
+`doc/Design/Frontend/PlatformManager/Prototypes/index.html`, describing screens that do not exist in `src/FE` yet.
+`COMPONENTS.md` gained five marked rows the same day for the components those two screens
+compose; those five components were **built on 2026-09-09** and the marker changed from
+📐 to 🚧 on 2026-09-10 — read `COMPONENTS.md` § Index for what the marker means now.
 Read each file's own `status:` / `updated:` frontmatter rather than this sentence.
 
 > 🔄 **SỬA 2026-09-08.** This paragraph said *"`05-auth` has not been [rewritten]"*.
@@ -125,9 +127,10 @@ Cross-check this table against the live route list rather than trusting it:
 
 The table changed twice on 2026-09-05. First, the two DTI rows stopped pointing at historical
 descriptions of the pre-2026-08-29 screens and became living target specs approved from
-`Prototype/index.html` — read the old ones in git history if you need them. Then decisions Q18,
+`doc/Design/Frontend/PlatformManager/Prototypes/index.html` — read the old ones in git history if you
+need them. Then decisions Q18,
 Q29 and Q33 turned both route cells from open questions into paths: `/trang-chu` for the
-Dashboard, `/danh-muc/dti` for the catalogue. The 📐 stays on the **spec**, not on the route,
+Dashboard, `/danh-muc/dti` for the catalogue. The marker stays on the **spec**, not on the route,
 because neither screen exists in `app.routes.ts` yet — which is also why neither cites a
 `file:line` in `src/FE` for its DTI parts. Two specs now describe `/trang-chu`; that is
 deliberate and the banner on `06-trang-chu.md` says which is which.

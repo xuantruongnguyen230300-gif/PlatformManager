@@ -89,6 +89,38 @@ describe('ToastService', () => {
     expect(service.toasts()).toEqual([]);
   });
 
+  // ═══ Action tuỳ chọn (2026-09-10) ═════════════════════════════════════════════════════════════
+  // Sinh ra cho đúng MỘT nơi gọi: toast "không kết nối được" của `http-error.interceptor.ts` cần
+  // chỗ đặt nút "Thử lại". Hai test dưới khoá phần hợp đồng mà nơi gọi đó dựa vào.
+  it('error(text, title, action) mang action theo toast; toast thường thì KHÔNG có', () => {
+    const run = jasmine.createSpy('run');
+
+    service.error('không kết nối được', 'Mất kết nối', { Label: 'Thử lại', Run: run });
+    service.error('hỏng thường');
+
+    const [withAction, withoutAction] = service.toasts();
+    expect(withAction.Action?.Label).toBe('Thử lại');
+    expect(withoutAction.Action).toBeUndefined();
+
+    // Service KHÔNG tự chạy action — nó chỉ chở. Chạy hộ sẽ biến mọi toast thành một tác dụng phụ.
+    expect(run).not.toHaveBeenCalled();
+    withAction.Action?.Run();
+    expect(run).toHaveBeenCalledTimes(1);
+  });
+
+  it('action KHÔNG kéo dài tuổi thọ toast — vẫn tự tắt sau AUTO_DISMISS_MS', () => {
+    // Cửa sổ bấm được của người dùng bằng ĐÚNG tuổi thọ toast, và `http-error.interceptor.ts` đóng
+    // cơ hội thử lại theo đúng con số này. Toast mang action mà sống lâu hơn/ngắn hơn là hai bên
+    // lệch nhau: hoặc nút còn đó nhưng bấm không ăn, hoặc cửa sổ còn mở mà nút đã biến mất.
+    service.error('không kết nối được', 'Mất kết nối', { Label: 'Thử lại', Run: () => undefined });
+
+    jasmine.clock().tick(AUTO_DISMISS_MS - 1);
+    expect(service.toasts().length).toBe(1);
+
+    jasmine.clock().tick(1);
+    expect(service.toasts()).toEqual([]);
+  });
+
   it('dismiss thủ công trước hạn → timer đến hạn không xoá nhầm toast khác', () => {
     service.info('a');
     const a = service.toasts()[0];

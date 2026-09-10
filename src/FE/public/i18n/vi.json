@@ -233,16 +233,26 @@
       "close": "Đóng",
       "confirm": "Đồng ý",
       "reload": "Tải lại",
+      "retry": "Thử lại",
       "saving": "Đang lưu…"
     },
     "app": {
       "newVersion": "Đã có phiên bản mới, tải lại để tiếp tục.",
       "skipToContent": "Bỏ qua điều hướng, tới nội dung chính"
     },
+    "deltaIndicator": {
+      "score": "{{Value}}",
+      "pointUp": "↑ {{Value}} đ.%",
+      "pointDown": "↓ {{Value}} đ.%",
+      "pointFlat": "{{Value}} đ.%"
+    },
     "field": {
       "email": "Email",
       "role": "Vai trò",
       "userName": "Tên đăng nhập"
+    },
+    "format": {
+      "absentValue": "—"
     },
     "grid": {
       "empty": "Không có dữ liệu."
@@ -255,6 +265,7 @@
       "notFound": "Không tìm thấy dữ liệu yêu cầu.",
       "notFoundTitle": "Không tìm thấy",
       "offline": "Không thể kết nối tới máy chủ. Kiểm tra kết nối mạng.",
+      "offlineDevice": "Thiết bị của bạn đang không có kết nối mạng. Kiểm tra Wi-Fi hoặc dây mạng rồi thử lại.",
       "offlineTitle": "Mất kết nối",
       "tooMany": "Bạn đã gửi quá nhiều yêu cầu — vui lòng chờ một lát rồi thử lại.",
       "tooManyTitle": "Quá nhiều yêu cầu",

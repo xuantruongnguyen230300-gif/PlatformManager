@@ -42,8 +42,12 @@ Câu hỏi "ai được xem" **không còn để ngỏ**. Hợp đồng vì th�
 
 | Ca | BE phải trả gì | KHÔNG được làm gì |
 | --- | --- | --- |
-| Chưa có dữ liệu nào trong năm đang xem | `IApiResult` **thành công**; `groups`/`trend`/`table` là **mảng rỗng**, các trường số của `kpi` vắng mặt | Không trả 404. "Chưa có dữ liệu" không phải lỗi |
-| **Đã có chỉ tiêu nhưng chưa ai nhập `Tiến độ %`** (Q24 — trạng thái ngay sau import) | `table` **có đủ dòng**, `kpi.overallProgress` và `groups[].progress` **vắng mặt**, `trend` **rỗng** | Không trả `0` thay cho "chưa có" — xem cảnh báo dưới |
+| Chưa có dữ liệu nào trong năm đang xem | `IApiResult` **thành công**; `groups`/`table` là **mảng rỗng**; `trend` có **đủ các kỳ** nhưng **không kỳ nào mang `value`** (Q44 — DB-1 luật 2); các trường số của `kpi` vắng mặt | Không trả 404. "Chưa có dữ liệu" không phải lỗi |
+| **Đã có chỉ tiêu nhưng chưa ai nhập `Tiến độ %`** (Q24 — trạng thái ngay sau import) | `table` **có đủ dòng**, `kpi.overallProgress` và `groups[].progress` **vắng mặt**, `trend` **đủ các kỳ, không kỳ nào mang `value`** | Không trả `0` thay cho "chưa có" — xem cảnh báo dưới |
+
+> 🔄 **LẬT 2026-09-10 (Q44).** Hai ô `trend` ở bảng trên trước đây ghi *"mảng rỗng"* /
+> *"rỗng"*. Sau Q44, `trend` luôn mang đủ các kỳ của phạm vi — "chưa có dữ liệu" nay là
+> *không phần tử nào có `value`*, không phải *mảng rỗng*.
 | Người gọi chưa đăng nhập | `401` qua `[Authorize]` fail-closed | — |
 
 > ⚠️ **Không còn ca "thiếu quyền xem".** Bản sáng nay khai một ca `403` cho người thiếu
@@ -83,7 +87,8 @@ Ràng buộc phía FE (ba trạng thái rỗng phải hiển thị tử tế) th
 
 ## CONTRACT DB-1 — Tổng hợp Dashboard theo Tuần / Tháng / "Tất cả trong năm"
 
-- **Status: AGREED** (2026-09-05)
+- **Status: AGREED** (2026-09-05) — **đổi shape `trend[]` ngày 2026-09-10 theo Q43**, người
+  dùng chốt. Nhật ký thay đổi: §1 "Đổi ở vòng 2026-09-10".
 - Route: `GET /api/dashboard`
 - Query params:
 
@@ -93,13 +98,24 @@ date:    date?     // mode=week: ngày bất kỳ TRONG tuần muốn xem
                    // mode=month: ngày bất kỳ TRONG tháng muốn xem
                    // bỏ trống = kỳ hiện tại (hôm nay)
 year:    int?      // mode=year: năm cần tổng hợp. mode=week/month: năm dùng để dựng `trend`
-                   // bỏ trống = năm hiện tại
+                   // mode=week: gửi CẢ `date` lẫn `year` thì `year` PHẢI bằng năm ISO của
+                   //   tuần chứa `date`; lệch -> 400 (Q61). Bỏ trống `year` = năm ISO đó (Q63)
+                   // bỏ trống = năm hiện tại — mode=month|year, và mode=week khi cũng bỏ trống `date`
 
 // ── Bộ lọc của BẢNG CHI TIẾT — cùng object với endpoint export (DB-4) ──
-search:  string?   // khớp Code HOẶC Name
+search:  string?   // khớp Code HOẶC Name, không phân biệt hoa/thường + không phân biệt dấu (Q47)
+                   // kiểu khớp: cùng luật khớp của DM-2 (Q59)
 groupId: guid?
 status:  string?   // 1 trong 4 giá trị Trạng thái; giá trị lạ -> 400
 ```
+
+> **Q47 (chốt 2026-09-10) — `search` KHÔNG phân biệt dấu**, giống hệt `search` của DM-2
+> ([`danh-muc-dti.md`](danh-muc-dti.md)). Trước ngày này card im lặng về dấu, và im lặng thì
+> người cài sẽ mặc định so khớp nguyên văn. Cách cài (cột chuẩn hoá) có file chủ là
+> `spec/danh-muc-dti/business-rules.md` §1 — không mô tả lại ở đây.
+>
+> **Q59 (chốt 2026-09-10) — kiểu khớp:** cùng luật khớp của DM-2 — file chủ vẫn là
+> `spec/danh-muc-dti/business-rules.md` §1. DB-4 dùng chung object bộ lọc nên tự hưởng theo.
 
 - Response: `IApiResult<DashboardAggregateDto>`
 
@@ -123,7 +139,10 @@ kpi: {
 
 groups: [ { groupId: guid, groupCode: string, groupName: string, progress: number? } ]
 
-trend:  [ { label: string, value: number? } ]
+trend:  [ { period: string, periodLabel: string, value: number? } ]
+        // period:      khoá định danh của kỳ — "YYYY-Www" | "YYYY-MM" (cùng khuôn `value` của DB-3)
+        // periodLabel: nhãn trục X BE DỰNG SẴN — "06/07 – 12/07" | "Th.1" (Q43)
+        // value:       null = kỳ không có dữ liệu (Q44) — phần tử VẪN có mặt
 
 table:  [ {
   criteriaId:    guid
@@ -159,13 +178,85 @@ Thẩm định · Chênh lệch · Trạng thái · Minh chứng/Ghi chú**.
    tính trên **toàn bộ** chỉ tiêu của kỳ. Lý do: nếu lọc một nhóm mà ô "Tiến độ chung" đổi
    theo, người đọc sẽ tưởng tiến độ toàn xã thay đổi — một con số đúng về mặt phép tính
    nhưng sai về mặt câu hỏi nó đang trả lời.
-2. **`trend` chỉ trả điểm CÓ dữ liệu** — không nội suy, không trả điểm `null` để lấp chỗ.
-   `mode=week` → `label = "YYYY-Www"` cho mọi tuần ISO có dữ liệu trong `year`;
-   `mode=month|year` → `label = "Th.1" … "Th.12"` — **chốt T7 (2026-09-05)**, không đổi sang
-   khoảng ngày; 12 nhãn khoảng-ngày không đủ chỗ trên trục.
+2. **`trend` trả ĐỦ các kỳ của phạm vi; kỳ không có dữ liệu mang `value: null`** — **Q44
+   (chốt 2026-09-10)**. Không nội suy: `null` là "không có số", không phải số đoán ra.
+   - **"Đủ các kỳ" — theo chế độ:**
+     - `mode=week` ⇒ **cửa sổ 12 tuần KẾT THÚC ở tuần đang xem** — tuần mà `date` chỉ tới
+       (bỏ trống `date` = tuần hiện tại), **không** phải tuần hiện tại của lịch — **Q54**.
+       Cửa sổ **cắt ở đầu năm** đang lọc: xem tuần 3 ⇒ trả tuần 1…3 (3 phần tử), không bao giờ
+       lấn sang năm trước — **Q57** (cả hai chốt 2026-09-10). Tuần thuộc năm nào: định nghĩa
+       ISO của `spec/danh-muc-dti/business-rules.md` §5.1 (tuần 1 có thể bắt đầu từ tháng 12
+       năm trước).
+     - `mode=month|year` ⇒ `year` là năm hiện tại ⇒ từ tháng đầu năm tới **tháng hiện tại**,
+       không trả kỳ tương lai; `year` là năm đã qua ⇒ trọn năm.
+     - Trong phạm vi đó, kỳ rỗng vẫn là `null` — Q44 không đổi.
+
+   > 🔄 **LẬT 2026-09-10 (Q54 + Q57), cùng ngày với Q44.** Bản sáng áp *"từ kỳ đầu năm tới
+   > kỳ hiện tại; năm đã qua ⇒ trọn năm"* cho **cả** chế độ Tuần — tức tới 37 rồi 52–53 nhãn
+   > khoảng ngày trên một trục. Q54 thu hẹp riêng chế độ Tuần thành 12 tuần (thiết kế đã duyệt
+   > vẽ 6; người dùng chọn 12). Không đổi shape.
+   - **Hai trường định danh mỗi phần tử — Q43 (chốt 2026-09-10):** `period` là **khoá**
+     (`"YYYY-Www"` / `"YYYY-MM"`); `periodLabel` là **nhãn trục X BE dựng sẵn** —
+     `mode=week` ⇒ khoảng ngày `06/07 – 12/07`; `mode=month|year` ⇒ `"Th.1"` … `"Th.12"`
+     (**chốt T7, 2026-09-05**, không đổi sang khoảng ngày; 12 nhãn khoảng-ngày không đủ chỗ
+     trên trục). Khuôn chuỗi: `spec/dashboard-dti/business-rules.md` §6.2. FE **không** tự quy
+     đổi mã tuần ra ngày.
+   - Tên `periodLabel` trùng với `periodLabel` ở cấp gốc là **có chủ đích** — cùng vai "chuỗi
+     hiển thị của một kỳ, BE dựng" — nhưng **khuôn khác**: cấp gốc là nhãn kỳ đầy đủ
+     (`Tuần 33/2026 (10/08 – 16/08/2026)`), còn đây là khuôn trục X.
+   - `value` null ⇒ theo luật casing (§0 của [`danh-muc-dti.md`](danh-muc-dti.md)) khoá `value`
+     **vắng mặt** trên dây. Điều bắt buộc là **phần tử của kỳ vẫn có mặt**, với `period` +
+     `periodLabel`; thiếu phần tử là thiếu kỳ trên trục.
+
+   > 🔄 **LẬT 2026-09-10 (Q44 + Q43).** Bản trước: *"`trend` chỉ trả điểm CÓ dữ liệu — không
+   > nội suy, không trả điểm `null` để lấp chỗ"*, và `mode=week` → `label = "YYYY-Www"`.
+   >
+   > **Lý do của bản trước sai về kỹ thuật:** trên trục category của `chart.js`, bỏ hẳn một
+   > điểm thì hai điểm kề nhau được nối **thẳng** — trục không có ô cho kỳ bị bỏ, nên không có
+   > chỗ đứt nào. Chỉ `null` nằm đúng ô của kỳ (khi `spanGaps` tắt) mới ngắt được đường. Đừng
+   > "dọn" `null` khỏi `trend` cho gọn. Vế "không nội suy" giữ nguyên. Đổi `label` →
+   > `period` + `periodLabel` là **đổi shape card `AGREED`** — nhật ký ở §1.
 3. **Công thức** (bình quân gia quyền theo `maxScore`, epsilon so sánh, ngưỡng "hoàn
    thành", cách gộp tháng/năm từ các kỳ tuần) nằm ở `spec/dashboard-dti/business-rules.md`
    §Công thức. **BE tính, FE chỉ hiển thị** — FE tính lại là tạo nguồn sự thật thứ hai.
+
+### Mã lỗi của DB-1 — vá 2026-09-09
+
+Bản trước khai *"`status` giá trị lạ -> 400"* trong khối query param mà **không nêu mã nào**,
+và cả card không có mục lỗi. Đóng lỗ đó:
+
+| Ca | Mã | HTTP |
+| --- | --- | --- |
+| `status` không thuộc 4 giá trị | **`DASHBOARD.STATUS_INVALID`** | 400 |
+| `mode` không thuộc `"week"` / `"month"` / `"year"` (kể cả sai hoa/thường) | **`DASHBOARD.MODE_INVALID`** | 400 |
+| `mode=week` và `year` **khác** năm ISO của tuần chứa `date` (Q61) | **`DASHBOARD.PERIOD_YEAR_MISMATCH`** | 400 |
+| `date` / `year` sai kiểu | `ValidationError` + `fields` — binder, **không** phải mã catalog | 400 |
+
+- Ba mã in đậm là **mã mới**, khai trong `DashboardErrors.cs` ở `Business.Application`
+  cùng chỗ với `DASHBOARD.EXPORT_MODE_UNSUPPORTED` — khuôn và lý do cưỡng chế bằng máy: xem
+  DB-4 §"Catalog mã lỗi".
+- **`DASHBOARD.PERIOD_YEAR_MISMATCH` — Q61 (chốt 2026-09-10), tên do người dùng đặt sẵn.**
+  Ví dụ: `date = 2025-12-29` thuộc tuần 1/2026, nên `year` phải là `2026`. Tuần thuộc năm nào:
+  định nghĩa ISO của `spec/danh-muc-dti/business-rules.md` §5.1. `MessageTemplate` dùng chỗ
+  giữ **đặt tên**, `Retryable = false`. Không mã nào có sẵn phủ ca này — `MODE_INVALID` nói về
+  `mode`, còn binder chỉ bắt sai **kiểu**, không bắt hai giá trị đúng kiểu mà lệch nhau.
+- **Bỏ trống `year` ⇒ lấy năm ISO của tuần chứa `date` — Q63 (chốt 2026-09-10).** Chỉ khi gửi
+  **cả hai** mà lệch nhau mới ra `400` (Q61); bỏ trống thì không có gì để mà lệch. Bỏ trống
+  **cả** `date` lẫn `year` thì giữ mặc định cũ: tuần hiện tại của năm hiện tại. Chế độ
+  `month`/`year` **không có ca này** — một tháng dương lịch luôn nằm gọn trong một năm — nên
+  Q61 và Q63 là luật của **riêng chế độ Tuần**.
+- **Người dùng bình thường không gặp ba mã trên — Q62 (chốt 2026-09-10).** FE đưa tham số lạ
+  trên URL về mặc định **trước** khi gọi API (`spec/dashboard-dti/ui-spec.md` §2), nên các mã
+  này là lưới chặn cuối ở BE và **không cần câu hiển thị**. Chúng vẫn phải có ở BE.
+- **`DASHBOARD.MODE_INVALID` ≠ `DASHBOARD.EXPORT_MODE_UNSUPPORTED`.** Cái đầu nghĩa là *"giá
+  trị này không phải một `mode`"*; cái sau nghĩa là *"`year` là `mode` hợp lệ, nhưng endpoint
+  export không phục vụ nó"* (DB-4). Gộp làm một thì câu chữ FE hiện cho người dùng sai ở đúng
+  ca hay gặp: bấm Xuất khi đang xem `Tất cả`.
+- **`status` lạ KHÔNG được âm thầm bỏ lọc.** Bảng chi tiết trả về đủ dòng trong khi ô lọc vẫn
+  hiện một trạng thái là ca hỏng người dùng không có cách nào phát hiện.
+- `mode` là tham số **bắt buộc**; vắng mặt cũng ra `DASHBOARD.MODE_INVALID`, không cần mã
+  `..._REQUIRED` riêng — cả hai ca đều kết thúc bằng "gửi lại một `mode` hợp lệ", và FE không
+  bao giờ để trống nó.
 
 ---
 
@@ -217,6 +308,25 @@ monthsInYear: [ { value: string, date: date, overallProgress: number? } ]
 > cho mốc đầu kỳ, và tuần ISO thì kết thúc sau đúng 6 ngày. Không thêm trường vào card
 > `AGREED` khi dữ liệu đã đủ — thêm là phá một hợp đồng đã chốt để lấy thứ tính được.
 
+### Mã lỗi của DB-3 — khai tường minh 2026-09-09: **KHÔNG có mã nghiệp vụ nào**
+
+Đây là câu trả lời, không phải mục còn thiếu. Card này trước đây im lặng về lỗi, và im lặng
+không phân biệt được *"không có mã"* với *"quên khai"* — người thi công gặp im lặng sẽ tự bịa
+một mã, hoặc tự thêm một ràng buộc không ai chốt.
+
+| Ca | Kết quả |
+| --- | --- |
+| `year` không phải số nguyên | `400 ValidationError` + `fields.Year` — của binder, không phải catalog |
+| `year` là một năm **không có dữ liệu** | **`200`** — `weeksInYear`/`monthsInYear` là mảng **rỗng**, `years` vẫn luôn kèm năm hiện tại. Không phải lỗi |
+| Không gửi `year` | `200` — mặc định năm hiện tại |
+
+**Năm rỗng không phải lỗi** là điểm dễ làm sai nhất ở đây: endpoint này nuôi hai ô lọc của
+**hai** màn, và trả 404/400 cho một năm chưa nhập số liệu sẽ khoá cứng ô `Năm` của người dùng
+ngay lần đầu họ mở một năm mới — đúng lúc chưa thể có dữ liệu.
+
+`DASHBOARD.STATUS_INVALID` và `DASHBOARD.MODE_INVALID` (DB-1) **không** áp cho DB-3: endpoint
+này không nhận `mode` lẫn `status`.
+
 ---
 
 ## CONTRACT DB-4 — "Xuất báo cáo": tải thẳng file `.xlsx`
@@ -265,7 +375,7 @@ status:  string?
 
 > **Vì sao được phép không bọc envelope, trong khi luật nói "mọi response đi qua
 > `IApiResult<T>`":** `HandleResult<T>` serialize `T` thành JSON
-> (`src/BE/PlatformManager.Api/Common/ApiControllerBase.cs:26`) — nhồi vài trăm KB bytes vào
+> (`src/BE/Core/PlatformManager.Core.Api/ApiControllerBase.cs:38`) — nhồi vài trăm KB bytes vào
 > `data` dưới dạng base64 làm file phình ~33% và buộc FE phải giải mã trong bộ nhớ trước khi
 > đưa cho người dùng lưu. Đây là ngoại lệ **có phạm vi hẹp và kiểm được**: chỉ áp cho nhánh
 > thành công của endpoint tải file; nhánh lỗi vẫn đi đúng đường chung. Luật gốc:
@@ -282,6 +392,10 @@ dây:
 - **12 cột = 11 cột của file import + `Tiến độ %`** ⇒ export là **superset** của import, tức
   file tải về nạp ngược lại được (round-trip). Đây là ràng buộc thiết kế, không phải trùng
   hợp: hai bộ cột lệch nhau thì người dùng sửa file export rồi import lại sẽ mất dữ liệu.
+- **Cột `Nhóm` ghi TÊN TRẦN** — đúng chuỗi `CriteriaGroup.Name`, như file import — **Q55
+  (chốt 2026-09-10)**. Dạng `Code. Name` của Q42 là luật **màn hình**, **không** áp cho file
+  xuất: import khớp nhóm theo đúng chuỗi tên, nên một ô `1. Hạ tầng và Nền tảng số` nạp ngược
+  lại sẽ không khớp nhóm nào — gãy đúng round-trip mà gạch đầu dòng trên bảo vệ.
 - **Dòng 10 `Bộ lọc đang áp` là bắt buộc** (chốt 2026-09-06), kể cả khi không lọc thì vẫn
   ghi `Không lọc — đủ 62 chỉ tiêu`. Đây là phần thuộc hợp đồng vì nó là **bằng chứng đi theo
   file**: export tôn trọng bộ lọc (Q23), mà file thì rời khỏi màn hình — người nhận nó qua
@@ -315,10 +429,19 @@ dây:
 `ExportJob`, không cần retention. Ngưỡng chuyển sang job nền là **cấu hình**, không phải
 hằng số rải trong code (`15-import-export.md` §3).
 
+> 📖 **Q9 (2026-09-09) — endpoint này ghi NPOI trực tiếp ở `Business.Infrastructure`, KHÔNG
+> qua seam `ITabularWriter`.** Seam đó hoãn tới khi có người tiêu thụ thứ hai; lý do (bố cục
+> file ở đây không diễn đạt được bằng "cột + dòng") và ràng buộc vẫn còn hiệu lực:
+> [`../huong_dan/wiki-core/be/15-import-export.md`](../huong_dan/wiki-core/be/15-import-export.md)
+> §7. Hợp đồng của DB-4 **không đổi** vì việc này.
+
 ### Tôn trọng bộ lọc đang áp — ĐÃ CHỐT (Q23, 2026-09-05)
 
 Export dùng **cùng object bộ lọc** với `GET /api/dashboard`: đang lọc nhóm nào thì xuất
 nhóm đó. Không còn là mục "cần chốt".
+
+Hệ quả của Q47 (2026-09-10): `search` của export **không phân biệt dấu** y như DB-1 — không
+phải một luật riêng của DB-4, nó tự đến vì hai endpoint dùng chung một object bộ lọc.
 
 ⚠️ **Rủi ro UX đã biết, ghi ra để FE xử lý chứ không phải để bỏ qua:** nút "Xuất báo cáo"
 nằm ở **thanh chọn kỳ trên cùng**, còn ba ô lọc nằm ở **thanh công cụ của bảng gần cuối
@@ -351,6 +474,22 @@ chỗ**: `spec/dashboard-dti/business-rules.md` §Export. Không chép ra đây.
 | Chưa nói ô KPI nào có số ngay sau import | ô 1, 2 hiện `—`; ô 3, 4 hiện `0`; ô 5 có số thật — file chủ `spec/dashboard-dti/business-rules.md` §1.6 | **T12** (2026-09-06) |
 | — | `mode=month` của DB-4 **không** bị Q37 thu hẹp | Q37 (2026-09-06) |
 | §Cần chốt còn mục để ngỏ | **hết mục** — mọi mục đã có đáp án | Q21 · Q22 · Q23 · T7 · tên thư mục |
+
+### Đổi ở vòng 2026-09-10 — nhật ký thay đổi của DB-1
+
+| Bản trước | Bản này | Vì sao |
+| --- | --- | --- |
+| `trend: [ { label, value } ]`; `mode=week` → `label = "YYYY-Www"` | `trend: [ { period, periodLabel, value } ]` — `period` là khoá (`"YYYY-Www"` / `"YYYY-MM"`), `periodLabel` là nhãn trục X BE dựng sẵn (`06/07 – 12/07` / `Th.1`) | **Q43** — **đổi shape card `AGREED`**, người dùng chốt 2026-09-10 |
+| `trend` chỉ trả điểm có dữ liệu | trả **đủ các kỳ**, kỳ rỗng `value: null` (khoá vắng mặt trên dây, phần tử vẫn có mặt); hai ô `trend` ở bảng §0 sửa theo | **Q44** |
+| `search` im lặng về dấu | không phân biệt hoa/thường **và** dấu, như DM-2; DB-4 hưởng theo | **Q47** — khai rõ, **không** đổi shape |
+| Nhóm hiển thị thế nào | `Code. Name` — **không** đổi shape: `groupCode` có sẵn ở `groups[]` và `table[]` | **Q42** |
+| Hai bản ghi một tuần | lấy `AssessmentDate` lớn nhất — **không** đổi shape; luật ở `spec/dashboard-dti/business-rules.md` §1.2 | **Q46** |
+| `trend` chế độ Tuần: mọi tuần từ đầu năm tới tuần hiện tại (Q44, bản sáng 2026-09-10) | **cửa sổ 12 tuần kết thúc ở tuần đang xem** (theo `date`), **cắt ở đầu năm** đang lọc — **không** đổi shape | **Q54 + Q57** |
+| Cột `Nhóm` của file xuất — chưa nói rõ dạng | **tên trần** `CriteriaGroup.Name`; Q42 **không** áp cho file xuất, để round-trip qua import | **Q55** (DB-4) |
+| `search` chưa nói kiểu khớp | cùng luật khớp của DM-2 — file chủ `spec/danh-muc-dti/business-rules.md` §1; DB-4 hưởng theo | **Q59** — **không** đổi shape |
+| Bỏ trống `year` khi `date` thuộc năm khác | lấy **năm ISO của tuần chứa `date`**; chỉ lệch khi gửi **cả hai** mới `400` | **Q63** (2026-09-10) |
+| `date` và `year` lệch năm ISO: chưa nói | `mode=week` ⇒ `400` + **`DASHBOARD.PERIOD_YEAR_MISMATCH`** (mã mới, `Retryable = false`) | **Q61** |
+| Mã lỗi DB-1 chưa nói người dùng có gặp không | FE chặn tham số lạ trên URL trước khi gọi API; mã giữ ở BE, **không** cần câu hiển thị | **Q62** |
 
 ---
 
@@ -389,3 +528,7 @@ trong hai chạm card này: nếu chốt lưu kỳ đích thành một cột ri�
    của cột đó phải ra **`−181,57`**. Tiêu đề cột 7 trong file `.xlsx` phải đọc được nguyên văn
    `Chênh lệch (Thẩm định − Tự đánh giá)` — thiếu phần trong ngoặc là thiếu đúng thứ khiến
    người đối chiếu với file gốc không hoảng.
+6. **Ca Q61 — `date` và `year` lệch năm ISO.** Gọi DB-1 với `mode=week&date=2025-12-29&year=2025`
+   ⇒ `400` + `DASHBOARD.PERIOD_YEAR_MISMATCH` (ngày đó thuộc tuần 1/2026). Cùng `date` với
+   `year=2026` ⇒ `200`, `trend` chỉ có đúng tuần 1 (Q57 — cửa sổ cắt ở đầu năm).
+   Cùng `date` mà **bỏ trống** `year` ⇒ `200`, hiểu là năm 2026 (Q63) — không phải `400`.

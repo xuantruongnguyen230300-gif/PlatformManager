@@ -25,7 +25,7 @@
     <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="10.0.11" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="10.2.3" />
     <!-- dotnet-ef yêu cầu chính startup project reference package Design (dù DbContext nằm
-         ở Infrastructure) — chỉ cần lúc build-time cho tooling, không chạy runtime. -->
+         ở Core.Persistence) — chỉ cần lúc build-time cho tooling, không chạy runtime. -->
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.11">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
@@ -33,13 +33,21 @@
   </ItemGroup>
 
   <!-- Api là composition root DUY NHẤT thấy toàn bộ Core.* + Modules.<Ten>.* — xem
-       doc/kien-truc-core-module.md. Tham chiếu tường minh đủ 6 project (dù Domain/Application
-       đã được kéo theo bắc cầu qua Infrastructure) để đồ thị phụ thuộc hiện rõ ràng ngay trong
-       .csproj, không dựa ngầm vào tính bắc cầu của ProjectReference. -->
+       doc/kien-truc-core-module.md. Tham chiếu tường minh MỌI project Core (dù Domain/Application/
+       Persistence đã được kéo theo bắc cầu qua Infrastructure) để đồ thị phụ thuộc hiện rõ ràng ngay
+       trong .csproj, không dựa ngầm vào tính bắc cầu của ProjectReference. -->
   <ItemGroup>
     <ProjectReference Include="..\Core\PlatformManager.Core.Domain\PlatformManager.Core.Domain.csproj" />
     <ProjectReference Include="..\Core\PlatformManager.Core.Application\PlatformManager.Core.Application.csproj" />
+    <!-- Core.Persistence (tách 2026-09-10): design-time factory + SeedCommand dùng thẳng
+         PlatformManagerDbContext/CoreSeeder, và host là nơi duy nhất được thấy mọi *.Persistence. -->
+    <ProjectReference Include="..\Core\PlatformManager.Core.Persistence\PlatformManager.Core.Persistence.csproj" />
     <ProjectReference Include="..\Core\PlatformManager.Core.Infrastructure\PlatformManager.Core.Infrastructure.csproj" />
+    <!-- Core.Api (thêm 2026-09-09, Q8): host reference để (a) ApiControllerBase — base class BẮT
+         BUỘC của mọi controller — nạp được vào 4 controller còn nằm ở đây, và (b) sau này gọi
+         AddApplicationPart(typeof(ApiControllerBase).Assembly) khi controller Core dời sang.
+         Xem doc/kien-truc-core-module.md §"Core.Api giữ ApiControllerBase". -->
+    <ProjectReference Include="..\Core\PlatformManager.Core.Api\PlatformManager.Core.Api.csproj" />
   </ItemGroup>
 
 </Project>

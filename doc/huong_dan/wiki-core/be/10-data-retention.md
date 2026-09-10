@@ -102,7 +102,7 @@ public async Task<Result> Handle(AnonymizeUserCommand cmd, CancellationToken ct)
 > **🔄 LẬT 2026-09-06 — hai lỗi trong đoạn mẫu cũ.**
 > 1. `user.IsDeleted = true; // vẫn đi qua soft-delete có sẵn` — **`AppUser` không có cột
 >    `IsDeleted`**. Nó kế thừa `IdentityUser<Guid>` chứ không phải `BaseEntity`
->    (`src/BE/Core/PlatformManager.Core.Infrastructure/Identity/AppUser.cs:11`), nên nó nằm
+>    (`src/BE/Core/PlatformManager.Core.Persistence/Identity/AppUser.cs:11`), nên nó nằm
 >    ngoài global query filter soft-delete lẫn `AuditInterceptor`. Câu đó vừa **không biên
 >    dịch được**, vừa dạy sai một điều quan trọng: *tài khoản không có soft-delete*, đường vô
 >    hiệu hoá duy nhất là lockout.

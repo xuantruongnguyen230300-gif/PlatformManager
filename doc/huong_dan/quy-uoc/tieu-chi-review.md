@@ -25,16 +25,26 @@ Mức chấm: **PASS** (đúng) · **PARTIAL** (có nhưng thiếu/sai một ph�
 > 📖 Quy ước: [`../../kien-truc-core-module.md`](../../kien-truc-core-module.md) —
 > **đọc bảng `🚧` "có thật hôm nay → sẽ thành" ở đầu file trước khi chấm mục này.**
 
-> 🚧 **Hiện trạng 2026-08-29 — repo KHÔNG còn module nghiệp vụ nào.** Module duy
-> nhất (`Modules.DtiWeekly.*`) đã gỡ để xây lại: không còn project `Modules.*`
-> nào trong `src/BE/PlatformManager.slnx`, và `src/FE/src/app/modules/` **không
-> tồn tại**. Kiểm bằng `grep -c '<Project Path=' src/BE/PlatformManager.slnx` và
-> `ls -d src/FE/src/app/*/` — đừng chấm theo con số nào chép sẵn trong văn bản.
+> 🚧 **Hiện trạng 2026-09-10 — BE và FE nay LỆCH nhau, đừng chấm chung một câu.**
+>
+> - **BE — chưa có module nghiệp vụ.** Module duy nhất (`Modules.DtiWeekly.*`) đã gỡ
+>   để xây lại và chưa dựng lại: không còn project `Modules.*` nào trong
+>   `src/BE/PlatformManager.slnx`.
+> - **FE — `src/FE/src/app/modules/` đã có trở lại** (đối chiếu 2026-09-10): module
+>   nghiệp vụ dựng 2026-09-09, khai đủ trong `src/FE/eslint.config.js:29`.
+>
+> Kiểm bằng `grep -c '<Project Path=' src/BE/PlatformManager.slnx`,
+> `ls -d src/FE/src/app/modules/*/` và `ls -d src/FE/src/app/*/` — đừng chấm theo
+> con số nào chép sẵn trong văn bản.
+>
+> 🔄 **LẬT 2026-09-10:** bản trước ghi `src/FE/src/app/modules/` *"không tồn tại"*
+> cho cả hai phía. Vế BE vẫn đúng; vế FE đã lạc hậu.
 
 **KHÔNG phải finding:**
 
-- **Không tìm thấy module nghiệp vụ nào** (BE lẫn FE). Đó là hiện trạng đã biết ở
-  trên, không phải MISSING, và không phải dấu hiệu ai đó xoá nhầm.
+- **Không tìm thấy module nghiệp vụ nào phía BE.** Đó là hiện trạng đã biết ở trên,
+  không phải MISSING, và không phải dấu hiệu ai đó xoá nhầm. 🔄 SỬA 2026-09-10: câu này
+  trước ghi *"(BE lẫn FE)"* — vế FE hết hiệu lực, `src/FE/src/app/modules/` nay có thật.
 - **ArchTest `Modules_MustNotReference_OtherModules` hiện pass "rỗng"** — không
   còn assembly `Modules.*` nào để nó bắt. Đây **không** phải test chết:
   `src/BE/Tests/PlatformManager.ArchTests/CoreModuleBoundaryTests.cs:49`. Rule
@@ -43,7 +53,10 @@ Mức chấm: **PASS** (đúng) · **PARTIAL** (có nhưng thiếu/sai một ph�
   **vẫn kiểm thật** vì nó quét tham chiếu của `Core.*`, không cần module tồn tại.
 - Thấy tên `PlatformManager.Modules.<Tên>.*` quay lại — bản thân cái tên không
   sai; chỉ thành finding khi thiếu lý do tách domain (xem ngay dưới).
-- Chưa có `Core.Persistence`, `Core.Api`, `Business.*` — đang thi công.
+- Chưa có `Business.*` — đang thi công. `Core.Api` **đã dựng 2026-09-09**; `Core.Persistence`
+  **đã tách 2026-09-10** — nó vắng mặt nay LÀ finding (xem `doc/kien-truc-core-module.md` §DbContext).
+- Namespace `PlatformManager.Core.Infrastructure.Persistence*` / `…Identity` nằm trong assembly
+  `Core.Persistence` — nợ **có chủ đích** (giữ cho `ModelSnapshot` còn biên dịch), không phải finding.
 
 **Là finding thật:**
 
@@ -56,6 +69,8 @@ Mức chấm: **PASS** (đúng) · **PARTIAL** (có nhưng thiếu/sai một ph�
   trực tiếp, đừng chỉ tin tên project.
 - `*.Api` reference thẳng `*.Persistence`/`*.Infrastructure` — chỉ được qua
   `*.Application`.
+- `*.Persistence` reference `*.Infrastructure` hoặc `*.Api` (kể cả chỉ khai
+  `ProjectReference`) — canh bởi `PersistenceLayerBoundaryTests` (ArchTests).
 - `PlatformManagerDbContext` hardcode reference assembly `Business.*` thay vì
   nhận danh sách từ host.
 - `Directory.Build.props`/`Directory.Packages.props` bị lồng vào `Core/` thay vì
@@ -69,26 +84,52 @@ LSP/ISP) · `Core.*` bị sửa chỉ để phục vụ một module cụ thể 
 field nghiệp vụ của entity không `private set` + mutation qua method tên nghiệp
 vụ.
 
-**FE:** màn Core phải ở `platform/`; `modules/` — khi được dựng lại — chỉ chứa
-module nghiệp vụ. Từ 2026-08-29 `src/FE/src/app/modules/` **không tồn tại**, nên
-"không có `modules/`" là hiện trạng, không phải finding. Liệt kê thư mục thật
-bằng `ls -d src/FE/src/app/*/` và `ls -d src/FE/src/app/platform/*/` thay vì tin
-danh sách chép sẵn (bản trước ghi cứng "4 màn Core" và đã lạc hậu).
+**FE:** màn Core phải ở `platform/`; `modules/` chỉ chứa module nghiệp vụ — và thư
+mục này **đã dựng lại** (đối chiếu 2026-09-10, `src/FE/eslint.config.js:29`). Vì vậy
+*"không có `modules/`"* **không còn là hiện trạng**: màn nghiệp vụ nằm trong
+`platform/`, hoặc màn Core nằm trong `modules/`, là finding thật. Liệt kê thư mục
+thật bằng `ls -d src/FE/src/app/*/`, `ls -d src/FE/src/app/modules/*/` và
+`ls -d src/FE/src/app/platform/*/` thay vì tin danh sách chép sẵn (bản trước ghi
+cứng "4 màn Core" và đã lạc hậu).
 
-Gate G8 (ESLint `import/no-restricted-paths`) hiện **không khai zone nào** cho
-`modules/` — và đó **không phải finding**. Schema của rule đòi `zones` tối thiểu
-1 phần tử, nên truyền mảng rỗng làm ESLint chết ngay lúc nạp config ("Invalid
-Options") và `ng lint` đỏ vì lý do không liên quan tới code. Vì chưa có module
-nghiệp vụ nào, cả block G8 được bỏ qua bằng spread có điều kiện
-(`BUSINESS_MODULES` rỗng → `moduleBoundaryZones` rỗng → block không sinh ra).
-**Bật lại khi module nghiệp vụ đầu tiên ra đời**: chỉ cần thêm tên module vào
-`BUSINESS_MODULES`, zone tự sinh.
+> 🔄 **LẬT 2026-09-10:** bản trước miễn trừ *"không có `modules/`"* khỏi finding —
+> đúng khi thư mục thật sự không tồn tại, nhưng miễn trừ đó nay đã hết hiệu lực.
 
-Chỉ báo finding khi `src/FE/src/app/modules/` **có** module nghiệp vụ mà
-`BUSINESS_MODULES` vẫn rỗng — kiểm bằng cách **đọc `src/FE/eslint.config.js`**
-và `ls -d src/FE/src/app/modules/*/`, không tin báo cáo. Zone trỏ vào thư mục
-không có thật còn tệ hơn không khai: `no-restricted-paths` không phân giải nổi
-`target` nên không chặn gì, tức G8 là no-op nhưng vẫn TRÔNG như đang chạy.
+Gate G8 (ESLint `import/no-restricted-paths`) **đang khai zone thật và đang chạy**
+(đối chiếu 2026-09-10): `BUSINESS_MODULES` ở `src/FE/eslint.config.js:29` khai đủ
+module có trong `src/FE/src/app/modules/`, nên `moduleBoundaryZones` sinh ra thật
+và block G8 không còn bị bỏ qua.
+
+**Phép thử phải chạy mỗi lượt review** — so hai tập, chúng phải KHỚP:
+
+```bash
+ls -d src/FE/src/app/modules/*/
+grep -n "BUSINESS_MODULES" src/FE/eslint.config.js
+# PASS: mọi thư mục module có tên trong `BUSINESS_MODULES`, và ngược lại
+```
+
+Lệch theo **bất kỳ** chiều nào đều là finding thật — đây đúng là hồi quy mà
+[`fe-architecture.md`](fe-architecture.md) gọi là *"bước dễ mất nhất, và mất thì
+không ai biết"* (§Bước 3):
+
+- `src/FE/src/app/modules/` **có** module mà `BUSINESS_MODULES` **thiếu** tên đó →
+  module ấy hoàn toàn không được G8 canh, trong khi `ng lint` vẫn xanh.
+- `BUSINESS_MODULES` khai tên **không có** thư mục tương ứng → còn tệ hơn không
+  khai: `no-restricted-paths` không phân giải nổi `target` nên không chặn gì, tức
+  G8 là no-op nhưng vẫn TRÔNG như đang chạy.
+
+Kiểm bằng cách **đọc `src/FE/eslint.config.js`** và `ls` như trên, không tin báo cáo.
+
+> **Vì sao mảng `zones` không bao giờ được để rỗng** — kiến thức vẫn đúng và vẫn
+> cần khi dựng repo mới, hoặc nếu module nghiệp vụ cuối cùng bị gỡ: schema của rule
+> đòi `zones` tối thiểu 1 phần tử, nên truyền mảng rỗng làm ESLint chết ngay lúc nạp
+> config ("Invalid Options") và `ng lint` đỏ vì lý do không liên quan tới code. Vì
+> vậy block G8 bọc trong spread có điều kiện — `BUSINESS_MODULES` rỗng →
+> `moduleBoundaryZones` rỗng → block không sinh ra.
+>
+> 🔄 **LẬT 2026-09-10:** bản trước ghi G8 *"hiện không khai zone nào … và đó
+> không phải finding"*. Đúng khi chưa module nào tồn tại, nhưng module nghiệp vụ đã
+> dựng 2026-09-09 — để nguyên câu đó là dạy reviewer bỏ qua đúng hồi quy nêu trên.
 
 ## 2. Phân quyền theo hành động
 

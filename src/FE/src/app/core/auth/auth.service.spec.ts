@@ -66,6 +66,7 @@ describe('AuthService — xoá cache theo phiên', () => {
   afterEach(() => httpMock.verify());
 
   it('logout() xoá cache menu', () => {
+    spyOn(csrf, 'primeToken').and.returnValue(of(undefined));
     const invalidate = spyOn(menu, 'invalidate').and.callThrough();
 
     auth.logout().subscribe();
@@ -76,6 +77,7 @@ describe('AuthService — xoá cache theo phiên', () => {
   });
 
   it('logout() vẫn xoá phiên client khi API lỗi 500', () => {
+    spyOn(csrf, 'primeToken').and.returnValue(of(undefined));
     const invalidate = spyOn(menu, 'invalidate').and.callThrough();
     let errored = false;
 
@@ -90,6 +92,7 @@ describe('AuthService — xoá cache theo phiên', () => {
   });
 
   it('logout() vẫn xoá phiên client khi caller huỷ đăng ký giữa chừng', () => {
+    spyOn(csrf, 'primeToken').and.returnValue(of(undefined));
     const invalidate = spyOn(menu, 'invalidate').and.callThrough();
 
     const sub = auth.logout().subscribe();
@@ -132,5 +135,50 @@ describe('AuthService — xoá cache theo phiên', () => {
     httpMock.expectOne('/auth/login').flush(ok(USER_B_DTO));
 
     expect(order).toEqual(['setUser', 'primeToken']);
+  });
+
+  /**
+   * Bug thật trên trình duyệt (2026-09-08): đăng xuất rồi đăng nhập lại trong cùng một lần tải
+   * trang luôn bị 403 `AUTH.CSRF_REJECTED`. Ràng buộc "request-token gắn với danh tính lúc phát
+   * hành" đối xứng theo CẢ HAI chiều đổi danh tính, nhưng chỉ chiều login (test ngay trên) được
+   * cài và được test — chiều logout thì không. Cookie giữ token của phiên vừa thoát, còn
+   * `provideCsrfInit()` chỉ chạy lúc bootstrap nên không có gì mồi lại (topbar điều hướng bằng
+   * router, không tải lại trang). Xem doc/contracts/auth.md §CSRF bước 4.
+   */
+  it('logout() mồi lại cookie CSRF (primeToken()) sau khi xoá phiên client', () => {
+    const order: string[] = [];
+    spyOn(currentUser, 'clear').and.callFake(() => order.push('clear'));
+    spyOn(csrf, 'primeToken').and.callFake(() => {
+      order.push('primeToken');
+      return of(undefined);
+    });
+
+    auth.logout().subscribe();
+    httpMock.expectOne('/auth/logout').flush(ok(true));
+
+    expect(order).toEqual(['clear', 'primeToken']);
+  });
+
+  it('logout() vẫn mồi lại cookie CSRF khi API lỗi 500', () => {
+    const primeToken = spyOn(csrf, 'primeToken').and.returnValue(of(undefined));
+
+    auth.logout().subscribe({ error: () => undefined });
+    httpMock.expectOne('/auth/logout').flush(null, { status: 500, statusText: 'Server Error' });
+
+    // Cùng lý do với `finalize()` của 2 dòng dọn phiên: phiên client đã bị xoá kể cả khi logout
+    // hỏng, nên cookie CSRF phải theo — nếu không, người dùng kẹt ở màn đăng nhập không vào lại
+    // được, đúng trạng thái tệ nhất.
+    expect(primeToken).toHaveBeenCalled();
+  });
+
+  it('logout() vẫn mồi lại cookie CSRF khi caller huỷ đăng ký giữa chừng', () => {
+    const primeToken = spyOn(csrf, 'primeToken').and.returnValue(of(undefined));
+
+    const sub = auth.logout().subscribe();
+    const req = httpMock.expectOne('/auth/logout');
+    sub.unsubscribe();
+
+    expect(req.cancelled).toBeTrue();
+    expect(primeToken).toHaveBeenCalled();
   });
 });

@@ -1,3 +1,5 @@
+@use './app/core/theme/breakpoints' as bp;
+
 /* =============================================================================
    styles.scss — TOKEN + THƯ VIỆN COMPONENT DÙNG CHUNG
    =============================================================================
@@ -880,7 +882,7 @@ select.input, .toolbar select { width: auto; min-width: 120px; max-width: 240px;
    nút này nằm TRÊN nền tonal xanh nên xám trông như lỗi render. */
 .filter-chip .icon-btn:hover { background: var(--brand); color: var(--on-primary); }
 
-@media (max-width: 560px) {
+@include bp.mobile {
   .toolbar .search { width: 100%; }
   .toolbar > * { flex: 1; }
   /* Nut Loc va day chip khong duoc keo gian theo: chung khong phai o nhap. */
@@ -899,7 +901,7 @@ select.input, .toolbar select { width: auto; min-width: 120px; max-width: 240px;
 .form-row { display: flex; flex-direction: column; gap: var(--sp-2); margin-bottom: var(--sp-4); }
 .form-row label, .form-row .form-row-label { font-size: var(--fs-sm); font-weight: 700; color: var(--text); }
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 var(--sp-5); }
-@media (max-width: 560px) { .form-grid { grid-template-columns: 1fr; } }
+@include bp.mobile { .form-grid { grid-template-columns: 1fr; } }
 .form-error { color: var(--bad); font-size: var(--fs-sm); margin: var(--sp-2) 0; }
 .required { color: var(--bad); }
 
@@ -1012,4 +1014,3 @@ dialog.confirm-dialog { width: min(420px, 92vw); }
 .footer { font-size: var(--fs-xs); color: var(--muted); padding: 12px 4px; }
 .footer a { color: var(--brand); font-weight: 700; text-decoration: none; }
 .footer a:hover { text-decoration: underline; }
-

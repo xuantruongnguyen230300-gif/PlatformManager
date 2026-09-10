@@ -6,26 +6,40 @@ verified: 2026-09-06
 
 # 12. Biểu đồ Dashboard
 
-> ## 📐 TOÀN BỘ FILE NÀY LÀ ĐÍCH ĐẾN — CHƯA THI CÔNG (đối chiếu 2026-09-06)
+> ## ✅ BIỂU ĐỒ ĐẦU TIÊN ĐÃ VỀ (đối chiếu 2026-09-10)
 >
-> **Không màn hình nào trong `src/FE` có biểu đồ, và `chart.js` không nằm trong
-> `src/FE/package.json`.** Hướng đã chốt (PrimeNG `p-chart`) vẫn giữ; mọi mẫu bên dưới là thứ
-> phải viết khi màn hình đầu tiên cần biểu đồ, **không** phải mô tả code đang chạy.
+> Hướng đã chốt (PrimeNG `p-chart`) giữ nguyên, và nay **có một hiện thực để soi** thay vì chỉ
+> có mẫu: `src/FE/src/app/modules/dashboard/components/trend-chart/trend-chart.ts`. Đo lại thay
+> vì tin câu này:
 >
 > ```bash
-> grep -rn "p-chart\|chart.js" src/FE/src src/FE/package.json   # hôm nay: 0 dòng
+> grep -rn "p-chart\|primeng/chart\|chart.js" src/FE/src --include=*.ts --include=*.html | grep -v spec
+> grep -n '"chart.js"' src/FE/package.json
 > ```
+>
+> PASS = cả hai lệnh in ra dòng. Thứ **chưa** có là một **trang** dùng nó: `TrendChart` đã dựng
+> và có test, nhưng `modules/dashboard/pages/dashboard/` còn là khung nên chưa ai lắp vào — vì
+> vậy `chart.js` chưa xuất hiện trong bundle của `ng build`.
 
 ## Hiện trạng
 
-🔄 LẬT 2026-09-06: mục này trước đây viết *"`dashboard.html` vẽ đường xu hướng bằng `<canvas>`
-tay"*. Màn `dashboard` và component `TrendChart` đã gỡ **2026-08-29**, và `chart.js` đã gỡ khỏi
-`package.json` **2026-09-04** (lý do ghi tại chỗ, khối `//dependencies` trong
-`src/FE/package.json`: sau khi gỡ, 0 file trong `src/` và 0 gói nào trong `package-lock.json`
-phụ thuộc vào nó).
+✅ **CÓ THẬT (đối chiếu 2026-09-10)** — đúng **một** biểu đồ trong app: `TrendChart`, đường xu
+hướng của Dashboard DTI, vẽ bằng `p-chart` (`import { ChartModule } from 'primeng/chart'` —
+`src/FE/src/app/modules/dashboard/components/trend-chart/trend-chart.ts:4`). `chart.js` đã cài lại
+ở `src/FE/package.json:68`, lý do ghi tại chỗ trong khối `//dependencies`
+(`src/FE/package.json:49`).
 
-Hiện trạng đúng: **không có biểu đồ nào.** Câu của `DESIGN.md` §Chart Palette — *"None — app has
-no charts"* — nay đúng theo nghĩa đen, không còn là ghi chú về một hình vẽ đơn lẻ.
+> 🔄 **LẬT 2026-09-10 — mục này (và banner trên đầu file) nói dối theo đúng khuôn đã bị bắt hai
+> lần ở `08-i18n.md`: số đo chạy trước, văn xuôi đứng yên.** Bản 2026-09-06 viết *"không màn hình
+> nào trong `src/FE` có biểu đồ, và `chart.js` không nằm trong `src/FE/package.json`"*, kèm một
+> lệnh `grep` và lời hứa *"hôm nay: 0 dòng"*. Cả ba mệnh đề đó hết hạn ngày 2026-09-09 khi
+> `TrendChart` được dựng lại và `chart.js` được thêm lại — nhưng đoạn văn thì không ai chạy, nên
+> không ai thấy.
+>
+> Bài học đã có sẵn ở `08-i18n.md` §Điểm xuất phát và lần này chỉ xác nhận thêm: cái sống sót là
+> **lệnh + tiêu chí PASS**, cái chết là **con số và câu tường thuật kèm theo**
+> ([`.claude/CLAUDE.md`](../../../../.claude/CLAUDE.md) §6). Banner mới ở trên vì vậy không chép
+> lại kết quả `grep`, nó chỉ nêu PASS.
 
 ## Đã CHỐT LẠI (2026-08-15) — `p-chart` của PrimeNG (Chart.js), không thêm `ng2-charts` riêng
 
@@ -37,28 +51,92 @@ việc. Vẫn giữ đúng ưu điểm đã chọn ban đầu: canvas-based (cù
 cách vẽ tay hiện tại), nhẹ hơn nhiều so với ECharts.
 
 ```bash
-npm install chart.js   # peer dependency của p-chart — CẦN CÀI LẠI, đã gỡ 2026-09-04
+npm install chart.js   # peer dependency của p-chart — đã cài lại 2026-09-09 (package.json:68)
 ```
 
 ```html
-<!-- <feature>/components/trend-chart/trend-chart.html — chưa tồn tại -->
-<p-chart type="line" [data]="chartData()" [options]="chartOptions" />
-```
-
-```ts
-export class TrendChart {
-  readonly chartData = input.required<ChartData<'line'>>();
-  readonly chartOptions: ChartOptions<'line'> = {
-    responsive: true,
-    plugins: { legend: { display: false } },
-    scales: { y: { ticks: { color: 'var(--muted)' } } },   // màu đọc từ token, không hardcode
-  };
-}
+<!-- modules/dashboard/components/trend-chart/trend-chart.html -->
+<p-chart type="line" [data]="chartData()" [options]="chartOptions()" />
 ```
 
 Component chart **luôn** là dumb component (`components/`, nhận `input()`
 data đã map sẵn) — page/service tự fetch + map dữ liệu thô sang shape
 `ChartData<T>` của Chart.js, không để component chart biết `HttpClient`.
+
+### 🛑 Màu KHÔNG truyền được bằng `var(--token)` — canvas không phân giải CSS
+
+Đây là bẫy đắt nhất của cả file, vì nó **không gây lỗi**: chart.js đưa thẳng chuỗi màu nhận được
+vào `fillStyle` / `strokeStyle` của canvas 2D context. Chuỗi `'var(--muted)'` không phải màu hợp
+lệ ở đó, nên canvas **âm thầm** lùi về màu mặc định (đen) — không cảnh báo, không exception,
+build xanh, lint xanh. Người viết thấy chart vẽ ra bình thường và tưởng token đã áp.
+
+Cơ chế **chạy được**: đọc token qua `getComputedStyle` **một lần** rồi truyền **chuỗi literal**
+xuống thư viện.
+
+```ts
+// Rút gọn từ code đang chạy — bản đầy đủ ở
+// src/FE/src/app/modules/dashboard/components/trend-chart/trend-chart.ts
+export class TrendChart {
+  private readonly document = inject(DOCUMENT);
+  private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
+
+  /** Không phụ thuộc signal nào ⇒ chạy đúng một lần. `getComputedStyle` ép trình duyệt tính lại
+   *  layout, nên gọi nó ở mỗi lần vẽ là trả giá thật. */
+  private readonly palette = computed(() => ({
+    series: this.readToken('--brand'),
+    axisLabel: this.readToken('--muted'),
+    grid: this.readToken('--line'),
+  }));
+
+  protected readonly chartOptions = computed<ChartOptions<'line'>>(() => {
+    const palette = this.palette();
+    return {
+      responsive: true,
+      maintainAspectRatio: false,          // bắt buộc khi chiều cao do SCSS quyết định
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: palette.axisLabel } },
+        y: { grid: { color: palette.grid }, ticks: { color: palette.axisLabel } },
+      },
+    };
+  });
+
+  /** Ngoài trình duyệt trả chuỗi rỗng — chart.js khi đó lùi về màu mặc định của nó, và ca đó
+   *  không bao giờ nhìn thấy được vì `p-chart` cũng chỉ dựng canvas trên trình duyệt. */
+  private readToken(name: string): string {
+    if (!this.isBrowser) return '';
+    return getComputedStyle(this.document.documentElement).getPropertyValue(name).trim();
+  }
+}
+```
+
+Ba hệ quả kéo theo, đều đã ở trong code thật:
+
+1. **`chartOptions` phải là `computed`, không phải field cố định.** Nó đọc `palette()`, mà
+   `palette()` chỉ có giá trị sau khi có DOM. Mẫu cũ khai `chartOptions` là field khởi tạo trong
+   constructor — với màu literal thì kiểu gì cũng sai thời điểm.
+2. **Cần alpha thì tự ghép, đừng viết `rgba(var(--brand), .12)`** — cùng lý do trên, canvas không
+   hiểu. Code thật có hàm `withAlpha()` chuyển `#rrggbb` → `rgba(r, g, b, a)`.
+3. **Không dựng token `--chart-*` mới trong `styles.scss` cho việc này.** Bốn vai trò `chart-*`
+   cố ý **không** là CSS custom property; quyết định và phép kiểm (`grep -c 'chart' src/FE/src/styles.scss`
+   PASS = 0) nằm ở file chủ `doc/Design/Frontend/PlatformManager/Tokens/colors.md` § Chart Palette.
+   Thêm chúng vào `:root` là dựng bản sao thứ hai của `--brand` / `--muted` / `--line` rồi để hai
+   bản lệch nhau khi đổi bảng màu.
+
+✅ **CÓ THẬT (đối chiếu 2026-09-10)** — cơ chế trên đang chạy:
+`src/FE/src/app/modules/dashboard/components/trend-chart/trend-chart.ts:244-247` (`readToken`),
+`:150-164` (`palette`), `:189-219` (`chartOptions` dùng `palette.axisLabel` / `palette.grid`),
+và lý do viết thành JSDoc ở `:92-97`.
+
+> 🔄 **SỬA 2026-09-10 — mẫu cũ ở mục này KHÔNG CHẠY ĐƯỢC, và nó là bẫy chép-dán.** Bản trước in
+> nguyên văn `scales: { y: { ticks: { color: 'var(--muted)' } } }` kèm chú thích *"màu đọc từ
+> token, không hardcode"* — tức nó **quảng cáo đúng thứ nó làm sai**. Người tiếp theo mở file chủ
+> về biểu đồ ra chép sẽ nhận một biểu đồ đen mà không hiểu vì sao.
+>
+> Đáng nói là **chính file này đã biết sự thật** ở §Accessibility ngay bên dưới (*"canvas không có
+> cấu trúc DOM nào… không sửa được bằng thêm thuộc tính HTML lên chính `<canvas>`"*), và
+> `Tokens/colors.md` § Chart Palette cũng đã chốt ngược lại. Ba nguồn trong cùng một repo, hai
+> nguồn đúng, một nguồn sai — và nguồn sai là nguồn có **code để chép**.
 
 ## Ngưỡng nâng cấp lên `ngx-echarts`
 

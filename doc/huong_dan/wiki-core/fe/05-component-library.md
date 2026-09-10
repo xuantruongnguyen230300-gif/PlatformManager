@@ -36,11 +36,19 @@ và khớp thiết kế 1:1.
 >
 > **🔄 LẬT 2026-09-08 — (b) đúng về cơ chế nhưng sai về danh sách.** Bản 2026-09-06 nói cả
 > nhóm ở dòng cuối bảng là "lớp CSS toàn cục trong `styles.scss`". Ba cái trong đó —
-> `ProgressBar`, `HistoryRow`, `KpiTile` — **không tồn tại dưới bất kỳ hình dạng nào**: không
-> có lớp CSS, không có thư mục component, không có ở đâu trong `src/FE/src`. Chúng là 📐 **ĐÍCH
-> ĐẾN — CHƯA THI CÔNG**, và spec của chúng nằm ở `doc/Design/…/Components/`. Nói ở thì hiện tại
-> rằng chúng "đã build" gây ra đúng thiệt hại mà (b) mô tả, chỉ theo chiều ngược: người đọc đi
-> tìm một lớp CSS không có thật rồi kết luận mình vừa xoá nhầm.
+> `ProgressBar`, `HistoryRow`, `KpiTile` — khi đó **không tồn tại dưới bất kỳ hình dạng nào**.
+> Nói ở thì hiện tại rằng chúng "đã build" gây ra đúng thiệt hại mà (b) mô tả, chỉ theo chiều
+> ngược: người đọc đi tìm một lớp CSS không có thật rồi kết luận mình vừa xoá nhầm.
+>
+> **🔄 LẬT LẠI 2026-09-10 — nay chúng CÓ THẬT, và không phải lớp CSS toàn cục.** Cả ba là
+> component Angular đứng riêng ở `src/FE/src/app/modules/dashboard/components/`, cùng
+> `TrendChart`. Bài học của (b) không đổi — **hình dạng thật** mới là thứ phải ghi, và hình
+> dạng thật của chúng nay là thư mục component chứ không phải một lớp trong `styles.scss`.
+> Đọc từ đĩa thay vì tin dòng này ([`.claude/CLAUDE.md`](../../../../.claude/CLAUDE.md) §6):
+>
+> ```bash
+> ls src/FE/src/app/modules/dashboard/components
+> ```
 >
 > Đếm bằng lệnh thay vì tin danh sách (`.claude/CLAUDE.md` §6) — **tiêu chí PASS: mỗi tên nêu
 > ở thì hiện tại phải trúng ít nhất một dòng**:
@@ -54,11 +62,11 @@ và khớp thiết kế 1:1.
 | Component | Quyết định | Vì sao |
 |---|---|---|
 | Table/Grid | **PrimeNG `p-table`**, bọc trong `shared/components/data-grid/` (dùng chung, chốt 2026-09-06) — mọi grid mới đi qua đó, không dựng `p-table` rời | Xem [11-grid-and-metadata.md](11-grid-and-metadata.md) — đây là thành phần rủi ro "chay" thật nhất. 🔄 LẬT 2026-09-06: ô này trước neo vào `danh-muc-dti`, module đã gỡ 2026-08-29 |
-| Chart | **PrimeNG `p-chart`** — 📐 chưa thi công, `chart.js` đã gỡ khỏi `package.json` 2026-09-04 cùng lượt xoá `TrendChart` | Xem [12-charting.md](12-charting.md) |
+| Chart | **PrimeNG `p-chart`** | File chủ: [12-charting.md](12-charting.md) — trạng thái, mẫu code và cách đọc token vào canvas đều ở đó, ô này cố ý **không** chép lại ([`.claude/CLAUDE.md`](../../../../.claude/CLAUDE.md) §5) |
 | Dropdown/Select có tìm kiếm, multiselect, date-range picker, autocomplete | **PrimeNG** (`p-select`, `p-multiselect`, `p-datepicker`...) khi lần đầu cần — **không** tự viết tay | Đây đúng nhóm input phức tạp mà tự viết tốn công + dễ thiếu a11y (xem cảnh báo 5 trạng thái bên dưới) |
 | Dialog | Giữ `<dialog>` gốc — ✅ đang chạy ở `shared/components/confirm-dialog/` và ở `platform/quan-tri-nguoi-dung/components/user-form-dialog/` (đối chiếu 2026-09-06, cả hai dùng `showModal()`). Chỉ đổi sang `p-dialog` khi cần animation/nested dialog thật sự | Dialog gốc đã đơn giản, đủ dùng, không có nỗi đau rõ ràng để đổi ngay |
 | **Đã có:** Button, Card, Badge, NoticeBanner, DeltaIndicator, Input (text/number cơ bản) | **Giữ nguyên hand-rolled** — không migrate. Hình dạng thật: **lớp CSS toàn cục trong `src/FE/src/styles.scss`** (`.btn`, `.card`, `.badge`, `.notice`, `.delta`, `.input`), không phải component Angular (xem cảnh báo §Phạm vi áp dụng) | Đã chạy đúng, khớp `Components/*.md` 1:1, đơn giản, không có tính năng ẩn khó tái tạo — PrimeNG không mang lại lợi ích tương xứng chi phí đổi |
-| **📐 ĐÍCH ĐẾN — CHƯA THI CÔNG:** ProgressBar, HistoryRow, KpiTile | Khi dựng thì **hand-rolled**, cùng lý do dòng trên — nhưng **chưa tồn tại** trong `src/FE/src` dưới bất kỳ hình dạng nào (đối chiếu 2026-09-08). Spec đã có ở `doc/Design/…/Components/`; đọc spec trước khi code | Ba cái này chỉ hiển thị, không có logic ẩn — không có lý do gọi PrimeNG. Ghi tách dòng để không ai lại nêu chúng ở thì hiện tại |
+| ✅ **ĐÃ DỰNG (đối chiếu 2026-09-10):** ProgressBar, HistoryRow, KpiTile | **Hand-rolled**, cùng lý do dòng trên. Hình dạng thật: **component Angular** ở `src/FE/src/app/modules/dashboard/components/`, KHÔNG phải lớp CSS toàn cục — chúng thuộc một màn nghiệp vụ nên không lên `shared/` | Ba cái này chỉ hiển thị, không có logic ẩn — không có lý do gọi PrimeNG. Ghi tách dòng vì hình dạng thật của chúng khác hẳn nhóm dòng trên |
 
 **Nguyên tắc chung khi phân vân:** component càng nhiều trạng thái tương
 tác/logic ẩn (sort, filter, keyboard nav phức tạp, a11y nhiều quy tắc) →

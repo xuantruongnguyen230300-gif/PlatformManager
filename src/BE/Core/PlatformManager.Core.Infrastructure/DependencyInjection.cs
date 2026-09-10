@@ -2,16 +2,21 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using PlatformManager.Core.Application;
 using PlatformManager.Core.Application.Auth;
+using PlatformManager.Core.Application.Import;
 using PlatformManager.Core.Application.Common.Interfaces;
 using PlatformManager.Core.Application.Menu;
+using PlatformManager.Core.Application.Storage;
 using PlatformManager.Core.Application.Users;
 using PlatformManager.Core.Infrastructure.Common;
 using PlatformManager.Core.Infrastructure.Identity;
+using PlatformManager.Core.Infrastructure.Import;
 using PlatformManager.Core.Infrastructure.Persistence;
 using PlatformManager.Core.Infrastructure.Persistence.Interceptors;
 using PlatformManager.Core.Infrastructure.Persistence.Repositories;
+using PlatformManager.Core.Infrastructure.Storage;
 
 namespace PlatformManager.Core.Infrastructure;
 
@@ -184,6 +189,36 @@ public static class DependencyInjection
         services.AddScoped<IUserLookupService, UserLookupService>();
 
         services.AddScoped<CoreSeeder>();
+
+        // Import engine — 3 reader đăng ký thành MỘT TẬP, selector hỏi CanRead từng cái. Đăng ký
+        // qua tập chứ không qua switch theo enum định dạng là điều kiện để thêm định dạng thứ tư
+        // mà không sửa dòng nào ở Core (doc/huong_dan/wiki-core/be/15-import-export.md §2).
+        // Singleton: cả ba đều không trạng thái, không giữ tài nguyên nào giữa hai lần đọc.
+        services.AddSingleton<IImportFileReader, CsvImportFileReader>();
+        services.AddSingleton<IImportFileReader, XlsxImportFileReader>();
+        services.AddSingleton<IImportFileReader, XlsImportFileReader>();
+        services.AddSingleton<IImportFileReaderSelector, ImportFileReaderSelector>();
+
+        // Trần dung lượng file import. ValidateOnStart KHÔNG điều kiện: section vắng mặt thì mặc
+        // định 10 MB vẫn hợp lệ, nên thứ duy nhất bị chặn ở đây là một giá trị SAI đã khai (0/âm) —
+        // và một trần bằng 0 từ chối mọi file mà không gợi được về nguyên nhân.
+        services.AddOptions<ImportOptions>()
+            .Bind(configuration.GetSection(ImportOptions.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+        // Kho file runtime (upload/export). Singleton: không trạng thái, chỉ giữ đường dẫn gốc đã
+        // phân giải một lần.
+        services.AddSingleton<IFileStorage, LocalFileStorage>();
+
+        // ValidateOnStart KHÔNG điều kiện, nhưng LUẬT thì có: StorageOptionsValidator chỉ bắt buộc
+        // khai RootPath ở Production (xem docstring của nó). Gọi ValidateOnStart vô điều kiện để
+        // luật đó chạy trên MỌI môi trường — ở Development nó vẫn bắt được một đường dẫn tương đối
+        // khai nhầm, thứ sẽ trỏ vào ba chỗ khác nhau tuỳ cách chạy tiến trình.
+        services.AddSingleton<IValidateOptions<StorageOptions>, StorageOptionsValidator>();
+        services.AddOptions<StorageOptions>()
+            .Bind(configuration.GetSection(StorageOptions.SectionName))
+            .ValidateOnStart();
 
         return services;
     }

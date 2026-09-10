@@ -22,6 +22,12 @@ public static class PermissionInfrastructureExtensions
         services.AddScoped<IPermissionChecker, PermissionChecker>();
         services.AddScoped<RequirePermissionFilter>();
 
+        // Fail-fast cho DANH MỤC key mà host khai (thêm 2026-09-09). Không phải một dịch vụ nền —
+        // nó chạy đúng một lần lúc khởi động rồi thôi; lý do đầy đủ ở chính lớp đó. Đặt cạnh phần
+        // enforcement vì cấu hình sai ở đây làm hỏng đúng đường enforcement: key rơi khỏi danh mục
+        // ⇒ RequirePermissionFilter deny-by-default ⇒ 403 không kèm lời giải thích nào.
+        services.AddHostedService<ResourceKeyCatalogStartupValidator>();
+
         return services;
     }
 }

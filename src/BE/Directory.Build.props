@@ -10,4 +10,27 @@
     <WarningsAsErrors>Nullable</WarningsAsErrors>
   </PropertyGroup>
 
+  <!-- Bỏ qua ĐÚNG MỘT advisory của NuGet audit, không phải tắt audit.
+
+       NPOI 2.8.0 (Core.Infrastructure, bộ đọc .xlsx/.xls — xem
+       doc/huong_dan/wiki-core/be/15-import-export.md §2) kéo theo Microsoft.SourceLink.GitHub
+       8.0.0 → Microsoft.Build.Tasks.Git 8.0.0, và audit báo NU1902 (moderate) cho gói cuối.
+
+       Vì sao bỏ qua chứ không vá:
+       • Đó là MSBuild task chạy LÚC BUILD để nhúng thông tin nguồn — không nằm trong assembly
+         xuất bản, không có mặt lúc chạy, nên không phải bề mặt tấn công của ứng dụng.
+       • Không có đường nâng: 8.0.0 là bản mới nhất của gói, và NPOI ghim SourceLink 8.0.0.
+       • Hạ NPOI xuống 2.7.2 chỉ đổi cảnh báo này lấy cảnh báo NẶNG HƠN — bản đó kéo
+         System.Security.Cryptography.Xml 8.0.2 (NU1903, HIGH) và SixLabors.ImageSharp 2.1.9.
+
+       Vì sao đặt ở đây chứ không ở Core.Infrastructure.csproj: NuGetAuditSuppress chỉ có hiệu lực
+       cho ĐỒ THỊ của chính project khai nó, nên khai ở project mang NPOI vẫn để lại cảnh báo ở cả
+       4 project tiêu thụ nó (đo 2026-09-09: 10 cảnh báo → 8).
+
+       Phạm vi hẹp bằng advisory ID: mọi lỗ hổng khác của mọi gói khác vẫn báo bình thường.
+       Đo lại khi nâng NPOI — bản mới bỏ phụ thuộc SourceLink thì XOÁ khối này đi. -->
+  <ItemGroup>
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-23fw-v26w-5fgq" />
+  </ItemGroup>
+
 </Project>

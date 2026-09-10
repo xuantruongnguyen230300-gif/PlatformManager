@@ -197,7 +197,7 @@ nguy hiểm nhất của kiểm thử:
 ### Schema cho integration test lấy từ file `.sql` của repo, KHÔNG từ `EnsureCreated()`
 
 `PostgresFixture` dựng schema bằng cách chạy **lần lượt các file delta `.sql`**
-trong `src/BE/Core/PlatformManager.Core.Infrastructure/Persistence/Migrations/sql/`
+trong `src/BE/Core/PlatformManager.Core.Persistence/Migrations/sql/`
 vào container — **không** dùng `dotnet ef database update`, và **không** đọc
 `doc/cau-truc-database.sql`.
 
@@ -211,13 +211,13 @@ một schema **khác** schema production — mà đợt tối ưu 2026-08-18 (th
 đáng quan tâm.
 
 ⚠️ Thêm file `.sql` mới → **phải** thêm tên vào `PostgresFixture.MigrationScripts`
-(`src/BE/Tests/PlatformManager.Core.IntegrationTests/PostgresFixture.cs:46`), nếu không
+(`src/BE/Tests/PlatformManager.Core.IntegrationTests/PostgresFixture.cs:47`), nếu không
 schema test sẽ lệch schema thật — đúng cái điều thiết kế này muốn tránh.
 
 Đếm bằng lệnh, đừng chép danh sách (§6):
 
 ```bash
-ls src/BE/Core/PlatformManager.Core.Infrastructure/Persistence/Migrations/sql/
+ls src/BE/Core/PlatformManager.Core.Persistence/Migrations/sql/
 ```
 
 PASS: mọi file liệt kê ở đó đều có tên trong `MigrationScripts`. Hôm nay

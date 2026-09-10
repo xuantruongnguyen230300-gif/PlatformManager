@@ -4,7 +4,7 @@ scope: du-an
 verified: 2026-09-06
 project: "PlatformManager"
 status: "current"
-updated: "2026-09-06"
+updated: "2026-09-09"
 component: "DataTable"
 sources:
   - "src/FE/src/app/shared/components/data-grid/data-grid.html"
@@ -16,7 +16,7 @@ sources:
   - "src/FE/src/styles.scss"
   - "src/FE/src/app/core/theme/core-preset.ts"
   - "src/FE/src/app/app.config.ts"
-  - "Prototypes/index.html"
+  - "doc/Design/Frontend/PlatformManager/Prototypes/index.html"
 ---
 
 # DataTable
@@ -56,8 +56,11 @@ sources:
 >
 > ```
 > [rows] [loading] [totalCount] [page] [pageSize] [rowsPerPageOptions] [dataKey] [minWidth]
-> [headerTemplate] [bodyTemplate] [emptyTemplate?]      (pageChange)
+> [headerTemplate] [bodyTemplate] [emptyTemplate?] [frozenColumns?]      (pageChange)
 > ```
+>
+> Mọi dòng trên là API **đang chạy**. `[frozenColumns]` được chốt **và** thi công cùng
+> ngày **2026-09-09** (`data-grid.ts:139`) — xem § Frozen edge columns.
 >
 > Màn hình khai `<ng-template #hdr>` / `<ng-template #row let-row>` ngay cạnh thẻ gọi và truyền
 > vào. `user-grid-table` giữ nguyên vai trò cũ — nay nó là **người dùng** của `DataGrid`, chỉ còn
@@ -96,11 +99,15 @@ sources:
 > | `scrollHeight="var(--grid-h)"` — height from `dimension.grid-h` | `scrollHeight="flex"` (`data-grid.html:19`) — height from the `page-fill` ⇄ `grid-host` flex chain. `dimension.grid-h` is **no longer used by this component**; it survives for plain `.tablewrap.scroll` (see `Table.md`) |
 > | Column header and empty-message strings are literals | they are translation keys — `quan-tri-nguoi-dung.grid.*`, `shared.field.role`, `shared.grid.empty` |
 >
-> The frontmatter `sources` also listed `Prototype/index.html` and `Prototype/GHI-CHU-CAN-SUA.md`.
-> Neither path exists: the prototype is at `Prototypes/index.html` in this folder, and the
-> `GHI-CHU-CAN-SUA.md` file does not exist anywhere in the repo.
+> The frontmatter `sources` also listed two paths under `Prototype/`.
+> `git check-ignore -v Prototype/index.html Prototype/GHI-CHU-CAN-SUA.md` prints the rule that
+> excludes both: the root `.gitignore` keeps that whole folder out, so they sit on the author's
+> machine and in no clone. **Corrected 2026-09-10** — this note used to say *"neither path
+> exists"*, which made it read as a typo instead of the cite-something-nobody-else-can-open
+> defect it actually was. The prototype anyone can open is
+> `doc/Design/Frontend/PlatformManager/Prototypes/index.html`, merged and anonymised 2026-09-10.
 
-One variant here has **no shipped instance**: frozen edge columns, added to the contract on 2026-09-05 by decision Q30 (§ Frozen edge columns). Every other line in this file describes running code.
+One variant here has **no shipped call site**: frozen edge columns, added to the contract on 2026-09-05 by decision Q30 and built into the component on **2026-09-09** (§ Frozen edge columns). Its support is running code; no grid in the app switches it on yet. Every other line in this file describes running code.
 
 > **Citation policy.** Values cite the source **file plus selector or binding name**, not a line number — the templates were rewritten on 2026-08-29.
 
@@ -141,18 +148,111 @@ Handing the scroll to PrimeNG fixes both, and the height comes from the flex cha
 
 ### Frozen edge columns — a contract extension made on 2026-09-05
 
-📐 **ĐÍCH ĐẾN — CHƯA THI CÔNG. No shipped instance.** The one grid that ships freezes
-nothing. This variant exists because decision **Q30** pins two columns on the DTI
-catalogue grid, and it is written here — as a variant of the component — rather than
-as a note inside that one screen.
+✅ **CÓ THẬT — built 2026-09-09.** The input, the CSS that implements it and its tests
+all ship (`data-grid.ts:139`, `data-grid.html:10-11`, `data-grid.scss:53-101`,
+`data-grid.spec.ts:78-192`). **No shipped call site yet:** the one grid running today
+freezes nothing, and a test fails the build if that changes silently
+(`data-grid.spec.ts:110-119`). This variant exists because decision **Q30** pins two
+columns on the DTI catalogue grid, and it is written here — as a variant of the
+component — rather than as a note inside that one screen.
 
-**What it is.** PrimeNG's `pFrozenColumn` directive pins a column against the
-horizontal scroll of `[scrollable]="true"`. Two pins, one per edge:
+**What it is.** Two pins, one per edge, held against the horizontal scroll of
+`[scrollable]="true"` — a precondition always met here, because the template hardcodes
+that binding (`data-grid.html:24`). The input puts one class per edge on `.tablewrap`
+(`data-grid.html:10-11`), and the pin itself is plain `position: sticky`:
 
-| Edge | Which column | Binding, on both the `<th>` and the `<td>` |
+| Edge | Which column | How this component expresses the pin |
 | --- | --- | --- |
-| Left | the row's identifier column | `pFrozenColumn` |
-| Right | the row's action column | `pFrozenColumn` + `alignFrozen="right"` |
+| Left | the row's identifier column — the **first** cell | `.tablewrap.frozen-left` → `position: sticky` + `left: 0` on `th:first-child` / `td:first-child` (`data-grid.scss:53-66`) |
+| Right | the row's action column — the **last** cell | `.tablewrap.frozen-right` → `position: sticky` + `right: 0` on `th:last-child` / `td:last-child` (`data-grid.scss:68-79`) |
+
+Both selectors carry `:not(:only-child)`, so the single-cell “no data” row is never
+pinned — pinning it would glue the empty sentence to one edge while the rest of the row
+scrolled past (`data-grid.scss:48-49`, asserted at `data-grid.spec.ts:169-178`).
+
+> ### 🆕 CHỐT 2026-09-09 — a screen asks for the pin through a `frozenColumns` input, never by using the directive itself
+>
+> ✅ **CÓ THẬT — decided and built the same day** (`data-grid.ts:139`). The observable
+> contract below is what shipped. The **mechanism** this block first named did not — see
+> § SỬA 2026-09-09 immediately after it.
+>
+> **The problem it settles.** `pFrozenColumn` belongs to PrimeNG's `TableModule`.
+> Writing it in a caller's `<ng-template #hdr>` / `#body` means that caller has to
+> import `TableModule` — and `../COMPONENTS.md` § Index records `data-grid` as the
+> **one and only** place `p-table` is imported (chốt 2026-09-06). One frozen grid
+> would reopen that boundary for every screen built after it, and the boundary is the
+> whole reason the shared grid exists.
+>
+> **The decision.** The boundary holds. `DataGrid` grows an input instead:
+>
+> ```
+> [frozenColumns]
+> ```
+>
+> The screen says **which** columns are pinned and to which edge; the component says
+> **how** a pin is expressed. That is the same split this file's § CHỐT 2026-09-06
+> already draws — the frame belongs to `DataGrid`, the columns belong to the screen —
+> so the pin is stated with the column set and applied with the rest of the `p-table`
+> vocabulary.
+>
+> **The type — settled 2026-09-09 against a real column list** (`data-grid.ts:32-37`):
+>
+> ```
+> IDataGridFrozenColumns { readonly left?: boolean; readonly right?: boolean; }
+> ```
+>
+> `left` pins the **first** column, `right` pins the **last**. This block deliberately
+> left the type open — *“fix the signature when the DTI grid is built, against a real
+> column list”* — and that list now exists: `Mã` pinned left, `Hành động` pinned right
+> ([`../Screens/02-danh-muc-dti.md`](../Screens/02-danh-muc-dti.md) § Layout Blueprint).
+>
+> **Why an index-based API was rejected.** That same screen renders **13 columns in
+> period mode and 14 in `Tất cả` mode**, while its own rule says *“the two frozen edges
+> are the same columns either way”*. Column indices would therefore have to be recomputed
+> by the screen every time the column count changed — the same class of off-by-one
+> arithmetic that `onLazyLoad` exists to perform once instead of once per caller. Two edge
+> flags say what the contract already says: first cell, last cell. Pinning more than one
+> column per edge would need a different type; change it then, against the screen that
+> asks for it.
+>
+> Call sites therefore write `<app-data-grid [frozenColumns]="…">` and **never** the
+> directive. First call site: [`../Screens/02-danh-muc-dti.md`](../Screens/02-danh-muc-dti.md)
+> § Layout Blueprint.
+
+> ### 🔄 SỬA 2026-09-09 — the pin is `position: sticky`, not `pFrozenColumn`
+>
+> The block above, and the § What it is table before it, first said *“the component
+> applies `pFrozenColumn`, and `alignFrozen="right"` on the last column, internally”*.
+> **That mechanism is not implementable under this component's own § CHỐT 2026-09-06
+> contract.** The two decisions were made four days apart, and nobody noticed they
+> collided until the code was written.
+>
+> **Why it cannot work.** `pFrozenColumn` is an attribute directive declared in PrimeNG's
+> `TableModule` and marked `isStandalone: false` (`primeng-table.mjs`, class
+> `FrozenColumn`). Angular matches a directive against a template using the `imports` of
+> the component that **declares** that template, not of the component that **renders** it.
+> Here the `<th>`/`<td>` are declared by the *screen* and handed over as `TemplateRef`s —
+> which is exactly the § CHỐT 2026-09-06 contract. So the directive written inside
+> `data-grid` reaches no cell at all, while writing it at the screen pulls `TableModule`
+> back into a feature folder — the one thing the block above exists to prevent.
+>
+> **What ships instead.** `position: sticky` with `left: 0` / `right: 0`, declared in
+> `data-grid.scss:53-79`. That is what `FrozenColumn` itself does — it too only sets
+> `position: sticky` plus a `left`/`right` offset — minus the part this component does not
+> need: re-measuring sibling widths in JavaScript after every render. With exactly one
+> column per edge the offset is always `0`.
+>
+> **`::ng-deep` is required, for the same reason.** The pinned cells carry the *calling*
+> component's style scope, not this one's, so an ordinary scoped selector cannot reach
+> them. Every block is anchored under `.tablewrap.frozen-*` — an element this template
+> draws itself — so the selector cannot leak past a grid that asked to be pinned
+> (`data-grid.scss:37-52`).
+>
+> **The lesson worth keeping.** A component that receives its cells as `TemplateRef`
+> cannot apply **any** attribute-matched directive to those cells. Every future “the
+> shared grid should apply X to a column” request meets this same wall, and the answer
+> has the same shape: express it in CSS the component owns, or move the decision to
+> whoever declares the template.
 
 **Why this is a component contract and not a screen-local patch.** The trigger is
 structural. A grid whose column `min-width`s sum past the viewport scrolls sideways,
@@ -170,10 +270,17 @@ start.
 **What it costs — stated up front, because none of it is visible until it ships.** A
 frozen cell is lifted out of the normal flow and painted on its own surface:
 
-- It needs an opaque background, or the scrolled cells show through. That background
-  comes from the PrimeNG preset, **not** from the zebra and hover rules in
-  `Table.md` — so a frozen column can lose the even-row tint the rest of its row
-  keeps.
+- It needs an opaque background, or the scrolled cells show through. The shipped
+  implementation paints that background **from this app's own tokens**, not from the
+  PrimeNG preset: `colors.card` by default, `colors.surface-table-header` on even rows,
+  `colors.bg` on hover — the same three row surfaces `src/FE/src/styles.scss` declares at
+  § `tbody tr:nth-child(even)` and § `tbody tr:hover` (`data-grid.scss:90-101`; opacity
+  asserted at `data-grid.spec.ts:159-167`). A pinned cell therefore keeps the tint the
+  rest of its row keeps, and the cost moved elsewhere — § Normalize item 7.
+  🔄 **SỬA 2026-09-09.** This bullet used to read *“that background comes from the
+  PrimeNG preset … so a frozen column can lose the even-row tint the rest of its row
+  keeps”*. That followed from the `pFrozenColumn` mechanism, which was never built
+  (§ SỬA 2026-09-09 above).
 - It costs width permanently. Two frozen edges on a phone leave very little
   scrollport between them.
 - It is the third PrimeNG-owned surface on this component, after the paginator and
@@ -183,11 +290,14 @@ frozen cell is lifted out of the normal flow and painted on its own surface:
 has no PrimeNG at all, so it renders an ordinary scrolling table. The pin is a decision to be
 built, not a rendering to be copied.
 
-> 🔄 **SỬA 2026-09-06.** This paragraph cited `Prototype/index.html` and
-> `Prototype/GHI-CHU-CAN-SUA.md` § 3.5. Neither path exists — the prototype lives at
-> `Prototypes/index.html` inside this folder, and no file named `GHI-CHU-CAN-SUA.md` exists
-> anywhere in the repo. `check-docs.sh` §4 missed both because it only resolves paths written
-> with a `src/` or `doc/` prefix.
+> 🔄 **SỬA 2026-09-06, sửa lại 2026-09-10.** This paragraph used to cite two paths under
+> `Prototype/`. Run `git check-ignore -v Prototype/index.html Prototype/GHI-CHU-CAN-SUA.md` to
+> see why neither belongs in a citation: the root `.gitignore` excludes that folder, so both
+> exist on the author's machine and in no clone. The 2026-09-06 revision called that *"neither
+> path exists"* — they did exist, just nowhere a second reader could look, which is the entire
+> defect. `check-docs.sh` §4 missed both because it only resolves paths written with a `src/` or
+> `doc/` prefix. The prototype anyone can open is
+> `doc/Design/Frontend/PlatformManager/Prototypes/index.html`.
 
 Call site: [`../Screens/02-danh-muc-dti.md`](../Screens/02-danh-muc-dti.md) § Layout Blueprint.
 
@@ -201,7 +311,7 @@ Call site: [`../Screens/02-danh-muc-dti.md`](../Screens/02-danh-muc-dti.md) § L
 | Empty — caller-supplied | `[emptyTemplate]` | One `.muted` cell spanning all columns | Filter matched nothing — `quan-tri-nguoi-dung.grid.empty` = `Không có người dùng nào khớp bộ lọc.` (`user-grid-table.html:93-97`) |
 | Empty — component default | none passed | `.grid-empty.muted`, `padding: spacing.sp-6 spacing.sp-4`, centred; colour inherited from the global `.muted`, **not** redeclared | Any grid that has nothing screen-specific to say — `shared.grid.empty` = `Không có dữ liệu.` (`data-grid.html:34-36`, `data-grid.scss:32-35`) |
 | Paginator | `[paginator]="true" [rowsPerPageOptions]="[10, 20, 50]"` | Rendered by PrimeNG below the scrollport; **not** marked `no-print` | Always |
-| Frozen edge columns 📐 | `pFrozenColumn` on the first column; `pFrozenColumn` + `alignFrozen="right"` on the last | Pinned against the horizontal scroll; requires `[scrollable]="true"`; the pinned cell's background comes from the preset, not from the zebra rule | A grid whose column `min-width`s sum past the viewport. **No shipped instance** — specified for the DTI catalogue grid by decision Q30, 2026-09-05 (§ Frozen edge columns) |
+| Frozen edge columns ✅ | `[frozenColumns]="{ left: true, right: true }"` on `<app-data-grid>` — type `IDataGridFrozenColumns` (chốt **and** built 2026-09-09; `data-grid.ts:32-37,139`) | The component puts `.frozen-left` / `.frozen-right` on `.tablewrap` (`data-grid.html:10-11`); each pinned cell takes `position: sticky` + `left`/`right: 0` and keeps the row's own fill, zebra tint and hover (`data-grid.scss:53-101`). **Not** `pFrozenColumn` — § SỬA 2026-09-09. Requires `[scrollable]="true"`, which the template hardcodes | A grid whose column `min-width`s sum past the viewport. **No shipped call site** — specified for the DTI catalogue grid by decision Q30, 2026-09-05 (§ Frozen edge columns) |
 
 The shipped row composes three documented components: `Avatar` + name/email block in the identity cell, `Badge` twice — once as `.badge.outline` per role string in the "Vai trò" cell, once as `.badge.ok` / `.badge.bad` for account status — and a pair of ghost `IconButton`s in the actions cell. The roles chip was `RoleTag` until **2026-08-29**, when that class was retired into `Badge.md`'s `.outline` variant (`COMPONENTS.md` § Retired); `user-grid-table.spec.ts` pins the column to `.badge.outline` and fails the build if it drifts back.
 
@@ -301,6 +411,7 @@ Sources: `src/FE/src/app/shared/components/data-grid/` (`data-grid.html` — inc
 - ✅ Declare column widths as inline `min-width` on each `<th>`. That is the shipped mechanism — there is no global table `min-width` and no column-config object.
 - ✅ Let the preset colour PrimeNG's own chrome. Every value in it derives from `:root`, so overriding it in a stylesheet creates a second source of truth.
 - ✅ Freeze **only** the two edge columns, and only on a grid that genuinely scrolls sideways. A pin on a grid that already fits costs width and buys nothing.
+- ❌ Don't write `pFrozenColumn` at a call site — ask for the pin through `[frozenColumns]` (chốt 2026-09-09). The directive drags `TableModule` into a feature folder, which breaks the one-importer rule this component exists to hold — and written inside `data-grid` it reaches nothing at all, which is why the pin ships as `position: sticky` instead (§ SỬA 2026-09-09).
 - ❌ Don't reach for a frozen column to make an over-wide grid acceptable. Q30 pins the edges of a fourteen-column grid; the column count itself stays on that screen's § Normalize list as a problem in its own right.
 - ❌ Don't use `p-table` for a permission matrix — those are hand-rolled `<table>` on purpose (`Table.md`): a full checkbox grid, a data-driven column count and no paging.
 - ❌ Don't add row selection styling; the grid enables no selection, so it would never appear.
@@ -314,7 +425,7 @@ Sources: `src/FE/src/app/shared/components/data-grid/` (`data-grid.html` — inc
 5. **`.num` has no call site in the one shipped grid**, so the tabular-figure path is unexercised in the running app.
 6. **The height contract spans two stylesheets and a class name, and nothing checks it.** `page-fill` on the page, `grid-host` on the tag, then `data-grid.scss:13-21` continuing the chain. Forget the class on the tag and the grid silently reverts to content height — the exact failure of § SỬA 2026-09-06, now with two of three parts inside the component instead of three of three outside it. A test asserting the rendered height, or a lint rule pairing `page-fill` with `grid-host`, would close it. *(Replaces the old item 6, which described `scrollHeight="var(--grid-h)"` — that binding no longer exists.)*
 8. **`minWidth` is optional and silently wrong when omitted.** A grid with many columns that forgets it gets squeezed columns rather than horizontal scroll, and nothing reports it. The value is also still a hand-summed string, which is item 2 in a new place.
-7. **A frozen cell is painted by PrimeNG, not by `Table.md`.** The hairline, the zebra tint and the row hover are global rules on `th, td`; a pinned cell additionally takes an opaque background from the preset so the scrolled content cannot show through it. Nothing in this design system owns that background, so the two edges of a row can drift out of step with its middle on a PrimeNG upgrade — the same blind spot as item 3, on the two columns a user looks at most. Recorded with the 2026-09-05 frozen-column variant; no shipped instance yet, so it is untested rather than broken.
+7. **A frozen cell's background restates `styles.scss` § 7 — the PrimeNG form of this risk closed 2026-09-09, a narrower one replaced it.** The original entry read: *“Nothing in this design system owns that background, so the two edges of a row can drift out of step with its middle on a PrimeNG upgrade.”* That risk is **gone**, and why it is gone matters more than the fact: the pin shipped as `position: sticky` in `data-grid.scss`, not as `pFrozenColumn` (§ SỬA 2026-09-09), so the app — not the preset — owns the pinned cell's fill, and a PrimeNG upgrade can no longer move it. What replaces it is smaller and closer to home: three rules restate the row surfaces `src/FE/src/styles.scss` declares once at § `tbody tr:nth-child(even)` and § `tbody tr:hover`, using the same tokens rather than new values (`data-grid.scss:90-101`). Change a row background there and forget it here, and a row's two edges differ from its middle — the same visible symptom, now triggered by a token change instead of a library upgrade, and now inside code this repo owns. The SCSS carries that warning at the point of copy (`data-grid.scss:81-89`). Closing it properly means one owner for the row surfaces that a pinned cell can reference instead of copy; still open.
 
 ## Resolved in the 2026-08-29 redesign
 <!-- Items that used to sit in "Normalize on redesign" and were actually done. Kept, not deleted, so the history is not lost. -->

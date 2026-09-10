@@ -1,7 +1,7 @@
 ---
 kind: luat
 scope: core
-verified: 2026-09-06
+verified: 2026-09-09
 ---
 
 # 14. Lưu file trên đĩa — upload, export, file mẫu
@@ -36,43 +36,64 @@ chúng lại là cách chắc chắn nhất để file người dùng upload l�
 Phép thử một dòng: **"xoá thư mục này rồi build lại — có lại được không?"**
 Có → tài sản của source. Không → dữ liệu runtime, phải nằm ngoài repo.
 
-## 2. Hiện trạng — 📐 ĐÍCH ĐẾN, CHƯA THI CÔNG (đối chiếu source 2026-09-06)
+## 2. Hiện trạng — ✅ CÓ THẬT: seam lưu file đã thi công (đối chiếu source 2026-09-09)
 
-**Không còn seam nào trong `src/BE`.** Toàn bộ code lưu file từng tồn tại đi cùng module
-DtiWeekly, gỡ 2026-08-29. Kiểm bằng lệnh, đừng tin bảng (§6 của `.claude/CLAUDE.md`):
+**Seam đã có, và đường dẫn đã đến từ cấu hình.** Kiểm bằng lệnh, đừng tin bảng
+(§6 của `.claude/CLAUDE.md`):
 
 ```bash
-grep -rn "IImportFileStorage\|IFileStorage" src/BE --include=*.cs | grep -v /obj/
+grep -rn "interface IFileStorage" src/BE --include=*.cs | grep -v /obj/
+grep -rn "class LocalFileStorage\|class StorageOptions" src/BE --include=*.cs | grep -v /obj/
 grep -rn "File.WriteAll\|new FileStream\|Directory.CreateDirectory" src/BE --include=*.cs | grep -v /obj/ | grep -v Tests
 ```
 
-PASS hôm nay: lệnh đầu **rỗng**; lệnh sau ra đúng **một** dòng và nó là đường ghi log
-Serilog (`src/BE/PlatformManager.Api/Program.cs:73`), không phải storage của người dùng.
+PASS hôm nay: hai lệnh đầu mỗi lệnh ra đúng **một** khai báo; lệnh thứ ba ra
+**đúng những dòng nằm trong `LocalFileStorage`** (`LocalFileStorage.cs:45`, `:49`,
+`:67`) cộng **một dòng chú thích XML** nhắc tên `Directory.CreateDirectory`
+(`src/BE/Core/PlatformManager.Core.Infrastructure/Storage/StorageOptions.cs:42`) —
+không phải một đường ghi file. Một dòng `new FileStream` xuất hiện
+**ngoài** `LocalFileStorage` là vi phạm — mọi đường ghi file của người dùng phải
+đi qua seam.
 
-| Có thật hôm nay | Sẽ thành |
+> 🔄 **SỬA 2026-09-10.** Đoạn trên trước ghi lệnh thứ ba còn ra *"một dòng ghi log
+> Serilog"* và neo vào một dòng của `Program.cs`. Đo lại: **`Program.cs` không khớp mẫu
+> grep đó dòng nào** — dòng được trích là `.WriteTo.File(` của Serilog, một lời gọi sink,
+> không phải `File.WriteAll`. Neo trỏ đúng file nhưng khẳng định quanh nó sai — đúng loại
+> lỗi `check-docs.sh` mục 7 không bắt được.
+
+| Có thật hôm nay (2026-09-09) | Sẽ thành |
 |---|---|
-| **Không có seam nào** — `IImportFileStorage` của module DtiWeekly đã xoá cùng module 2026-08-29 | `IFileStorage` dùng chung, sống ở `Core.Application` — import, export và mọi feature cần file dùng lại, không mỗi nơi một seam |
-| Không có code lưu file nào | Đường dẫn đọc từ cấu hình `Storage:RootPath`, bind qua `StorageOptions` fail-fast — xem §3 |
-| Không có nhánh upload lẫn export | Upload + export, cùng một seam — xem §5 |
-| Không có cơ chế dọn file | Chính sách retention theo §6 |
+| ✅ `IFileStorage` ở `Core.Application` (`src/BE/Core/PlatformManager.Core.Application/Storage/IFileStorage.cs:36`) — dùng chung cho mọi feature cần file, không mỗi nơi một seam | giữ nguyên |
+| ✅ Hiện thực `LocalFileStorage` ở `Core.Infrastructure` (`src/BE/Core/PlatformManager.Core.Infrastructure/Storage/LocalFileStorage.cs:16`), khoá lưu trữ đúng layout `<khu>/<feature>/<id><ext>` khai ở `:101` | thêm hiện thực object storage khi có nhu cầu thật — seam không phải đổi |
+| ✅ Đường dẫn đọc từ `Storage:RootPath`, bind qua `StorageOptions` (`src/BE/Core/PlatformManager.Core.Infrastructure/Storage/StorageOptions.cs:16`) + fail-fast `ValidateOnStart()` (`src/BE/Core/PlatformManager.Core.Infrastructure/DependencyInjection.cs:219`) — xem §3 | giữ nguyên |
+| ⚠️ Seam đã có nhưng **chưa nơi gọi nào** — `grep -rn "IFileStorage" src/BE/Core src/BE/PlatformManager.Api --include=*.cs \| grep -v /obj/` hôm nay chỉ ra dòng khai báo, dòng hiện thực và dòng đăng ký DI. Hai khu `uploads/`/`exports/` mới chỉ tồn tại trong `AreaFolder` (`LocalFileStorage.cs:87`) | handler import đầu tiên gọi `SaveAsync(FileStorageArea.Upload, …)`; đó cũng là lúc §6 (dọn file) thôi là nợ lý thuyết |
+| 📐 Chưa có cơ chế dọn file | Chính sách retention theo §6 |
 | ✅ `App_Data/` **đã** bị `.gitignore` chặn (`src/BE/.gitignore:23`, cùng `logs/` ở dòng 24) | — việc này xong rồi; luật ở [`../../quy-uoc/repo-artifact.md`](../../quy-uoc/repo-artifact.md) |
 
-> **🔄 LẬT 2026-09-06.** Bản trước sai ba chỗ, cùng một nguyên nhân: tiêu đề và câu mở
-> không được sửa khi bảng bên dưới đã cập nhật.
-> 1. Nhãn `🚧 ĐÃ CHỐT, ĐANG THI CÔNG` + câu *"Seam đã có và đúng hướng"* mâu thuẫn thẳng
->    với dòng đầu của chính cái bảng nó giới thiệu (*"Không có seam nào"*). Không có gì
->    đang thi công — đúng nhãn là `📐 ĐÍCH ĐẾN`.
-> 2. Ngày đối chiếu ghi `2026-08-27`, trong khi nội dung bảng nói về việc xảy ra
->    **2026-08-29**. Ngày đối chiếu không thể sớm hơn sự kiện nó mô tả.
-> 3. *"`App_Data/` chưa được `.gitignore` chặn"* — sai: `src/BE/.gitignore:23` đã có
->    `App_Data/`. Thư mục `src/BE/PlatformManager.Api/App_Data/imports/` còn file `.csv`
->    sót lại trên đĩa, nhưng `git ls-files` trên nó ra rỗng, tức chưa file nào bị theo dõi.
+> **🔄 LẬT 2026-09-09 — code đã đuổi kịp doc, nhãn phải đổi theo.** Bản 2026-09-06 của mục
+> này mang nhãn `📐 ĐÍCH ĐẾN, CHƯA THI CÔNG` và mở đầu bằng *"Không có seam nào trong
+> `src/BE`"*. Cả hai đã hết đúng: `IFileStorage`, `LocalFileStorage`, `StorageOptions` +
+> validator và lời đăng ký fail-fast đều là code chạy thật, có unit test riêng
+> (`src/BE/Tests/PlatformManager.Core.UnitTests/Storage/LocalFileStorageTests.cs`,
+> `.../Storage/StorageOptionsValidatorTests.cs`). Giữ nhãn cũ ở đây sẽ khiến lượt sau đi
+> **xây lại** một seam đã có — đúng chi phí mà §4 của `.claude/CLAUDE.md` sinh ra để tránh,
+> chỉ theo chiều ngược lại với chiều thường gặp.
+>
+> **Chỉ đổi nhãn cho thứ đo được.** Ba mục vẫn chưa xong và giữ nguyên trạng thái:
+> export (§5), cơ chế dọn file (§6), và hiện thực storage ngoài đĩa cục bộ.
+>
+> 🔎 Lịch sử lượt lật trước (2026-09-06) giữ lại vì bài học còn dùng được: khi đó tiêu đề
+> ghi `🚧 ĐÃ CHỐT, ĐANG THI CÔNG` + *"Seam đã có và đúng hướng"* trong khi bảng ngay dưới
+> nói *"Không có seam nào"*; ngày đối chiếu (`2026-08-27`) còn sớm hơn sự kiện nó mô tả
+> (`2026-08-29`). **Nguyên nhân cả hai lượt giống hệt nhau: bảng được sửa, câu mở đầu thì
+> không.** Sửa mục này lần sau thì sửa cả hai cùng lúc.
 
-> Thứ tự ưu tiên: **§3 (đường dẫn qua cấu hình) trước**, vì nó là thứ duy nhất
-> không lùi được — mỗi feature mới ghép cứng thêm một đường dẫn là một chỗ phải
-> sửa lại sau. Việc gộp seam (§5) rẻ hơn nhiều nếu làm sau.
+> Thứ tự ưu tiên còn lại: **§6 (dọn file) đi CÙNG lượt có nơi gọi đầu tiên**, không sau đó.
+> Hôm nay chưa file nào được ghi nên nợ này chưa tốn gì — nhưng từ dòng `SaveAsync` đầu tiên
+> trở đi, mỗi ngày chạy là thêm file không ai xoá, và lúc đó việc dọn phải làm ngược trên một
+> kho đã đầy. §5 (export) không có tính chất đó, làm sau vẫn rẻ.
 
-## 3. Đường dẫn phải đến từ cấu hình — 📐 ĐÍCH ĐẾN, CHƯA THI CÔNG
+## 3. Đường dẫn phải đến từ cấu hình — ✅ CÓ THẬT (đối chiếu 2026-09-09)
 
 Một section cấu hình, một root duy nhất, mọi loại file runtime là thư mục con:
 
@@ -97,17 +118,30 @@ public sealed class StorageOptions
 [`../../quy-uoc/be-architecture.md`](../../quy-uoc/be-architecture.md)
 §"Cấu hình — fail-fast validation" — không lặp lại cách làm ở đây.
 
+**✅ Đã thi công đúng khuôn trên (đối chiếu 2026-09-09).** Khối `csharp` ngay trên là bản rút
+gọn của `src/BE/Core/PlatformManager.Core.Infrastructure/Storage/StorageOptions.cs:16`; luật
+"Production PHẢI khai, và phải là đường dẫn TUYỆT ĐỐI" nằm ở `StorageOptionsValidator`
+(cùng file, `:49`) chứ không ở data annotation — vì nó phụ thuộc `IHostEnvironment`. Lời đăng
+ký + `ValidateOnStart()` ở
+`src/BE/Core/PlatformManager.Core.Infrastructure/DependencyInjection.cs:219`, và
+`ValidateOnStart()` là **không điều kiện** (lý do ghi tại chỗ, `:214`): gọi có điều kiện thì
+cấu hình sai chỉ lộ ra ở môi trường đã bật kiểm, tức đúng môi trường ít ai chạy thử nhất.
+
 **Vì sao không để giá trị mặc định cho production:** một đường dẫn mặc định
 "chạy được" là đường dẫn không ai kiểm lại, và nó luôn trỏ vào trong thư mục
 app — đúng chỗ bị xoá sạch mỗi lần deploy. Cùng một bài học đã trả giá ở
 `BootstrapOptions`
-(`src/BE/Core/PlatformManager.Core.Infrastructure/Persistence/BootstrapOptions.cs`):
+(`src/BE/Core/PlatformManager.Core.Persistence/BootstrapOptions.cs`):
 cấu hình giả đặt vào cho qua validation vẫn thất bại âm thầm đúng lúc cần dùng.
 
 ## 4. Vì sao `ContentRootPath` là bẫy — ba kịch bản hỏng
 
-Cách làm hiện tại chạy đúng trên máy dev và hỏng ở cả ba tình huống triển khai
-thật, không tình huống nào báo lỗi lúc build:
+Đây là lý do §3 tồn tại, giữ lại vì nó vẫn là cái bẫy dễ rơi lại nhất. Ghi ở
+thì hiện tại thì mục này đang mô tả **cách làm bị loại bỏ**, không phải code
+hôm nay: từ 2026-09-09, `RootPath` bỏ trống chỉ còn hợp lệ **ngoài Production**
+(`LocalFileStorage.cs:24`), còn ở Production `StorageOptionsValidator` chặn ngay
+lúc khởi động. Ba tình huống dưới đây là thứ sẽ quay lại nếu ai đó nới luật đó —
+và không tình huống nào báo lỗi lúc build:
 
 1. **Container** — `ContentRootPath` nằm trong image layer. Redeploy = mất toàn
    bộ file đã nhận. Job import đang chờ sẽ đọc vào đường dẫn không còn tồn tại.
@@ -178,6 +212,27 @@ Chính sách tối thiểu khi bật §3:
 
 Dọn bằng job Hangfire định kỳ, không xoá đồng bộ trong request.
 
+### 📐 Con số cụ thể — CHỐT 2026-09-10, CHƯA THI CÔNG
+
+Bảng trên khai **hình dạng** chính sách (chiều nào được phép hỏng, loại nào giữ lâu hơn
+loại nào) nhưng không có con số, nên không ai thi công được mà không tự nghĩ ra một mốc.
+Người dùng chốt ba mốc sau:
+
+| Loại | Giữ | Vì sao mốc này |
+| --- | --- | --- |
+| Dòng `ImportJob` **thành công** + file upload của nó | **7 ngày** | Đủ dài để tra khi kết quả một lần nạp bị nghi ngờ — nghi ngờ kiểu đó nảy sinh trong tuần làm việc, không phải sau một quý |
+| Dòng `ImportJob` **lỗi/treo** + file upload của nó | **30 ngày** | Đây đúng là thứ người ta đi tìm khi dò nguyên nhân, và việc dò thường bắt đầu muộn. Dài hơn job thành công — đúng chiều bảng trên đã chốt |
+| File **export** | **24 giờ** | Sinh lại được từ dữ liệu bất cứ lúc nào. Giữ lâu là tự tạo một bản sao lệch dần khỏi nguồn |
+
+**Trạng thái: chưa có dòng code nào** (đối chiếu 2026-09-10). `IFileStorage` hiện chưa có
+nơi gọi nào trong mã sản phẩm ngoài đăng ký DI, nên chưa file nào được ghi ra để mà dọn.
+
+**Thi công cùng lượt dựng đường import (DM-7), không sớm hơn** — và đó là quyết định chứ
+không phải trì hoãn: một job dọn viết trước khi có file để dọn thì không nghiệm thu được
+bằng luồng thật, chỉ bằng dữ liệu tự dựng. Nghiệm thu đúng là: nạp một file, đợi qua mốc,
+kiểm file đã biến mất **và** dòng `ImportJob` tương ứng cũng vậy — hai vế phải cùng đúng,
+vì §6 ý 1 ở trên chọn sẵn chiều được phép hỏng là **file sống lâu hơn dòng DB**.
+
 ## 7. File mẫu import — tài sản của source, KHÔNG phải storage runtime
 
 Đây là mục dễ đặt nhầm chỗ nhất. File mẫu `.csv`/`.xlsx` cho người dùng tải về
@@ -198,12 +253,19 @@ không làm trước "phòng khi cần":
 | Việc | Khi nào | Vì sao không sớm hơn/muộn hơn |
 |---|---|---|
 | ~~`App_Data/` vào `.gitignore`~~ | ✅ **Xong** (đối chiếu 2026-09-06, `src/BE/.gitignore:23`) | Rẻ nhất, và hậu quả không lùi được: file lọt vào git history không xoá sạch bằng một commit |
-| Đường dẫn qua `Storage:RootPath` (§3) | **trước lần deploy thật đầu tiên** | Ba kịch bản §4 đều không lộ ra trên máy dev |
-| Dựng `IFileStorage` ở `Core.Application` (§5) | **ngay** — ngưỡng đã đạt 2026-08-29 | Ngưỡng cũ là "khi có tính năng **thứ hai** cần file" (Rule of Three). Nay có ≥2 màn import/export đã lên kế hoạch và **không còn seam cũ để bám theo**, nên dựng thẳng ở Core thay vì dựng trong module rồi nâng lên |
-| Chính sách dọn file (§6) | cùng lúc bật §3 | Cần biết file nằm ở đâu trước khi bàn chuyện dọn nó |
+| ~~Đường dẫn qua `Storage:RootPath` (§3)~~ | ✅ **Xong** (đối chiếu 2026-09-09, `src/BE/Core/PlatformManager.Core.Infrastructure/Storage/StorageOptions.cs:16`) | Ba kịch bản §4 đều không lộ ra trên máy dev |
+| ~~Dựng `IFileStorage` ở `Core.Application` (§5)~~ | ✅ **Xong** (đối chiếu 2026-09-09, `src/BE/Core/PlatformManager.Core.Application/Storage/IFileStorage.cs:36`) | Ngưỡng cũ là "khi có tính năng **thứ hai** cần file" (Rule of Three). Nay có ≥2 màn import/export đã lên kế hoạch và **không còn seam cũ để bám theo**, nên dựng thẳng ở Core thay vì dựng trong module rồi nâng lên |
+| Chính sách dọn file (§6) | 📐 **còn nợ** — cùng lượt có nơi gọi `SaveAsync` đầu tiên | Cần biết file nằm ở đâu trước khi bàn chuyện dọn nó. §3 xong rồi nên điều kiện tiên quyết đã đủ; thứ còn thiếu là một file thật để dọn |
 | S3/Blob thay local | khi chạy ≥2 instance thật | Volume dùng chung giải quyết được đa số; đổi hạ tầng lưu trữ chỉ để "cho chuẩn" là đổi chi phí vận hành lấy không gì |
 
-Ghi chú cho người implement: bản `IImportFileStorage` cũ có chú thích trỏ tới
-`.claude/rules/cqrs-handler.md` — đường dẫn đó **đã chuyển** về
-[`../../quy-uoc/be-cqrs-handler.md`](../../quy-uoc/be-cqrs-handler.md). Đừng
-chép lại đường dẫn cũ vào `IFileStorage` mới.
+✅ **Bẫy đường dẫn cũ đã tránh được (đối chiếu 2026-09-09).** Bản `IImportFileStorage`
+cũ mang chú thích trỏ `.claude/rules/cqrs-handler.md`, một đường dẫn **đã chuyển** về
+[`../../quy-uoc/be-cqrs-handler.md`](../../quy-uoc/be-cqrs-handler.md). `IFileStorage`
+mới không chép lại nó — kiểm bằng lệnh, không bằng trí nhớ:
+
+```bash
+grep -rn "\.claude/rules" src/BE --include=*.cs | grep -v /obj/
+```
+
+PASS = **rỗng**. Đây chính là mục 11 của `.claude/check-docs.sh` áp ở phạm vi hẹp hơn:
+chú thích trong `src/` trỏ `doc/` cũng phải tồn tại.

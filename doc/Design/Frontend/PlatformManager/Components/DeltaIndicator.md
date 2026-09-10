@@ -1,33 +1,52 @@
 ---
 kind: luat
 scope: du-an
-verified: khong-ap-dung
+verified: 2026-09-10
 project: "PlatformManager"
-status: "target — not built"
-updated: "2026-09-05"
+status: "built 2026-09-09 in src/FE — no call site on any page yet"
+updated: "2026-09-10"
 component: "DeltaIndicator"
 sources:
   - "src/FE/src/styles.scss"
+  - "src/FE/src/app/shared/components/delta-indicator/delta-indicator.ts"
+  - "src/FE/src/app/shared/components/delta-indicator/delta-indicator.html"
+  - "src/FE/src/app/shared/components/delta-indicator/delta-indicator.scss"
   - "doc/Design/Frontend/PlatformManager/Prototypes/index.html"
 ---
 
 # DeltaIndicator
 
-> 📐 **ĐÍCH ĐẾN — CHƯA THI CÔNG — with one live half.** This component is a split
-> case and the split matters:
+> ✅ **CÓ THẬT — dựng 2026-09-09, đối chiếu 2026-09-10.** The wrapper ships now, and
+> it is the **only one of the five restored components that belongs to CoreBase**:
+> both screens' specs compose it — the Dashboard and the DTI catalogue — so it sits in
+> `shared/` rather than in a feature module
+> (`doc/huong_dan/quy-uoc/fe-architecture.md` § Bên trong `shared/`, which keeps a
+> one-feature component out of the shared layer).
 >
-> - **The colour layer already ships.** `.delta`, `.delta.up`, `.delta.down` and
->   `.delta.flat` are declared in `src/FE/src/styles.scss` § `.delta` and survived
->   the 2026-08-29 consolidation. `../COMPONENTS.md` § Index records them under
->   `Badge.md` as a neighbouring class with no call site.
-> - **The wrapper does not.** No `app-delta-indicator` element exists in `src/FE`;
->   the component that classified the number and formatted it went with the
->   dashboard module on 2026-08-29.
+> | What | Where it shipped |
+> | --- | --- |
+> | Classification against the epsilon, and locale formatting | `src/FE/src/app/shared/components/delta-indicator/delta-indicator.ts:112-174` |
+> | One `<span class="delta">`, one display branch | `src/FE/src/app/shared/components/delta-indicator/delta-indicator.html:3-9` |
+> | Host style — `display: inline-block`, and deliberately nothing else | `src/FE/src/app/shared/components/delta-indicator/delta-indicator.scss:7-9` |
+> | The colour layer, unchanged and still global | `src/FE/src/styles.scss` § `.delta` |
 >
 > ```bash
-> grep -n '^\.delta' src/FE/src/styles.scss          # expect the four rules
-> grep -rn 'delta-indicator' src/FE/src              # expect zero hits
+> grep -rn 'app-delta-indicator' src/FE/src     # PASS = at least one hit
+> grep -n '^\.delta' src/FE/src/styles.scss     # PASS = the four rules, still global
 > ```
+>
+> 🛑 **Built is not composed.** The one element that renders it is
+> `src/FE/src/app/modules/dashboard/components/history-row/history-row.html:30` —
+> another unbuilt-into-a-page component. **No page and no route reaches it**: the
+> Dashboard page is still a stub
+> (`src/FE/src/app/modules/dashboard/pages/dashboard/dashboard.page.html:1-10`) and
+> `DASHBOARD_ROUTES` is deliberately left out of `app.routes.ts`
+> (`src/FE/src/app/modules/dashboard/dashboard.routes.ts:8-13`). Nothing below is
+> reachable in a browser yet.
+>
+> The banner this replaces said *"the wrapper does not [ship]"* and set
+> `grep -rn 'delta-indicator' src/FE/src` at **zero hits**. Both were true when
+> written; the criterion now runs the other way round.
 
 **Description:** Inline text showing a period-over-period or self-vs-verified
 change, coloured by direction. The wrapper owns two jobs the call sites must not
@@ -44,13 +63,25 @@ both rebuilt screens use it again — and on the DTI catalogue it now carries a
 
 ## Anatomy
 
-A single `<span class="delta up|down|flat">` whose text is assembled by the caller:
-an optional arrow glyph, the number, and an optional unit suffix.
-`white-space: nowrap` keeps arrow, number and unit on one line.
+A single `<span class="delta up|down|flat">` carrying an optional arrow glyph, the
+number, and an optional unit suffix. `white-space: nowrap` keeps all three on one
+line.
 
-**No icon element.** `↑` and `↓` are literal Unicode characters inside the string,
-so they cannot be styled, hidden or swapped apart from the number — carried in
-`../Icons.md` § Legacy Exceptions and in § Normalize on redesign below.
+**Who assembles that string changed when the component was built — 2026-09-09.**
+The caller passes a **raw signed number** and a format; the component classifies and
+formats it, then looks up one translation key whose sentence already contains the
+arrow and the unit (`src/FE/src/app/shared/components/delta-indicator/delta-indicator.ts:71-77`, rendered by the single branch
+at `src/FE/src/app/shared/components/delta-indicator/delta-indicator.html:3-9`). The vi strings are
+`src/FE/public/i18n/vi.json:71-76`. An earlier revision of this paragraph said the
+text was *"assembled by the caller"*, which is what § Do / Don't below has always
+told callers **not** to do.
+
+**No icon element.** `↑` and `↓` are still literal Unicode characters rather than
+`<i>` elements, so they cannot be styled, hidden or swapped apart from the number —
+carried in `../Icons.md` § Legacy Exceptions and in § Normalize on redesign below.
+What the build changed is only *where* they live: inside the translation table, not
+inside a template. That makes them translatable, and it makes them one more thing a
+translator can drop without anything failing.
 
 The wrapper `app-delta-indicator` contributes only `display: inline-block`
 (§ `app-delta-indicator`); all painting stays in the global layer so the three
@@ -65,8 +96,10 @@ contexts cannot drift apart.
 | Flat — **grey** | `delta flat` | ink `colors.muted` (`src/FE/src/styles.scss` § `.delta.flat`) | The value is within ± epsilon of zero | `1.5` — self `10`, verified `10` → **`0,00`** |
 | No comparable value | `delta flat` | ink `colors.muted`, text `—`, no suffix | There is no earlier period to compare against | — not used in this column; history rows only |
 
-The three examples are rows of `spec/DTI_CanGiuoc_2026-08-11.csv` recomputed under
-the Q25 direction, and they are the same three the approved prototype draws.
+The three examples are the three the approved prototype draws (`doc/Design/Frontend/PlatformManager/Prototypes/index.html`
+§ `#screen-dashboard`), recomputed under the Q25 direction. They were computed from
+the BA's August 2026 spreadsheet, which is deliberately outside this repo (root `.gitignore`), so it is named here rather than cited as a path — the prototype is where they
+can actually be read.
 
 All four share `.delta` itself: weight `850`, `white-space: nowrap`
 (`src/FE/src/styles.scss` § `.delta`).
@@ -100,14 +133,14 @@ the meaning finally agree.
 
 **Spec and prototype both changed, and they are back in step.** Earlier on
 2026-09-05 both carried the old direction: this file stated
-`Tự đánh giá − Thẩm định`, and `Prototype/index.html` drew `1.1` as `−2,96` red and
+`Tự đánh giá − Thẩm định`, and `doc/Design/Frontend/PlatformManager/Prototypes/index.html` drew `1.1` as `−2,96` red and
 `1.4` as `+5,00` green to match. Q25 reversed the rule, the prototype was re-drawn the
 same day, and this file follows it here. Today both render `1.1` as `+2,96` green and
 `1.4` as `−5,00` red. Check the current state rather than trusting either document:
 
 ```bash
-grep -c 'delta up">+2,96' Prototype/index.html      # PASS = 2 (dashboard + catalogue)
-grep -c 'delta down">−5,00' Prototype/index.html    # PASS = 2
+grep -c 'delta up">+2,96' doc/Design/Frontend/PlatformManager/Prototypes/index.html      # PASS = 2 (dashboard + catalogue)
+grep -c 'delta down">−5,00' doc/Design/Frontend/PlatformManager/Prototypes/index.html    # PASS = 2
 ```
 
 > **Correction, 2026-09-06 (T13).** The revision of this paragraph written on
@@ -122,13 +155,39 @@ grep -c 'delta down">−5,00' Prototype/index.html    # PASS = 2
 > bad faith, and this file's own § Variants examples were the thing that changed
 > under the reader.
 
-⚠️ **The sign is now the opposite of the `Chênh lệch` column in the source
-spreadsheet.** `spec/DTI_CanGiuoc_2026-08-11.csv` writes `1.1` as `-2.96` and `1.4`
-as `5.00`. That is not a defect and it cannot break import: the column is computed
-by the system and never read from a file. It does mean anyone reconciling an
-exported file against the original will see every non-zero row flip sign. How the
-export names the column and how import skips it are owned by
-`doc/contracts/danh-muc-dti.md` and `spec/danh-muc-dti/business-rules.md`, not here.
+⚠️ **The sign is the opposite of the `Chênh lệch` column in the spreadsheet BA
+supplied.** That file writes `1.1` as `-2.96` and `1.4` as `5.00` — it subtracts
+`Tự đánh giá − Thẩm định`. It is deliberately outside this repo (root `.gitignore`), so this is the reading taken on
+2026-09-05 and it cannot be re-measured from the repo. That is not a defect and it
+cannot break import: the column is computed by the system and never read from a file.
+It does mean anyone reconciling an exported file against BA's original will see every
+non-zero row flip sign. How the export names the column and how import skips it are
+owned by `doc/contracts/danh-muc-dti.md` and `spec/danh-muc-dti/business-rules.md`,
+not here.
+
+> ### 🛑 The in-repo sample subtracts the OTHER way — measured 2026-09-10
+>
+> `spec/danh-muc-dti/dti-mau-an-danh-62-dong.csv` is the anonymised 62-row dataset this
+> folder cites for **shape**. Its `Chênh lệch` column is in the **Q25 direction** —
+> the same way the app computes it — so it is *not* a second witness to the paragraph
+> above, and a reader who opens it instead will conclude the warning is wrong.
+>
+> Two files, opposite conventions, and which one someone opens decides which way they
+> think the app is broken. Measure the half that is in the repo rather than assuming
+> either:
+>
+> ```bash
+> python -c "
+> import csv, io
+> rows = list(csv.DictReader(io.open('spec/danh-muc-dti/dti-mau-an-danh-62-dong.csv', encoding='utf-8-sig', newline='')))
+> n = lambda s: float(s.replace(',', '.'))
+> print(sum(1 for r in rows if abs(n(r['Chênh lệch']) - (n(r['Thẩm định']) - n(r['Tự đánh giá']))) > 1e-9))
+> "   # PASS = 0 — every row matches Thẩm định − Tự đánh giá
+> ```
+>
+> The sample also carries **different scores throughout**: it does not contain `7,04`,
+> `−2,96` or `5,00` at all, so none of this file's § Variants examples can be checked
+> against it. They are checked against the prototype.
 
 Sign reading, in one line: **positive (green) = the verifier scored the criterion
 higher than the unit scored itself; negative (red) = lower.**
@@ -153,7 +212,7 @@ higher than the unit scored itself; negative (red) = lower.**
 ## Reference markup
 
 ```html
-<!-- detail table — Chênh lệch column, as drawn in Prototype/index.html § #screen-dashboard.
+<!-- detail table — Chênh lệch column, as drawn in doc/Design/Frontend/PlatformManager/Prototypes/index.html § #screen-dashboard.
      Direction per decision Q25: Thẩm định − Tự đánh giá. -->
 <td class="num"><app-delta-indicator><span class="delta up">+2,96</span></app-delta-indicator></td>    <!-- 1.1: 10 − 7,04 -->
 <td class="num"><app-delta-indicator><span class="delta down">−5,00</span></app-delta-indicator></td>  <!-- 1.4: 0 − 5 -->
@@ -170,19 +229,19 @@ Sources: `src/FE/src/styles.scss` (§ `.delta`, § `.delta.up`, § `.delta.down`
 § `.delta.flat` — the live colour layer),
 `doc/Design/Frontend/PlatformManager/Prototypes/index.html`
 (§ `app-delta-indicator` — the wrapper's `display: inline-block`),
-`Prototype/index.html` § `#screen-dashboard` (detail table and history rows) and
+`doc/Design/Frontend/PlatformManager/Prototypes/index.html` § `#screen-dashboard` (detail table and history rows) and
 § `#screen-dti` (the `Chênh lệch` column of the catalogue grid).
 
 ## Do / Don't
 
 - ✅ Pass the raw signed number and let one place classify and format it. Pre-formatting at the call site is how the epsilon rule and the decimal comma diverge.
-- ✅ Keep one epsilon everywhere a delta is classified. A strict `> 0` on floating-point scores flags rounding noise as real movement — `2.2` in the real data is `0,38` against `0,38`, which must read `0,00`, not `+0,00000001`.
+- ✅ Keep one epsilon everywhere a delta is classified. A strict `> 0` on floating-point scores flags rounding noise as real movement — the approved prototype's detail table draws `2.2` as `0,38` against `0,38` (`doc/Design/Frontend/PlatformManager/Prototypes/index.html` § `#screen-dti`), which must read `0,00`, not `+0,00000001`.
 - ✅ Handle "nothing to compare" **outside** the component when the context has better copy. The history list prints `Kỳ đầu` on its oldest row rather than a bare em dash.
 - ✅ Keep the two contexts' formats distinct — two decimals and no unit for a score difference, one decimal and `đ.%` for a percentage-point movement.
 - ❌ Don't add an icon set for up/down. The shipped arrows are characters inside the text; introducing `<i>` elements would give the app two direction vocabularies.
 - ❌ Don't restyle `.delta` per screen. The classes are global precisely so the contexts agree, and a screen-local override is the exact drift the 2026-08-29 consolidation removed.
 - ✅ Read the `Chênh lệch` colour at face value **since decision Q25** — red is the verification panel scoring the criterion lower than the unit claimed. A spec, mock or prototype that shows `1.4` in green predates Q25 and is wrong.
-- ❌ Don't reconcile the column against the `Chênh lệch` figures in `spec/DTI_CanGiuoc_2026-08-11.csv`. That file computes the difference in the opposite direction, and the app recomputes the value rather than reading it.
+- ❌ Don't reconcile the column against the `Chênh lệch` figures in the spreadsheet BA supplied — that file computes the difference in the opposite direction, and the app recomputes the value rather than reading it. ⚠️ The in-repo sample `spec/danh-muc-dti/dti-mau-an-danh-62-dong.csv` is **not** a counter-example: it computes the difference the same way the app does, so finding agreement there proves nothing about BA's file. See § The `Chênh lệch` direction was reversed by decision Q25.
 
 ## Normalize on redesign
 
@@ -194,9 +253,11 @@ Sources: `src/FE/src/styles.scss` (§ `.delta`, § `.delta.up`, § `.delta.down`
 
 ## Cần chốt
 
-<!-- Open questions this spec must not answer on its own. Raised 2026-09-05. -->
+<!-- Open questions this spec must not answer on its own. Raised 2026-09-05; the last one closed 2026-09-09. -->
 
-1. **The epsilon value.** The retired implementation used `0.001` and matched the backend's rule. Whether the rebuilt one keeps it — and whether the same epsilon applies to a two-decimal score difference as to a one-decimal percentage — belongs to `spec/dashboard-dti/business-rules.md`, not here.
+1. ~~**The epsilon value.**~~ **Closed 2026-09-09 — `ε = 0.001`, one value for both contexts.** The number and the reasoning are held by the two business-rule files that own the comparison, and this line is a pointer rather than a second copy of them: `spec/dashboard-dti/business-rules.md` §1.4 (the `up` / `flat` / `down` counts) and `spec/danh-muc-dti/business-rules.md` §3.1 (`Chênh lệch`). Both name the same value, and §1.4 says explicitly that it applies to `diff` too — so the second half of this question, *"does a two-decimal score difference use the same epsilon as a one-decimal percentage"*, is answered **yes**.
+
+**No open question remains in this file.**
 
 ### Answered elsewhere — do not re-ask
 

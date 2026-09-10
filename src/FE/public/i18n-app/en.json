@@ -1,0 +1,30 @@
+{
+  "danh-muc-dti": {
+    "routeTitle": "DTI catalogue",
+    "title": "DTI catalogue",
+    "hint": {
+      "underConstruction": "This screen is still being built. The criteria list, filters and data-entry actions arrive in a coming update."
+    }
+  },
+  "dashboard": {
+    "routeTitle": "DTI overview",
+    "title": "DTI overview",
+    "action": {
+      "viewPeriod": "View",
+      "viewPeriodAriaLabel": "View the {{From}} – {{To}} period"
+    },
+    "grid": {
+      "groupAwaitingData": "No data yet",
+      "historyDateRange": "{{From}} – {{To}}",
+      "historyFirstPeriod": "First period",
+      "historyOverallLead": "Overall progress",
+      "trendAriaLabelFallback": "Line chart of overall progress across the saved periods",
+      "trendEmpty": "No saved period carries data to chart yet.",
+      "trendPeriodHeader": "Period",
+      "trendValueHeader": "Overall progress"
+    },
+    "hint": {
+      "underConstruction": "This screen is still being built. The summary figures and trend charts arrive in a coming update."
+    }
+  }
+}

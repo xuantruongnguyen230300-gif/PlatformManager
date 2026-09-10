@@ -54,6 +54,15 @@ export class AuthService {
       finalize(() => {
         this.menu.invalidate();
         this.currentUser.clear();
+        // Mồi lại cookie CSRF sau khi thoát — ĐỐI XỨNG với `login()` ở trên, và vì cùng một lý do:
+        // request-token gắn với danh tính lúc phát hành, nên token của phiên vừa thoát không dùng
+        // được cho request ghi kế tiếp ở trạng thái anonymous. Request ghi đó gần như luôn là
+        // `POST /auth/login` — thiếu dòng này thì đăng nhập lại NGAY SAU khi đăng xuất luôn bị 403
+        // `AUTH.CSRF_REJECTED`, vì `provideCsrfInit()` chỉ chạy lúc bootstrap còn topbar điều
+        // hướng về màn đăng nhập bằng router (không tải lại trang). Đặt trong `finalize()` cùng
+        // lý do với 2 dòng trên: phiên client đã bị xoá kể cả khi logout lỗi, nên cookie CSRF cũng
+        // phải theo. Xem doc/contracts/auth.md §CSRF bước 4.
+        this.csrf.primeToken().subscribe();
       }),
     );
   }

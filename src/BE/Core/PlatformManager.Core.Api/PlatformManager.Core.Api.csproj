@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>PlatformManager.Core.Api</RootNamespace>
+    <AssemblyName>PlatformManager.Core.Api</AssemblyName>
+  </PropertyGroup>
+
+  <!-- Microsoft.NET.Sdk (KHÔNG phải Microsoft.NET.Sdk.Web) + FrameworkReference: đây là CLASS
+       LIBRARY chứa base class của controller, không phải một app. SDK.Web sẽ kéo theo entry
+       point ngầm, wwwroot, launchSettings và cả một loạt target về publish/static asset —
+       toàn thứ vô nghĩa cho một thư viện, và chúng làm project trông như một host thứ hai.
+       FrameworkReference lấy đúng thứ cần: kiểu ControllerBase / [Authorize] / StatusCodes từ
+       shared framework Microsoft.AspNetCore.App, không thêm PackageReference nào. -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <!-- Chỉ Core.Application (kéo theo Core.Domain bắc cầu, nhưng khai tường minh cả hai theo đúng
+       thói quen của repo — đồ thị phụ thuộc phải đọc được ngay trong .csproj). Cần cho
+       IApiResult<T> và ErrorCode mà HandleResult<T> dùng. TUYỆT ĐỐI KHÔNG reference
+       *.Persistence / *.Infrastructure: controller chỉ nói chuyện qua MediatR — xem
+       doc/kien-truc-core-module.md §"Nguyên tắc phụ thuộc bắt buộc". -->
+  <ItemGroup>
+    <ProjectReference Include="..\PlatformManager.Core.Domain\PlatformManager.Core.Domain.csproj" />
+    <ProjectReference Include="..\PlatformManager.Core.Application\PlatformManager.Core.Application.csproj" />
+  </ItemGroup>
+
+</Project>

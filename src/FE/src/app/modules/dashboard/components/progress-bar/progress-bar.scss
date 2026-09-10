@@ -1,0 +1,45 @@
+@use '../../../../core/theme/breakpoints' as bp;
+
+/* Nguồn: doc/Design/Frontend/PlatformManager/Components/ProgressBar.md § Anatomy + § Variants,
+   chép từ bản dựng đã duyệt (Prototype § `app-group-progress-list`).
+
+   `.bar` / `.fill` CỐ Ý ở phạm vi component chứ không lên styles.scss: đây là chỉ báo tiến độ duy
+   nhất của app, và hai cái tên đó quá chung để nằm ở tầng toàn cục. Cần chỉ báo thứ hai thì nâng
+   lên toàn cục TRƯỚC, đừng dùng lại lớp này từ ngoài (§ Do / Don't). */
+
+:host {
+  display: grid;
+  grid-template-columns: 210px 1fr 80px;
+  gap: var(--sp-3);
+  align-items: center;
+  margin: 0;
+  font-size: var(--fs-sm);
+}
+
+/* `overflow: hidden` không phải để "cho chắc": nó cắt bo góc pill của `.fill` theo track, nếu
+   không thì một thanh 2% vẽ ra một viên thuốc rộng hơn chính giá trị của nó. */
+.bar {
+  height: 9px;
+  background: var(--surface-track);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+}
+
+/* MỘT màu cho mọi mức hoàn thành — không có ngưỡng đổi màu. */
+.fill {
+  height: 100%;
+  background: var(--brand);
+  border-radius: var(--radius-pill);
+}
+
+@include bp.tablet {
+  :host {
+    grid-template-columns: 140px 1fr 75px;
+  }
+}
+
+@include bp.mobile {
+  :host {
+    grid-template-columns: 110px 1fr 68px;
+  }
+}

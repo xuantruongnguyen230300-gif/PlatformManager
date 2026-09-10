@@ -46,8 +46,13 @@
     "node_modules/primeng/fesm2022/primeng-table.mjs:6 — import { trigger, transition, style, animate }",
     "từ @angular/animations. Gỡ là build gãy ngay. Kiểm lại khi nâng primeng:",
     "grep -rl '@angular/animations' node_modules/primeng/fesm2022/ — hết sạch thì mới bỏ được.",
-    "chart.js đã gỡ 2026-09-04: chỉ TrendChart của module DtiWeekly (xoá 2026-08-29) dùng nó;",
-    "sau khi gỡ, 0 file trong src/ và 0 gói nào trong package-lock.json phụ thuộc vào nó."
+    "chart.js: THÊM LẠI 2026-09-09 cho màn Dashboard DTI (src/app/modules/dashboard/). Lịch sử —",
+    "nó từng bị gỡ 2026-09-04 vì nơi dùng duy nhất khi đó, TrendChart của module DtiWeekly, đã bị",
+    "xoá 2026-08-29; lúc gỡ, 0 file trong src/ và 0 gói nào trong package-lock.json phụ thuộc vào",
+    "nó. Nay module nghiệp vụ dựng lại và cần lại biểu đồ, nên gói quay về cùng lý do nó ra đi.",
+    "🛑 KHÔNG kéo theo gói biểu đồ thứ hai, và KHÔNG dùng nó cho vòng quay loading: vòng quay dùng",
+    "p-progressSpinner của PrimeNG (chốt T10). Kiểm nơi dùng trước khi gỡ lần sau:",
+    "grep -rl \"chart.js\" src/ — không dòng nào thì mới bỏ được."
   ],
   "dependencies": {
     "@angular/animations": "^20.3.0",
@@ -60,6 +65,7 @@
     "@ngx-translate/core": "^18.0.0",
     "@ngx-translate/http-loader": "^18.0.0",
     "@primeng/themes": "^20.2.0",
+    "chart.js": "^4.5.0",
     "primeicons": "^7.0.0",
     "primelocale": "^2.4.0",
     "primeng": "^20.2.0",

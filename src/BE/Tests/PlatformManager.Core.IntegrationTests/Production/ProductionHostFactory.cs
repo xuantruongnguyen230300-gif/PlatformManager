@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using PlatformManager.Api.Common;
+using PlatformManager.Core.Application.Permissions;
+using PlatformManager.Core.Infrastructure.Storage;
 
 namespace PlatformManager.Core.IntegrationTests.Production;
 
@@ -51,8 +53,20 @@ internal sealed class ProductionHostFactory : WebApplicationFactory<Program>
 
     private static readonly PathString SchemeProbePathString = new(SchemeProbePath);
 
+    /// <summary>
+    /// Gốc kho file cho host Production trong test. Phải là đường dẫn TUYỆT ĐỐI —
+    /// <c>StorageOptionsValidator</c> từ chối đường dẫn tương đối ở mọi môi trường.
+    ///
+    /// <para>KHÔNG cần tạo sẵn thư mục: <c>LocalFileStorage</c> chỉ tạo thư mục lúc thật sự ghi
+    /// file, và không test Production nào ghi file.</para>
+    /// </summary>
+    public static readonly string StorageRootPath =
+        Path.Combine(Path.GetTempPath(), "platformmanager-it-storage");
+
     private readonly bool _configureCors;
     private readonly string? _connectionString;
+    private readonly bool _configureStorage;
+    private readonly ICoreResourceKeySource? _resourceKeySource;
 
     /// <param name="configureCors">
     /// <c>false</c> = KHÔNG khai <c>Cors:AllowedOrigins</c>. Ở <c>Production</c> đó là cấu hình
@@ -64,10 +78,30 @@ internal sealed class ProductionHostFactory : WebApplicationFactory<Program>
     /// Ghi đè <c>ConnectionStrings:Default</c> cho riêng host này — dùng cho bất biến 2, nơi cần một
     /// database TRỐNG chứ không phải database đã seed dùng chung của collection.
     /// </param>
-    public ProductionHostFactory(bool configureCors = true, string? connectionString = null)
+    /// <param name="configureStorage">
+    /// <c>false</c> = KHÔNG khai <c>Storage:RootPath</c>. Ở <c>Production</c> đó cũng là cấu hình
+    /// THIẾU thật sự, cùng lý do với <paramref name="configureCors"/>: <c>appsettings.json</c>
+    /// không có khoá <c>Storage</c>. Dùng cho bất biến 5.
+    /// </param>
+    /// <param name="resourceKeySource">
+    /// Khác <c>null</c> = THAY hiện thực <see cref="ICoreResourceKeySource"/> của host bằng bản
+    /// truyền vào. Dùng cho bất biến 6: một danh mục permission-key khai SAI phải chặn host boot.
+    ///
+    /// <para>Đây là tham số duy nhất trong lớp này thay một DỊCH VỤ chứ không phải một dòng cấu
+    /// hình — vì thứ cần làm sai ở đây là DỮ LIỆU do host cấp qua seam, và nó không đến từ
+    /// <c>appsettings</c>. Mọi thứ khác của host giữ nguyên, kể cả
+    /// <c>ResourceKeyCatalogStartupValidator</c> đang được kiểm.</para>
+    /// </param>
+    public ProductionHostFactory(
+        bool configureCors = true,
+        string? connectionString = null,
+        bool configureStorage = true,
+        ICoreResourceKeySource? resourceKeySource = null)
     {
         _configureCors = configureCors;
         _connectionString = connectionString;
+        _configureStorage = configureStorage;
+        _resourceKeySource = resourceKeySource;
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -77,11 +111,19 @@ internal sealed class ProductionHostFactory : WebApplicationFactory<Program>
         if (_configureCors)
             builder.UseSetting($"{CorsPolicyOptions.SectionName}:AllowedOrigins:0", AllowedOrigin);
 
+        if (_configureStorage)
+            builder.UseSetting($"{StorageOptions.SectionName}:RootPath", StorageRootPath);
+
         if (_connectionString is not null)
             builder.UseSetting("ConnectionStrings:Default", _connectionString);
 
         builder.ConfigureTestServices(services =>
-            services.AddSingleton<IStartupFilter, ForwardedHeadersProbeStartupFilter>());
+        {
+            services.AddSingleton<IStartupFilter, ForwardedHeadersProbeStartupFilter>();
+
+            if (_resourceKeySource is not null)
+                services.AddSingleton(_resourceKeySource);
+        });
     }
 
     /// <summary>

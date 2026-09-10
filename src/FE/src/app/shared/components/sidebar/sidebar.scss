@@ -1,3 +1,5 @@
+@use '../../../core/theme/breakpoints' as bp;
+
 // Thiết kế: doc/Design/Frontend/PlatformManager/Prototypes/index.html — "LỚP 3 · sidebar.scss".
 // Token từ src/styles.scss; hành vi/breakpoint theo
 // doc/Design/Frontend/PlatformManager/Components/Sidebar.md §Variants (6 dòng cuối phủ collapsed
@@ -219,7 +221,7 @@
   }
 }
 
-@media (max-width: 980px) {
+@include bp.tablet {
   .sidebar {
     width: min(85vw, 300px);
     transform: translateX(-100%);
@@ -261,7 +263,7 @@
   }
 }
 
-@media (max-width: 560px) {
+@include bp.mobile {
   .sidebar {
     width: min(90vw, 300px);
   }
@@ -272,7 +274,7 @@
   }
 }
 
-@media (min-width: 981px) {
+@include bp.desktop {
   // Collapsed desktop: submenu ẩn mặc định, hiện dạng flyout khi hover/focus — xem spec §2.5/3.
   .sidebar.collapsed {
     .sidebar-navgroup {

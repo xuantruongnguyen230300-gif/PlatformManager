@@ -1,0 +1,23 @@
+<!-- Ba phần CỐ ĐỊNH: nhãn → giá trị → chú thích. Không icon, không sparkline, không con số thứ
+     hai — bản dựng đã duyệt không có ô nào khác khuôn này (KpiTile.md § Do / Don't). -->
+<div class="card kpi">
+  <div class="label">{{ label() }}</div>
+
+  <!-- Chỉ CON SỐ mang màu. Nhãn, chú thích và mặt card giữ nguyên màu mặc định. -->
+  <div
+    class="value"
+    [class.good]="tone() === 'good'"
+    [class.warn]="tone() === 'warn'"
+    [class.bad]="tone() === 'bad'"
+  >
+    @if (hasValue()) {
+      {{ value() }}
+    } @else {
+      {{ 'shared.format.absentValue' | translate }}
+    }
+  </div>
+
+  @if (subText()) {
+    <div class="sub">{{ subText() }}</div>
+  }
+</div>

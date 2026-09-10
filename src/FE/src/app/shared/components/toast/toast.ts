@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { TranslatePipe } from '@ngx-translate/core';
-import { ToastSeverity, ToastService } from '../../../core/toast/toast.service';
+import { IToastMessage, ToastSeverity, ToastService } from '../../../core/toast/toast.service';
 
 /**
  * Bảng icon theo mức độ — khai ở TẦNG HIỂN THỊ, không phải trong `IToastMessage`: chọn hình
@@ -33,5 +33,15 @@ export class Toast {
 
   dismiss(id: number): void {
     this.toastService.dismiss(id);
+  }
+
+  /**
+   * Chạy hành động rồi đóng toast — theo thứ tự đó. Đóng trước thì `message` vẫn còn tham chiếu
+   * hợp lệ (mảng bị thay chứ object không bị huỷ), nhưng chạy trước giữ đúng nhân quả: nếu `Run`
+   * ném lỗi thì toast còn đó để bấm lại, thay vì biến mất cùng với cơ hội thử lại.
+   */
+  protected runAction(message: IToastMessage): void {
+    message.Action?.Run();
+    this.toastService.dismiss(message.Id);
   }
 }

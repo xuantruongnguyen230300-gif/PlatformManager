@@ -233,16 +233,26 @@
       "close": "Close",
       "confirm": "Confirm",
       "reload": "Reload",
+      "retry": "Try again",
       "saving": "Saving…"
     },
     "app": {
       "newVersion": "A new version is available — reload to continue.",
       "skipToContent": "Skip navigation, go to the main content"
     },
+    "deltaIndicator": {
+      "score": "{{Value}}",
+      "pointUp": "↑ {{Value}} pp",
+      "pointDown": "↓ {{Value}} pp",
+      "pointFlat": "{{Value}} pp"
+    },
     "field": {
       "email": "Email",
       "role": "Role",
       "userName": "User name"
+    },
+    "format": {
+      "absentValue": "—"
     },
     "grid": {
       "empty": "No data."
@@ -255,6 +265,7 @@
       "notFound": "The requested data was not found.",
       "notFoundTitle": "Not found",
       "offline": "Cannot reach the server. Check your network connection.",
+      "offlineDevice": "Your device is not connected to a network. Check your Wi-Fi or cable, then try again.",
       "offlineTitle": "No connection",
       "tooMany": "You have sent too many requests — please wait a moment and try again.",
       "tooManyTitle": "Too many requests",

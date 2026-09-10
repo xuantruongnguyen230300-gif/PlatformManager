@@ -9,19 +9,19 @@
 <link rel="stylesheet" href="assets/fonts/be-vietnam-pro.css">
 <!--
   ============================================================================
-  PROTOTYPE GIAO DIỆN — PlatformManager
+  PROTOTYPE GIAO DIỆN — PlatformManager  ·  BẢN TRONG REPO, ĐÃ ẨN DANH
   ============================================================================
-  Đây là bản TÁI HIỆN 1:1 giao diện Angular đang có trước khi redesign.
-  Nguồn: src/FE/src/styles.scss + toàn bộ *.html/*.scss của 5 màn hình
-  (khôi phục từ git HEAD + bản làm việc trên đĩa, ngày 2026-08-29).
+  Bản TÁI HIỆN 1:1 giao diện Angular, nguồn: src/FE/src/styles.scss + toàn bộ
+  *.html/*.scss của các màn hình (khôi phục từ git HEAD, ngày 2026-08-29).
+  HỢP NHẤT 2026-09-10 với bản đối chiếu tay ngoài repo, rồi ẨN DANH: tên đơn vị,
+  địa phương và số hiệu văn bản → MINH HOẠ. Bản DUY NHẤT tài liệu được trích dẫn.
 
   CÁCH SỬA GIAO DIỆN:
     1. Đổi TOKEN  -> khối `:root` ngay bên dưới. Đổi 1 dòng, đổi cả app.
     2. Đổi PRIMITIVE dùng chung (.card/.btn/.badge/table/dialog...)
                    -> khối "LỚP 2 — PRIMITIVE TOÀN CỤC"
     3. Đổi 1 màn  -> khối CSS của màn đó ở "LỚP 4"
-  Thanh điều khiển màu tím trên cùng KHÔNG thuộc thiết kế — nó là công cụ
-  của prototype (đổi màn hình, thu gọn sidebar, mở dialog, bắn toast).
+  Thanh tím trên cùng KHÔNG thuộc thiết kế — nó là công cụ của prototype.
   ============================================================================
 -->
 <style>
@@ -1467,7 +1467,8 @@ app-history-list .history {
 }
 app-history-list .histrow {
   display: grid;
-  grid-template-columns: 100px 1fr 90px 70px;
+  /* SỬA 2026-09-05 (T3): 100px -> 150px cho khoảng ngày của kỳ. */
+  grid-template-columns: 150px 1fr 90px 70px;
   gap: var(--sp-3);
   align-items: center;
   padding: var(--sp-2);
@@ -1731,7 +1732,8 @@ app-criteria-grid-table .dti-grid-scroll {
 app-criteria-grid-table .proto-paginator {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  /* Khối còn 2 phần tử. Style PROTOTYPE-ONLY. */
+  justify-content: center;
   gap: var(--sp-3);
   padding: var(--sp-3) 0 0;
 }
@@ -2170,6 +2172,27 @@ body.auth-mode main { max-width: none; padding: 0; }
      =================================================================== -->
 <section class="screen" id="screen-dashboard">
 
+  <!-- =====================================================================
+       SỬA 2026-09-04 — ghép yêu cầu spec DTI mới vào ĐÚNG thiết kế đã có.
+       Không thêm class mới, không đổi giá trị style nào. Mọi thay đổi chỉ
+       nằm ở DỮ LIỆU và ở SỐ CỘT của bảng chi tiết:
+         1. Dashboard nay là trang chủ (thay /trang-chu) — đã chốt 2026-09-04
+         2. 6 nhóm chỉ tiêu của khung DTI hiện hành, thay 8 nhóm mẫu cũ
+         3. Bảng chi tiết ĐỔI bộ cột (vẫn 9): bỏ Tuần trước/Tuần này/Tăng-giảm,
+            thêm Tự đánh giá · Thẩm định · Chênh lệch — chốt 2026-09-05
+         4. Bộ lọc thêm điều kiện "Trạng thái" (4 giá trị BA chốt, người dùng
+            chọn tay) — vẫn dùng nguyên <details class="filter"> có sẵn
+         5. SỬA 2026-09-05 (Q22): bỏ ô lọc "Mức thay đổi so với kỳ trước" và 2
+            tùy chọn sắp xếp không có dữ liệu. Hai ô KPI "Chỉ tiêu tăng"/"Không
+            tăng" GIỮ — chúng chỉ hiển thị, không phải control.
+         6. SỬA 2026-09-05 (Q24): `Tiến độ %` để TRỐNG khi import, người dùng tự
+            nhập. Vì thanh tiến độ nhóm và biểu đồ vẽ theo `Tiến độ %` (Q11), các
+            con số 74,3% · 51,8% … dưới đây là trạng thái SAU KHI người dùng đã
+            nhập, KHÔNG phải ngay sau import — ngay sau import dashboard trống.
+       ẨN DANH 2026-09-10 — số dưới đây là DỮ LIỆU MINH HOẠ, không của đơn vị
+       nào; chú thích xuất xứ "(thật …)" đã gỡ (chốt 2026-09-09, KpiTile.md).
+       ===================================================================== -->
+
   <!-- ============ app-period-toolbar ============ -->
   <app-period-toolbar>
     <!-- Toolbar chọn kỳ: .toolbar tự mang nền + viền, KHÔNG kèm .card nữa
@@ -2188,17 +2211,41 @@ body.auth-mode main { max-width: none; padding: 0; }
         <option value="2024">2024</option>
       </select>
 
-      <!-- @if (viewMode() === 'week') -> true: select tuan (select thang khong render) -->
+      <!-- SỬA 2026-09-05: mỗi mốc kỳ ghi RÕ khoảng ngày, không chỉ ngày đầu kỳ.
+           Tuần = thứ Hai -> Chủ nhật theo chuẩn tuần ISO (ISO-8601), đúng chuẩn
+           mà `period="YYYY-Www"` của contract đang dùng. Năm không lặp lại trong
+           từng dòng vì ô chọn năm nằm ngay bên trái; năm đầy đủ đọc ở nhãn
+           "Kỳ đang xem" và ở bảng Lịch sử. -->
+      <!-- @if (viewMode() === 'week') -> true -->
       <select title="Chọn 1 tuần cụ thể hoặc xem Tất cả" aria-label="Chọn kỳ">
         <option value="">— Kỳ hiện tại —</option>
         <option value="__ALL__">— Tất cả (tổng hợp theo năm) —</option>
-        <option value="2026-08-10" selected>10/08/2026 · 71,4%</option>
-        <option value="2026-08-03">03/08/2026 · 69,1%</option>
-        <option value="2026-07-27">27/07/2026 · 66,9%</option>
-        <option value="2026-07-20">20/07/2026 · 63,7%</option>
-        <option value="2026-07-13">13/07/2026 · 61,0%</option>
-        <option value="2026-07-06">06/07/2026 · 58,2%</option>
+        <option value="2026-W33" selected>Tuần 33 · 10/08–16/08 · 82,1%</option>
+        <option value="2026-W32">Tuần 32 · 03/08–09/08 · 79,8%</option>
+        <option value="2026-W31">Tuần 31 · 27/07–02/08 · 77,6%</option>
+        <option value="2026-W30">Tuần 30 · 20/07–26/07 · 74,4%</option>
+        <option value="2026-W29">Tuần 29 · 13/07–19/07 · 71,7%</option>
+        <option value="2026-W28">Tuần 28 · 06/07–12/07 · 68,9%</option>
       </select>
+
+      <!-- @if (viewMode() === 'month') -> nhánh TẮT: select tháng THAY THẾ select
+           tuần ở trên (chỉ 1 trong 2 render, nên toolbar không bao giờ dôi hàng).
+           Tháng = ngày 1 -> ngày cuối tháng dương lịch. Markup nhánh tháng, kèm
+           đúng định dạng nhãn đã chốt 2026-09-05:
+
+      <select title="Chọn tháng" aria-label="Chọn tháng">
+        <option value="">— Tháng hiện tại —</option>
+        <option value="2026-08" selected>Tháng 8 · 01/08–31/08 · 81,0%</option>
+        <option value="2026-07">Tháng 7 · 01/07–31/07 · 72,6%</option>
+        <option value="2026-06">Tháng 6 · 01/06–30/06 · 66,4%</option>
+      </select>
+
+           Ở chế độ tháng, nhãn "Kỳ đang xem" (.period-display) đọc là:
+             Tháng 8/2026 (01/08 – 31/08/2026)
+           đối xứng với nhãn tuần đang hiển thị:
+             Tuần 33/2026 (10/08 – 16/08/2026)
+           Xem thêm ô "Kỳ trong năm" ở màn Danh mục DTI — ô đó liệt kê CẢ tuần lẫn
+           tháng nên duyệt được cả hai định dạng ngay trên giao diện. -->
 
       <div class="segmented" role="group" aria-label="Chế độ xem theo Tuần hoặc Tháng">
         <button type="button" class="seg-btn active">
@@ -2211,7 +2258,16 @@ body.auth-mode main { max-width: none; padding: 0; }
 
       <span class="toolbar-sep"></span>
       <div class="toolbar-actions">
-        <button type="button" class="btn primary">Xuất báo cáo</button>
+        <!-- SỬA 2026-09-05: nút này TẢI THẲNG file .xlsx của kỳ đang xem, không
+             mở dialog xem trước nữa (app-report-dialog đã gỡ — xem ghi chú cuối
+             màn). Icon pi-file-excel có sẵn trong bộ primeicons đang vendored. -->
+        <button
+          type="button"
+          class="btn primary"
+          title="Tải file Excel (.xlsx) của kỳ đang xem — Tuần 33/2026 (10/08 – 16/08/2026)"
+        >
+          <i class="pi pi-file-excel"></i> Xuất báo cáo
+        </button>
       </div>
     </section>
   </app-period-toolbar>
@@ -2222,36 +2278,36 @@ body.auth-mode main { max-width: none; padding: 0; }
       <app-kpi-tile>
         <div class="card kpi">
           <div class="label">Tiến độ chung tuần này</div>
-          <div class="value">71,4%</div>
-          <div class="sub">Bình quân gia quyền theo điểm</div>
+          <div class="value">82,1%</div>
+          <div class="sub">Bình quân Tiến độ %, gia quyền theo Điểm tối đa</div>
         </div>
       </app-kpi-tile>
       <app-kpi-tile>
         <div class="card kpi">
           <div class="label">So với tuần trước</div>
-          <div class="value text-good">↑ 2,3 đ.%</div>
+          <div class="value good">↑ 2,3 đ.%</div>
           <div class="sub">Tuần 32/2026 (03/08–09/08/2026)</div>
         </div>
       </app-kpi-tile>
       <app-kpi-tile>
         <div class="card kpi">
           <div class="label">Chỉ tiêu tăng</div>
-          <div class="value text-good">5</div>
+          <div class="value good">18</div>
           <div class="sub">Có tiến bộ so với kỳ trước</div>
         </div>
       </app-kpi-tile>
       <app-kpi-tile>
         <div class="card kpi">
           <div class="label">Không tăng</div>
-          <div class="value text-warn">3</div>
+          <div class="value warn">27</div>
           <div class="sub">Cần chú ý theo dõi</div>
         </div>
       </app-kpi-tile>
       <app-kpi-tile>
         <div class="card kpi">
-          <div class="label">Hoàn thành 100%</div>
-          <div class="value">1/8</div>
-          <div class="sub">Số chỉ tiêu đạt đủ tiến độ</div>
+          <div class="label">Hoàn thành</div>
+          <div class="value">26/62</div>
+          <div class="sub">Số chỉ tiêu ở trạng thái Hoàn thành</div>
         </div>
       </app-kpi-tile>
     </section>
@@ -2267,47 +2323,38 @@ body.auth-mode main { max-width: none; padding: 0; }
       </div>
 
       <!-- ---- app-group-progress-list ---- -->
+      <!-- 6 nhóm của khung DTI; % = tổng Tự đánh giá / tổng Điểm tối đa (minh hoạ) -->
       <app-group-progress-list>
         <div class="group-progress-list">
           <div class="group-row">
-            <div><b>1. Nhận thức số</b></div>
-            <div class="bar"><div class="fill" style="width: 84.5%"></div></div>
-            <div class="num"><b>84,5%</b></div>
+            <div><b>1. Hạ tầng và Nền tảng số</b></div>
+            <div class="bar"><div class="fill" style="width: 74.3%"></div></div>
+            <div class="num"><b>74,3%</b></div>
           </div>
           <div class="group-row">
-            <div><b>2. Thể chế số</b></div>
+            <div><b>2. Nhân lực số</b></div>
+            <div class="bar"><div class="fill" style="width: 51.8%"></div></div>
+            <div class="num"><b>51,8%</b></div>
+          </div>
+          <div class="group-row">
+            <div><b>3. An toàn thông tin, an ninh mạng</b></div>
             <div class="bar"><div class="fill" style="width: 100%"></div></div>
             <div class="num"><b>100,0%</b></div>
           </div>
           <div class="group-row">
-            <div><b>3. Hạ tầng số</b></div>
-            <div class="bar"><div class="fill" style="width: 92%"></div></div>
-            <div class="num"><b>92,0%</b></div>
+            <div><b>4. Hoạt động chính quyền số</b></div>
+            <div class="bar"><div class="fill" style="width: 85.1%"></div></div>
+            <div class="num"><b>85,1%</b></div>
           </div>
           <div class="group-row">
-            <div><b>4. Nhân lực số</b></div>
-            <div class="bar"><div class="fill" style="width: 62.5%"></div></div>
-            <div class="num"><b>62,5%</b></div>
+            <div><b>5. Hoạt động Kinh tế số</b></div>
+            <div class="bar"><div class="fill" style="width: 100%"></div></div>
+            <div class="num"><b>100,0%</b></div>
           </div>
           <div class="group-row">
-            <div><b>5. An toàn thông tin mạng</b></div>
-            <div class="bar"><div class="fill" style="width: 65%"></div></div>
-            <div class="num"><b>65,0%</b></div>
-          </div>
-          <div class="group-row">
-            <div><b>6. Hoạt động chính quyền số</b></div>
-            <div class="bar"><div class="fill" style="width: 59.8%"></div></div>
-            <div class="num"><b>59,8%</b></div>
-          </div>
-          <div class="group-row">
-            <div><b>7. Hoạt động kinh tế số</b></div>
-            <div class="bar"><div class="fill" style="width: 97.1%"></div></div>
-            <div class="num"><b>97,1%</b></div>
-          </div>
-          <div class="group-row">
-            <div><b>8. Hoạt động xã hội số</b></div>
-            <div class="bar"><div class="fill" style="width: 85.6%"></div></div>
-            <div class="num"><b>85,6%</b></div>
+            <div><b>6. Hoạt động Xã hội số</b></div>
+            <div class="bar"><div class="fill" style="width: 67.6%"></div></div>
+            <div class="num"><b>67,6%</b></div>
           </div>
         </div>
       </app-group-progress-list>
@@ -2353,31 +2400,34 @@ body.auth-mode main { max-width: none; padding: 0; }
             <!-- fill: true -->
             <polygon
               class="proto-chart-area"
-              points="56,88.7 184.8,83.9 313.6,79.2 442.4,73.6 571.2,69.8 700,65.8 700,190 56,190"
+              points="56,69.2 184.8,64.4 313.6,59.7 442.4,54.1 571.2,50.3 700,46.3 700,190 56,190"
             />
             <!-- tension: 0 -> duong gap khuc -->
             <polyline
               class="proto-chart-line"
-              points="56,88.7 184.8,83.9 313.6,79.2 442.4,73.6 571.2,69.8 700,65.8"
+              points="56,69.2 184.8,64.4 313.6,59.7 442.4,54.1 571.2,50.3 700,46.3"
             />
             <!-- pointRadius: 4 -->
             <g class="proto-chart-point">
-              <circle cx="56" cy="88.7" r="4" />
-              <circle cx="184.8" cy="83.9" r="4" />
-              <circle cx="313.6" cy="79.2" r="4" />
-              <circle cx="442.4" cy="73.6" r="4" />
-              <circle cx="571.2" cy="69.8" r="4" />
-              <circle cx="700" cy="65.8" r="4" />
+              <circle cx="56" cy="69.2" r="4" />
+              <circle cx="184.8" cy="64.4" r="4" />
+              <circle cx="313.6" cy="59.7" r="4" />
+              <circle cx="442.4" cy="54.1" r="4" />
+              <circle cx="571.2" cy="50.3" r="4" />
+              <circle cx="700" cy="46.3" r="4" />
             </g>
 
-            <!-- nhan truc x: Trend[].Label = YYYY-Www o che do tuan -->
+            <!-- nhan truc x. SỬA 2026-09-05: hiện KHOẢNG NGÀY thay cho mã tuần "2026-Www" —
+                 dễ đọc hơn hẳn với người dùng nghiệp vụ. Ở chế độ THÁNG trục x vẫn là
+                 "Th.1..Th.12" vì 12 nhãn khoảng-ngày không đủ chỗ; khoảng ngày của
+                 tháng đọc ở thanh chọn kỳ và ở nhãn kỳ. -->
             <g class="proto-chart-axis-x">
-              <text x="56" y="208">2026-W28</text>
-              <text x="184.8" y="208">2026-W29</text>
-              <text x="313.6" y="208">2026-W30</text>
-              <text x="442.4" y="208">2026-W31</text>
-              <text x="571.2" y="208">2026-W32</text>
-              <text x="700" y="208">2026-W33</text>
+              <text x="56" y="208">06/07 – 12/07</text>
+              <text x="184.8" y="208">13/07 – 19/07</text>
+              <text x="313.6" y="208">20/07 – 26/07</text>
+              <text x="442.4" y="208">27/07 – 02/08</text>
+              <text x="571.2" y="208">03/08 – 09/08</text>
+              <text x="700" y="208">10/08 – 16/08</text>
             </g>
           </svg>
         </div>
@@ -2390,15 +2440,16 @@ body.auth-mode main { max-width: none; padding: 0; }
   <app-criteria-table>
     <section class="card criteria-table-card">
       <div class="title">
-        <h2>8 chỉ tiêu DTI</h2>
-        <span class="muted">8/8 chỉ tiêu</span>
+        <h2>62 chỉ tiêu DTI</h2>
+        <span class="muted">62/62 chỉ tiêu</span>
       </div>
 
-      <!-- Cùng hợp đồng .toolbar với màn Danh mục DTI: 2 điều kiện lọc (nhóm,
-           mức thay đổi) nằm trong nút "Lọc"; ô sắp xếp KHÔNG phải điều kiện lọc
-           nên ở lại hàng, phía nhóm hành động. Đây là trạng thái CHƯA lọc —
+      <!-- Cùng hợp đồng .toolbar với màn Danh mục DTI. SỬA 2026-09-04: thêm
+           điều kiện "Trạng thái" (4 giá trị BA chốt) vào đúng <details class="filter">
+           đang có — không dựng control lọc mới. Ô sắp xếp KHÔNG phải điều kiện
+           lọc nên ở lại hàng, phía nhóm hành động. Đây là trạng thái CHƯA lọc —
            không có .filter-count và không có .filter-chip nào, khớp với
-           "8/8 chỉ tiêu" ở tiêu đề. -->
+           "62/62 chỉ tiêu" ở tiêu đề. -->
       <div class="toolbar no-print">
         <div class="input-icon search">
           <i class="pi pi-search"></i>
@@ -2412,25 +2463,23 @@ body.auth-mode main { max-width: none; padding: 0; }
               <label for="dashFilterGroup">Nhóm chỉ tiêu</label>
               <select id="dashFilterGroup">
                 <option value="" selected>Tất cả nhóm</option>
-                <option value="1">1. Nhận thức số</option>
-                <option value="2">2. Thể chế số</option>
-                <option value="3">3. Hạ tầng số</option>
-                <option value="4">4. Nhân lực số</option>
-                <option value="5">5. An toàn thông tin mạng</option>
-                <option value="6">6. Hoạt động chính quyền số</option>
-                <option value="7">7. Hoạt động kinh tế số</option>
-                <option value="8">8. Hoạt động xã hội số</option>
+                <option value="1">1. Hạ tầng và Nền tảng số</option>
+                <option value="2">2. Nhân lực số</option>
+                <option value="3">3. An toàn thông tin, an ninh mạng</option>
+                <option value="4">4. Hoạt động chính quyền số</option>
+                <option value="5">5. Hoạt động Kinh tế số</option>
+                <option value="6">6. Hoạt động Xã hội số</option>
               </select>
             </div>
 
             <div class="form-row">
-              <label for="dashFilterDelta">Mức thay đổi so với kỳ trước</label>
-              <select id="dashFilterDelta">
-                <option value="" selected>Tất cả mức thay đổi</option>
-                <option value="up">Chỉ tiêu tăng</option>
-                <option value="flat">Không tăng</option>
-                <option value="down">Giảm</option>
-                <option value="done">Hoàn thành</option>
+              <label for="dashFilterStatus">Trạng thái</label>
+              <select id="dashFilterStatus">
+                <option value="" selected>Tất cả trạng thái</option>
+                <option value="chua">Chưa thực hiện</option>
+                <option value="dang">Đang thực hiện</option>
+                <option value="minhchung">Cần bổ sung minh chứng</option>
+                <option value="xong">Hoàn thành</option>
               </select>
             </div>
 
@@ -2444,137 +2493,107 @@ body.auth-mode main { max-width: none; padding: 0; }
         <span class="toolbar-sep"></span>
         <div class="toolbar-actions">
           <select title="Sắp xếp danh sách" aria-label="Sắp xếp danh sách">
+            <!-- SỬA 2026-09-05 (Q22): bỏ "Tăng nhiều nhất" và "Tiến độ thấp nhất".
+                 Bảng đã bỏ 3 cột so sánh tuần nên API không trả chênh lệch kỳ trước
+                 lẫn Tiến độ % cho từng dòng — hai tùy chọn đó không có dữ liệu nào
+                 để chạy. Hai cái còn lại đều có dữ liệu thật. -->
             <option value="id" selected>Theo mã chỉ tiêu</option>
-            <option value="delta">Tăng nhiều nhất</option>
-            <option value="low">Tiến độ thấp nhất</option>
+            <option value="gap">Chênh lệch lớn nhất</option>
           </select>
         </div>
       </div>
 
       <div class="tablewrap">
-        <!-- <p-table [scrollable]="true" scrollHeight="480px"> -> .proto-table-scroll -->
+        <!-- <p-table [scrollable]="true" scrollHeight="480px"> -> .proto-table-scroll
+             SỬA 2026-09-05 (chốt với người dùng): bảng vẫn 9 cột, nhưng ĐỔI bộ cột —
+             bỏ 3 cột so sánh tuần (Tuần trước / Tuần này / Tăng-giảm), thêm 3 cột
+             điểm (Tự đánh giá / Thẩm định / Chênh lệch). Xu hướng theo tuần đã có
+             ở biểu đồ + 2 ô KPI nên không lặp lại trong bảng. Số trong bảng là
+             DỮ LIỆU MINH HOẠ, đã ẩn danh 2026-09-10. -->
         <div class="proto-table-scroll">
           <table>
             <thead>
               <tr>
-                <th style="width:6%">Mã</th>
-                <th style="width:24%">Chỉ tiêu</th>
-                <th style="width:12%">Nhóm</th>
-                <th class="num" style="width:7%">Điểm tối đa</th>
-                <th class="num" style="width:9%">Tuần trước</th>
-                <th class="num" style="width:9%">Tuần này</th>
-                <th class="num" style="width:8%">Tăng/giảm</th>
-                <th style="width:9%">Trạng thái</th>
-                <th style="width:16%">Ghi chú tuần</th>
+                <th style="width:5%">Mã</th>
+                <th style="width:26%">Chỉ tiêu</th>
+                <th style="width:13%">Nhóm</th>
+                <th class="num" style="width:8%">Điểm tối đa</th>
+                <th class="num" style="width:9%">Tự đánh giá</th>
+                <th class="num" style="width:9%">Thẩm định</th>
+                <th class="num" style="width:9%">Chênh lệch</th>
+                <th style="width:10%">Trạng thái</th>
+                <th style="width:11%">Minh chứng/Ghi chú</th>
               </tr>
             </thead>
             <tbody>
               <tr>
                 <td><b>1.1</b></td>
-                <td>Tỷ lệ cán bộ, công chức được tập huấn về chuyển đổi số</td>
-                <td>1. Nhận thức số</td>
+                <td>Tỷ lệ người sử dụng có khả năng truy nhập băng rộng cố định với tốc độ trên 1Gb/s</td>
+                <td>1. Hạ tầng và Nền tảng số</td>
                 <td class="num">10</td>
-                <td class="num">78,0%</td>
-                <td class="num">84,5%</td>
-                <td class="num"><app-delta-indicator><span class="delta up">↑ +6,5 đ.%</span></app-delta-indicator></td>
+                <td class="num">7,04</td>
+                <td class="num">10</td>
+                <td class="num"><app-delta-indicator><span class="delta up">+2,96</span></app-delta-indicator></td>
                 <td><app-status-badge><span class="badge warn">Đang thực hiện</span></app-status-badge></td>
-                <td>Đã tổ chức 2 lớp tập huấn cho khối xã, phường</td>
+                <td><span class="muted">—</span></td>
               </tr>
               <tr>
-                <td><b>2.3</b></td>
-                <td>Ban hành kế hoạch chuyển đổi số năm của đơn vị</td>
-                <td>2. Thể chế số</td>
-                <td class="num">8</td>
-                <td class="num">100,0%</td>
-                <td class="num">100,0%</td>
-                <td class="num"><app-delta-indicator><span class="delta flat">0,0 đ.%</span></app-delta-indicator></td>
+                <td><b>1.4</b></td>
+                <td>Mức độ ứng dụng AI</td>
+                <td>1. Hạ tầng và Nền tảng số</td>
+                <td class="num">20</td>
+                <td class="num">5</td>
+                <td class="num">0</td>
+                <td class="num"><app-delta-indicator><span class="delta down">−5,00</span></app-delta-indicator></td>
+                <td><app-status-badge><span class="badge bad">Cần bổ sung minh chứng</span></app-status-badge></td>
+                <td>Thẩm định chưa thống nhất tiêu chí</td>
+              </tr>
+              <tr>
+                <td><b>1.5</b></td>
+                <td>Trang bị máy tính cho CBCCVC</td>
+                <td>1. Hạ tầng và Nền tảng số</td>
+                <td class="num">10</td>
+                <td class="num">10</td>
+                <td class="num">10</td>
+                <td class="num"><app-delta-indicator><span class="delta flat">0,00</span></app-delta-indicator></td>
                 <td><app-status-badge><span class="badge ok">Hoàn thành</span></app-status-badge></td>
-                <td><span class="muted">—</span></td>
+                <td>*123/VB-MAU - 15/03/2026: khảo sát cấu hình máy tính</td>
               </tr>
               <tr>
-                <td><b>3.2</b></td>
-                <td>Tỷ lệ hộ gia đình có kết nối cáp quang băng rộng</td>
-                <td>3. Hạ tầng số</td>
-                <td class="num">12</td>
-                <td class="num">91,2%</td>
-                <td class="num">92,0%</td>
-                <td class="num"><app-delta-indicator><span class="delta up">↑ +0,8 đ.%</span></app-delta-indicator></td>
-                <td><app-status-badge><span class="badge warn">Đang thực hiện</span></app-status-badge></td>
-                <td>VNPT bổ sung 3 tuyến cáp tại xã Tân Lập</td>
-              </tr>
-              <tr>
-                <td><b>4.1</b></td>
-                <td>Tỷ lệ nhân lực CNTT chuyên trách trên tổng biên chế</td>
-                <td>4. Nhân lực số</td>
-                <td class="num">8</td>
-                <td class="num">62,5%</td>
-                <td class="num">62,5%</td>
-                <td class="num"><app-delta-indicator><span class="delta flat">0,0 đ.%</span></app-delta-indicator></td>
-                <td><app-status-badge><span class="badge bad">Không tăng</span></app-status-badge></td>
-                <td>Chờ kết quả tuyển dụng đợt 2 năm 2026</td>
-              </tr>
-              <tr>
-                <td><b>5.2</b></td>
-                <td>Tỷ lệ hệ thống thông tin được phê duyệt cấp độ an toàn</td>
-                <td>5. An toàn thông tin mạng</td>
-                <td class="num">10</td>
-                <td class="num">70,0%</td>
-                <td class="num">65,0%</td>
-                <td class="num"><app-delta-indicator><span class="delta down">↓ -5,0 đ.%</span></app-delta-indicator></td>
-                <td><app-status-badge><span class="badge bad">Không tăng</span></app-status-badge></td>
-                <td>2 hệ thống hết hiệu lực hồ sơ, đang rà soát lại</td>
-              </tr>
-              <tr>
-                <td><b>6.4</b></td>
-                <td>Tỷ lệ hồ sơ thủ tục hành chính xử lý trực tuyến toàn trình</td>
-                <td>6. Hoạt động chính quyền số</td>
-                <td class="num">15</td>
-                <td class="num">54,3%</td>
-                <td class="num">59,8%</td>
-                <td class="num"><app-delta-indicator><span class="delta up">↑ +5,5 đ.%</span></app-delta-indicator></td>
-                <td><app-status-badge><span class="badge warn">Đang thực hiện</span></app-status-badge></td>
-                <td>Tăng mạnh nhờ Sở Tư pháp và Sở Xây dựng</td>
-              </tr>
-              <tr>
-                <td><b>7.1</b></td>
-                <td>Tỷ lệ doanh nghiệp sử dụng hoá đơn điện tử</td>
-                <td>7. Hoạt động kinh tế số</td>
-                <td class="num">12</td>
-                <td class="num">96,4%</td>
-                <td class="num">97,1%</td>
-                <td class="num"><app-delta-indicator><span class="delta up">↑ +0,7 đ.%</span></app-delta-indicator></td>
+                <td><b>2.2</b></td>
+                <td>Tỷ lệ công chức, viên chức chuyên trách về chuyển đổi số</td>
+                <td>2. Nhân lực số</td>
+                <td class="num">20</td>
+                <td class="num">0,38</td>
+                <td class="num">0,38</td>
+                <td class="num"><app-delta-indicator><span class="delta flat">0,00</span></app-delta-indicator></td>
                 <td><app-status-badge><span class="badge warn">Đang thực hiện</span></app-status-badge></td>
                 <td><span class="muted">—</span></td>
               </tr>
               <tr>
-                <td><b>8.3</b></td>
-                <td>Tỷ lệ người dân có tài khoản định danh điện tử mức 2</td>
-                <td>8. Hoạt động xã hội số</td>
+                <td><b>3.1</b></td>
+                <td>Tỷ lệ hệ thống thông tin được phê duyệt cấp độ an toàn thông tin</td>
+                <td>3. An toàn thông tin, an ninh mạng</td>
+                <td class="num">20</td>
+                <td class="num">20</td>
+                <td class="num">20</td>
+                <td class="num"><app-delta-indicator><span class="delta flat">0,00</span></app-delta-indicator></td>
+                <td><app-status-badge><span class="badge ok">Hoàn thành</span></app-status-badge></td>
+                <td>Đã phê duyệt cấp độ 2 cho toàn bộ hệ thống dùng chung</td>
+              </tr>
+              <tr>
+                <td><b>6.8</b></td>
+                <td>Tỷ lệ dân số trưởng thành có chữ ký số hoặc chữ ký điện tử cá nhân</td>
+                <td>6. Hoạt động Xã hội số</td>
                 <td class="num">10</td>
-                <td class="num">81,9%</td>
-                <td class="num">85,6%</td>
-                <td class="num"><app-delta-indicator><span class="delta up">↑ +3,7 đ.%</span></app-delta-indicator></td>
-                <td><app-status-badge><span class="badge warn">Đang thực hiện</span></app-status-badge></td>
-                <td>Công an tỉnh cấp thêm 12.400 tài khoản trong tuần</td>
+                <td class="num">1,44</td>
+                <td class="num">0</td>
+                <td class="num"><app-delta-indicator><span class="delta down">−1,44</span></app-delta-indicator></td>
+                <td><app-status-badge><span class="badge neutral">Chưa thực hiện</span></app-status-badge></td>
+                <td><span class="muted">—</span></td>
               </tr>
             </tbody>
           </table>
-        </div>
-
-        <!-- Paginator PrimeNG ([paginator]="true" [rows]="20" [rowsPerPageOptions]="[10,20,50]").
-             Style that nam o core/theme/platform-manager-preset.ts - KHONG co trong snapshot,
-             nen day la dung gan dung cho prototype. Xem "Ghi chú để sửa sau". -->
-        <div class="proto-paginator">
-          <button type="button" class="proto-pg-btn" disabled aria-label="Trang đầu">«</button>
-          <button type="button" class="proto-pg-btn" disabled aria-label="Trang trước">‹</button>
-          <button type="button" class="proto-pg-btn active" aria-current="page">1</button>
-          <button type="button" class="proto-pg-btn" disabled aria-label="Trang sau">›</button>
-          <button type="button" class="proto-pg-btn" disabled aria-label="Trang cuối">»</button>
-          <select class="proto-pg-rows" aria-label="Số dòng mỗi trang">
-            <option value="10">10</option>
-            <option value="20" selected>20</option>
-            <option value="50">50</option>
-          </select>
         </div>
       </div>
     </section>
@@ -2587,42 +2606,46 @@ body.auth-mode main { max-width: none; padding: 0; }
       <span class="muted">Không ghi đè dữ liệu tuần cũ</span>
     </div>
 
-    <!-- @defer (on viewport) da resolve -> app-history-list -->
+    <!-- @defer (on viewport) da resolve -> app-history-list.
+         SỬA 2026-09-05: cột đầu nay là KHOẢNG NGÀY của kỳ, không phải 1 ngày.
+         Lưới .histrow gốc là "100px 1fr 90px 70px" — 100px không đủ cho
+         "10/08 – 16/08/2026" nên cột này cần nới. ĐIỂM CẦN DUYỆT: đây là
+         giá trị style DUY NHẤT phải đổi cho yêu cầu mốc ngày. -->
     <app-history-list>
       <div class="history">
         <div class="histrow">
-          <b>10/08/2026</b>
-          <span>Tiến độ chung <b>71,4%</b></span>
+          <b>10/08 – 16/08/2026</b>
+          <span>Tiến độ chung <b>82,1%</b></span>
           <app-delta-indicator><span class="delta up">↑ +2,3 đ.%</span></app-delta-indicator>
           <button type="button" class="btn">Xem</button>
         </div>
         <div class="histrow">
-          <b>03/08/2026</b>
-          <span>Tiến độ chung <b>69,1%</b></span>
+          <b>03/08 – 09/08/2026</b>
+          <span>Tiến độ chung <b>79,8%</b></span>
           <app-delta-indicator><span class="delta up">↑ +2,2 đ.%</span></app-delta-indicator>
           <button type="button" class="btn">Xem</button>
         </div>
         <div class="histrow">
-          <b>27/07/2026</b>
-          <span>Tiến độ chung <b>66,9%</b></span>
+          <b>27/07 – 02/08/2026</b>
+          <span>Tiến độ chung <b>77,6%</b></span>
           <app-delta-indicator><span class="delta up">↑ +3,2 đ.%</span></app-delta-indicator>
           <button type="button" class="btn">Xem</button>
         </div>
         <div class="histrow">
-          <b>20/07/2026</b>
-          <span>Tiến độ chung <b>63,7%</b></span>
+          <b>20/07 – 26/07/2026</b>
+          <span>Tiến độ chung <b>74,4%</b></span>
           <app-delta-indicator><span class="delta up">↑ +2,7 đ.%</span></app-delta-indicator>
           <button type="button" class="btn">Xem</button>
         </div>
         <div class="histrow">
-          <b>13/07/2026</b>
-          <span>Tiến độ chung <b>61,0%</b></span>
+          <b>13/07 – 19/07/2026</b>
+          <span>Tiến độ chung <b>71,7%</b></span>
           <app-delta-indicator><span class="delta up">↑ +2,8 đ.%</span></app-delta-indicator>
           <button type="button" class="btn">Xem</button>
         </div>
         <div class="histrow">
-          <b>06/07/2026</b>
-          <span>Tiến độ chung <b>58,2%</b></span>
+          <b>06/07 – 12/07/2026</b>
+          <span>Tiến độ chung <b>68,9%</b></span>
           <span class="muted">Kỳ đầu</span>
           <button type="button" class="btn">Xem</button>
         </div>
@@ -2636,34 +2659,26 @@ body.auth-mode main { max-width: none; padding: 0; }
     <a href="#screen-danh-muc-dti">Danh mục &gt; DTI</a>.
   </div>
 
-  <!-- ============ app-report-dialog (dong) ============ -->
-  <app-report-dialog>
-    <dialog class="proto-dialog">
-      <div class="title">
-        <h2>Báo cáo tiến độ DTI — Tuần 33/2026</h2>
-        <button type="button" class="btn">Đóng</button>
-      </div>
-      <!-- .report = [innerHTML] noi dung HTML do server dung san (GET /api/dashboard/report) -->
-      <div class="report">
-        <h3>BÁO CÁO TIẾN ĐỘ CHUYỂN ĐỔI SỐ</h3>
-        <p><b>Kỳ báo cáo:</b> Tuần 33/2026 (10/08/2026 – 16/08/2026)</p>
-        <p><b>Tiến độ chung:</b> 71,4% (tăng 2,3 điểm phần trăm so với Tuần 32/2026).</p>
-        <p>
-          Trong tuần có 5 chỉ tiêu tăng, 3 chỉ tiêu không tăng, 1 chỉ tiêu đã hoàn thành 100%.
-          Nhóm "Hoạt động kinh tế số" giữ mức cao nhất (97,1%); nhóm
-          "Hoạt động chính quyền số" thấp nhất (59,8%).
-        </p>
-        <p>
-          <b>Đề nghị:</b> Sở Thông tin và Truyền thông đôn đốc các đơn vị hoàn thiện hồ sơ
-          cấp độ an toàn thông tin cho 2 hệ thống đã hết hiệu lực.
-        </p>
-      </div>
-      <div class="dialog-actions">
-        <button type="button" class="btn">Sao chép</button>
-        <button type="button" class="btn primary">In</button>
-      </div>
-    </dialog>
-  </app-report-dialog>
+  <!-- ============ app-report-dialog — ĐÃ GỠ 2026-09-05 ============
+       Chốt với người dùng: "Xuất báo cáo" tải thẳng file .xlsx, không hỏi gì,
+       không xem trước. Vì vậy component report-dialog (xem trước HTML + nút
+       Sao chép + nút In) và endpoint GET /api/dashboard/report KHÔNG còn dùng.
+       Thay bằng: GET /api/dashboard/export?mode=week|month|year&date=…&year=…
+       trả file .xlsx (chỉ .xlsx, không CSV, không .xls — khớp luật Core ở
+       doc/huong_dan/wiki-core/be/15-import-export.md §3).
+
+       File .xlsx: ĐÚNG 1 sheet = bảng 62 chỉ tiêu, phía trên có khối nhận dạng
+       kỳ (Kỳ báo cáo · Từ ngày · Đến ngày · Thuộc tháng / Gồm các tuần · Năm ·
+       Số chỉ tiêu · Ngày xuất · Người xuất), phía dưới có dòng TỔNG CỘNG.
+       Chọn chế độ Tháng thì xuất TRỌN tháng, không phải 1 tuần trong tháng.
+
+       Hai file MẪU (.xlsx) KHÔNG kèm theo bản này — chúng sinh từ dữ liệu
+       thật nên ở lại thư mục đối chiếu tay ngoài repo. Tên để tra lại:
+         mau-xuat-bao-cao_Tuan-33-2026.xlsx · mau-xuat-bao-cao_Thang-8-2026.xlsx
+
+       Ghi chú dọn dẹp: khối CSS "app-report-dialog - report-dialog.scss" ở LỚP 4
+       nay là style chết, gỡ khi chốt spec.
+       ============================================================ -->
 
 </section>
 
@@ -2722,19 +2737,20 @@ body.auth-mode main { max-width: none; padding: 0; }
         </div>
       </details>
 
+      <!-- SỬA 2026-09-06 (T1 + T2, áp nốt cho màn Core): trước đây khối này đặt
+           .filter-chips TRƯỚC .toolbar-sep và dùng ký tự "×" + title, không khớp
+           component đang chạy (shared/components/toolbar/toolbar.html) — mà chính
+           màn này là nơi <app-toolbar> được dùng thật, nên prototype đang vẽ thứ
+           component không tạo ra được. Nay: sep trước, chips sau; nút gỡ dùng
+           aria-label "Bỏ lọc <nhãn chip>", KHÔNG title, ký hiệu là icon pi-times. -->
+      <span class="toolbar-sep"></span>
+
       <div class="filter-chips">
         <span class="filter-chip">
           Vai trò: User
-          <!-- SỬA 2026-09-06 (T2): nút gỡ chip theo đúng component đang chạy
-               (shared/components/toolbar/toolbar.html) — aria-label dạng
-               "Bỏ lọc <nhãn chip>", KHÔNG title, ký hiệu là icon pi-times.
-               Bản trước dùng ký tự "×" + title, thứ <app-toolbar> không tạo ra
-               được — mà chính màn này là nơi <app-toolbar> được dùng thật. -->
           <button type="button" class="icon-btn" aria-label="Bỏ lọc Vai trò: User"><i class="pi pi-times"></i></button>
         </span>
       </div>
-
-      <span class="toolbar-sep"></span>
       <div class="toolbar-actions">
         <button type="button" class="btn primary">+ Thêm người dùng</button>
       </div>
@@ -3219,10 +3235,57 @@ body.auth-mode main { max-width: none; padding: 0; }
      Trạng thái render: isLive() = true, có dữ liệu, không có ô nào đang sửa
      ============================================================ -->
 <section class="screen fill" id="screen-dti">
+
+  <!-- =====================================================================
+       SỬA 2026-09-04 — ghép yêu cầu spec DTI mới vào ĐÚNG thiết kế đã có.
+       Màn này vốn ĐÃ có 10/11 cột BA yêu cầu (Mã · Tên · Nhóm · Điểm tối đa ·
+       Tự đánh giá · Thẩm định · Trạng thái · Phụ trách · Hạn xử lý · Ghi chú).
+       Thay đổi thật sự chỉ có:
+         1. THÊM 1 cột: Chênh lệch (= Tự đánh giá − Thẩm định, trường TÍNH)
+         2. 6 nhóm chỉ tiêu thật, thay 8 nhóm mẫu cũ
+         3. Bộ giá trị Trạng thái đổi sang 4 giá trị BA chốt (người dùng chọn tay)
+         4. Bộ lọc thêm điều kiện "Trạng thái" — vẫn dùng nguyên <details class="filter">
+         5. Nút "Import CSV" -> "Import CSV/Excel" (BA cần .xlsx/.xls) — dialog
+            cho định dạng này ĐÃ có sẵn ở cuối màn (app-import-dialog)
+         6. Cột "Ghi chú" -> "Minh chứng/Ghi chú" (giữ 1 ô text, đã chốt)
+         7. SỬA 2026-09-05: Trạng thái hiển thị bằng Badge có màu — thống nhất với
+            Dashboard theo chốt của người dùng. Bản gốc để chữ trần ở màn này.
+         8. SỬA 2026-09-05: mỗi kỳ trong bộ lọc ghi RÕ khoảng ngày (tuần = thứ Hai
+            tới Chủ nhật theo chuẩn ISO; tháng = ngày 1 tới ngày cuối tháng).
+         9. SỬA 2026-09-05 (Q20): CHO nhập/sửa dữ liệu kỳ ĐÃ QUA — chọn kỳ rồi
+            nhập cho đúng kỳ đó. Bỏ khái niệm "Live" và dải "đang xem lịch sử —
+            chỉ đọc" của bản cũ.
+        10. SỬA 2026-09-06 (Q37): CHỈ nhập theo TUẦN. Chọn tháng/năm ⇒ bảng chỉ đọc.
+        11. SỬA 2026-09-06 (Q38): cột "Kỳ của số liệu" chỉ hiện khoảng ngày.
+        12. SỬA 2026-09-06 (Q39): không có quyền ghi ⇒ vào được nhưng CHỈ ĐỌC —
+            ẩn "+ Thêm chỉ tiêu", "Import CSV/Excel", "Sửa", "Xoá", tắt sửa inline.
+            KHÔNG chặn route, KHÔNG ẩn mục menu.
+        13. SỬA 2026-09-05 (Q24): Tiến độ % để TRỐNG khi import, người dùng tự
+            nhập. Giả định cũ (= Tự đánh giá / Điểm tối đa) ĐÃ BỊ BÁC. Hệ quả:
+            ngay sau import, thanh tiến độ nhóm và biểu đồ trên Dashboard TRỐNG
+            cho tới khi có người nhập — đây là hành vi đã chấp nhận, không phải lỗi.
+       Không thêm class mới, không đổi giá trị style nào.
+       Dữ liệu: mọi dòng là SỐ MINH HOẠ, đã ẩn danh 2026-09-10.
+       ===================================================================== -->
+
   <div class="card dti-grid-card">
     <div class="title">
-      <h2>Danh mục &amp; Đánh giá theo tuần</h2>
-      <span class="muted">128 bản ghi</span>
+      <!-- SỬA 2026-09-05: đổi tên khối theo yêu cầu — "Danh mục & Đánh giá theo
+           tuần" -> "Danh mục DTI". -->
+      <h2>Danh mục DTI</h2>
+
+      <!-- GIỮ (không bỏ) — `.title` CÓ hỗ trợ vùng này, và Core đang dùng đúng như vậy:
+             · styles.scss § .title khai `justify-content: space-between` — chỉ có
+               nghĩa khi có phần tử thứ hai bên phải, tức khe này là CỦA hợp đồng.
+             · Màn Core đang chạy "Quản trị người dùng" render đúng khuôn này:
+               `<span class="muted" aria-live="polite">{{ totalCount() }} người dùng</span>`
+               (quan-tri-nguoi-dung.page.html), kèm comment trong source nói rõ
+               ".title chỉ còn tên khối + số lượng".
+             · `aria-live="polite"` KHÔNG được bỏ: sau khi lọc, số dòng là bằng
+               chứng DUY NHẤT cho người dùng trình đọc màn hình rằng bộ lọc đã
+               chạy (WCAG 2.2 AA — wiki-core/fe/15-accessibility.md §3a).
+           Chỉ đổi CHỮ cho khớp cách đặt của Core ("N người dùng" -> "N chỉ tiêu"). -->
+      <span class="muted" aria-live="polite">62 chỉ tiêu</span>
     </div>
 
     <!-- @if (!isLive()) -> nhánh TẮT (đang xem kỳ hiện tại, cho phép sửa).
@@ -3243,20 +3306,30 @@ body.auth-mode main { max-width: none; padding: 0; }
       </div>
 
       <details class="filter">
-        <summary class="btn"><i class="pi pi-filter"></i> Lọc <span class="filter-count">2</span></summary>
+        <summary class="btn"><i class="pi pi-filter"></i> Lọc <span class="filter-count">1</span></summary>
         <div class="filter-panel">
           <div class="form-row">
             <label for="dtiFilterGroup">Nhóm chỉ tiêu</label>
             <select id="dtiFilterGroup">
               <option value="">Tất cả nhóm</option>
-              <option value="g1">1. Nhận thức số</option>
-              <option value="g2">2. Thể chế số</option>
-              <option value="g3" selected>3. Hạ tầng số</option>
-              <option value="g4">4. Nhân lực số</option>
-              <option value="g5">5. An toàn thông tin mạng</option>
-              <option value="g6">6. Hoạt động chính quyền số</option>
-              <option value="g7">7. Hoạt động kinh tế số</option>
-              <option value="g8">8. Hoạt động xã hội số</option>
+              <option value="g1" selected>1. Hạ tầng và Nền tảng số</option>
+              <option value="g2">2. Nhân lực số</option>
+              <option value="g3">3. An toàn thông tin, an ninh mạng</option>
+              <option value="g4">4. Hoạt động chính quyền số</option>
+              <option value="g5">5. Hoạt động Kinh tế số</option>
+              <option value="g6">6. Hoạt động Xã hội số</option>
+            </select>
+          </div>
+
+          <!-- SỬA 2026-09-04: điều kiện lọc MỚI — 4 giá trị Trạng thái do BA chốt -->
+          <div class="form-row">
+            <label for="dtiFilterStatus">Trạng thái</label>
+            <select id="dtiFilterStatus">
+              <option value="">Tất cả trạng thái</option>
+              <option value="chua">Chưa thực hiện</option>
+              <option value="dang">Đang thực hiện</option>
+              <option value="minhchung">Cần bổ sung minh chứng</option>
+              <option value="xong">Hoàn thành</option>
             </select>
           </div>
 
@@ -3273,12 +3346,20 @@ body.auth-mode main { max-width: none; padding: 0; }
             <label for="dtiFilterPeriod">Kỳ trong năm</label>
             <select
               id="dtiFilterPeriod"
-              title="Xem tổng hợp cả năm (mới nhất mỗi chỉ tiêu) hoặc 1 kỳ cụ thể đã lưu trong năm"
+              title="Xem tổng hợp cả năm (mới nhất mỗi chỉ tiêu) hoặc 1 kỳ cụ thể đã lưu trong năm. Mỗi kỳ ghi rõ từ ngày nào tới ngày nào. Chọn THÁNG hoặc NĂM thì bảng chỉ đọc — muốn sửa phải chọn một tuần"
             >
               <option value="all" selected>Tất cả (mới nhất trong năm)</option>
-              <option value="2026-W33">2026-W33</option>
-              <option value="2026-W34">2026-W34</option>
-              <option value="2026-W35">2026-W35</option>
+              <option value="2026-W33">Tuần 33: 10/08 – 16/08/2026</option>
+              <option value="2026-W34">Tuần 34: 17/08 – 23/08/2026</option>
+              <option value="2026-W35">Tuần 35: 24/08 – 30/08/2026</option>
+              <!-- SỬA 2026-09-06 (Q37): CHỌN ĐƯỢC nhưng khi chọn thì bảng chuyển
+                   CHỈ ĐỌC. Chỉ nhập liệu theo TUẦN; tháng/năm là tổng hợp tự tính.
+                   Lý do: một bản ghi neo theo ngày, nên "Tháng 8" phải neo vào một
+                   ngày cụ thể — neo 31/08/2026 thì tuần ISO của nó là tuần 36, tức
+                   cột "Kỳ của số liệu" sẽ báo sai đơn vị. Một đơn vị lưu duy nhất
+                   thì lỗi đó không tồn tại. -->
+              <option value="2026-08">Tháng 8: 01/08 – 31/08/2026 (chỉ đọc)</option>
+              <option value="2026-07">Tháng 7: 01/07 – 31/07/2026 (chỉ đọc)</option>
             </select>
           </div>
 
@@ -3289,22 +3370,26 @@ body.auth-mode main { max-width: none; padding: 0; }
         </div>
       </details>
 
-      <!-- 2 điều kiện đang áp = con số trong .filter-count ở trên. Kỳ đang để
-           mặc định ("Tất cả") nên không tính là một điều kiện lọc. -->
+      <!-- SỬA 2026-09-05 (T1): .toolbar-sep đặt TRƯỚC .filter-chips, khớp thứ tự
+           DOM thật của component đang chạy (shared/components/toolbar/toolbar.html)
+           và bảng "Children, in DOM order" của Components/Toolbar.md. Bản trước của
+           prototype đảo hai khối này — prototype sai, component đúng. -->
+      <span class="toolbar-sep"></span>
+
+      <!-- SỬA 2026-09-05 (T8): số trên nút "Lọc" chỉ đếm điều kiện KHÁC MẶC ĐỊNH.
+           `Kỳ = Tất cả` và `Năm = 2026` (năm hiện tại) đều là mặc định nên KHÔNG
+           tính và KHÔNG sinh chip. Còn đúng 1 điều kiện thật: Nhóm. Bản trước đếm 2.
+           SỬA 2026-09-05 (T2): nút gỡ chip theo đúng component — aria-label dạng
+           "Bỏ lọc <nhãn chip>", KHÔNG có title, và ký hiệu là icon pi-times chứ
+           không phải ký tự "×". Bản trước không tạo ra được bằng <app-toolbar>. -->
       <div class="filter-chips">
         <span class="filter-chip">
-          Nhóm: 3. Hạ tầng số
-          <button type="button" class="icon-btn" aria-label="Gỡ điều kiện nhóm chỉ tiêu" title="Gỡ điều kiện">×</button>
-        </span>
-        <span class="filter-chip">
-          Năm: 2026
-          <button type="button" class="icon-btn" aria-label="Gỡ điều kiện năm đánh giá" title="Gỡ điều kiện">×</button>
+          Nhóm: 1. Hạ tầng và Nền tảng số
+          <button type="button" class="icon-btn" aria-label="Bỏ lọc Nhóm: 1. Hạ tầng và Nền tảng số"><i class="pi pi-times"></i></button>
         </span>
       </div>
-
-      <span class="toolbar-sep"></span>
       <div class="toolbar-actions">
-        <button type="button" class="btn">Import CSV</button>
+        <button type="button" class="btn">Import CSV/Excel</button>
         <button type="button" class="btn primary">+ Thêm chỉ tiêu</button>
       </div>
     </div>
@@ -3320,138 +3405,52 @@ body.auth-mode main { max-width: none; padding: 0; }
               <th style="min-width:70px">Mã</th>
               <th style="min-width:220px">Tên</th>
               <th style="min-width:120px">Nhóm</th>
+              <!-- SỬA 2026-09-05 (Q31): cột MỚI. Ở chế độ "Tất cả (mới nhất trong
+                   năm)" mỗi dòng có thể đến từ một kỳ khác nhau — cột này nói rõ số
+                   đang hiển thị lấy từ kỳ nào. HAI LUẬT: (a) chỉ hiện khi Kỳ = "Tất
+                   cả"; chọn kỳ cụ thể thì mọi dòng cùng kỳ nên cột này ẩn. (b) sau
+                   khi lưu, ô này TỰ ĐỔI sang kỳ hiện tại — đó là phản hồi cho biết
+                   bản ghi vừa rơi vào kỳ nào (Q26), phân biệt với "ghi đè kỳ cũ".
+                   (c) SỬA 2026-09-06 (Q38): chỉ hiện KHOẢNG NGÀY, bỏ số tuần —
+                   110px không chứa nổi "Tuần 33: 10/08 – 16/08/2026". Đây là
+                   NGOẠI LỆ có chủ đích so với Q12; chấp nhận được vì sau Q37 mọi
+                   dòng đều là tuần nên không cần phân biệt đơn vị.
+                   SỬA 2026-09-06 (T14): GIỮ khoảng trắng quanh dấu gạch, đúng T5.
+                   Q38 chỉ bỏ SỐ TUẦN, không lật quy ước dấu gạch của toàn sản phẩm —
+                   cả hai bản đều vừa 110px nên bề rộng không phải lý do để lệch.
+                   Khác hàng Lịch sử ở chỗ cột này bỏ năm ("10/08 – 16/08"), vì mọi
+                   dòng đều thuộc năm đang lọc. -->
+              <th style="min-width:110px">Kỳ của số liệu</th>
               <th class="num" style="min-width:90px">Điểm tối đa</th>
               <th class="num" style="min-width:90px">Tự đánh giá</th>
               <th class="num" style="min-width:90px">Thẩm định</th>
-              <th style="min-width:110px">Trạng thái</th>
+              <th class="num" style="min-width:90px">Chênh lệch</th>
+              <th style="min-width:150px">Trạng thái</th>
               <th style="min-width:110px">Phụ trách</th>
               <th style="min-width:100px">Hạn xử lý</th>
               <th class="num" style="min-width:130px">Tiến độ %</th>
-              <th style="min-width:180px">Ghi chú</th>
+              <th style="min-width:220px">Minh chứng/Ghi chú</th>
               <th style="min-width:120px">Hành động</th>
             </tr>
           </thead>
           <tbody>
             <tr>
               <td><b>1.1</b></td>
-              <td>Người đứng đầu cơ quan trực tiếp chỉ đạo công tác chuyển đổi số</td>
-              <td>1. Nhận thức số</td>
+              <td>Tỷ lệ người sử dụng có khả năng truy nhập băng rộng cố định với tốc độ trên 1Gb/s</td>
+              <td>1. Hạ tầng và Nền tảng số</td>
+              <td>10/08 – 16/08</td>
               <td class="num">10</td>
+              <td class="num">7,04</td>
               <td class="num">10</td>
-              <td class="num">10</td>
-              <td>Hoàn thành</td>
-              <td>Nguyễn Văn An</td>
-              <td>12/09/2026</td>
-              <td class="num">
-                <span class="cell-editable" tabindex="0" role="button" title="Bấm đúp để sửa Tiến độ %">100%</span>
-              </td>
-              <td>
-                <span class="cell-editable" tabindex="0" role="button" title="Bấm đúp để sửa Ghi chú">Đã ban hành Quyết định 118/QĐ-UBND kiện toàn Ban Chỉ đạo</span>
-              </td>
-              <td>
-                <button type="button" class="btn sm">Sửa</button>
-                <button type="button" class="btn sm danger">Xoá</button>
-              </td>
-            </tr>
-            <tr>
-              <td><b>1.2</b></td>
-              <td>Chuyên mục chuyển đổi số trên Cổng thông tin điện tử được cập nhật định kỳ</td>
-              <td>1. Nhận thức số</td>
-              <td class="num">5</td>
-              <td class="num">4,5</td>
-              <td class="num">4</td>
-              <td>Đang làm</td>
-              <td>Trần Thị Bích</td>
-              <td>30/09/2026</td>
-              <td class="num">
-                <span class="cell-editable" tabindex="0" role="button" title="Bấm đúp để sửa Tiến độ %">80%</span>
-              </td>
-              <td>
-                <span class="cell-editable" tabindex="0" role="button" title="Bấm đúp để sửa Ghi chú">Đã đăng 18/24 tin bài, còn thiếu chuyên đề quý III</span>
-              </td>
-              <td>
-                <button type="button" class="btn sm">Sửa</button>
-                <button type="button" class="btn sm danger">Xoá</button>
-              </td>
-            </tr>
-            <tr>
-              <td><b>2.1</b></td>
-              <td>Ban hành Kế hoạch chuyển đổi số năm và phân công trách nhiệm cụ thể</td>
-              <td>2. Thể chế số</td>
-              <td class="num">10</td>
-              <td class="num">9</td>
-              <td class="num">9</td>
-              <td>Hoàn thành</td>
-              <td>Lê Minh Cường</td>
-              <td>15/08/2026</td>
-              <td class="num">
-                <span class="cell-editable" tabindex="0" role="button" title="Bấm đúp để sửa Tiến độ %">100%</span>
-              </td>
-              <td>
-                <span class="cell-editable" tabindex="0" role="button" title="Bấm đúp để sửa Ghi chú">Kế hoạch 45/KH-UBND ngày 12/02/2026</span>
-              </td>
-              <td>
-                <button type="button" class="btn sm">Sửa</button>
-                <button type="button" class="btn sm danger">Xoá</button>
-              </td>
-            </tr>
-            <tr>
-              <td><b>2.3</b></td>
-              <td>Quy chế quản lý, vận hành, khai thác các hệ thống thông tin dùng chung</td>
-              <td>2. Thể chế số</td>
-              <td class="num">5</td>
-              <td class="num">2,5</td>
-              <td class="num">2</td>
-              <td>Chậm tiến độ</td>
-              <td>Phạm Quốc Đạt</td>
-              <td>20/08/2026</td>
-              <td class="num">
-                <span class="cell-editable" tabindex="0" role="button" title="Bấm đúp để sửa Tiến độ %">40%</span>
-              </td>
-              <td>
-                <span class="cell-editable" tabindex="0" role="button" title="Bấm đúp để sửa Ghi chú">Dự thảo đang lấy ý kiến các phòng ban, quá hạn 1 tuần</span>
-              </td>
-              <td>
-                <button type="button" class="btn sm">Sửa</button>
-                <button type="button" class="btn sm danger">Xoá</button>
-              </td>
-            </tr>
-            <tr>
-              <td><b>3.2</b></td>
-              <td>Tỷ lệ máy trạm của cán bộ, công chức được kết nối mạng truyền số liệu chuyên dùng</td>
-              <td>3. Hạ tầng số</td>
-              <td class="num">15</td>
-              <td class="num">12</td>
-              <td class="num">11,5</td>
-              <td>Đang làm</td>
-              <td>Vũ Hải Đăng</td>
-              <td>10/10/2026</td>
-              <td class="num">
-                <span class="cell-editable" tabindex="0" role="button" title="Bấm đúp để sửa Tiến độ %">76%</span>
-              </td>
-              <td>
-                <span class="cell-editable" tabindex="0" role="button" title="Bấm đúp để sửa Ghi chú">Đã kết nối 190/250 máy trạm, chờ cấp bổ sung thiết bị</span>
-              </td>
-              <td>
-                <button type="button" class="btn sm">Sửa</button>
-                <button type="button" class="btn sm danger">Xoá</button>
-              </td>
-            </tr>
-            <tr>
-              <td><b>4.1</b></td>
-              <td>Tỷ lệ cán bộ, công chức được bồi dưỡng kỹ năng số cơ bản trong năm</td>
-              <td>4. Nhân lực số</td>
-              <td class="num">10</td>
-              <td class="num">7</td>
-              <td class="num">7</td>
-              <td>Đang làm</td>
-              <td>Hoàng Thu Hà</td>
-              <td>30/11/2026</td>
+              <td class="num"><span class="delta up">+2,96</span></td>
+              <td><app-status-badge><span class="badge warn">Đang thực hiện</span></app-status-badge></td>
+              <td>—</td>
+              <td>—</td>
               <td class="num">
                 <span class="cell-editable" tabindex="0" role="button" title="Bấm đúp để sửa Tiến độ %">70%</span>
               </td>
               <td>
-                <span class="cell-editable" tabindex="0" role="button" title="Bấm đúp để sửa Ghi chú">Đã tổ chức 3/5 lớp, 210 lượt học viên</span>
+                <span class="cell-editable" tabindex="0" role="button" title="Bấm đúp để sửa Minh chứng/Ghi chú">— bấm đúp để ghi chú</span>
               </td>
               <td>
                 <button type="button" class="btn sm">Sửa</button>
@@ -3459,62 +3458,22 @@ body.auth-mode main { max-width: none; padding: 0; }
               </td>
             </tr>
             <tr>
-              <td><b>5.2</b></td>
-              <td>Hệ thống thông tin được phê duyệt hồ sơ đề xuất cấp độ an toàn thông tin</td>
-              <td>5. An toàn thông tin mạng</td>
-              <td class="num">10</td>
-              <td class="num">6</td>
-              <td class="num">5,5</td>
-              <td>Đang làm</td>
-              <td>Đỗ Trung Kiên</td>
-              <td>25/09/2026</td>
-              <td class="num">
-                <span class="cell-editable" tabindex="0" role="button" title="Bấm đúp để sửa Tiến độ %">60%</span>
-              </td>
-              <td>
-                <span class="cell-editable" tabindex="0" role="button" title="Bấm đúp để sửa Ghi chú">6/10 hệ thống đã phê duyệt cấp độ 2, còn 4 hệ thống đang thẩm định</span>
-              </td>
-              <td>
-                <button type="button" class="btn sm">Sửa</button>
-                <button type="button" class="btn sm danger">Xoá</button>
-              </td>
-            </tr>
-            <tr>
-              <td><b>6.4</b></td>
-              <td>Tỷ lệ hồ sơ thủ tục hành chính được xử lý trực tuyến toàn trình</td>
-              <td>6. Hoạt động chính quyền số</td>
+              <td><b>1.4</b></td>
+              <td>Mức độ ứng dụng AI</td>
+              <td>1. Hạ tầng và Nền tảng số</td>
+              <td>10/08 – 16/08</td>
               <td class="num">20</td>
-              <td class="num">13,5</td>
-              <td class="num">13</td>
-              <td>Đang làm</td>
-              <td>Nguyễn Thị Lan</td>
-              <td>31/12/2026</td>
-              <td class="num">
-                <span class="cell-editable" tabindex="0" role="button" title="Bấm đúp để sửa Tiến độ %">67,5%</span>
-              </td>
-              <td>
-                <span class="cell-editable" tabindex="0" role="button" title="Bấm đúp để sửa Ghi chú">Tỷ lệ tháng 8 đạt 67,5%, tăng 4,2 điểm so với tháng 7</span>
-              </td>
-              <td>
-                <button type="button" class="btn sm">Sửa</button>
-                <button type="button" class="btn sm danger">Xoá</button>
-              </td>
-            </tr>
-            <tr>
-              <td><b>7.1</b></td>
-              <td>Tỷ lệ doanh nghiệp nhỏ và vừa sử dụng nền tảng số do Bộ TT&amp;TT công bố</td>
-              <td>7. Hoạt động kinh tế số</td>
-              <td class="num">15</td>
               <td class="num">5</td>
-              <td class="num">4,5</td>
-              <td>Chậm tiến độ</td>
-              <td>Trịnh Văn Nam</td>
-              <td>15/09/2026</td>
+              <td class="num">0</td>
+              <td class="num"><span class="delta down">−5,00</span></td>
+              <td><app-status-badge><span class="badge bad">Cần bổ sung minh chứng</span></app-status-badge></td>
+              <td>—</td>
+              <td>—</td>
               <td class="num">
-                <span class="cell-editable" tabindex="0" role="button" title="Bấm đúp để sửa Tiến độ %">33%</span>
+                <span class="cell-editable" tabindex="0" role="button" title="Bấm đúp để sửa Tiến độ %">25%</span>
               </td>
               <td>
-                <span class="cell-editable" tabindex="0" role="button" title="Bấm đúp để sửa Ghi chú">Mới khảo sát được 420/1.270 doanh nghiệp trên địa bàn</span>
+                <span class="cell-editable" tabindex="0" role="button" title="Bấm đúp để sửa Minh chứng/Ghi chú">Thẩm định chưa thống nhất tiêu chí. Giải trình: cần bổ sung minh chứng</span>
               </td>
               <td>
                 <button type="button" class="btn sm">Sửa</button>
@@ -3522,20 +3481,91 @@ body.auth-mode main { max-width: none; padding: 0; }
               </td>
             </tr>
             <tr>
-              <td><b>8.3</b></td>
-              <td>Tỷ lệ người dân trưởng thành có tài khoản định danh điện tử mức độ 2</td>
-              <td>8. Hoạt động xã hội số</td>
+              <td><b>1.5</b></td>
+              <td>Trang bị máy tính cho CBCCVC</td>
+              <td>1. Hạ tầng và Nền tảng số</td>
+              <td>27/07 – 02/08</td>
               <td class="num">10</td>
-              <td class="num">0</td>
-              <td class="num">—</td>
-              <td>Chưa bắt đầu</td>
+              <td class="num">10</td>
+              <td class="num">10</td>
+              <td class="num"><span class="delta flat">0,00</span></td>
+              <td><app-status-badge><span class="badge ok">Hoàn thành</span></app-status-badge></td>
               <td>—</td>
               <td>—</td>
               <td class="num">
-                <span class="cell-editable" tabindex="0" role="button" title="Bấm đúp để sửa Tiến độ %">0%</span>
+                <span class="cell-editable" tabindex="0" role="button" title="Bấm đúp để sửa Tiến độ %">100%</span>
               </td>
               <td>
-                <span class="cell-editable" tabindex="0" role="button" title="Bấm đúp để sửa Ghi chú">— bấm đúp để ghi chú</span>
+                <span class="cell-editable" tabindex="0" role="button" title="Bấm đúp để sửa Minh chứng/Ghi chú">*123/VB-MAU - 15/03/2026: khảo sát cấu hình máy tính</span>
+              </td>
+              <td>
+                <button type="button" class="btn sm">Sửa</button>
+                <button type="button" class="btn sm danger">Xoá</button>
+              </td>
+            </tr>
+            <tr>
+              <td><b>1.7</b></td>
+              <td>Nội dung thông tin của đài truyền thanh xã, phường được thực hiện trên nền tảng công nghệ thông tin - viễn thông</td>
+              <td>1. Hạ tầng và Nền tảng số</td>
+              <td>20/07 – 26/07</td>
+              <td class="num">10</td>
+              <td class="num">10</td>
+              <td class="num">10</td>
+              <td class="num"><span class="delta flat">0,00</span></td>
+              <td><app-status-badge><span class="badge ok">Hoàn thành</span></app-status-badge></td>
+              <td>—</td>
+              <td>—</td>
+              <td class="num">
+                <span class="cell-editable" tabindex="0" role="button" title="Bấm đúp để sửa Tiến độ %">100%</span>
+              </td>
+              <td>
+                <span class="cell-editable" tabindex="0" role="button" title="Bấm đúp để sửa Minh chứng/Ghi chú">*45/VB-MAU - 31/12/2025: Bảng thống kê chi tiết lịch phát</span>
+              </td>
+              <td>
+                <button type="button" class="btn sm">Sửa</button>
+                <button type="button" class="btn sm danger">Xoá</button>
+              </td>
+            </tr>
+            <tr>
+              <td><b>2.2</b></td>
+              <td>Tỷ lệ công chức, viên chức chuyên trách về chuyển đổi số</td>
+              <td>2. Nhân lực số</td>
+              <td>13/07 – 19/07</td>
+              <td class="num">20</td>
+              <td class="num">0,38</td>
+              <td class="num">0,38</td>
+              <td class="num"><span class="delta flat">0,00</span></td>
+              <td><app-status-badge><span class="badge warn">Đang thực hiện</span></app-status-badge></td>
+              <td>—</td>
+              <td>—</td>
+              <td class="num">
+                <span class="cell-editable" tabindex="0" role="button" title="Bấm đúp để sửa Tiến độ %">2%</span>
+              </td>
+              <td>
+                <span class="cell-editable" tabindex="0" role="button" title="Bấm đúp để sửa Minh chứng/Ghi chú">— bấm đúp để ghi chú</span>
+              </td>
+              <td>
+                <button type="button" class="btn sm">Sửa</button>
+                <button type="button" class="btn sm danger">Xoá</button>
+              </td>
+            </tr>
+            <tr>
+              <td><b>6.8</b></td>
+              <td>Tỷ lệ dân số trưởng thành có chữ ký số hoặc chữ ký điện tử cá nhân</td>
+              <td>6. Hoạt động Xã hội số</td>
+              <td>10/08 – 16/08</td>
+              <td class="num">10</td>
+              <td class="num">1,44</td>
+              <td class="num">0</td>
+              <td class="num"><span class="delta down">−1,44</span></td>
+              <td><app-status-badge><span class="badge neutral">Chưa thực hiện</span></app-status-badge></td>
+              <td>—</td>
+              <td>—</td>
+              <td class="num">
+                <span class="cell-editable" tabindex="0" role="button" title="Bấm đúp để sửa Tiến độ %">14%</span>
+              </td>
+              <td>
+                <span class="cell-editable" tabindex="0" role="button" title="Bấm đúp để sửa Minh chứng/Ghi chú">— bấm đúp để ghi chú</span>
               </td>
               <td>
                 <button type="button" class="btn sm">Sửa</button>
@@ -3550,7 +3580,18 @@ body.auth-mode main { max-width: none; padding: 0; }
            ([paginator]="true" [rowsPerPageOptions]="[10,20,50]"). Style thật đến từ preset
            PrimeNG (file TS, không có trong snapshot) — xem "Ghi chú để sửa sau". -->
       <div class="proto-paginator no-print">
-        <span class="muted">Hiển thị 1–10 trong 128 bản ghi</span>
+        <!-- BỎ dòng "Hiển thị 1–10 trong 62 bản ghi" (2026-09-05) — component
+             KHÔNG có vùng này:
+               · Lưới Core đang chạy khai đúng: [paginator]="true" [rows] [first]
+                 [totalRecords] [rowsPerPageOptions]="[10,20,50]" — KHÔNG có
+                 `showCurrentPageReport` (user-grid-table.html).
+               · Components/DataTable.md khai hợp đồng paginator đúng bằng đó.
+               · Chính khối này trong prototype gốc đã tự ghi "Prototype-only:
+                 đại diện paginator của <p-table>" — markup mô phỏng, không phải
+                 component.
+             Ghi chú: PrimeNG CÓ hỗ trợ dòng này qua [showCurrentPageReport]="true"
+             + currentPageReportTemplate. Bật lại chỉ tốn 1 binding, nhưng đó là MỞ
+             RỘNG hợp đồng DataTable nên phải chốt vào spec trước — chưa làm. -->
         <span class="proto-paginator-pages">
           <button type="button" class="btn sm">‹</button>
           <button type="button" class="btn sm">1</button>
@@ -3567,7 +3608,13 @@ body.auth-mode main { max-width: none; padding: 0; }
     </app-criteria-grid-table>
   </div>
 
-  <!-- ===== Dialog 1/5 — Thêm/Sửa chỉ tiêu ===== -->
+  <!-- ===== Dialog 1/5 — Thêm/Sửa chỉ tiêu =====
+       SỬA 2026-09-04: dialog cũ chỉ có 4 trường của bản thân chỉ tiêu (Mã · Tên ·
+       Nhóm · Điểm tối đa), vì mọi trường đánh giá đều sửa inline trong lưới. Bộ
+       trường đánh giá nay có 6 (Tự đánh giá · Thẩm định · Trạng thái · Phụ trách ·
+       Hạn xử lý · Minh chứng) — quá nhiều cho sửa inline, nên gom vào đây thành
+       nhóm thứ hai. Sửa inline giữ nguyên cho ĐÚNG 2 trường như thiết kế cũ:
+       Tiến độ % và Minh chứng/Ghi chú. ĐIỂM CẦN ANH DUYỆT — xem ghi chú cuối file. -->
   <app-criteria-form-dialog>
     <dialog class="form-dialog proto-dialog">
       <div class="title">
@@ -3577,26 +3624,24 @@ body.auth-mode main { max-width: none; padding: 0; }
 
       <div class="form-row">
         <label for="cfCode">Mã <span class="required">*</span></label>
-        <input id="cfCode" maxlength="20" placeholder="vd 1.1" value="6.4" />
+        <input id="cfCode" maxlength="20" placeholder="vd 1.1" value="1.4" />
       </div>
 
       <div class="form-row">
         <label for="cfName">Tên chỉ tiêu <span class="required">*</span></label>
-        <textarea id="cfName" placeholder="Nhập tên đầy đủ chỉ tiêu...">Tỷ lệ hồ sơ thủ tục hành chính được xử lý trực tuyến toàn trình</textarea>
+        <textarea id="cfName" placeholder="Nhập tên đầy đủ chỉ tiêu...">Mức độ ứng dụng AI</textarea>
       </div>
 
       <div class="form-grid">
         <div class="form-row">
           <label for="cfGroup">Nhóm <span class="required">*</span></label>
           <select id="cfGroup">
-            <option value="g1">1. Nhận thức số</option>
-            <option value="g2">2. Thể chế số</option>
-            <option value="g3">3. Hạ tầng số</option>
-            <option value="g4">4. Nhân lực số</option>
-            <option value="g5">5. An toàn thông tin mạng</option>
-            <option value="g6" selected>6. Hoạt động chính quyền số</option>
-            <option value="g7">7. Hoạt động kinh tế số</option>
-            <option value="g8">8. Hoạt động xã hội số</option>
+            <option value="g1" selected>1. Hạ tầng và Nền tảng số</option>
+            <option value="g2">2. Nhân lực số</option>
+            <option value="g3">3. An toàn thông tin, an ninh mạng</option>
+            <option value="g4">4. Hoạt động chính quyền số</option>
+            <option value="g5">5. Hoạt động Kinh tế số</option>
+            <option value="g6">6. Hoạt động Xã hội số</option>
           </select>
         </div>
         <div class="form-row">
@@ -3605,8 +3650,50 @@ body.auth-mode main { max-width: none; padding: 0; }
         </div>
       </div>
 
+      <div class="form-grid">
+        <div class="form-row">
+          <label for="cfSelf">Tự đánh giá</label>
+          <input id="cfSelf" type="number" min="0" step="0.01" placeholder="vd 5" value="5" />
+        </div>
+        <div class="form-row">
+          <label for="cfVerified">Thẩm định</label>
+          <input id="cfVerified" type="number" min="0" step="0.01" placeholder="vd 0" value="0" />
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-row">
+          <label for="cfStatus">Trạng thái</label>
+          <select id="cfStatus">
+            <option value="chua">Chưa thực hiện</option>
+            <option value="dang">Đang thực hiện</option>
+            <option value="minhchung" selected>Cần bổ sung minh chứng</option>
+            <option value="xong">Hoàn thành</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label for="cfDeadline">Hạn xử lý</label>
+          <input id="cfDeadline" type="date" />
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label for="cfOwner">Phụ trách</label>
+        <select id="cfOwner">
+          <option value="" selected>— Chưa phân công —</option>
+          <option value="u1">Nguyễn Văn An</option>
+          <option value="u2">Trần Thị Bích</option>
+          <option value="u3">Lê Minh Cường</option>
+        </select>
+      </div>
+
+      <div class="form-row">
+        <label for="cfNote">Minh chứng/Ghi chú</label>
+        <textarea id="cfNote" placeholder="Số văn bản - ngày - trích yếu, mỗi minh chứng 1 dòng...">Thẩm định chưa thống nhất tiêu chí. Giải trình: cần bổ sung minh chứng</textarea>
+      </div>
+
       <!-- @if (errorMessage()) -> nhánh TẮT. Markup nhánh lỗi:
-      <div class="form-error">Mã chỉ tiêu "6.4" đã tồn tại trong nhóm này.</div>
+      <div class="form-error">Mã chỉ tiêu "1.4" đã tồn tại trong nhóm này.</div>
       -->
 
       <div class="dialog-actions">
@@ -3624,7 +3711,7 @@ body.auth-mode main { max-width: none; padding: 0; }
       <div class="title">
         <h2>Xác nhận</h2>
       </div>
-      <p class="confirm-message">Xoá chỉ tiêu "6.4 — Tỷ lệ hồ sơ thủ tục hành chính được xử lý trực tuyến toàn trình"?</p>
+      <p class="confirm-message">Xoá chỉ tiêu "1.4 — Mức độ ứng dụng AI"?</p>
       <div class="dialog-actions">
         <button type="button" class="btn">Huỷ</button>
         <button type="button" class="btn danger">Xoá</button>
@@ -3632,7 +3719,9 @@ body.auth-mode main { max-width: none; padding: 0; }
     </dialog>
   </app-confirm-dialog>
 
-  <!-- ===== Dialog 3/5 — Import CSV ===== -->
+  <!-- ===== Dialog 3/5 — Import CSV =====
+       GIỮ NGUYÊN để đối chiếu. BA yêu cầu .xlsx/.xls nên đường đi THẬT của nút
+       "Import CSV/Excel" trên toolbar là Dialog 4/5 ngay dưới. -->
   <app-csv-import-dialog>
     <dialog class="form-dialog proto-dialog">
       <div class="title">
@@ -3645,7 +3734,7 @@ body.auth-mode main { max-width: none; padding: 0; }
         <input id="csvFileInput" type="file" accept=".csv" />
       </div>
 
-      <p class="muted">Đã chọn: danh-muc-dti-2026-W35.csv</p>
+      <p class="muted">Đã chọn: danh-muc-dti-2026-W33.csv</p>
 
       <div class="dialog-actions">
         <button type="button" class="btn">Huỷ</button>
@@ -3656,7 +3745,7 @@ body.auth-mode main { max-width: none; padding: 0; }
     </dialog>
   </app-csv-import-dialog>
 
-  <!-- ===== Dialog 4/5 — Import CSV/Excel (component import-dialog, không gắn trên page) ===== -->
+  <!-- ===== Dialog 4/5 — Import CSV/Excel (đường đi thật của nút trên toolbar) ===== -->
   <app-import-dialog>
     <dialog class="form-dialog proto-dialog">
       <div class="title">
@@ -3669,7 +3758,7 @@ body.auth-mode main { max-width: none; padding: 0; }
         <input id="importFileInput" type="file" accept=".csv,.xlsx,.xls" />
       </div>
 
-      <p class="muted">Đã chọn: danh-gia-tuan-35.xlsx</p>
+      <p class="muted">Đã chọn: danh-muc-dti-2026-W33.xlsx</p>
 
       <div class="dialog-actions">
         <button type="button" class="btn">Huỷ</button>
@@ -3690,29 +3779,25 @@ body.auth-mode main { max-width: none; padding: 0; }
 
       <div class="import-summary">
         <p>
-          Tổng <b>128</b> dòng — <span class="ok">124 thành công</span>,
-          <span class="err">4 lỗi</span>.
-          Đã tự tạo mới <b>3</b> chỉ tiêu.
+          Tổng <b>62</b> dòng — <span class="ok">59 thành công</span>,
+          <span class="err">3 lỗi</span>.
+          Đã tự tạo mới <b>2</b> chỉ tiêu.
         </p>
         <ul>
           <li class="err">
             Dòng 17
-            — mã "2.3"
+            — mã "4.2"
             : Điểm tự đánh giá (6) vượt quá điểm tối đa (5).
           </li>
           <li class="err">
             Dòng 42
-            — mã "3.2"
-            : Tiến độ % phải nằm trong khoảng 0–100.
+            — mã "4.15"
+            : Trạng thái "Đang xử lý" không thuộc 4 giá trị hợp lệ.
           </li>
           <li class="err">
-            Dòng 63
-            : Thiếu mã chỉ tiêu ở cột A.
-          </li>
-          <li class="err">
-            Dòng 91
-            — mã "7.1"
-            : Không tìm thấy nhóm "Kinh tế số" (sai chính tả hoặc thừa khoảng trắng).
+            Dòng 55
+            — mã "6.3"
+            : Không tìm thấy nhóm "Xã hội số" (sai chính tả hoặc thừa khoảng trắng).
           </li>
         </ul>
       </div>
@@ -4303,8 +4388,8 @@ body.auth-mode main { max-width: none; padding: 0; }
       <div class="lib-item">
         <span class="muted">Ô chọn nội dung dài — chặn ở 240px</span>
         <select class="input" aria-label="Đơn vị báo cáo">
-          <option>Sở Thông tin và Truyền thông tỉnh Thái Bình</option>
-          <option>UBND huyện Đông Hưng</option>
+          <option>Sở Thông tin và Truyền thông tỉnh (đơn vị mẫu A)</option>
+          <option>UBND huyện Mẫu A</option>
         </select>
         <code>select.input — max 240px</code>
       </div>
@@ -4598,12 +4683,12 @@ body.auth-mode main { max-width: none; padding: 0; }
                 <td class="num">85,8</td>
               </tr>
               <tr>
-                <td>UBND huyện Đông Hưng</td>
+                <td>UBND huyện Mẫu A</td>
                 <td class="num">55,0</td>
                 <td class="num">50,0</td>
               </tr>
               <tr>
-                <td>UBND huyện Tiền Hải</td>
+                <td>UBND huyện Mẫu B</td>
                 <td class="num">58,9</td>
                 <td class="num">59,6</td>
               </tr>
@@ -5276,7 +5361,7 @@ body.auth-mode main { max-width: none; padding: 0; }
               <td><span class="text-good">Vượt 5,8</span></td>
             </tr>
             <tr>
-              <td>UBND huyện Đông Hưng</td>
+              <td>UBND huyện Mẫu A</td>
               <td class="num"><span class="text-bad filled">50,0</span></td>
               <td><span class="text-bad">Thiếu 30,0</span></td>
             </tr>

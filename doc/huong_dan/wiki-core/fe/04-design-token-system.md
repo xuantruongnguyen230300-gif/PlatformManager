@@ -299,7 +299,7 @@ từ đầu): điền `tokens.json` → `dark`, thêm 2 lớp CSS trên, thêm 1
 `ThemeService` (signal `'light' | 'dark' | 'system'`, ghi `localStorage`, set
 attribute). Không bước nào đòi migrate lại component đã viết theo token.
 
-## Token breakpoint/responsive — nhất quán bằng kỷ luật, chưa bằng cơ chế
+## Token breakpoint/responsive — nay đã có cơ chế, không còn chỉ là kỷ luật
 
 > Bổ sung 2026-08-24, đối chiếu thực hành ngành cho hệ thống tầm trung:
 > `Tokens/spacing.md` xác nhận 3 breakpoint (`980px`/`560px`/`981px`) được
@@ -307,6 +307,12 @@ attribute). Không bước nào đòi migrate lại component đã viết theo t
 > khác nhau. Nhưng nhất quán đó tới từ **kỷ luật của người viết**, không
 > phải một cơ chế chặn được sai lệch — khác hẳn màu/spacing, nơi
 > `var(--card)` thật sự **không biên dịch được** nếu gõ sai tên token.
+>
+> 🔄 **LẬT 2026-09-10 — vế sau đã hết đúng.** Cơ chế đã thi công: mọi `@media` theo bề rộng nay
+> đi qua mixin của `src/FE/src/app/core/theme/_breakpoints.scss`, và gõ sai tên biến/mixin là
+> **lỗi biên dịch Sass** (`Undefined variable`), tức đã có chốt chặn thật sự đúng như đoạn trên
+> nói là còn thiếu. Vế đầu (`tokens.json` ↔ partial vẫn phải khớp tay) thì **giữ nguyên** — xem
+> gạch đầu dòng cuối mục này.
 
 Lý do gốc: `tokens.json` khai `breakpoint.tablet = 980px` như 1 token DTCG
 hợp lệ (đúng định dạng, dùng được cho tài liệu/Figma) — nhưng **CSS
@@ -319,29 +325,52 @@ Cách chuẩn ngành xử lý đúng giới hạn này — biến SCSS + mixin, 
 build nhưng là chỗ **duy nhất** thật sự enforce được số breakpoint;
 `tokens.json` vẫn giữ vai trò tài liệu/Figma song song, không thay thế:
 
-> 📐 **ĐÍCH ĐẾN — CHƯA THI CÔNG (đối chiếu 2026-09-06).** `_breakpoints.scss` **chưa tồn tại**;
-> SCSS hiện tại vẫn gõ tay `@media (max-width: 980px)`. Nghĩa là đoạn "nhất quán bằng kỷ luật,
-> chưa bằng cơ chế" ở ngay trên mô tả đúng hiện trạng — mixin dưới đây là việc phải làm, không
-> phải việc đã làm:
+> ✅ **CÓ THẬT — thi công 2026-09-10 (đối chiếu 2026-09-10).** File chủ của breakpoint là
+> `src/FE/src/app/core/theme/_breakpoints.scss`; ba biến khai ở
+> `_breakpoints.scss:25` (`$tablet`), `:28` (`$mobile`), `:37` (`$desktop`).
+> **Không còn `@media` theo bề rộng nào gõ tay ngoài file đó** — kiểm bằng lệnh, đừng chép danh
+> sách file vào đây ([`../../../../.claude/CLAUDE.md`](../../../../.claude/CLAUDE.md) §6):
 >
 > ```bash
-> find src/FE/src -name '_breakpoints.scss'      # hôm nay: không có kết quả
+> find src/FE/src -name '_breakpoints.scss'                              # PASS: đúng 1 kết quả
+> grep -rn -E '@media *\((max|min)-width' src/FE/src --include='*.scss' \
+>   | grep -v '_breakpoints.scss'                                        # PASS: không in dòng nào
 > ```
+>
+> `@media print` và `@media (prefers-reduced-motion: reduce)` **cố ý ở ngoài** cơ chế này: chúng
+> không mang giá trị bề rộng nào nên không có gì để token hoá.
+
+Hình dạng THẬT đang chạy (đọc từ đĩa nếu nghi ngờ) — nạp bằng `@use` có namespace, nên tên gọi
+là `bp.tablet` chứ không phải `bp-tablet` như bản phác trước đây của mục này:
 
 ```scss
-// core/theme/_breakpoints.scss  (chưa tồn tại — đích đến)
-$breakpoint-tablet: 980px;   // khớp tokens.json breakpoint.tablet — sửa cả 2 khi đổi
-$breakpoint-mobile: 560px;   // khớp tokens.json breakpoint.mobile
+// src/FE/src/app/core/theme/_breakpoints.scss
+$tablet: 980px;            // khớp tokens.json breakpoint.tablet — sửa cả 2 khi đổi
+$mobile: 560px;            // khớp tokens.json breakpoint.mobile
+$desktop: $tablet + 1px;   // DẪN XUẤT, không gõ tay — xem lý do ngay dưới
 
-@mixin bp-tablet { @media (max-width: $breakpoint-tablet) { @content; } }
-@mixin bp-mobile { @media (max-width: $breakpoint-mobile) { @content; } }
+@mixin tablet  { @media (max-width: $tablet)  { @content; } }
+@mixin mobile  { @media (max-width: $mobile)  { @content; } }
+@mixin desktop { @media (min-width: $desktop) { @content; } }
 ```
 
 ```scss
 // dùng trong component thay vì @media (max-width: 980px) gõ tay lặp lại
+@use '../../../core/theme/breakpoints' as bp;   // đường dẫn tương đối, KHÔNG cần includePaths
+
 .layout { grid-template-columns: 1.15fr 0.85fr; }
-@include bp-tablet { .layout { grid-template-columns: 1fr; } }
+@include bp.tablet { .layout { grid-template-columns: 1fr; } }
 ```
+
+**`$desktop` dẫn xuất chứ không khai `981px` bằng tay** — đây là cạnh trên liền kề của `$tablet`,
+nên viết rời hai số là để ngỏ một lỗi câm: đổi `$tablet` sang `1024px` mà quên số kia thì dải
+`981px–1024px` không rơi vào khối nào. Đã kiểm bằng canary 2026-09-10: đặt `$tablet: 1024px` thì
+CSS xuất ra `min-width:1025px` và không còn `min-width:981px`.
+
+> 🛑 **Đừng "sửa" mixin thành CSS custom property.** `@media (max-width: var(--bp-mobile))` là cú
+> pháp hợp lệ nên không có gì báo lỗi, nhưng nó **không bao giờ khớp** — media query được đánh giá
+> trước khi custom property phân giải, và cả khối responsive biến mất im lặng. Lý do đầy đủ ghi
+> ngay đầu `_breakpoints.scss`.
 
 - **2 nguồn (`tokens.json` + `_breakpoints.scss`) phải khớp tay** — chấp
   nhận được ở quy mô này, đúng tinh thần mục "Mọi nơi khai màu phải khớp nhau"

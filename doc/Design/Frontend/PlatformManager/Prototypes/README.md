@@ -5,7 +5,7 @@ verified: 2026-09-06
 project: "PlatformManager"
 artifact: "Interactive prototype"
 status: "visual reference — not a source"
-updated: "2026-08-29"
+updated: "2026-09-10"
 ---
 
 # Interactive Prototype — PlatformManager
@@ -14,6 +14,43 @@ A single self-contained HTML file that renders the whole product: seven screens,
 shared component library, and every documented component state. Open
 [`index.html`](./index.html) in a browser — no build step, no dev server, no backend.
 Fonts and icons are vendored under [`assets/`](./assets/), so it also works offline.
+
+> ### 🔒 In-repo master, anonymised — merged 2026-09-10
+>
+> Until 2026-09-10 there were **two** files named `index.html`: this one, and a newer
+> working copy the reviewer kept in a folder deliberately outside the repo (see the
+> root `.gitignore`). Component specs cited the out-of-repo one, so their *approved*
+> copy and geometry rested on a file nobody who clones this repository can open —
+> and `.claude/CLAUDE.md` §5 forbids two files describing one thing.
+>
+> This file is the merged result and the **only** one any document may cite. Two
+> different things happened in that merge:
+>
+> - **Content.** The 2026-09-04 / -09-05 / -09-06 sync work came across whole — the
+>   six-group DTI structure, the re-cut detail-table columns, the date-range period
+>   labels, the `150px` history grid, the removed report dialog, the toolbar chip
+>   order. Tile 1's KPI caption was also brought forward to the wording decided on
+>   2026-09-09 in [`../Components/KpiTile.md`](../Components/KpiTile.md).
+> - **Anonymisation.** Organisation names, locality names, the source spreadsheet's
+>   filename and real internal document numbers were replaced with illustrative
+>   stand-ins. DOM structure, class names, geometry and template copy were **not**
+>   touched — each of those is something a spec measures, and losing one loses a
+>   measurement.
+>
+> ⚠️ **What was deliberately left alone, and is still open.** The numeric values were
+> kept. Component specs and prompt packs quote them as their approved figures, so
+> re-fabricating them would silently invalidate every one of those measurements — and
+> the derived figures are already in this repository's history through those specs.
+> They are unattributable now that no organisation is named anywhere in the file, but
+> they remain figures computed from a real dataset. Whether to re-fabricate them is a
+> product-owner decision, not a documentation one.
+>
+> ```bash
+> git check-ignore -v doc/Design/Frontend/PlatformManager/Prototypes/index.html
+> ```
+>
+> PASS = **no match** (exit code 1). That is the entire point of the merge: a citation
+> is evidence only if the second reader can open what it points at.
 
 ## Why this file exists
 

@@ -377,7 +377,7 @@ Core có sẵn CSRF protection" với "tôi không cần làm gì thêm".
 >
 > Tiêu đề mục này và mẫu code "Lớp 1" ngay dưới giả định `SameSite=Strict`. Cookie phiên
 > của dự án này khai `SameSiteMode.None`
-> (`src/BE/PlatformManager.Api/Program.cs:389`; cookie antiforgery cũng vậy, `:444`), và nó
+> (`src/BE/PlatformManager.Api/Program.cs:432`; cookie antiforgery cũng vậy, `:487`), và nó
 > **buộc phải là `None`**: FE nằm khác origin
 > ([`../fe/17-phuc-vu-va-trien-khai.md`](../fe/17-phuc-vu-va-trien-khai.md) §2), cookie
 > `Strict`/`Lax` sẽ không được gửi kèm và không ai đăng nhập được.
@@ -388,18 +388,18 @@ Core có sẵn CSRF protection" với "tôi không cần làm gì thêm".
 >
 > | | Cơ chế thật | Ở đâu |
 > |---|---|---|
-> | Lớp 1 | Mọi request ghi phải mang `Origin` trong allowlist, không thì 403 | `src/BE/PlatformManager.Api/Common/OriginValidationMiddleware.cs`, nối pipeline ở `Program.cs:544` |
-> | Lớp 2 | Token antiforgery (`X-XSRF-TOKEN`) | `Program.cs:421` trở đi |
+> | Lớp 1 | Mọi request ghi phải mang `Origin` trong allowlist, không thì 403 | `src/BE/PlatformManager.Api/Common/OriginValidationMiddleware.cs`, nối pipeline ở `Program.cs:587` |
+> | Lớp 2 | Token antiforgery (`X-XSRF-TOKEN`) | `Program.cs:484` trở đi |
 >
 > > **🔄 LẬT 2026-09-06.** Bản trước tuyên bố *"hệ thống này đang chạy trên MỘT lớp"* và
 > > dẫn hai bằng chứng, **cả hai đều sai ở thời điểm này**:
-> > 1. `Program.cs:218` cho `SameSiteMode.None` — dòng đó là
+> > 1. `Program.cs:218` cho `SameSiteMode.None` — dòng đó, khi đo 2026-09-06, là
 > >    `.Bind(builder.Configuration.GetSection(CorsPolicyOptions.SectionName))`, không liên
-> >    quan cookie. Dòng đúng là `:389`.
+> >    quan cookie. Dòng đúng là `:432` (đo lại 2026-09-10).
 > > 2. *"Chú thích ở `Program.cs:252` vẫn nói Lớp 1 là SameSite"* — chú thích đó **đã được
-> >    sửa**, và nay nói **ngược lại** (`Program.cs:421-424`: *"chú thích cũ nói … SAI …
-> >    Lớp 1 thật là kiểm header Origin"*). `:252` hôm nay là
-> >    `const int GlobalSegmentsPerWindow = 6;`.
+> >    sửa**, và nay nói **ngược lại** (`Program.cs:464-468`: *"chú thích cũ nói … SAI …
+> >    Lớp 1 thật là kiểm header Origin"*). `:252` không trỏ vào chú thích nào — khi đo
+> >    2026-09-06 nó là `const int GlobalSegmentsPerWindow = 6;`.
 > >
 > > Đây là dạng sai nguy hiểm nhất của tài liệu bảo mật: nó **báo động cho một lỗ hổng đã
 > > vá**, nên người đọc hoặc đi vá lại thứ đã vá, hoặc học cách bỏ qua cảnh báo của file này.
@@ -425,9 +425,9 @@ Vì sao nó là một lớp thật chứ không phải trang trí:
 
 | | Trước (2026-08-31) | ✅ Hôm nay |
 |---|---|---|
-| Lớp 1 | `SameSite=None` ⇒ không tồn tại | `OriginValidationMiddleware` — 403 cho request ghi có `Origin` ngoài allowlist (`OriginValidationMiddleware.cs:47`), nối pipeline ở `Program.cs:544` |
+| Lớp 1 | `SameSite=None` ⇒ không tồn tại | `OriginValidationMiddleware` — 403 cho request ghi có `Origin` ngoài allowlist (`OriginValidationMiddleware.cs:47`), nối pipeline ở `Program.cs:587` |
 | Lớp 2 | Token antiforgery, hoạt động đúng | Không đổi |
-| Chú thích trong `Program.cs` | Nói Lớp 1 là `SameSite` | Đã sửa — `Program.cs:421-424` nói đúng, kèm lý do `SameSite` không dùng được |
+| Chú thích trong `Program.cs` | Nói Lớp 1 là `SameSite` | Đã sửa — `Program.cs:464-468` nói đúng, kèm lý do `SameSite` không dùng được |
 | Mẫu code Lớp 1 trong file này | `SameSiteMode.Strict` | Giữ làm mẫu cho ca **cùng origin**; dự án này **không** thuộc ca đó — xem cảnh báo ngay dưới khối code |
 
 So khớp origin dùng `string.Equals(..., OrdinalIgnoreCase)`, **không** so theo tiền tố
@@ -540,11 +540,11 @@ app.Use(async (ctx, next) =>
 > `AntiforgeryValidationException` *"the cookie token and the request token were swapped"* —
 > **khoá mọi request ghi thật từ trình duyệt, kể cả `POST /api/auth/login`**. Ca này xảy ra
 > thật và đã sửa 2026-08-24; lời giải thích đầy đủ nằm ngay trong
-> `src/BE/PlatformManager.Api/Program.cs:431-440`.
+> `src/BE/PlatformManager.Api/Program.cs:474-483`.
 
 > **🔄 LẬT 2026-09-06 — khối mẫu cũ có hai lỗi, một lỗi không biên dịch được:**
 > 1. `HttpMethods.IsDeleted(...)` — **không tồn tại**. Tên đúng là `HttpMethods.IsDelete`
->    (code thật: `Program.cs:587`).
+>    (code thật: `Program.cs:630`).
 > 2. Endpoint mẫu chỉ `return Results.Ok(new { token = ... })` và **không set cookie
 >    `XSRF-TOKEN`**. Ai chép mẫu về sẽ có một endpoint trả token mà Angular
 >    `HttpXsrfInterceptor` không bao giờ đọc tới, nên **mọi** request ghi bị 403 — hỏng ở

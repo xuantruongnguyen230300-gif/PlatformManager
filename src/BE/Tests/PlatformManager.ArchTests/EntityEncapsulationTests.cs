@@ -17,6 +17,18 @@ public class EntityEncapsulationTests
     private static readonly HashSet<string> AllowedPublicSetterNames =
         ["Id", "CreatedBy", "UpdatedBy", "CreatedAt", "UpdatedAt", "IsDeleted"];
 
+    /// <summary>
+    /// 🛑 <b>DANH SÁCH LIỆT KÊ TAY — thiếu một assembly domain thì luật dưới XANH MÀ KHÔNG ĐO GÌ</b>
+    /// cho đúng những entity nó bỏ sót (không có assert nào bắt được, vì entity vắng mặt cũng vắng
+    /// khỏi tập được kiểm — cùng khuôn hỏng đã đo ở finding F7).
+    ///
+    /// <para><b>Khi dựng <c>PlatformManager.Business.Domain</c> (bước 3): thêm assembly của nó vào
+    /// đây</b> — đó mới là nơi CÓ entity nghiệp vụ thật, tức nơi luật "field nghiệp vụ phải
+    /// <c>private set</c>, mutate qua method có tên nghiệp vụ" thực sự có việc để làm. Hôm nay
+    /// danh sách chỉ có Core.Domain nên luật gần như chỉ chạy không tải.</para>
+    ///
+    /// <para><c>Core.Api</c> (2026-09-09) KHÔNG thuộc danh sách này — nó không chứa entity nào.</para>
+    /// </summary>
     private static readonly Assembly[] DomainAssemblies =
     [
         typeof(BaseEntity).Assembly,

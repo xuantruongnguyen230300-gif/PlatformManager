@@ -64,7 +64,7 @@ member enum**, thành công luôn **HTTP 200**, grid trả `PagedList<T>` bốn 
 ### Hệ quả riêng của DTI mà mapper phải xử lý — giữ ở đây vì file chủ không nói
 
 ⚠️ **Trường `null` KHÔNG ra dây; nó VẮNG MẶT khỏi JSON.**
-`src/BE/PlatformManager.Api/Program.cs:97` và `:114` —
+`src/BE/PlatformManager.Api/Program.cs:111` và `:128` —
 `DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull`, đặt cho **cả** đường MVC
 lẫn `Http.Json` (đối chiếu source 2026-09-05).
 
@@ -142,8 +142,9 @@ data: [ { id: guid, code: string, name: string, displayOrder: int } ]
 
 - Sắp xếp theo `displayOrder` tăng dần — BE sắp, FE không sắp lại.
 - Chỉ trả nhóm chưa xoá mềm.
-- Dữ liệu gốc: 6 nhóm của `spec/DTI_CanGiuoc_2026-08-11.csv`, seed sẵn. Danh sách 6 nhóm
-  và số chỉ tiêu/điểm từng nhóm: `spec/danh-muc-dti/business-rules.md` §Danh mục nhóm.
+- Dữ liệu gốc: 6 nhóm của `spec/danh-muc-dti/dti-mau-an-danh-62-dong.csv`, seed sẵn (**Q42**, 2026-09-10). Bảng
+  seed (`code` · `displayOrder` · `name`) và lệnh đếm số chỉ tiêu/điểm từng nhóm:
+  `spec/danh-muc-dti/business-rules.md` §1.6 Danh mục nhóm. Giao diện hiện `code. name` — ghép ở FE.
 - FE tải một lần lúc khởi tạo màn, dùng cho cả dropdown lọc lẫn dropdown trong dialog.
 
 ---
@@ -158,6 +159,9 @@ data: [ { id: guid, code: string, name: string, displayOrder: int } ]
 
 ```
 search:   string?   // khớp Code HOẶC Name, không phân biệt hoa/thường + không phân biệt dấu
+                    // (Q47 — cột chuẩn hoá lưu sẵn; cách cài: spec/danh-muc-dti/business-rules.md §1.2)
+                    // Q59: tên CHỨA chuỗi; mã khớp theo ĐOẠN — Code = q hoặc bắt đầu bằng q + "."
+                    //      (gõ 4.2 ra 4.2 và 4.2.x, không ra 4.20–4.29)
 groupId:  guid?     // lọc theo nhóm
 status:   string?   // 1 trong 4 giá trị Trạng thái; giá trị lạ -> 400, KHÔNG âm thầm bỏ lọc
 year:     int?      // mặc định = năm hiện tại
@@ -178,6 +182,9 @@ pageSize: int = 10  // trần 200
 > người dùng luôn gửi `pageSize` tường minh nên chênh lệch đó chưa bao giờ lộ. Ở đây chốt
 > **10 ở cả hai phía** để không dựng lại đúng cái bẫy đó cho màn thứ hai.
 
+- **Thứ tự dòng: theo mã chỉ tiêu, tự nhiên** (`4.2 < 4.10 < 4.22.11`) — BE sắp, FE không sắp
+  lại; không có tham số sắp xếp. Cài bằng cột khoá sắp xếp tính sẵn (**Q53**, 2026-09-10):
+  `spec/danh-muc-dti/business-rules.md` §1.2 và §2.
 - Response: `IApiResult<CriteriaGridDto>`
 
 ```
@@ -192,6 +199,9 @@ CriteriaGridDto:                     // = PagedList<CriteriaRowDto> + khối quy
   isEditable:    bool                // = canWrite VÀ editBlockedBy rỗng
   editBlockedBy: string[]            // LUÔN có mặt; [] khi isEditable = true
                                      // "NO_WRITE_PERMISSION" | "PERIOD_NOT_WEEKLY" | "PERIOD_OUT_OF_YEAR"
+  isCurrentYear: bool                // kỳ đang xem có thuộc NĂM HIỆN TẠI không — Q66 (2026-09-10)
+                                     // FE chọn BIẾN THỂ câu của lời nhắc "PERIOD_NOT_WEEKLY" (Q60) theo đây,
+                                     // KHÔNG suy từ đồng hồ máy khách — cùng lý do Q40
 
 CriteriaRowDto:
   criteriaId:      guid
@@ -244,7 +254,7 @@ CriteriaRowDto:
    | 2 | đơn vị kỳ là tuần hoặc `"all"` | `400 CRITERIA.ASSESSMENT_PERIOD_NOT_WEEKLY` | chọn một tuần |
    | 3 | `"all"` chỉ dùng khi đang xem năm hiện tại | `400 CRITERIA.ASSESSMENT_PERIOD_OUT_OF_YEAR` | chọn một tuần cụ thể của năm đó, hoặc về năm hiện tại |
 
-   > **T15 KHÔNG lật Q20.** Chọn `Năm = 2025` rồi chọn **`Tuần 33/2025`** vẫn ghi được — kỳ
+   > **T15 KHÔNG lật Q20 (khẳng định lại: Q41, 2026-09-10).** Chọn `Năm = 2025` rồi chọn **`Tuần 33/2025`** vẫn ghi được — kỳ
    > đích đúng bằng thứ người dùng đang nhìn. Điều T15 chặn là **lối tắt `"all"`**, thứ giải
    > nghĩa thành *tuần hiện tại của năm hiện tại* bất kể ô `Năm` đang chỉ vào đâu.
 
@@ -253,6 +263,7 @@ CriteriaRowDto:
    | `canWrite` | hiện/**ẩn** `+ Thêm chỉ tiêu`, `Import CSV/Excel`, `Sửa`, `Xoá` |
    | `isEditable` | bật/**tắt** sửa inline và nút Lưu của dialog |
    | `editBlockedBy` | chọn **lời nhắc** nào hiện trên dải băng, và chỉ đúng ô lọc đang chặn |
+   | `isCurrentYear` | chọn **biến thể câu** của lời nhắc `PERIOD_NOT_WEEKLY` (Q60): năm hiện tại gợi ý thêm lối `Tất cả`, năm cũ thì không |
 
    > ### ⚠️ `isEditable` ĐÃ RỜI khỏi `CriteriaRowDto` (2026-09-06) — đừng đọc nó ở cấp dòng
    >
@@ -301,8 +312,14 @@ CriteriaRowDto:
    ### `editBlockedBy` — `isEditable = false` phải nói LÝ DO, không chỉ nói "không"
 
    Ba điều kiện trượt cho ra **hai kiểu hiển thị** và **ba lời nhắc** khác nhau. Một `bool`
-   trần không phân biệt được, và hai điều kiện có thể **cùng lúc** trượt — nên lý do là một
-   **mảng mã**, không phải một mã.
+   trần không phân biệt được — nên lý do là một **mảng mã**, không phải một mã.
+
+   > 🔄 **LẬT 2026-09-10 (Q48).** Câu trên từng kèm vế *"và hai điều kiện có thể **cùng lúc**
+   > trượt"*. Sai theo chính bất biến ngay dưới: `PERIOD_OUT_OF_YEAR` chỉ sinh khi
+   > `period = "all"`, `PERIOD_NOT_WEEKLY` chỉ sinh khi kỳ là tháng — một `period` không thể là
+   > cả hai. Với ba mã hôm nay, khi `canWrite = true` mảng mang **tối đa một** phần tử. Shape
+   > mảng **giữ nguyên**: nó là chỗ cho một điều kiện thứ tư về sau, không phải cho ca hai mã
+   > lọc cùng trượt.
 
    | Mã | Sinh ra khi | Người dùng tự thoát được không |
    | --- | --- | --- |
@@ -325,8 +342,14 @@ CriteriaRowDto:
    > lời: đây không phải thứ bộ lọc chữa được.
    >
    > Khi `canWrite = true` thì mảng liệt kê **mọi** điều kiện đang trượt, không phải cái đầu
-   > tiên — hai ô lọc chặn cùng lúc là ca thật (`Năm = 2025` **và** `Kỳ = Tháng 8`), và một
-   > dải băng chỉ nhắc một ô sẽ khiến người dùng sửa xong ô đó rồi vẫn thấy bảng chỉ đọc.
+   > tiên.
+   >
+   > 🔄 **LẬT 2026-09-10 (Q48).** Câu trên từng viện *"hai ô lọc chặn cùng lúc là ca thật
+   > (`Năm = 2025` **và** `Kỳ = Tháng 8`)"* làm lý do. Ca đó cho **đúng**
+   > `["PERIOD_NOT_WEEKLY"]`: `PERIOD_OUT_OF_YEAR` chỉ sinh khi `period = "all"`. Luật "liệt kê
+   > mọi" giữ nguyên cho điều kiện thứ tư về sau. Cái vấp thật của ca 2025 + tháng là **nối
+   > tiếp** — đổi sang `Tất cả` thì trượt tiếp `PERIOD_OUT_OF_YEAR` — và lối thoát một bước là
+   > một tuần cụ thể của 2025 (Q41).
 
    > **`editBlockedBy` LUÔN có mặt, rỗng chứ không vắng mặt.** Luật `null` ⇒ khoá biến mất
    > (§0) áp cho `null`, không áp cho mảng rỗng — nhưng chỉ cần BE trả `null` thay cho `[]` là
@@ -382,7 +405,8 @@ CriteriaRowDto:
      hai trường, ở mọi chế độ.
    - **`assessmentPeriod` LUÔN là một tuần** sau Q37 — không bao giờ là `"YYYY-MM"`, vì không
      có đường nào ghi dữ liệu vào một kỳ tháng.
-   - **Q38 (2026-09-06):** cột trên lưới hiện **chỉ khoảng ngày** (`10/08–16/08`), bỏ số tuần
+   - **Q38 (2026-09-06):** cột trên lưới hiện **chỉ khoảng ngày** (`10/08 – 16/08` — có khoảng trắng quanh
+     dấu gạch theo T14; bản trước viết dính), bỏ số tuần
      — cột rộng 110px và sau Q37 thì mọi dòng đều là tuần. Đây là quyết định **hiển thị**;
      hợp đồng **không đổi**, vẫn trả đủ cả hai trường. Ngoại lệ này đăng ký ở
      `spec/dashboard-dti/business-rules.md` §6.2.
@@ -401,6 +425,27 @@ CriteriaRowDto:
 > `"Tất cả (mới nhất trong năm)"`, tức chính ngữ nghĩa mới; và một lưới mà số dòng phụ
 > thuộc số lần ai đó bấm sửa thì không phân trang ổn định được.
 
+### Mã lỗi của DM-2 — vá 2026-09-09
+
+Bản trước khai *"`status` giá trị lạ → 400"* mà **không nêu `businessCode` nào**, tức FE không
+có gì để bind và BE không có descriptor nào để khai. Đóng lỗ đó:
+
+| Ca | Mã | HTTP |
+| --- | --- | --- |
+| `status` không thuộc 4 giá trị §1 | **`CRITERIA.STATUS_INVALID`** | 400 |
+| `period` sai khuôn (`"all"` / `"YYYY-Www"` / `"YYYY-MM"`) | `CRITERIA.ASSESSMENT_PERIOD_INVALID` | 400 |
+| `page` < 1 hoặc `pageSize` ngoài `1..200` | `ValidationError` + `fields` — **không** phải mã của catalog DTI | 400 |
+
+- **`CRITERIA.STATUS_INVALID` là mã MỚI**, phải khai trong `CriteriaErrors.cs` như mọi mã
+  khác (§2). Nó dùng chung cho **mọi** endpoint nhận tham số `status`, không chỉ DM-2.
+- `period` sai khuôn ở đường **đọc** dùng **lại đúng mã** của đường ghi
+  (`…ASSESSMENT_PERIOD_INVALID`), không sinh mã thứ hai: cùng một chuỗi sai khuôn thì cùng một
+  câu chữ, và FE chỉ phải dịch một lần. Hai mã kỳ còn lại (`…NOT_WEEKLY`, `…OUT_OF_YEAR`)
+  **không** áp cho đường đọc — đọc một kỳ tháng hay một năm cũ là hợp lệ (Q37 + T15 chỉ chạm
+  đường ghi).
+- **Không âm thầm bỏ lọc.** Trả 200 với bộ lọc bị lờ đi là ca hỏng tệ nhất của lưới: người
+  dùng thấy dữ liệu không khớp bộ lọc đang hiện và không có gì báo cho họ biết.
+
 ---
 
 ## CONTRACT DM-3 — Tạo chỉ tiêu
@@ -410,7 +455,7 @@ CriteriaRowDto:
 - Request:
 
 ```
-code:       string    // bắt buộc, maxlength 20, unique trong tập chưa xoá mềm
+code:       string    // bắt buộc, maxlength 20, mỗi đoạn ≤ 4 chữ số (Q58), unique trong tập chưa xoá mềm
 name:       string    // bắt buộc
 groupId:    guid      // bắt buộc
 maxScore:   number    // bắt buộc, > 0
@@ -419,6 +464,8 @@ assessment: object?   // TUỲ CHỌN — 6 trường của Q9, xem DM-4
 
 - Response: `IApiResult<CriteriaDto>` — `{ id, code, name, groupId, groupName, maxScore }`
 - Lỗi: `CRITERIA.CODE_REQUIRED` (400) · `CRITERIA.CODE_TOO_LONG` (400) ·
+  **`CRITERIA.CODE_SEGMENT_TOO_LONG`** (400, mới 2026-09-10 — Q58) ·
+  **`CRITERIA.CODE_FORMAT_INVALID`** (400, mới 2026-09-10 — Q65) ·
   `CRITERIA.NAME_REQUIRED` (400) · `CRITERIA.MAX_SCORE_INVALID` (400) ·
   `CRITERIA.GROUP_NOT_FOUND` (422) · `CRITERIA.DUPLICATE_CODE` (409)
 
@@ -428,7 +475,8 @@ assessment: object?   // TUỲ CHỌN — 6 trường của Q9, xem DM-4
 > §"Error → HTTP status mapping". Bản card cũ ghi 404 — sai.
 
 ⚠️ **Regex validate `code` KHÔNG được giả định đúng 2 cấp.** Dữ liệu thật có mã ba cấp
-(`4.22.11`). Ràng buộc `maxlength 20` vẫn đủ; luật đầy đủ ở
+(`4.22.11`). Ràng buộc là `maxlength 20` **cộng mỗi đoạn ≤ 4 chữ số** (Q58, 2026-09-10 —
+🔄 LẬT: bản trước ghi *"`maxlength 20` vẫn đủ"*); luật đầy đủ ở
 `spec/danh-muc-dti/business-rules.md` §Mã chỉ tiêu.
 
 ---
@@ -519,6 +567,12 @@ assessment: {              // TUỲ CHỌN — vắng mặt = không đụng t�
 > ngay trong phản hồi qua `assessmentPeriod`/`assessmentPeriodLabel` (DM-2 mục 4) nên không
 > cần đoán trước.
 >
+> **Q40 (2026-09-10) — chốt lại đúng câu trên.** `spec/danh-muc-dti/ui-spec.md` §7.4b từng nói
+> ngược: FE thay `"all"` bằng tuần hiện tại trước khi gửi, và *"`all` không bao giờ được ra
+> dây"*. Người dùng chốt **hợp đồng thắng**: FE gửi nguyên giá trị ô `Kỳ trong năm` (kể cả
+> `"all"`) kèm `year`, server quy đổi và tự kiểm T15. §7.4b đã viết lại theo — hai file nay trỏ
+> cùng một chốt. Áp y hệt cho DM-6 và DM-7.
+>
 > **`period` vắng mặt vẫn là lỗi, đừng gộp nó vào ca `"all"`.** `"all"` là một lựa chọn người
 > dùng nhìn thấy trên màn hình và chủ động để nguyên; `period` thiếu là một client quên gửi.
 > Đối xử hai ca như nhau nghĩa là mọi bug quên-gửi-tham-số đều âm thầm ghi vào tuần này.
@@ -529,6 +583,8 @@ assessment: {              // TUỲ CHỌN — vắng mặt = không đụng t�
 - Response: `IApiResult<CriteriaRowDto>` — **cùng shape với một dòng của DM-2**, để FE thay
   thẳng dòng trong lưới thay vì gọi lại danh sách.
 - Lỗi: `CRITERIA.NOT_FOUND` (404) · `CRITERIA.DUPLICATE_CODE` (409) ·
+  **`CRITERIA.CODE_SEGMENT_TOO_LONG`** (400, mới 2026-09-10 — Q58) ·
+  **`CRITERIA.CODE_FORMAT_INVALID`** (400, mới 2026-09-10 — Q65) ·
   `CRITERIA.ASSESSMENT_SELF_SCORE_EXCEEDS_MAX` (422) ·
   `CRITERIA.ASSESSMENT_VERIFIED_SCORE_EXCEEDS_MAX` (422) ·
   `CRITERIA.STATUS_INVALID` (400) · `CRITERIA.OWNER_NOT_FOUND` (422) ·
@@ -591,7 +647,7 @@ version:         string?   // token đọc ở DM-2
 > Q37): kỳ **đích** của lời ghi, bắt buộc, không mặc định, **nhận `"all"`** với nghĩa "tuần
 > hiện tại", và **từ chối kỳ tháng**. FE lấy nó từ chính ô lọc "Kỳ trong năm" mà người dùng
 > đang chọn và gửi **nguyên giá trị đó** — kể cả khi giá trị đó là `"all"`. Đừng để FE tự quy
-> `"all"` thành một tuần cụ thể; xem lý do ở khối Q26 của DM-4.
+> `"all"` thành một tuần cụ thể; xem lý do ở khối Q26 của DM-4 (chốt lại bằng Q40, 2026-09-10).
 >
 > Khi ô lọc đang chọn một **tháng**, FE không gửi request nào cả: `isEditable = false` nên ô
 > sửa inline không mở được (DM-2 mục 3).
@@ -638,16 +694,25 @@ version:         string?   // token đọc ở DM-2
 - Response: `IApiResult<{ jobId: guid }>` — object bọc, **không** trả `Guid` trần, để thêm
   trường sau (vd `estimatedRows`) không phá shape.
 
-> ### 🔴 ĐIỀU KIỆN TIÊN QUYẾT của card này — hạng mục Core, chốt Q35 (2026-09-06)
+> ### 🔴 ĐIỀU KIỆN TIÊN QUYẾT của card này — chốt Q35 (2026-09-06, cách làm chốt 2026-09-09)
 >
 > **Không bật đường import lên môi trường thật khi nhật ký còn ghi `"system"`.** Job nền không
 > có `HttpContext` nên `AuditInterceptor` ghi `UpdatedBy = "system"` cho cả 62 dòng — tức thao
 > tác **rủi ro nhất** của hệ thống (nạp đè một kỳ đã báo cáo) lại là thao tác **không có tên
 > người**. Người dùng chốt: phải ghi **đúng tài khoản đã bấm nút nạp file**.
 >
-> Ba bước, hiện trạng đã đo, và điều **không** phải sửa (`AuditInterceptor`) — cùng ranh giới
-> Core: `spec/danh-muc-dti/business-rules.md` §5.6. Đây là **thay đổi Core**, đi qua
-> `core-reviewer`; card này chỉ ghi ràng buộc thứ tự.
+> Ba bước, hiện trạng đã đo, và điều **không** phải sửa (`AuditInterceptor`):
+> `spec/danh-muc-dti/business-rules.md` §5.6. Card này chỉ ghi ràng buộc thứ tự.
+>
+> **Cơ chế thi công xong 2026-09-10** — hai bản cài `ICurrentUser` + filter Hangfire chụp danh
+> tính lúc enqueue, bằng chứng `file:dòng` ở §5.6. Ràng buộc thứ tự **không đổi**: mục nghiệm thu
+> chỉ đóng khi chạy thật một lần import bằng tài khoản A và đọc ra tên của A (§5 dưới đây, mục
+> 10) — phép thử đó cần đường import tồn tại nên chưa làm được.
+>
+> **🔄 Sửa 2026-09-09 — đây KHÔNG còn là "thay đổi Core".** Cách làm đã chốt (Hangfire client
+> filter + một bản cài `ICurrentUser` thứ hai, cả hai đặt trong `PlatformManager.Api`) đụng
+> **0 dòng** trong `Core.*`, và `IBackgroundJobScheduler` **không** mở rộng chữ ký. Ràng buộc
+> thứ tự thì **giữ nguyên**: vẫn không bật đường import khi nhật ký còn ghi `"system"`.
 
 > **`period` là trường mới 2026-09-05 (Q20).** Bản trước ghi *"`AssessmentDate` = ngày hệ
 > thống lúc import"*, tức nạp một file của tuần 33 vào tháng 9 sẽ ghi dữ liệu đó vào tuần
@@ -655,7 +720,7 @@ version:         string?   // token đọc ở DM-2
 > ghi cho cả ba đường**, không phải ba luật.
 
 > ⚠️ **HTTP status là 200, KHÔNG phải 202.** `ApiControllerBase.HandleResult<T>` map mọi
-> response thành công về 200 — `src/BE/PlatformManager.Api/Common/ApiControllerBase.cs:25`
+> response thành công về 200 — `src/BE/Core/PlatformManager.Core.Api/ApiControllerBase.cs:37`
 > — và `ErrorCode` không có member nào mang giá trị 202
 > (`src/BE/Core/PlatformManager.Core.Application/Common/Results/ErrorCode.cs:11`). "Đã bắt
 > đầu chứ chưa xong" thể hiện ở tầng dữ liệu (`jobId` cần poll tiếp), không ở HTTP status.
@@ -675,6 +740,19 @@ version:         string?   // token đọc ở DM-2
   `IMPORT.PERIOD_REQUIRED` (400) · `IMPORT.PERIOD_INVALID` (400) ·
   **`IMPORT.PERIOD_NOT_WEEKLY`** (400, mới 2026-09-06 — Q37) ·
   **`IMPORT.PERIOD_OUT_OF_YEAR`** (400, mới 2026-09-06 — T15)
+
+> **Ngưỡng của `IMPORT.FILE_TOO_LARGE` = 10 MB — chốt Q12b (2026-09-09).** Kiểm **trước** khi
+> đọc byte nội dung nào và trước khi ghi file tạm. Tham chiếu chọn con số: file BA gửi có
+> **62 dòng ≈ 19 KB**, nên 10 MB rộng hơn ca dùng thật khoảng hai bậc độ lớn — vẫn nhận được
+> file `.xlsx` nặng định dạng, mà chặn được ca kéo nhầm file video vào ô upload.
+>
+> Trần là **cấu hình**, không phải hằng số trong code; nó thuộc Core, mã lỗi thuộc catalog
+> DTI. Đầy đủ + lưu ý phải khớp trần thân request của Kestrel/reverse proxy:
+> [`../huong_dan/wiki-core/be/15-import-export.md`](../huong_dan/wiki-core/be/15-import-export.md)
+> §2.
+>
+> ⚠️ Trần này áp cho **dung lượng**, độc lập với trần **số dòng** (§1 của file trên). Một file
+> 200 KB có 500.000 dòng vẫn phải bị chặn — bởi trần số dòng, không phải bởi mã này.
 
 ### Bước 2 — poll trạng thái
 
@@ -738,7 +816,64 @@ errorMessage: string?           // chỉ có khi status = "Failed" — dev-facin
   (§3 của file i18n) — FE ghi log/hiện cho quản trị, **không** dùng làm câu cho người dùng
   cuối. Lỗi hạ tầng thì không có mã nghiệp vụ để dịch, và đó là chủ đích.
 - Ánh xạ 11 cột, quy tắc tạo mới / báo lỗi từng dòng, quy tắc khớp `Phụ trách`:
-  `spec/danh-muc-dti/business-rules.md` §Import. Card này không lặp lại.
+  `spec/danh-muc-dti/business-rules.md` §6.3. Card này không lặp lại **luật**, nhưng **phải**
+  khai đủ **mã** — xem ngay dưới.
+
+#### `errors[].code` — bộ mã ĐẦY ĐỦ cho lỗi dòng, khai 2026-09-09
+
+`spec/danh-muc-dti/business-rules.md` §6.3 khai **sáu** tình huống lỗi dòng; bản trước của card
+chỉ nêu **hai** mã, và cả hai chỉ xuất hiện làm ví dụ trong đoạn văn chứ không thành danh sách.
+Hệ quả: bốn ca còn lại không có tên để BE khai và FE dịch — chúng sẽ được đặt tên tuỳ hứng lúc
+code, hoặc tệ hơn, gộp chung vào một mã "lỗi dòng" không dịch nổi thành câu hữu ích.
+
+| Tình huống ở §6.3 | `code` | `messageParams` (khoá là TÊN) |
+| --- | --- | --- |
+| `Nhóm` không khớp `CriteriaGroup.Name` nào | `IMPORT.ROW_GROUP_NOT_FOUND` | `Code`, `GroupName` |
+| `Tự đánh giá` > `Điểm tối đa` | `IMPORT.ROW_SELF_SCORE_EXCEEDS_MAX` | `Code`, `SelfScore`, `MaxScore` |
+| **`Thẩm định` > `Điểm tối đa`** | **`IMPORT.ROW_VERIFIED_SCORE_EXCEEDS_MAX`** | `Code`, `VerifiedScore`, `MaxScore` |
+| **`Trạng thái` ngoài 4 giá trị §1** | **`IMPORT.ROW_STATUS_INVALID`** | `Code`, `Status` |
+| **`Mã` rỗng** | **`IMPORT.ROW_CODE_MISSING`** | — (chỉ có `rowNumber`) |
+| **`Mã` trùng trong CÙNG file** | **`IMPORT.ROW_CODE_DUPLICATED_IN_FILE`** | `Code`, `FirstRowNumber` |
+| **Một đoạn của `Mã` quá 4 chữ số** (Q58) | **`IMPORT.ROW_CODE_SEGMENT_TOO_LONG`** | `Code`, `MaxSegmentDigits` |
+| **`Mã` sai định dạng** — có chữ cái, đoạn rỗng kiểu `4..2`, hoặc dấu chấm ở đầu/cuối (Q65) | **`IMPORT.ROW_CODE_FORMAT_INVALID`** | `Code` |
+| **`Mã` quá 20 ký tự** (Q65) | **`IMPORT.ROW_CODE_TOO_LONG`** | `Code`, `MaxLength` |
+
+Các mã in đậm là **mã mới**, khai trong `ImportErrors.cs` như mọi mã khác (§2): bốn mã của lượt
+vá 2026-09-09, cộng `IMPORT.ROW_CODE_SEGMENT_TOO_LONG` của Q58 (2026-09-10).
+
+- **Tiền tố `IMPORT.ROW_` là bắt buộc và có nghĩa**: nó phân biệt lỗi **một dòng** (job vẫn
+  `Succeeded`, lỗi nằm trong `result.errors`) với lỗi **cả request** (400 ngay ở bước 1). Hai
+  nhóm đi hai đường khác nhau tới FE, nên trộn tên là trộn hai luồng xử lý.
+- **`SELF_SCORE` và `VERIFIED_SCORE` phải là HAI mã, không gộp làm một.** Câu người dùng đọc
+  phải nói đúng ô nào trong file cần sửa — một mã chung buộc FE dựng câu mơ hồ kiểu "một cột
+  điểm vượt trần", và người dùng mở file ra không biết nhìn cột nào. Một dòng sai **cả hai**
+  cột thì báo **hai** phần tử `errors[]` cùng `rowNumber`, không phải một.
+- **`IMPORT.ROW_CODE_DUPLICATED_IN_FILE` báo ở dòng THỨ HAI** (§6.3), và `FirstRowNumber` trỏ
+  về dòng đầu tiên mang mã đó — không có tham số này thì người dùng phải tự dò cả file để tìm
+  cái còn lại.
+- **`IMPORT.ROW_CODE_MISSING` cố ý KHÔNG có tham số `Code`** — chính `Code` là thứ đang thiếu.
+  `rowNumber` là toàn bộ thông tin định vị có được.
+- `Phụ trách` không khớp ai **KHÔNG sinh mã nào** — theo §6.3 đó không phải lỗi, `OwnerId` để
+  trống và dòng vẫn nạp bình thường.
+- Allowlist `messageParams` áp y như envelope: chỉ đưa ra giá trị **đã có sẵn trong file người
+  dùng tự gửi lên** (mã, tên nhóm, điểm, trạng thái) — không đưa ra gì khác.
+#### Mã lỗi của chính endpoint poll — vá 2026-09-09
+
+Bản trước **không khai mã nào cho `GET /api/import/{jobId}`**, kể cả ca hiển nhiên nhất là
+`jobId` không tồn tại. Một endpoint mà FE phải gọi lặp lại thì đó đúng là ca phải khai:
+
+| Ca | Mã | HTTP |
+| --- | --- | --- |
+| `jobId` không có trong `ImportJobs` (sai id, hoặc job đã bị dọn theo retention) | **`IMPORT.JOB_NOT_FOUND`** | 404 |
+| `jobId` không phải GUID hợp lệ | `ValidationError` — binder, **không** phải mã catalog | 400 |
+
+- **`IMPORT.JOB_NOT_FOUND` là mã MỚI**, khai trong `ImportErrors.cs` (§2).
+- **Không phân biệt "sai id" với "job đã bị dọn"** — cùng một mã. Trả hai mã khác nhau nghĩa
+  là tiết lộ *"id này từng tồn tại"* cho người gọi bất kỳ, mà thông tin đó không giúp gì cho
+  người dùng: cả hai ca đều kết thúc bằng "nạp lại file".
+- **404 phải làm FE DỪNG poll.** Không có mã này thì FE không có tín hiệu dừng nào và sẽ poll
+  vô hạn một job không bao giờ tồn tại — đúng kiểu hỏng chỉ lộ ra ở tab để mở qua đêm.
+
 - **Cột `Chênh lệch` trong file: ĐỌC VÀO RỒI VỨT.** Nó là trường tính (§1), nên đường import
   không đọc, không đối chiếu, không báo lỗi khi lệch, và **không đòi nó phải có mặt**. Sau
   Q25 điều này còn quan trọng hơn: cột đó trong file gốc của BA tính theo chiều **cũ**, tức
@@ -746,6 +881,28 @@ errorMessage: string?           // chỉ có khi status = "Failed" — dev-facin
   chối gần nửa file gốc và đổ lỗi cho dữ liệu của BA.
 
 ### Hạ tầng — cái nào có sẵn, cái nào phải dựng
+
+> 🔄 **LẬT LẠI 2026-09-10 — seam đọc file NAY ĐÃ CÓ.** Khối `LẬT 2026-09-06` ngay dưới **giữ
+> nguyên, không sửa**: phép đo của nó đã hết hạn, còn bài học của nó thì chưa. Đo lại hôm nay
+> (2026-09-10): seam `IImportFileReader` đã thi công ở Core —
+> `src/BE/Core/PlatformManager.Core.Application/Import/IImportFileReader.cs:17`, cùng
+> `IImportFileReaderSelector.cs` và `ImportCellValue.cs` trong cùng thư mục; bốn reader và bộ
+> chọn ở `src/BE/Core/PlatformManager.Core.Infrastructure/Import/` (`CsvImportFileReader.cs` ·
+> `ExcelImportFileReader.cs` · `XlsImportFileReader.cs` · `XlsxImportFileReader.cs` ·
+> `ImportFileReaderSelector.cs`); hai package khai đúng một chỗ —
+> `src/BE/Core/PlatformManager.Core.Infrastructure/PlatformManager.Core.Infrastructure.csproj:51`
+> (`CsvHelper` 33.1.0) và dòng `52` ngay dưới (`NPOI` 2.8.0). File chủ đã đổi nhãn theo:
+> frontmatter của
+> [`../huong_dan/wiki-core/be/15-import-export.md`](../huong_dan/wiki-core/be/15-import-export.md)
+> mang `status: "import built 2026-09-09; export not built"`, và bảng trạng thái của nó xếp
+> nửa **Import** vào ✅ CÓ THẬT (2026-09-10).
+>
+> Đo lại được bằng hai lệnh:
+> `grep -rn "interface IImportFileReader" src/BE --include=*.cs | grep -v /obj/` (PASS: 1 dòng)
+> và `grep -n "CsvHelper\|NPOI" src/BE/Core/PlatformManager.Core.Infrastructure/PlatformManager.Core.Infrastructure.csproj`.
+>
+> ⚠️ **Cái vẫn CHƯA có là nơi gọi seam** — endpoint, handler và bảng job của DM-7. Seam có sẵn
+> không rút ngắn phần đó; đừng đọc dòng này thành *"đường import đã chạy"*.
 
 > 🔄 **LẬT 2026-09-06.** Mục này từng mang tiêu đề *"Hạ tầng dùng lại, không dựng mới"* và
 > liệt cả hai seam như nhau. Đo lại: **chỉ seam job nền là có thật.** `IImportFileReader`,
@@ -760,10 +917,16 @@ errorMessage: string?           // chỉ có khi status = "Failed" — dev-facin
   `src/BE/Core/PlatformManager.Core.Infrastructure/BackgroundJobs/HangfireBackgroundJobScheduler.cs`
   (đối chiếu 2026-09-06). **Không** gọi thẳng `BackgroundJob.Enqueue` — `LayerDependencyTests`
   cưỡng chế việc chỉ `Core.Infrastructure` được biết tới Hangfire.
-- 📐 **PHẢI DỰNG** — đọc file qua seam `IImportFileReader` ở Core (CsvHelper cho CSV, NPOI cho
-  `.xls`/`.xlsx`). **NPOI chỉ được reference ở `Core.Infrastructure`** — luật §2 của
-  `15-import-export.md`. Đây là hạng mục **Core** thứ ba của card này, cùng nhóm với Q35 và
-  Q36 ở §4.
+- ✅ **Có sẵn (đối chiếu 2026-09-10)** — đọc file qua seam `IImportFileReader` ở Core
+  (`src/BE/Core/PlatformManager.Core.Application/Import/IImportFileReader.cs:17`), bộ chọn
+  reader theo chữ ký file, và bốn hiện thực ở
+  `src/BE/Core/PlatformManager.Core.Infrastructure/Import/` — CsvHelper cho CSV, NPOI cho
+  `.xls`/`.xlsx`. **NPOI chỉ được reference ở `Core.Infrastructure`** — luật §2 của
+  `15-import-export.md`, và chỗ khai duy nhất là
+  `src/BE/Core/PlatformManager.Core.Infrastructure/PlatformManager.Core.Infrastructure.csproj:52`.
+  Bản trước xếp đây là hạng mục **Core** thứ ba của card này, cùng nhóm với Q35 và Q36 ở §4 —
+  **không còn**; xem khối 🔄 ở đầu mục. Phần chưa có là **nơi gọi** seam (endpoint/handler
+  của DM-7), không phải seam.
 - File upload **không sống sót** qua ranh giới request → job nền: ghi ra storage tạm trước
   khi enqueue. 📖 [`../huong_dan/wiki-core/be/14-file-storage.md`](../huong_dan/wiki-core/be/14-file-storage.md).
 - **Quyền của đường import: ĐÃ CHỐT (Q27, 2026-09-05)** — dùng **chung** permission-key ghi
@@ -780,6 +943,30 @@ errorMessage: string?           // chỉ có khi status = "Failed" — dev-facin
 - Đặc tả đầy đủ ở [`dashboard.md`](dashboard.md) CONTRACT DB-3 — **không mô tả lại ở đây**.
 - Owner FE: một service dùng chung ở `shared/`, không đặt trong `modules/danh-muc-dti/`
   (≥2 feature dùng — 📖 [`../huong_dan/quy-uoc/fe-architecture.md`](../huong_dan/quy-uoc/fe-architecture.md)).
+
+---
+
+## Ô `Phụ trách` — KHÔNG có endpoint riêng (Q12a, chốt 2026-09-09)
+
+Dropdown chọn người phụ trách trong dialog DM-3/DM-4 **tái dùng `GET /api/users`**. Không thêm
+route mới, không thêm DTO mới. 📖 Shape, phân trang, trần `pageSize` và tham số `searchText`:
+[`users.md`](users.md) §`GET /api/users`.
+
+Ba điểm thuộc hợp đồng, phần còn lại đọc ở file kia:
+
+- Gọi kèm **`searchText`** (gõ tới đâu lọc tới đó) + **`pageSize`**, không tải hết danh sách.
+  Trần `pageSize` là **200**, BE enforce — vượt trần là `400 ValidationError`, không phải
+  âm thầm cắt.
+- **Quyền khớp sẵn, không phải nới gì.** `UsersController` chặn
+  `[Authorize(Roles = SuperAdmin,Admin)]` (`src/BE/PlatformManager.Api/Controllers/UsersController.cs:14`),
+  mà Q36 chốt key ghi DTI **chỉ cấp cho `Admin`**. Nghĩa là mọi tài khoản mở được dialog ghi
+  thì cũng gọi được `GET /api/users`. Không cần endpoint "lookup người dùng" nhẹ hơn cho màn
+  này, và **không** được nới quyền của `UsersController` để phục vụ nó.
+- Người thiếu quyền ghi không mở được dialog (Q39), nên ca "gọi `/api/users` rồi nhận 403"
+  không phát sinh từ luồng UI bình thường.
+
+⚠️ Đây là đường **chọn** người phụ trách trên UI. Đường **khớp tên** khi import là việc khác
+hẳn, không đi qua endpoint này: `spec/danh-muc-dti/business-rules.md` §6.3.
 
 ---
 
@@ -814,6 +1001,28 @@ Ràng buộc nội dung của từng descriptor:
   trùng mã, sai nhóm, sai trạng thái, xung đột phiên bản đều cần người sửa dữ liệu rồi mới
   gọi lại. Đặt `true` nghĩa là bảo FE tự thử lại — và thử lại một `DUPLICATE_CODE` thì lần
   nào cũng hỏng y hệt.
+
+### Hai mã của Q58 (2026-09-10) — tên đặt sẵn, đừng đổi
+
+| `BusinessCode` | Catalog | `ErrorCode` | `MessageTemplate` | `Retryable` |
+| --- | --- | --- | --- | --- |
+| `CRITERIA.CODE_SEGMENT_TOO_LONG` | `CriteriaErrors.cs` | 400 — cùng nhóm với `CRITERIA.CODE_TOO_LONG` | `"Mỗi đoạn của mã chỉ tiêu tối đa {MaxSegmentDigits} chữ số."` | `false` |
+| `IMPORT.ROW_CODE_SEGMENT_TOO_LONG` | `ImportErrors.cs` | như các `IMPORT.ROW_*` khác — lỗi dòng trong `result.errors`, không thành HTTP status | `"Mã chỉ tiêu '{Code}' có đoạn dài quá {MaxSegmentDigits} chữ số."` | `false` |
+
+Tên hai mã do người dùng đặt cùng Q58; câu người dùng đọc do Design soạn theo đúng hai tên này.
+Luật: `spec/danh-muc-dti/business-rules.md` §2.
+
+### Ba mã của Q65 (2026-09-10) — tên đặt sẵn, đừng đổi
+
+| `BusinessCode` | Catalog | `ErrorCode` | `MessageTemplate` | `Retryable` |
+| --- | --- | --- | --- | --- |
+| `CRITERIA.CODE_FORMAT_INVALID` | `CriteriaErrors.cs` | 400 — cùng nhóm với `CRITERIA.CODE_TOO_LONG` | `"Mã chỉ tiêu chỉ gồm chữ số ngăn bằng dấu chấm đơn, không có đoạn rỗng."` | `false` |
+| `IMPORT.ROW_CODE_FORMAT_INVALID` | `ImportErrors.cs` | như các `IMPORT.ROW_*` khác — lỗi dòng trong `result.errors`, không thành HTTP status | `"Mã chỉ tiêu '{Code}' sai định dạng."` | `false` |
+| `IMPORT.ROW_CODE_TOO_LONG` | `ImportErrors.cs` | như trên | `"Mã chỉ tiêu '{Code}' dài quá {MaxLength} ký tự."` | `false` |
+
+Trước Q65 **cả ba ca đều không có mã**: mã chứa chữ cái hoặc có đoạn rỗng lọt qua ở cả ba đường
+ghi, và import không có mã cho ca quá 20 ký tự (dialog thì đã có `CRITERIA.CODE_TOO_LONG`).
+Luật: `spec/danh-muc-dti/business-rules.md` §2.
 
 📖 Khuôn `ErrorDescriptor` + ví dụ:
 [`../huong_dan/quy-uoc/be-cqrs-handler.md`](../huong_dan/quy-uoc/be-cqrs-handler.md)
@@ -871,16 +1080,24 @@ Ràng buộc nội dung của từng descriptor:
 | Chưa nói người thiếu quyền thấy gì | vào được màn, **chỉ đọc**; không chặn route, không ẩn menu | **Q39** |
 | Import ghi `UpdatedBy = "system"` — ghi thành mục còn mở | phải ghi **đúng người đăng nhập**; hạng mục **Core**, **điều kiện tiên quyết** của DM-7 | **Q35** |
 | Seed cấp key DTI cho `Admin` + `User` — cảnh báo và bảo bỏ tick tay | seed **chỉ cấp cho `Admin`**; ngoại lệ có đăng ký | **Q36** |
-| Cột `Kỳ của số liệu` hiện nhãn kỳ đầy đủ | hiện **chỉ khoảng ngày** `10/08–16/08` (chỉ là hiển thị, hợp đồng không đổi) | **Q38** |
+| Cột `Kỳ của số liệu` hiện nhãn kỳ đầy đủ | hiện **chỉ khoảng ngày** `10/08 – 16/08` (chỉ là hiển thị, hợp đồng không đổi; khoảng trắng quanh dấu gạch theo T14) | **Q38** · T14 |
 | `"all"` ghi được ở mọi năm đang lọc | `"all"` + `year` ≠ năm hiện tại ⇒ `400 …PERIOD_OUT_OF_YEAR`; đường ghi nhận thêm `year` | **T15** |
 | Cờ quyền nằm trong từng dòng | cả khối quyền (`canWrite` · `isEditable` · `editBlockedBy`) chuyển lên **cấp màn** — lưới rỗng vẫn quyết được ẩn/hiện nút và vẫn nói được lý do | lỗ hổng Q39 × T9 |
-| `isEditable` là một `bool` trần | kèm **`editBlockedBy: string[]`** — phân biệt đủ 3 ca và diễn đạt được **hai điều kiện cùng trượt** | 3 lời nhắc ≠ 1 câu chung |
+| `isEditable` là một `bool` trần | kèm **`editBlockedBy: string[]`** — phân biệt đủ 3 ca. *(🔄 LẬT 2026-09-10, Q48: bản này từng ghi thêm "diễn đạt được hai điều kiện cùng trượt" — hai mã lọc loại trừ nhau, xem DM-2 mục 3.)* | 3 lời nhắc ≠ 1 câu chung |
 
 ---
 
 ## 4. Cần chốt — KHÔNG tự quyết
 
-**Card này không còn mục nào để ngỏ.** Mục cuối cùng — quyền GHI — đóng bằng **Q27**
+**Danh sách mục CÒN MỞ của cả cụm DTI có đúng một chỗ: `spec/danh-muc-dti/business-rules.md`
+§8** — card này trỏ về đó, không chép.
+
+> 🔄 **LẬT 2026-09-10.** Đoạn này từng mở bằng *"Card này không còn mục nào để ngỏ"*, và đoạn
+> dưới bảng kết bằng *"Cả cụm DTI nay không còn mục nghiệp vụ nào để ngỏ"*. Sai: vẫn còn mục
+> mở (copy mã lỗi, khe băng V3, các mục của Dashboard…). Bảng ngay dưới chỉ là sổ các mục
+> **đã** đóng của card.
+
+Mục quyền GHI đóng bằng **Q27**
 (2026-09-05): đúng một permission-key cho toàn bộ đường ghi DTI, áp cho mọi kỳ, không tách
 "sửa kỳ hiện tại" / "sửa kỳ cũ", không có khái niệm "chốt kỳ". Tên key và ba bước khai:
 `spec/danh-muc-dti/business-rules.md` §6.5.
@@ -906,17 +1123,50 @@ Ràng buộc nội dung của từng descriptor:
 
 **Hai câu hỏi từng CÒN MỞ đã đóng ngày 2026-09-06** — bằng **Q37** (chỉ nhập theo tuần, nên
 không có ca "ghi vào kỳ tháng" để mà báo sai đơn vị) và **Q35** (nhật ký phải mang đúng người
-đăng nhập). Cả cụm DTI nay **không còn mục nghiệp vụ nào để ngỏ**:
-`spec/danh-muc-dti/business-rules.md` §8.
+đăng nhập). Mục nào còn mở hôm nay: `spec/danh-muc-dti/business-rules.md` §8.1.
+*(🔄 LẬT 2026-09-10: câu cũ ở đây ghi "Cả cụm DTI nay không còn mục nghiệp vụ nào để ngỏ".)*
 
-⚠️ **Nhưng "hết mục cần chốt" KHÔNG có nghĩa là làm được ngay.** **Ba** hạng mục **Core** là
-điều kiện tiên quyết, và cả ba đều đi qua `core-reviewer`:
+⚠️ **Nhưng "hết mục cần chốt" KHÔNG có nghĩa là làm được ngay.** Vẫn còn hạng mục nền tảng là
+điều kiện tiên quyết — bảng dưới đây, cột cuối nói rõ cái nào **chạm Core** (đi qua
+`core-reviewer`) và cái nào không:
 
-| Hạng mục Core | Chặn cái gì | Đặc tả |
-| --- | --- | --- |
-| Danh tính trong job nền (Q35) | **DM-7 — toàn bộ đường import** | `spec/danh-muc-dti/business-rules.md` §5.6 |
-| Seed permission-key theo vai (Q36) | quyền ghi đúng như đã chốt; nếu bỏ qua thì vai `User` được cấp sẵn, ngược Q36 | `spec/danh-muc-dti/business-rules.md` §6.5 |
-| **Seam `IImportFileReader`** (thêm 2026-09-06) | **DM-7 — toàn bộ đường import.** Chưa tồn tại ở `src/BE`, xem DM-7 §Hạ tầng | [`../huong_dan/wiki-core/be/15-import-export.md`](../huong_dan/wiki-core/be/15-import-export.md) §2 |
+| Hạng mục | Chặn cái gì | Đặc tả | Chạm Core? |
+| --- | --- | --- | --- |
+| ~~Danh tính trong job nền (Q35)~~ | **KHÔNG còn chặn** — ✅ Xong 2026-09-10: seam `ICurrentUser` nay có bản cài **thứ hai** cho job nền, danh tính chụp lúc enqueue bằng filter Hangfire; xem khối 🔄 dưới bảng | `spec/danh-muc-dti/business-rules.md` §5.6 | **Không** — cả ba bước ở host (chốt 2026-09-09) |
+| Seed permission-key theo vai (Q36) | quyền ghi đúng như đã chốt; nếu bỏ qua thì vai `User` được cấp sẵn, ngược Q36 | `spec/danh-muc-dti/business-rules.md` §6.5 | **Có** |
+| ~~Seam `IImportFileReader`~~ (thêm 2026-09-06) | **KHÔNG còn chặn** — ✅ Xong 2026-09-09, đối chiếu 2026-09-10: seam + reader + bộ chọn đã có ở `src/BE`, xem DM-7 §Hạ tầng | [`../huong_dan/wiki-core/be/15-import-export.md`](../huong_dan/wiki-core/be/15-import-export.md) §2 | **Có** — đã qua |
+| ~~`IUserLookupService` bỏ nhánh tự tạo `AppUser`~~ (thêm 2026-09-09) | **KHÔNG còn chặn** — ✅ Xong 2026-09-09, đối chiếu 2026-09-10: nhánh tự tạo đã gỡ, xem khối 🔄 dưới bảng | `spec/danh-muc-dti/business-rules.md` §6.3 | **Có** — đã qua |
+| **`Core.Api` + `ApiControllerBase`** (Q8, thêm 2026-09-09) | mọi controller DTI — `Business.Api` không dựng được khi base class còn ở host | [`../kien-truc-core-module.md`](../kien-truc-core-module.md) §`Core.Api` giữ `ApiControllerBase` | **Có** |
+
+> **🔄 Sửa 2026-09-10 — ba dòng đã đóng, một dòng còn mở.** Các hạng mục gạch ngang ở trên
+> **đã có thật ở `src/BE`**, giữ lại trong bảng (gạch ngang thay vì xoá) để người từng đọc bản
+> cũ biết chúng đã đóng chứ không phải bị bỏ quên:
+>
+> - **Seam `IImportFileReader`** — `src/BE/Core/PlatformManager.Core.Application/Import/IImportFileReader.cs:17`
+>   + 4 reader và bộ chọn ở `src/BE/Core/PlatformManager.Core.Infrastructure/Import/`; bằng
+>   chứng và lệnh đo lại: DM-7 §Hạ tầng.
+> - **`IUserLookupService`** — nhánh tự tạo `AppUser` đã gỡ; interface nay chỉ còn đúng một
+>   phương thức trả `Guid?`, không khớp ai thì trả `null` và **không tạo gì**
+>   (`src/BE/Core/PlatformManager.Core.Application/Users/IUserLookupService.cs:31`, docstring
+>   nêu thẳng lý do ở dòng 11–16). Tức Core **không còn làm ngược** luật §6.3 như bản
+>   2026-09-09 ghi.
+>
+> - **Danh tính trong job nền (Q35)** — thi công 2026-09-10, đúng ba bước đã chốt và **0 dòng
+>   sửa trong `Core.*`**: filter chụp danh tính lúc enqueue
+>   (`src/BE/PlatformManager.Api/Common/BackgroundJobIdentityFilter.cs:42`), bản cài `ICurrentUser`
+>   **thứ hai** đọc lại danh tính đó trong worker
+>   (`src/BE/PlatformManager.Api/Common/BackgroundJobCurrentUser.cs:19`), và `Program.cs:145` chọn
+>   bản cài theo ngữ cảnh chạy. `AuditInterceptor` lẫn `IBackgroundJobScheduler` không đổi.
+>   ⚠️ Còn thiếu **seam activation test** (cần Docker) — xem cảnh báo ở §5.6 của file luật.
+>
+> **Dòng còn lại vẫn chặn thật, đừng đọc lướt thành "xong hết":** Q36 —
+> `src/BE/PlatformManager.Api/Permissions/AppResourceKeySource.cs` mới có key `import.manage` của
+> module đã gỡ, chưa có key nào của DTI (đối chiếu 2026-09-10).
+
+> **🔄 Sửa 2026-09-09.** Bản trước mở đầu bằng *"**Ba** hạng mục **Core**… cả ba đều đi qua
+> `core-reviewer`"*. Cả hai vế đều đã hết hạn: Q35 thôi là hạng mục Core (đi đường host), và
+> danh sách dài thêm hai dòng. Đây đúng khuôn `.claude/CLAUDE.md` §6 cảnh báo — một con số
+> chép vào văn xuôi thì lần sửa sau không ai nhớ cập nhật.
 
 ---
 
@@ -980,15 +1230,21 @@ hai mục cuối là nghiệm thu của hai quyết định chốt ngày 2026-09
     **ca âm bắt buộc**: cùng `year = 2025` nhưng `period = "2025-W33"` ⇒ **ghi thành công**,
     và giá trị nằm ở tuần 33 của **2025**. Thiếu ca âm này thì một bản cài "cấm ghi vào năm
     cũ" sẽ qua được nghiệm thu trong khi nó đã lật mất Q20.
-15. **Ca `editBlockedBy` — bốn tổ hợp, kiểm đủ bốn.** Đây là trường dễ cài "gần đúng" nhất:
-    một bản cài chỉ trả mã đầu tiên vẫn qua được ba ca đầu.
+15. **Ca `editBlockedBy` — kiểm đủ mọi hàng của bảng dưới.** Đây là trường dễ cài "gần đúng"
+    nhất: một bản cài suy `PERIOD_OUT_OF_YEAR` từ *"năm cũ"* thay vì từ *"`all` + năm cũ"* vẫn
+    qua được mọi hàng khác, và chỉ hàng 3 bắt được nó.
 
     | Bộ lọc / tài khoản | `canWrite` | `isEditable` | `editBlockedBy` |
     | --- | --- | --- | --- |
     | có quyền · `year` = năm hiện tại · kỳ = một tuần | `true` | `true` | `[]` |
     | có quyền · `year` = năm hiện tại · kỳ = **Tháng 8** | `true` | `false` | `["PERIOD_NOT_WEEKLY"]` |
-    | có quyền · **`year` = 2025** · kỳ = **Tháng 8** | `true` | `false` | **`["PERIOD_NOT_WEEKLY", "PERIOD_OUT_OF_YEAR"]`** — hai phần tử, đúng thứ tự |
-    | **không quyền** · bộ lọc bất kỳ, kể cả đang sai cả hai | `false` | `false` | **`["NO_WRITE_PERMISSION"]`** — đúng MỘT phần tử |
+    | có quyền · **`year` = 2025** · kỳ = **Tháng 8** | `true` | `false` | **`["PERIOD_NOT_WEEKLY"]`** — **chỉ một** phần tử (Q48): `PERIOD_OUT_OF_YEAR` chỉ sinh khi `period = "all"` |
+    | có quyền · **`year` = 2025** · kỳ = **`Tất cả`** | `true` | `false` | `["PERIOD_OUT_OF_YEAR"]` |
+    | **không quyền** · bộ lọc bất kỳ | `false` | `false` | **`["NO_WRITE_PERMISSION"]`** — đúng MỘT phần tử |
+
+    > 🔄 **LẬT 2026-09-10 (Q48).** Hàng 3 từng ghi `["PERIOD_NOT_WEEKLY", "PERIOD_OUT_OF_YEAR"]`
+    > — hai phần tử — trái bất biến ở DM-2 mục 3 (`PERIOD_OUT_OF_YEAR` chỉ khi `period = "all"`).
+    > Hàng 4 thêm cùng lượt: bảng cũ không có hàng nào sinh `PERIOD_OUT_OF_YEAR` một mình.
 
     Kiểm thêm: khi `isEditable = true`, khoá `editBlockedBy` **có mặt** với giá trị `[]` —
     không được vắng mặt (§0 chỉ bỏ khoá khi giá trị là `null`, và `null` ở đây là sai).

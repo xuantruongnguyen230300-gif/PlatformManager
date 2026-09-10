@@ -26,7 +26,9 @@ npm install primeng @primeng/themes
 
 🔄 LẬT 2026-09-06: mục này trước đây nói về `CriteriaGridTable`
 (`modules/danh-muc-dti/components/criteria-grid-table/`) và dặn "không bắt buộc migrate ngay".
-Component đó **không còn tồn tại** — cả module `danh-muc-dti` đã gỡ 2026-08-29. Không còn lưới
+Component đó **không còn tồn tại** — nó bị gỡ cùng module `danh-muc-dti` ngày 2026-08-29.
+Module `danh-muc-dti` **đã dựng lại 2026-09-09** nhưng `CriteriaGridTable` thì không quay lại
+(đối chiếu 2026-09-10: `find src/FE/src -iname "*criteria*"` không ra gì). Không còn lưới
 hand-rolled nào để migrate.
 
 Luật hiện hành:
@@ -40,9 +42,16 @@ Luật hiện hành:
   `src/FE/src/app/platform/quan-tri-nguoi-dung/components/user-grid-table/`.
 
 ```bash
-grep -rn "primeng/table" src/FE/src --include=*.ts | grep -v spec
+grep -rn "from 'primeng/table'" src/FE/src --include=*.ts | grep -v spec
 # PASS: đúng 1 dòng, và dòng đó thuộc shared/components/data-grid/
 ```
+
+> 🔄 **SỬA 2026-09-10 — lệnh cũ báo FAIL GIẢ.** Bản trước đo bằng `"primeng/table"` trần,
+> nên nó đếm cả **chú thích** nhắc tên gói (`src/FE/src/app/core/i18n/core-i18n.ts:67`) chứ không
+> chỉ `import` thật, và ra nhiều hơn 1 dòng dù ranh giới không hề bị phá. Ranh giới vẫn đúng như
+> mô tả — chỉ phép đo sai. Neo `import` thật đang chạy:
+> `src/FE/src/app/shared/components/data-grid/data-grid.ts:4` (đối chiếu 2026-09-10).
+> Một tiêu chí PASS đỏ vì lý do không liên quan tới code là tiêu chí người ta tắt đi.
 
 ### Mẫu dùng `DataGrid` với server-side pagination
 
@@ -76,6 +85,11 @@ Hai điều `DataGrid` đã lo hộ, **đừng** làm lại ở màn hình:
   `#header`/`#body`/`#emptymessage` bằng *content query*; chiếu chúng qua một lớp bọc là dựa
   vào chi tiết nội tại của Angular — chạy được hôm nay, hỏng khi nâng phiên bản mà **không có
   lỗi biên dịch**.
+
+🛑 **Giới hạn có chủ đích:** `DataGrid` chỉ phát `page`/`pageSize`; `sortField`/`sortOrder`/`filters`
+của `TableLazyLoadEvent` bị bỏ qua — lý do và việc phải làm khi màn đầu tiên cần sort/filter
+server-side ghi tại chỗ, `src/FE/src/app/shared/components/data-grid/data-grid.ts:68` (đối chiếu
+2026-09-10).
 
 ### Chiều cao lưới — ba thao tác, thiếu một là hỏng im lặng
 

@@ -14,6 +14,7 @@ import {
 } from '@angular/core';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ApiFieldError } from '../../../../core/http/api-result.model';
+import { groupServerFieldErrors } from '../../../../core/http/server-field-errors';
 import { ApiErrorMessageService } from '../../../../core/i18n/api-error-message.service';
 import { AutofocusDirective } from '../../../../shared/directives/autofocus.directive';
 import { ASSIGNABLE_ROLES, ICreateUserPayload, IUpdateUserPayload, IUser } from '../../models/quan-tri-nguoi-dung.model';
@@ -57,30 +58,6 @@ export interface IUserFormSaveEvent {
  * duy trì một bảng ánh xạ thứ hai.
  */
 export type UserFormField = 'UserName' | 'Email' | 'FullName' | 'TempPassword' | 'Roles';
-
-/**
- * Gom `fields` của BE về đúng khoá ô trên form.
- *
- * Hai việc, đều không bỏ được:
- *  1. **Bỏ hậu tố chỉ số.** `RuleForEach(x => x.Roles)` của FluentValidation phát `PropertyName`
- *     dạng `Roles[0]`, `Roles[1]` (BE giữ nguyên chuỗi này, xem `GlobalExceptionHandler`
- *     `NormalizeField` — chỉ cắt tiền tố `Request.`, không đụng chỉ số). Tra thẳng `fields['Roles']`
- *     sẽ trượt và lỗi biến mất im lặng.
- *  2. **Gộp nhiều thông điệp cho cùng một ô** thành một chuỗi — mỗi ô chỉ có một chỗ để hiện.
- */
-function groupServerFieldErrors(
-  fields: Record<string, ApiFieldError[]> | null,
-  translate: (error: ApiFieldError) => string,
-): Record<string, string> {
-  if (!fields) return {};
-  const grouped: Record<string, string[]> = {};
-  for (const [rawKey, errors] of Object.entries(fields)) {
-    // `Roles[0]` / `Roles[1]` là lỗi của cùng MỘT nhóm ô — gộp về `Roles` để hiện một chỗ.
-    const key = rawKey.replace(/\[\d+\]$/, '');
-    grouped[key] = [...(grouped[key] ?? []), ...errors.map(translate)];
-  }
-  return Object.fromEntries(Object.entries(grouped).map(([key, messages]) => [key, messages.join(' ')]));
-}
 
 /**
  * Dialog Thêm/Sửa người dùng (native `<dialog>`) — khớp `doc/contracts/users.md`: tạo mới cần
@@ -132,11 +109,9 @@ export class UserFormDialog {
   /** Thông điệp lỗi KHÔNG gắn với ô nào (`message` của envelope) — hiện ở cuối form. */
   readonly serverError = input<string | null>(null);
   /**
-   * `fields` nguyên văn của envelope lỗi — key PascalCase khớp property C#. Trang cha truyền
-   * thẳng `err.apiResult?.fieldErrors`, KHÔNG tự camelCase lại và cũng không tự gộp thành một câu.
-   */
-  /**
-   * `fieldErrors` nguyên văn của envelope — mã + câu, KHÔNG phải câu đã dịch.
+   * `fieldErrors` nguyên văn của envelope — mã + câu, KHÔNG phải câu đã dịch. Key PascalCase khớp
+   * property C#; trang cha truyền thẳng `err.apiResult?.fieldErrors`, KHÔNG tự camelCase lại và
+   * cũng không tự gộp thành một câu.
    *
    * Đổi 2026-09-06 từ `fields` (`Record<string, string[]>`) sang `fieldErrors`: với lỗi nghiệp vụ
    * BE **để trống** `fields` và chỉ điền `fieldErrors`, nên bản trước bỏ lọt toàn bộ mã Identity.

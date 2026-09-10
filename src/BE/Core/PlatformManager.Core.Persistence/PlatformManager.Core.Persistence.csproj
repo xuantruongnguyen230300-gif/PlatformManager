@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>PlatformManager.Core.Persistence</RootNamespace>
+    <AssemblyName>PlatformManager.Core.Persistence</AssemblyName>
+  </PropertyGroup>
+
+  <!-- Tách khỏi Core.Infrastructure 2026-09-10 — xem doc/kien-truc-core-module.md
+       §"tách Core.Persistence khỏi Core.Infrastructure". Chứa CÁCH LƯU DỮ LIỆU của Core:
+       PlatformManagerDbContext, EF Configuration, AuditInterceptor, repository dùng EF,
+       UnitOfWork, CoreSeeder, AppUser/AppRole, và artifact schema Migrations/sql/.
+
+       ⚠️ NAMESPACE CỐ Ý KHÁC TÊN ASSEMBLY: các file ở đây vẫn khai
+       PlatformManager.Core.Infrastructure.Persistence* / PlatformManager.Core.Infrastructure.Identity.
+       ModelSnapshot + Designer của migration ở host tham chiếu namespace đó LÚC BIÊN DỊCH
+       (using + typeof(PlatformManagerDbContext)), nên đổi namespace buộc phải sửa snapshot hoặc
+       sinh migration — ngoài phạm vi lượt tách. RootNamespace ở trên chỉ áp cho file MỚI. -->
+
+  <!-- IdentityDbContext<AppUser, AppRole, Guid> và UserManager/RoleManager (CoreSeeder) thuộc
+       shared framework ASP.NET Core — cùng lý do FrameworkReference ở Core.Infrastructure.csproj. -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <!-- Chỉ EF Core + store Identity cho EF. KHÔNG có provider (Npgsql): UseNpgsql nằm ở
+       Core.Infrastructure/DependencyInjection.cs (AddCoreModule) và ở design-time factory của host;
+       DbContext không biết provider nào. -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.11" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.11" />
+  </ItemGroup>
+
+  <!-- Đúng cạnh đã khai: Core.Persistence → Core.Application, Core.Domain. TUYỆT ĐỐI KHÔNG
+       reference *.Infrastructure (Infrastructure reference NGƯỢC lại project này để dùng AppUser/
+       DbContext) hay *.Api. Canh bằng máy: PersistenceLayerBoundaryTests (ArchTests). -->
+  <ItemGroup>
+    <ProjectReference Include="..\PlatformManager.Core.Domain\PlatformManager.Core.Domain.csproj" />
+    <ProjectReference Include="..\PlatformManager.Core.Application\PlatformManager.Core.Application.csproj" />
+  </ItemGroup>
+
+</Project>

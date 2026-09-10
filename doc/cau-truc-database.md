@@ -24,12 +24,12 @@ verified: 2026-09-03
 >
 > Sáu file `sql/0003…0008` **không còn tồn tại**. Đợt baseline lại lịch sử migration
 > ngày 2026-08-31 (§5.2) gộp tất cả vào **một** file duy nhất:
-> `src/BE/Core/PlatformManager.Core.Infrastructure/Persistence/Migrations/sql/0001_initial_baseline.sql`.
+> `src/BE/Core/PlatformManager.Core.Persistence/Migrations/sql/0001_initial_baseline.sql`.
 >
 > Đếm bằng lệnh thay vì tin đoạn văn nào trong file này:
 >
 > ```bash
-> ls src/BE/Core/PlatformManager.Core.Infrastructure/Persistence/Migrations/sql/
+> ls src/BE/Core/PlatformManager.Core.Persistence/Migrations/sql/
 > ```
 >
 > Các đoạn nhắc tên file cũ được **giữ nguyên có chủ đích** — chúng ghi lại *vì sao* một
@@ -117,7 +117,7 @@ Hai lý do giữ, cả hai đều mất nếu tách thật:
 | Còn **giao dịch chung** | Một `SaveChanges` chạm cả hai bên đang là atomic; qua hai database thì phải dựng giao dịch phân tán hoặc chấp nhận ghi nửa vời |
 
 Cơ chế thi hành nằm ở
-`src/BE/Core/PlatformManager.Core.Infrastructure/Persistence/PlatformManagerDbContext.cs`
+`src/BE/Core/PlatformManager.Core.Persistence/PlatformManagerDbContext.cs`
 (đối chiếu 2026-09-03):
 
 | Ai vào schema nào | Cách |
@@ -284,7 +284,7 @@ rơi vào `core` chứ không phải `business` — xem §1.1.
 
 | Mã | Kiểm 2026-08-23 (lạc hậu) | Kiểm 2026-08-24 (lạc hậu) | Kiểm 2026-08-29 (hiện trạng) |
 | --- | --- | --- | --- |
-| Entity/configuration `RolePermission` | chưa có | có | **còn** — `src/BE/Core/PlatformManager.Core.Domain/Entities/RolePermission.cs`, `src/BE/Core/PlatformManager.Core.Infrastructure/Persistence/Configurations/RolePermissionConfiguration.cs` |
+| Entity/configuration `RolePermission` | chưa có | có | **còn** — `src/BE/Core/PlatformManager.Core.Domain/Entities/RolePermission.cs`, `src/BE/Core/PlatformManager.Core.Persistence/Configurations/RolePermissionConfiguration.cs` |
 | Entity `ImportJob` | chưa có | có | **đã xoá cùng module** — không còn file `ImportJob.cs` nào trong solution; bảng DB thì còn hay không tuỳ DB dựng lúc nào — xem [`cau-truc-database-business.md`](cau-truc-database-business.md) |
 | `RequirePermissionFilter` + danh mục permission-key | chưa có | có, gắn lên 3 controller DTI | **còn**, deny-by-default — nhưng **không controller production nào khai `[RequirePermission]`** nữa. Lớp `ResourceKeys` trong Core **đã xoá** 2026-09-03; danh mục nay do host cấp qua seam, còn đúng `import.manage` |
 | `AddPermissionInfrastructure()` + `options.Filters.Add<RequirePermissionFilter>()` ở `Program.cs` | chưa có | có | **còn** — filter vẫn nằm trong pipeline MVC, canh bằng seam activation test `RequirePermissionSeamTests` qua probe controller riêng của test |
@@ -325,7 +325,7 @@ rơi vào `core` chứ không phải `business` — xem §1.1.
 >
 > Bản trước của mục này ghi *"PK ghép … **không** có cột `BaseEntity`"* — đúng
 > với schema trước 2026-08-31, sai từ ngày baseline. Đối chiếu 2026-09-08:
-> `src/BE/Core/PlatformManager.Core.Infrastructure/Persistence/Migrations/sql/0001_initial_baseline.sql:106-116`
+> `src/BE/Core/PlatformManager.Core.Persistence/Migrations/sql/0001_initial_baseline.sql:106-116`
 > (bảng + `PRIMARY KEY ("Id")`), `…:254` (unique index partial),
 > `src/BE/Core/PlatformManager.Core.Domain/Entities/RolePermission.cs:26`
 > (`: BaseEntity`).
@@ -383,7 +383,7 @@ Chính chiều FK này là một trong hai lý do hai schema **ở lại chung m
   > ✅ **`SysMenus` KHÔNG còn là ngoại lệ — vá 2026-08-28 bằng migration `0008`.**
   > `IX_SysMenus_Code` nay là unique **partial** `WHERE "IsDeleted" = false`,
   > khai tại
-  > `src/BE/Core/PlatformManager.Core.Infrastructure/Persistence/Configurations/SysMenuConfiguration.cs`
+  > `src/BE/Core/PlatformManager.Core.Persistence/Configurations/SysMenuConfiguration.cs`
   > và áp bằng
   > file `0008_sysmenu_code_partial_unique_index.sql` (**không còn tồn tại** — gộp
   > vào `0001_initial_baseline.sql` khi baseline lại lịch sử 2026-08-31).
@@ -459,9 +459,9 @@ Hai cột `CreatedBy`/`UpdatedBy` thì **điền tay** ở tầng service, khôn
 `AuditInterceptor` — interceptor chỉ chạm entity kế thừa `BaseEntity`.
 
 > Đối chiếu 2026-09-08:
-> `src/BE/Core/PlatformManager.Core.Infrastructure/Identity/AppUser.cs:14-15`
+> `src/BE/Core/PlatformManager.Core.Persistence/Identity/AppUser.cs:14-15`
 > (`DateCreate`/`DateUpdate`), `…:29,32` (`CreatedBy`/`UpdatedBy`), và DDL
-> `src/BE/Core/PlatformManager.Core.Infrastructure/Persistence/Migrations/sql/0001_initial_baseline.sql`
+> `src/BE/Core/PlatformManager.Core.Persistence/Migrations/sql/0001_initial_baseline.sql`
 > (bảng `core."AspNetUsers"`). Bản trước của đoạn này gọi hai cột thời gian là
 > `CreatedAt`/`UpdatedAt` và khẳng định chúng *"cố ý đặt trùng quy ước
 > `BaseEntity`"* — sai cả tên lẫn kết luận, và bỏ sót hai cột `CreatedBy`/`UpdatedBy`
@@ -723,14 +723,14 @@ file `.sql` nào đã được chạy tay.
 
 #### `MigrationsAssembly` khai đúng MỘT chỗ, và đó là chỗ design-time
 
-`PlatformManagerDbContext` sống ở `Core.Infrastructure`, mà mặc định EF tìm migration trong
+`PlatformManagerDbContext` sống ở `Core.Persistence` (tách khỏi `Core.Infrastructure` 2026-09-10), mà mặc định EF tìm migration trong
 **assembly chứa DbContext**. Chuyển thư mục xong mà không khai `MigrationsAssembly` thì
 `dotnet ef` không thấy migration nào. Phản xạ tự nhiên là khai ở **cả hai** chỗ gọi
 `UseNpgsql` cho "khớp nhau" — đó là cái bẫy, và chốt 2026-09-04 quyết định ngược lại:
 
 | Chỗ gọi `UseNpgsql` | Khai `MigrationsAssembly`? |
 | --- | --- |
-| Design-time factory, `src/BE/PlatformManager.Api/PlatformManagerDbContextFactory.cs:119` | **CÓ** — nơi duy nhất `dotnet ef` thật sự đọc options |
+| Design-time factory, `src/BE/PlatformManager.Api/PlatformManagerDbContextFactory.cs:120` (neo lại 2026-09-10, trước ghi `:119`) | **CÓ** — nơi duy nhất `dotnet ef` thật sự đọc options |
 | Runtime, `src/BE/Core/PlatformManager.Core.Infrastructure/DependencyInjection.cs:63` | **KHÔNG**, cố ý — có khối chú thích tại chỗ giải thích |
 
 Lý do không khai ở Core mạnh hơn "cho gọn": khai ở đó buộc `Core.Infrastructure` **gọi tên
@@ -814,9 +814,9 @@ này: tính delta, không áp schema.
 
 | # | Phép thử | PASS | Kết quả 2026-09-04 |
 | --- | --- | --- | --- |
-| 1 | `ls src/BE/Core/PlatformManager.Core.Infrastructure/Persistence/Migrations/` | Không còn file `.cs` nào, chỉ còn thư mục `sql/` | ✅ đúng vậy |
+| 1 | `ls src/BE/Core/PlatformManager.Core.Persistence/Migrations/` | Không còn file `.cs` nào, chỉ còn thư mục `sql/` | ✅ đúng vậy — đo 2026-09-04 ở đường dẫn cũ `Core.Infrastructure/Persistence/Migrations/`; thư mục chuyển sang `Core.Persistence` 2026-09-10, đo lại cùng ngày: vẫn chỉ `sql/` |
 | 2 | `ls src/BE/PlatformManager.Api/Persistence/Migrations/` | Có migration `.cs` + `ModelSnapshot` | ✅ đúng vậy |
-| 3 | `grep -rn "MigrationsAssembly" src/BE --include=*.cs` (bỏ `obj/`, bỏ chú thích và test) | Đúng **một** lời gọi thật, ở design-time factory | ✅ `PlatformManagerDbContextFactory.cs:119` |
+| 3 | `grep -rn "MigrationsAssembly" src/BE --include=*.cs` (bỏ `obj/`, bỏ chú thích và test) | Đúng **một** lời gọi thật, ở design-time factory | ✅ `PlatformManagerDbContextFactory.cs:120` (đo 2026-09-04 ra `:119`; dòng trôi 1 về sau, neo lại 2026-09-10) |
 | 4 | `grep -rn "Database.Migrate\|GetPendingMigrations" src/BE --include=*.cs` (bỏ `obj/`) | Không lời gọi nào ở **code sản phẩm** (khớp lý do bỏ trống `MigrationsAssembly` ở runtime) | ✅ chỉ còn trong chú thích và trong fixture của `MigrationsLocationTests` |
 | 5 | `dotnet test` trên `PlatformManager.ArchTests` — có `MigrationsLocationTests` khoá chỗ đặt migration lẫn neo `MigrationsAssembly` | Xanh toàn bộ | ✅ 57/57 xanh |
 | 6 | `dotnet test` trên `PlatformManager.Core.IntegrationTests` — `PostgresFixture` dựng schema từ `.sql` | Xanh | ⏸ **chưa đo** — Docker tắt trên máy đo (`docker version` không kết nối được). Không phải kết quả đỏ, là chưa chạy |

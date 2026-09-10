@@ -10,7 +10,7 @@
          doc/huong_dan/wiki-core/fe/15-accessibility.md §1). `polite` chứ không `assertive`: đây là
          xác nhận kết quả, không phải cảnh báo, không được cắt ngang câu đang đọc dở. -->
     <span class="muted" aria-live="polite">
-      {{ 'quan-tri-nguoi-dung.grid.totalCount' | translate: { count: totalCount() } }}
+      {{ 'quan-tri-nguoi-dung.grid.totalCount' | translate: { count: feed.totalCount() } }}
     </span>
   </div>
 
@@ -65,7 +65,7 @@
        Bảng phải biến mất chứ không chỉ trống: giữ nó lại là để dữ liệu của bộ lọc TRƯỚC nằm trên
        màn hình như thể đó là kết quả của bộ lọc vừa chọn. Thanh công cụ vẫn còn để người dùng đổi
        bộ lọc hoặc bấm "Thử lại" ngay tại chỗ. -->
-  @if (loadError(); as messageKey) {
+  @if (feed.loadError(); as messageKey) {
     <div class="notice bad" role="alert">
       <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
       <span>{{ messageKey | translate }}</span>
@@ -78,9 +78,9 @@
     <app-user-grid-table
       class="grid-host"
       [localeId]="localeId()"
-      [rows]="rows()"
-      [loading]="loading()"
-      [totalCount]="totalCount()"
+      [rows]="feed.rows()"
+      [loading]="feed.loading()"
+      [totalCount]="feed.totalCount()"
       [page]="page()"
       [pageSize]="pageSize()"
       [currentUserId]="currentUserId()"
@@ -92,11 +92,11 @@
 </div>
 
 <app-user-form-dialog
-  [open]="formOpen()"
-  [editing]="formEditing()"
-  [serverError]="formServerError()"
-  [serverFieldErrors]="formServerFieldErrors()"
-  [saving]="formSaving()"
+  [open]="form.open()"
+  [editing]="form.editing()"
+  [serverError]="form.serverError()"
+  [serverFieldErrors]="form.serverFieldErrors()"
+  [saving]="form.saving()"
   (saved)="onFormSaved($event)"
   (closed)="onFormClosed()"
 />
@@ -107,7 +107,7 @@
 <app-confirm-dialog
   severity="warn"
   [title]="'quan-tri-nguoi-dung.dialog.lockTitle' | translate"
-  [description]="lockConfirmDescription()"
+  [description]="lock.confirmDescription()"
   [confirmLabel]="'quan-tri-nguoi-dung.dialog.lockConfirm' | translate"
   [confirmDanger]="true"
   (confirmed)="onLockConfirmed()"

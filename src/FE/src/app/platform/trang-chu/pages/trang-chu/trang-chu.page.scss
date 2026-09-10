@@ -1,3 +1,5 @@
+@use '../../../../core/theme/breakpoints' as bp;
+
 // Chỉ chứa BỐ CỤC riêng của trang. Mọi bề mặt/nút/badge/dải thông báo dùng class toàn cục ở
 // src/styles.scss — không khai lại ở đây.
 
@@ -34,7 +36,7 @@
 }
 
 // Khổ hẹp: hai cột `max-content 1fr` ép giá trị dài xuống một cột rất mảnh. Xếp dọc thay vì co.
-@media (max-width: 560px) {
+@include bp.mobile {
   .facts {
     grid-template-columns: 1fr;
     gap: 2px;
