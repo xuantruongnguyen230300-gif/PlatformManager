@@ -48,10 +48,18 @@ grep -rn "File.WriteAll\|new FileStream\|Directory.CreateDirectory" src/BE --inc
 ```
 
 PASS hôm nay: hai lệnh đầu mỗi lệnh ra đúng **một** khai báo; lệnh thứ ba ra
-**đúng những dòng nằm trong `LocalFileStorage`** cộng một dòng ghi log Serilog
-(`src/BE/PlatformManager.Api/Program.cs:73`). Một dòng `new FileStream` xuất hiện
+**đúng những dòng nằm trong `LocalFileStorage`** (`LocalFileStorage.cs:45`, `:49`,
+`:67`) cộng **một dòng chú thích XML** nhắc tên `Directory.CreateDirectory`
+(`src/BE/Core/PlatformManager.Core.Infrastructure/Storage/StorageOptions.cs:42`) —
+không phải một đường ghi file. Một dòng `new FileStream` xuất hiện
 **ngoài** `LocalFileStorage` là vi phạm — mọi đường ghi file của người dùng phải
 đi qua seam.
+
+> 🔄 **SỬA 2026-09-10.** Đoạn trên trước ghi lệnh thứ ba còn ra *"một dòng ghi log
+> Serilog"* và neo vào một dòng của `Program.cs`. Đo lại: **`Program.cs` không khớp mẫu
+> grep đó dòng nào** — dòng được trích là `.WriteTo.File(` của Serilog, một lời gọi sink,
+> không phải `File.WriteAll`. Neo trỏ đúng file nhưng khẳng định quanh nó sai — đúng loại
+> lỗi `check-docs.sh` mục 7 không bắt được.
 
 | Có thật hôm nay (2026-09-09) | Sẽ thành |
 |---|---|
@@ -123,7 +131,7 @@ cấu hình sai chỉ lộ ra ở môi trường đã bật kiểm, tức đúng
 "chạy được" là đường dẫn không ai kiểm lại, và nó luôn trỏ vào trong thư mục
 app — đúng chỗ bị xoá sạch mỗi lần deploy. Cùng một bài học đã trả giá ở
 `BootstrapOptions`
-(`src/BE/Core/PlatformManager.Core.Infrastructure/Persistence/BootstrapOptions.cs`):
+(`src/BE/Core/PlatformManager.Core.Persistence/BootstrapOptions.cs`):
 cấu hình giả đặt vào cho qua validation vẫn thất bại âm thầm đúng lúc cần dùng.
 
 ## 4. Vì sao `ContentRootPath` là bẫy — ba kịch bản hỏng
@@ -203,6 +211,27 @@ Chính sách tối thiểu khi bật §3:
 | File export | ngắn — sinh lại được từ dữ liệu | giữ lâu là tự tạo bản sao dữ liệu lệch dần |
 
 Dọn bằng job Hangfire định kỳ, không xoá đồng bộ trong request.
+
+### 📐 Con số cụ thể — CHỐT 2026-09-10, CHƯA THI CÔNG
+
+Bảng trên khai **hình dạng** chính sách (chiều nào được phép hỏng, loại nào giữ lâu hơn
+loại nào) nhưng không có con số, nên không ai thi công được mà không tự nghĩ ra một mốc.
+Người dùng chốt ba mốc sau:
+
+| Loại | Giữ | Vì sao mốc này |
+| --- | --- | --- |
+| Dòng `ImportJob` **thành công** + file upload của nó | **7 ngày** | Đủ dài để tra khi kết quả một lần nạp bị nghi ngờ — nghi ngờ kiểu đó nảy sinh trong tuần làm việc, không phải sau một quý |
+| Dòng `ImportJob` **lỗi/treo** + file upload của nó | **30 ngày** | Đây đúng là thứ người ta đi tìm khi dò nguyên nhân, và việc dò thường bắt đầu muộn. Dài hơn job thành công — đúng chiều bảng trên đã chốt |
+| File **export** | **24 giờ** | Sinh lại được từ dữ liệu bất cứ lúc nào. Giữ lâu là tự tạo một bản sao lệch dần khỏi nguồn |
+
+**Trạng thái: chưa có dòng code nào** (đối chiếu 2026-09-10). `IFileStorage` hiện chưa có
+nơi gọi nào trong mã sản phẩm ngoài đăng ký DI, nên chưa file nào được ghi ra để mà dọn.
+
+**Thi công cùng lượt dựng đường import (DM-7), không sớm hơn** — và đó là quyết định chứ
+không phải trì hoãn: một job dọn viết trước khi có file để dọn thì không nghiệm thu được
+bằng luồng thật, chỉ bằng dữ liệu tự dựng. Nghiệm thu đúng là: nạp một file, đợi qua mốc,
+kiểm file đã biến mất **và** dòng `ImportJob` tương ứng cũng vậy — hai vế phải cùng đúng,
+vì §6 ý 1 ở trên chọn sẵn chiều được phép hỏng là **file sống lâu hơn dòng DB**.
 
 ## 7. File mẫu import — tài sản của source, KHÔNG phải storage runtime
 

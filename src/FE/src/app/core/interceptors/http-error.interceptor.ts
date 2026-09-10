@@ -1,14 +1,15 @@
+import { isPlatformBrowser } from '@angular/common';
 import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
-import { inject } from '@angular/core';
+import { PLATFORM_ID, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
-import { catchError, throwError } from 'rxjs';
+import { Observable, Subject, catchError, mergeMap, race, retry, throwError, timer } from 'rxjs';
 import { CurrentUserService } from '../auth/current-user.service';
 import { CORE_ROUTES } from '../config/core-routes';
 import { ApiErrorMessageService } from '../i18n/api-error-message.service';
 import { IApiResult } from '../http/api-result.model';
 import { SKIP_ERROR_TOAST } from '../http/http-context-tokens';
-import { ToastService } from '../toast/toast.service';
+import { TOAST_AUTO_DISMISS_MS, ToastService } from '../toast/toast.service';
 
 /**
  * Khoá dịch của câu thông báo khi phiên bị chấm dứt từ phía server. Cố ý KHÔNG dùng `toast.error`
@@ -57,6 +58,110 @@ function isOnSignInPage(router: Router, signInPath: string): boolean {
  */
 
 /**
+ * Khoá dịch của toast "không kết nối được" — nhóm khoá CORE (`public/i18n/`), vì hạ tầng HTTP đi
+ * theo CoreBase sang sản phẩm thứ hai chứ không ở lại với dự án này.
+ *
+ * ⚠️ **`status === 0` KHÔNG đồng nghĩa với "người dùng mất mạng".** Trình duyệt trả `0` cho MỌI
+ * ca request không bao giờ nhận được một response hợp lệ: mất mạng thật, DNS trượt, CORS chặn
+ * preflight, chứng chỉ TLS hỏng, server đóng kết nối giữa chừng, request bị huỷ (`AbortError`,
+ * đổi route lúc đang tải). FE không phân biệt được — trình duyệt cố tình không nói, vì nói ra là
+ * rò rỉ thông tin xuyên nguồn. Nên câu chữ nói theo hướng **"không kết nối được tới máy chủ"** —
+ * điều duy nhất quan sát được — thay vì quả quyết "bạn đã mất mạng", một câu sai hẳn khi nguyên
+ * nhân thật là CORS hoặc máy chủ sập.
+ */
+const OFFLINE_TITLE_KEY = 'shared.httpError.offlineTitle';
+const OFFLINE_TEXT_KEY = 'shared.httpError.offline';
+
+/**
+ * Câu MẠNH hơn, chỉ dùng khi `navigator.onLine === false`.
+ *
+ * ⚠️ Giới hạn của `navigator.onLine`, phải biết trước khi tin nó: nó chỉ trả lời *"máy có đang
+ * gắn vào MỘT mạng nào đó không"* — card mạng có link, Wi-Fi đã kết nối. Nó **không** kiểm tra
+ * có ra được Internet hay không. Hệ quả hai chiều:
+ *
+ *  · `true` mà request vẫn hỏng là chuyện thường: captive portal ở khách sạn, VPN rớt, DNS hỏng,
+ *    hoặc chính máy chủ sập. Vì vậy `true` KHÔNG được dùng để suy ra "mạng ổn, chắc lỗi khác";
+ *    nó chỉ khiến ta rơi về câu trung tính `OFFLINE_TEXT_KEY`.
+ *  · `false` thì đáng tin theo ĐÚNG MỘT CHIỀU: hệ điều hành báo không có mạng nào cả, nên nói
+ *    thẳng "thiết bị đang không có kết nối" là đúng — và đó là lúc duy nhất câu mạnh được dùng.
+ *
+ * Tức là chỉ khai thác chiều `false`, chiều mà giá trị này thực sự nói lên điều gì đó.
+ */
+const OFFLINE_DEVICE_TEXT_KEY = 'shared.httpError.offlineDevice';
+
+/** Nhãn nút hành động trên toast mất kết nối. */
+const RETRY_ACTION_KEY = 'shared.action.retry';
+
+interface IOfflineGateDeps {
+  toast: ToastService;
+  translate: TranslateService;
+  isBrowser: boolean;
+}
+
+/**
+ * Cổng THỬ LẠI cho ca `status === 0` — đặt ở `retry({ delay })`, tức TRƯỚC `catchError`.
+ *
+ * ## Vì sao phải là `retry` chứ không phải một callback "gọi lại request" đặt trong `catchError`
+ *
+ * Yêu cầu là *"nút gọi lại đúng request vừa hỏng"*, và chữ nặng nhất là **đúng request**: kết quả
+ * của lần gọi lại phải chảy về **đúng nơi đã đặt hàng** (component đang chờ danh sách, form đang
+ * chờ kết quả lưu). Nếu bấm nút mà interceptor tự `next(req).subscribe()` thêm một lần nữa thì
+ * request có bay đi thật, nhưng response rơi vào hư không — lưới vẫn trống, form vẫn treo, và
+ * người dùng thấy nút "Thử lại" như không làm gì cả. `retry` thì **resubscribe chính nguồn**, nên
+ * người đặt hàng ban đầu nhận kết quả như thể lần gọi đầu đã thành công.
+ *
+ * ## Cái giá phải trả, nói thẳng: lỗi bị HOÃN
+ *
+ * Muốn người dùng bấm được nút thì observable phải còn sống lúc họ bấm ⇒ lỗi `status 0` không
+ * phát ra ngay nữa mà chờ hết **cửa sổ thử lại**. Trong khoảng đó spinner của màn hình vẫn quay.
+ * Đánh đổi có chủ đích: một thao tác "đang chờ thử lại" vài giây dễ chịu hơn hẳn một thông báo
+ * lỗi mà người dùng không làm gì được với nó.
+ *
+ * Cửa sổ ấy dài bằng ĐÚNG tuổi thọ của toast (`TOAST_AUTO_DISMISS_MS`), và đó là bất biến chứ
+ * không phải trùng hợp: nút rời khỏi màn hình lúc nào thì cơ hội thử lại tắt lúc đó. Lấy hằng số
+ * từ `toast.service.ts` thay vì chép một con số vào đây chính là để hai thứ không thể lệch nhau.
+ *
+ * 🛑 Notifier trả về **không bao giờ được complete rỗng**: `retry` hiểu "notifier complete" là
+ * *thôi không thử nữa* và cho observable kết quả complete **không giá trị, không lỗi** — nơi gọi
+ * sẽ không chạy nhánh `error`, còn `firstValueFrom` thì ném `EmptyError` rất khó truy. Vì vậy
+ * nhánh hết giờ là `throwError(lỗi gốc)`, không phải `EMPTY`.
+ *
+ * ## Nhiều request hỏng cùng lúc → nhiều toast, CÓ CHỦ ĐÍCH
+ *
+ * Khác hẳn cách xử lý 401 bên dưới (một cờ chặn, vì ở đó ba request chỉ dẫn tới MỘT việc: điều
+ * hướng về màn đăng nhập — làm ba lần là thừa ba lần). Ở đây mỗi toast **sở hữu một request
+ * riêng**: gộp còn một nghĩa là những request kia mất luôn cơ hội thử lại và hỏng im lặng. Đổi
+ * vài dòng toast chồng nhau lấy dữ liệu không bao giờ về là một cuộc đổi tồi.
+ *
+ * ## Không tự động thử lại
+ *
+ * Cổng chỉ mở khi CON NGƯỜI bấm. Điều này quan trọng với request không idempotent: `status 0`
+ * không nói được server đã nhận request hay chưa (response mất trên đường về cũng ra `0`), nên
+ * một `POST` thử lại có thể tạo hai bản ghi. Để người dùng quyết giữ đúng mức rủi ro của việc họ
+ * tự bấm "Lưu" lần nữa — không hơn.
+ */
+function offlineRetryGate(err: unknown, deps: IOfflineGateDeps): Observable<unknown> {
+  // Mọi thứ KHÔNG phải lỗi mạng đi thẳng xuống `catchError` như trước, không đổi hành vi gì. Kiểm
+  // `instanceof` chứ không chỉ đọc `.status`: interceptor khác có thể ném lỗi thường xuống đây.
+  if (!(err instanceof HttpErrorResponse) || err.status !== 0) {
+    return throwError(() => err);
+  }
+
+  const deviceOffline = deps.isBrowser && navigator.onLine === false;
+  const retryClicked = new Subject<void>();
+
+  deps.toast.error(
+    deps.translate.instant(deviceOffline ? OFFLINE_DEVICE_TEXT_KEY : OFFLINE_TEXT_KEY) as string,
+    deps.translate.instant(OFFLINE_TITLE_KEY) as string,
+    { Label: deps.translate.instant(RETRY_ACTION_KEY) as string, Run: () => retryClicked.next() },
+  );
+
+  // Ai emit trước thì thắng: bấm nút → `retry` gọi lại nguồn; hết giờ → ném lại CHÍNH lỗi ban đầu
+  // để `catchError` phía dưới và nơi gọi nhìn thấy đúng thứ đã xảy ra.
+  return race(retryClicked, timer(TOAST_AUTO_DISMISS_MS).pipe(mergeMap(() => throwError(() => err))));
+}
+
+/**
  * 1 chỗ duy nhất dịch lỗi HTTP sang toast — đọc đúng `message` (KHÔNG phải `Message`/
  * `ErrorMessage` của envelope cũ đã bỏ, xem doc/huong_dan/wiki-core/fe/02-http-envelope.md
  * §Vấn đề gốc). Giữ nguyên `body` gắn vào `apiResult` trên error rethrow để nơi gọi (thường là
@@ -85,8 +190,22 @@ export const httpErrorInterceptor: HttpInterceptorFn = (req, next) => {
   const translate = inject(TranslateService);
   // Đọc cờ probe ngay từ request, dùng cho CẢ hai quyết định bên dưới (toast + điều hướng).
   const isProbeRequest = req.context.get(SKIP_ERROR_TOAST);
+  // `navigator` chỉ tồn tại trên trình duyệt. Dự án hôm nay không chạy SSR, nhưng quy ước SSR-safe
+  // của repo (doc/huong_dan/quy-uoc/fe-ui-conventions.md) áp cho mọi truy cập API trình duyệt ở
+  // `core/` — và `inject()` thì bắt buộc phải gọi ở ĐÂY, như `router` phía trên.
+  const isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
   return next(req).pipe(
+    // Nhánh MẤT KẾT NỐI, tách hẳn khỏi nhánh lỗi HTTP thường bên dưới. Đặt trước `catchError` vì
+    // nó phải nhìn thấy lỗi TRƯỚC — `catchError` nuốt lỗi thì không còn gì để thử lại nữa.
+    //
+    // Request probe (`SKIP_ERROR_TOAST`, vd `GET /auth/me` lúc khởi động) đi thẳng: nó hỏng là
+    // chuyện bình thường, và giữ nó sống thêm vài giây để chờ một cú bấm sẽ treo luôn màn hình
+    // khởi động — đúng lúc mạng hỏng là lúc app cần trả lời "chưa đăng nhập" nhanh nhất.
+    retry({
+      delay: (err: unknown) =>
+        isProbeRequest ? throwError(() => err) : offlineRetryGate(err, { toast, translate, isBrowser }),
+    }),
     catchError((err: HttpErrorResponse) => {
       const body = (err.error ?? null) as IApiResult<unknown> | null;
 
@@ -120,7 +239,11 @@ export const httpErrorInterceptor: HttpInterceptorFn = (req, next) => {
           // `finally` sẽ thành unhandled rejection, còn cờ thì phải mở lại ở CẢ hai nhánh.
           router.navigate([coreRoutes.signIn], { queryParams: { returnUrl } }).then(releaseFlag, releaseFlag);
         }
-      } else if (!isProbeRequest) {
+      } else if (!isProbeRequest && err.status !== 0) {
+        // `err.status !== 0`: ca mất kết nối đã được `offlineRetryGate` phía trên lo trọn (toast
+        // riêng + nút thử lại), và tới được đây nghĩa là cửa sổ thử lại đã đóng. Không loại trừ
+        // thì người dùng nhận HAI toast cho cùng một sự cố, cái sau còn xoá mất cái mang nút bấm.
+        //
         // Request "probe" tự đánh dấu bỏ qua toast — lỗi ở đó là tình huống bình thường, không
         // phải lỗi cần làm phiền user. Vẫn rethrow để nơi gọi tự xử lý.
         // `titleFor` trả `undefined` khi envelope đã có câu thật — giữ nguyên hành vi cũ

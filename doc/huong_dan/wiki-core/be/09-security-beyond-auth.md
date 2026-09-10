@@ -235,7 +235,7 @@ lần sau ai rà soát không mở lại cuộc thảo luận này từ đầu.
 | `RequiredLength` | `6` | **`12`** — `grep -n 'RequiredLength' src/BE/Core/PlatformManager.Core.Infrastructure/DependencyInjection.cs` |
 | Luật thành phần | Tất cả `false` | **vẫn `false`, có chủ đích** — `RequireDigit`/`RequireNonAlphanumeric`/`RequireUppercase`/`RequireLowercase`, lý do ở mục dưới |
 | Mật khẩu phổ biến | Không kiểm | **Đã kiểm** — `grep -n AddTop10000PasswordValidator src/BE/Core/PlatformManager.Core.Infrastructure/DependencyInjection.cs`. Gói `CommonPasswordsValidator` (Andrew Lock, MIT), danh sách nhúng sẵn trong assembly, chạy **hoàn toàn offline** |
-| Tài khoản miễn khoá | Không có gì thay thế | ✅ **Hàng rào rate limit theo tên đăng nhập** (2026-09-01) — *không* phải trễ luỹ tiến, phương án đó đã bị loại, xem mục trên. Số đo thật (đối chiếu 2026-09-06): SlidingWindow **10 lượt / 5 phút / 5 đoạn**, `src/BE/PlatformManager.Api/Program.cs:263`–`:265`; middleware đọc tên đăng nhập ở `src/BE/PlatformManager.Api/Common/LoginUserNameRateLimitMiddleware.cs` |
+| Tài khoản miễn khoá | Không có gì thay thế | ✅ **Hàng rào rate limit theo tên đăng nhập** (2026-09-01) — *không* phải trễ luỹ tiến, phương án đó đã bị loại, xem mục trên. Số đo thật (đối chiếu 2026-09-06): SlidingWindow **10 lượt / 5 phút / 5 đoạn**, `src/BE/PlatformManager.Api/Program.cs:306`–`:308`; middleware đọc tên đăng nhập ở `src/BE/PlatformManager.Api/Common/LoginUserNameRateLimitMiddleware.cs` |
 | `BootstrapOptions` `MinLength` | `6`, chú thích *"khớp Identity Password.RequiredLength"* | `12` — **phải sửa cùng lượt**, nếu không hai nơi lệch nhau |
 
 Dòng cuối là bẫy dễ quên nhất: `BootstrapOptions` tự khai nó khớp với `RequiredLength`, nên

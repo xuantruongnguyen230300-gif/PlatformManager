@@ -121,8 +121,15 @@ sống ở **hai** file, nên đừng sửa ở đây mà quên chỗ kia — đ
 grep -A2 '"type": "initial"' src/FE/angular.json
 ```
 
-**Lỗ mù còn nguyên:** `angular.json` chỉ khai budget cho `initial` và `anyComponentStyle` —
-**không có luật nào cho lazy chunk**, xem §G7 của file gate.
+🔄 LẬT 2026-09-10 — **lỗ mù lazy chunk đã bịt.** Chỗ này trước ghi *"`angular.json` chỉ khai
+budget cho `initial` và `anyComponentStyle` — không có luật nào cho lazy chunk"*. Nay có budget
+thứ ba, `anyScript` 600kb/800kb. Lý do chọn đúng type đó, bảng so 5 type, và kết quả canary nằm ở
+file chủ [trien-khai/05-gate.md](trien-khai/05-gate.md) §G7 — không chép lại ở đây; khối `json`
+đầu mục này cũng cố ý không liệt kê lại ba budget, đọc thẳng từ nguồn:
+
+```bash
+grep -A3 '"type": "anyScript"' src/FE/angular.json
+```
 
 ## 5. Server-side pagination là mặc định, không phải ngoại lệ
 

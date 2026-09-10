@@ -360,9 +360,11 @@ sự cần store — không cài trước khi có nhu cầu.
 
 ## Chốt chặn chống god component
 
-- Soft cap **~300–400 dòng/component**. Vượt → tách `components/` con.
+- Soft cap **~300–400 dòng/component**. Vượt → tách `components/` con, **hoặc** — khi phần vượt
+  là điều phối chứ không phải giao diện — tách thành lớp cộng tác `@Injectable()` khai trong
+  `providers` của chính trang (xem khuôn ở dưới).
 
-  ⚠️ **Đang có vi phạm (đối chiếu 2026-09-06)** — đếm bằng lệnh, đừng chép danh sách vào đây
+  ✅ **Không còn vi phạm (đối chiếu 2026-09-10)** — đếm bằng lệnh, đừng chép danh sách vào đây
   (`.claude/CLAUDE.md` §6):
 
   ```bash
@@ -370,6 +372,29 @@ sự cần store — không cài trước khi có nhu cầu.
     -exec awk 'END { if (NR > 400) print FILENAME ": " NR }' {} \;
   # PASS khi không in dòng nào
   ```
+
+  🔄 **LẬT 2026-09-10.** Mục này mang nhãn *"⚠️ Đang có vi phạm"* từ 2026-09-06; ca duy nhất là
+  `quan-tri-nguoi-dung.page.ts` (579 dòng), nay còn 358 sau khi tách ba lớp cộng tác.
+
+- **Khuôn tách một trang quá dài mà phần thừa KHÔNG phải giao diện.** Trang lưới + hộp thoại
+  thường phình vì nó ôm nhiều máy trạng thái độc lập, chứ không vì template rườm rà — lúc đó tách
+  thêm component dumb không giảm được gì. Ví dụ đang chạy để soi:
+  `src/FE/src/app/platform/quan-tri-nguoi-dung/pages/quan-tri-nguoi-dung/` — một `.page.ts` cạnh
+  `user-list-feed.ts` (trạng thái lưới), `user-form-flow.ts` (hộp thoại tạo/sửa + ánh xạ lỗi),
+  `user-lock-flow.ts` (xác nhận khoá).
+
+  Ba ràng buộc, mỗi cái chặn một lỗi thật:
+
+  1. **Cắt theo chỗ KHÔNG dùng chung trạng thái**, không theo số dòng. Ba lớp trên không đọc
+     signal của nhau; chỗ duy nhất chúng gặp nhau là một callback "ghi xong thì nạp lại".
+  2. **`@Injectable()` trần, khai trong `providers` của trang — KHÔNG `providedIn: 'root'`.** Vòng
+     đời phải trùng vòng đời trang, vì đó chính là vòng đời của các field `signal()` mà chúng thay
+     thế. Lên `root` là để hộp thoại đang mở dở và dữ liệu của lượt xem trước sống sót qua điều
+     hướng rồi hiện lại ở lượt sau.
+  3. **Đặt cạnh trang trong `pages/<trang>/`, không đẩy vào `services/` hay `state/`.** Bảng trách
+     nhiệm ở dưới cấm `services/*` giữ UI state, còn `state/*.store.ts` là chỗ của `signalStore()`
+     (§"Khi nào cần `state/*.store.ts`") — cả hai đều sai chỗ cho state cục bộ của đúng một trang.
+     Cũng vì vậy chúng **không** đặt tên `*.service.ts`, nên không rơi vào cổng G5.
 - Không bao giờ để bản `-v2` song song một component/service. Sửa tại chỗ;
   lịch sử nằm trong git.
 - Component dumb chỉ nhận `input()`/phát `output()` — không tự inject

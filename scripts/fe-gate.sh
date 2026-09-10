@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# fe-gate.sh — G1 + G3 + G4 + G6 + G11 + G12 của bộ gate FE
+# fe-gate.sh — G1 + G3 + G4 + G5 + G6 + G11 + G12 của bộ gate FE
 #
 # Ba gate còn lại chạy bằng công cụ có sẵn, KHÔNG nằm trong script này:
 #   G2 + G8 + G9 → npx ng lint
@@ -158,6 +158,45 @@ done < <(
 )
 [ "$n" -eq 0 ] && ok "không component dumb nào inject HttpClient hay service dữ liệu"
 
+# ---------------------------------------------------------------- G5
+# Service là nơi lời gọi API và ánh xạ DTO↔model sống. Một service không có spec
+# thì hợp đồng nó giữ chỉ được kiểm bằng cách bấm tay trên UI — và bấm tay không
+# chạy lại ở lượt sửa sau.
+#
+# 🔄 PHẠM VI RỘNG HƠN định nghĩa gốc, có chủ đích (thi công 2026-09-10). Bảng gate
+# ở 05-gate.md khai G5 là "mọi file `services/*.service.ts`", nhưng đo trên đĩa hôm
+# đó: 10 file `*.service.ts` tồn tại, chỉ 3 trong số đó nằm dưới một thư mục tên
+# `services/` — 7 file còn lại (`core/toast/`, `core/i18n/`, `core/auth/`…) là hạ
+# tầng dùng chung, tức đúng loại mà một lỗi ánh xạ lan ra mọi màn hình. Bó gate vào
+# tên thư mục là để 70% số service ngoài lưới trong khi vẫn in OK.
+#
+# Rộng hơn mà KHÔNG phát sinh việc: cả 10 file đều đã có spec cùng tên lúc gate này
+# được thêm, nên nó xanh ngay từ dòng đầu — không có nợ nào bị hợp thức hoá.
+#
+# Tiêu chí là spec CÙNG TÊN (`x.service.ts` → `x.service.spec.ts`), không phải
+# "thư mục có file .spec.ts nào đó". Cách lỏng kia cho một service mới trốn sau
+# spec của service hàng xóm.
+section "G5  Mọi *.service.ts có .spec.ts cùng tên cạnh nó"
+n=0
+total=0
+while IFS= read -r svc; do
+  [ -z "$svc" ] && continue
+  total=$((total+1))
+  spec="${svc%.ts}.spec.ts"
+  if [ ! -f "$spec" ]; then
+    bad "$svc — thiếu ${spec##*/}"
+    n=$((n+1))
+  fi
+done < <(find "$APP" -type f -name '*.service.ts' ! -name '*.spec.ts' 2>/dev/null)
+# Mục phải tự chứng minh nó có dữ liệu đầu vào — bài học 2026-09-08 (.claude/CLAUDE.md
+# §9): một vòng lặp nhận 0 dòng cho FAIL=0 rồi in OK, không phân biệt được "tất cả
+# đều đạt" với "tôi không nhìn gì cả".
+if [ "$total" -eq 0 ]; then
+  bad "không tìm thấy *.service.ts nào — G5 đang quét rỗng, không phải đang PASS"
+elif [ "$n" -eq 0 ]; then
+  ok "cả $total service đều có spec cùng tên"
+fi
+
 # ---------------------------------------------------------------- G6
 # DTO thuộc về server, model thuộc về app. Component/page chạm thẳng DTO là mất
 # điểm chặn khi server đổi field — TypeScript bị xoá lúc chạy nên không ai báo.
@@ -267,7 +306,7 @@ done < <(
 # ----------------------------------------------------------------
 printf '\n'
 if [ "$FAIL" -eq 0 ]; then
-  printf '\033[32m✅ PASS — G1 + G3 + G4 + G6 + G11 + G12\033[0m\n'
+  printf '\033[32m✅ PASS — G1 + G3 + G4 + G5 + G6 + G11 + G12\033[0m\n'
   printf 'Còn lại phải chạy tay: npx ng lint (G2/G8/G9) · npx ng build (G7) · npx ng test\n'
 else
   printf '\033[31m❌ FAIL — xem danh sách trên\033[0m\n'

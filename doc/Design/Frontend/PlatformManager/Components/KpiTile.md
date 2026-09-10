@@ -98,7 +98,13 @@ Tone colours **only the value**, never the label, the sub-caption or the card.
 
 Copy taken verbatim from `doc/Design/Frontend/PlatformManager/Prototypes/index.html` § `#screen-dashboard` →
 `app-kpi-summary`, **except tile 1's sub-caption, corrected 2026-09-09** — see the
-⚠️ below the table. The figures are the prototype's own and illustrate a
+⚠️ below the table — **and tile 2's dash, spaced on 2026-09-10.** The prototype writes
+`03/08–09/08/2026` with no spaces; decision T5 forbids that form on every screen
+surface (`spec/dashboard-dti/business-rules.md` §6.1 rule 2, whose only exception is
+the contents of the exported `.xlsx`), and tile 2 carries the "Nhãn kỳ đang xem" format
+of §6.2. The prototype is the side that needs syncing, as
+[`../Screens/01-dashboard.md`](../Screens/01-dashboard.md) § Normalize on redesign
+already records for the same dash elsewhere on that screen. The figures are the prototype's own and illustrate a
 **populated** period; they are not what an import produces. They were computed from
 the BA's August 2026 spreadsheet, which is deliberately outside this repo (root `.gitignore`), so it is named rather than cited as a path. The in-repo sample `spec/danh-muc-dti/dti-mau-an-danh-62-dong.csv`
 is a **different** 62-row dataset and reproduces none of them — do not "verify" these
@@ -107,7 +113,7 @@ five tiles against it.
 | # | Label | Value shown | Tone | Sub-caption |
 | --- | --- | --- | --- | --- |
 | 1 | `Tiến độ chung tuần này` | `82,1%` | default | `Bình quân Tiến độ %, gia quyền theo Điểm tối đa` |
-| 2 | `So với tuần trước` | `↑ 2,3 đ.%` | good | `Tuần 32/2026 (03/08–09/08/2026)` |
+| 2 | `So với tuần trước` | `↑ 2,3 đ.%` | good | `Tuần 32/2026 (03/08 – 09/08/2026)` |
 | 3 | `Chỉ tiêu tăng` | `18` | good | `Có tiến bộ so với kỳ trước` |
 | 4 | `Không tăng` | `27` | warn | `Cần chú ý theo dõi` |
 | 5 | `Hoàn thành` | `26/62` | default | `Số chỉ tiêu ở trạng thái Hoàn thành` |
@@ -151,6 +157,35 @@ still renders green. That was true before the retirement and is unchanged in the
 approved prototype; it is carried in § Normalize on redesign rather than quietly
 corrected here.
 
+### Tiles 1 and 2 follow the period mode — decision Q52, 2026-09-10
+
+> 📐 **ĐÍCH ĐẾN — CHƯA THI CÔNG.** `app-kpi-tile` renders whatever label its caller
+> passes, and no page composes it yet (banner at the top of this file), so no file in
+> `src/FE` carries these strings today.
+
+The table above shows the tiles in **week** mode. Tiles 1 and 2 name the period, so
+their labels change with the Dashboard's period mode. Tiles 3–5 keep their labels in
+every mode.
+
+| Mode | Tile 1 label | Tile 2 label |
+| --- | --- | --- |
+| Week (`Tuần`) | `Tiến độ chung tuần này` | `So với tuần trước` |
+| Month (`Tháng`) | `Tiến độ chung tháng này` | `So với tháng trước` |
+| Year — the `— Tất cả (tổng hợp theo năm) —` option, `mode=year` (xác nhận 2026-09-10, Q52) | `Tiến độ chung năm nay` | `So với năm trước` |
+
+- **This file is the master for these strings.** `spec/dashboard-dti/ui-spec.md` § 3.2
+  names it as the owner of the KPI copy; every other file points here.
+- The week row is the existing copy, unchanged. The month and year rows were
+  **approved by the product owner on 2026-09-10 (Q52) and are not drawn in the
+  prototype**.
+- Q52 decides the **labels only**. Values, tones and sub-captions are outside it; tile
+  2's sub-caption is already composed from `kpi.previousPeriodLabel`
+  (`spec/dashboard-dti/ui-spec.md` § 7.2).
+- Localization keys: none are allocated for these tiles in any mode.
+  [`../Screens/01-dashboard.md`](../Screens/01-dashboard.md) § Copy lists the KPI
+  labels as `key TBA`, and the `dashboard` group in `src/FE/public/i18n-app/vi.json`
+  has no KPI entry.
+
 ## States
 <!-- Exactly these five rows, in this order — treatments as rendered by the shipped CSS. -->
 
@@ -191,7 +226,7 @@ Un-tokenised literals, carried forward unchanged from the retired spec:
     <div class="card kpi">
       <div class="label">So với tuần trước</div>
       <div class="value good">↑ 2,3 đ.%</div>
-      <div class="sub">Tuần 32/2026 (03/08–09/08/2026)</div>
+      <div class="sub">Tuần 32/2026 (03/08 – 09/08/2026)</div>
     </div>
   </app-kpi-tile>
   <!-- three more tiles: Chỉ tiêu tăng · Không tăng · Hoàn thành -->

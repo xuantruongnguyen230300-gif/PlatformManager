@@ -96,7 +96,7 @@ trả lời **khác nhau** (đối chiếu 2026-09-05):
 
 | Câu hỏi | Trạng thái |
 |---|---|
-| Cơ chế đã có chưa? | ✅ `RequirePermissionFilter` đăng ký toàn cục (`src/BE/PlatformManager.Api/Program.cs:93`), seam `ICoreResourceKeySource` + `CoreSeeder` đầy đủ |
+| Cơ chế đã có chưa? | ✅ `RequirePermissionFilter` đăng ký toàn cục (`src/BE/PlatformManager.Api/Program.cs:102`), seam `ICoreResourceKeySource` + `CoreSeeder` đầy đủ |
 | Có endpoint nào **đang dùng** nó chưa? | ❌ **không endpoint sản phẩm nào** mang `[RequirePermission]` |
 
 Kiểm bằng lệnh, đừng tin bảng (§6):
@@ -151,7 +151,7 @@ mục biến chúng thành dòng mồ côi.
 > | --- | --- |
 > | Vai được cấp khi seed, khai trên từng key | `../../../../src/BE/Core/PlatformManager.Core.Application/Permissions/ICoreResourceKeySource.cs:51` (`SeedRoles`) |
 > | Mặc định `[Admin, User]` — đổi nó là đổi quyền của MỌI key cùng lúc | cùng file, `:34` (`DefaultSeedRoles`) |
-> | Seeder lấy vai từ định nghĩa key, không lặp cứng nữa | `../../../../src/BE/Core/PlatformManager.Core.Infrastructure/Persistence/CoreSeeder.cs:93` |
+> | Seeder lấy vai từ định nghĩa key, không lặp cứng nữa | `../../../../src/BE/Core/PlatformManager.Core.Persistence/CoreSeeder.cs:93` |
 > | Chặn 3 ca khai sai **trước khi ghi dòng nào** (rỗng · tên vai lạ · khai `SuperAdmin`) | `ICoreResourceKeySource.cs:153` (`GuardSeedRoles`) |
 >
 > **Còn lại là việc ở HOST, không phải ở Core:** `dti.manage` chưa có trong
@@ -190,41 +190,39 @@ trên; seam chạy thật từ khai báo tới nơi gọi:
 | Seam (Application, không biết Hangfire) | [`IBackgroundJobScheduler.cs:19`](../../../../src/BE/Core/PlatformManager.Core.Application/Common/Interfaces/IBackgroundJobScheduler.cs) |
 | Hiện thực Hangfire (Infrastructure) | [`HangfireBackgroundJobScheduler.cs:15`](../../../../src/BE/Core/PlatformManager.Core.Infrastructure/BackgroundJobs/HangfireBackgroundJobScheduler.cs) |
 | Nối seam → hiện thực | [`BackgroundJobInfrastructureExtensions.cs:19`](../../../../src/BE/Core/PlatformManager.Core.Infrastructure/BackgroundJobInfrastructureExtensions.cs) |
-| Composition root gọi | [`Program.cs:175`](../../../../src/BE/PlatformManager.Api/Program.cs) — `AddBackgroundJobInfrastructure()` |
+| Composition root gọi | [`Program.cs:218`](../../../../src/BE/PlatformManager.Api/Program.cs) — `AddBackgroundJobInfrastructure()` (neo đo lại 2026-09-10; bản trước ghi `:175`, đã trôi) |
 | Nơi dùng thật (enqueue import) | **chưa có** — chỗ dùng duy nhất nằm ở module DtiWeekly, đã xoá 2026-08-29 |
-| Gate: Application cấm reference Hangfire | [`LayerDependencyTests.cs:35`](../../../../src/BE/Tests/PlatformManager.ArchTests/LayerDependencyTests.cs) |
+| Gate: Application cấm reference Hangfire | [`LayerDependencyTests.cs:36`](../../../../src/BE/Tests/PlatformManager.ArchTests/LayerDependencyTests.cs) |
 | Gate: job chạy thật, Pending → Succeeded | **đã gỡ 2026-08-29** cùng endpoint `/api/import` mà nó gọi — dựng lại cùng Import ở Core |
 
 Phần **chưa** có là lịch biểu định kỳ (`RecurringJob`) — hiện chỉ dùng
 fire-and-forget. Đó là tính năng chưa cần, không phải seam còn thiếu.
 
-> ### 🚧 #17b — Job nền KHÔNG mang danh tính người khởi tạo (mở 2026-09-06)
+> ### ✅ #17b — Job nền MANG danh tính người khởi tạo (mở 2026-09-06, thi công 2026-09-10)
 >
-> **Đây là seam còn thiếu thật, khác với `RecurringJob` ở trên.** Mọi thứ job nền ghi vào
-> DB đều mang `UpdatedBy = "system"`, kể cả khi nó chạy vì một người bấm nút.
+> **Trước 2026-09-10:** mọi thứ job nền ghi vào DB đều mang `UpdatedBy = "system"`, kể cả khi nó
+> chạy vì một người bấm nút — `HttpContextCurrentUser` là bản cài **duy nhất** của `ICurrentUser`,
+> mà trong worker Hangfire không có `HttpContext` nên seam trả "không ai" và `AuditInterceptor`
+> rơi vào nhánh `?? "system"`.
 >
-> Chuỗi nhân quả, đã đối chiếu source 2026-09-06:
->
-> | Mắt xích | Điều xảy ra |
+> | Mắt xích | Vị trí (đối chiếu 2026-09-10) |
 > | --- | --- |
-> | `ICurrentUser` (seam, `Core.Application`) | đúng chỗ — `AuditInterceptor` chỉ hỏi seam này, **không** đọc `HttpContext` |
-> | `HttpContextCurrentUser` | **bản cài đặt DUY NHẤT**, đăng ký ở `Program.cs:118` |
-> | Trong worker Hangfire | không có `HttpContext` ⇒ seam trả "không ai" |
-> | `AuditInterceptor` | rơi vào nhánh `?? "system"` |
+> | Chụp danh tính lúc enqueue — client filter, còn trong HTTP request | `src/BE/PlatformManager.Api/Common/BackgroundJobIdentityFilter.cs:42` |
+> | Đặt lại danh tính lúc worker chạy — server filter | `BackgroundJobIdentityFilter.cs:68`, chỗ chứa theo luồng chạy ở `BackgroundJobIdentityAccessor.cs:45` |
+> | Bản cài `ICurrentUser` **thứ hai** | `src/BE/PlatformManager.Api/Common/BackgroundJobCurrentUser.cs:19` |
+> | Chọn bản cài theo **ngữ cảnh chạy** | [`Program.cs:145`](../../../../src/BE/PlatformManager.Api/Program.cs) |
+> | Nối filter vào Hangfire (filter TOÀN CỤC, phủ mọi job) | [`Program.cs:209`](../../../../src/BE/PlatformManager.Api/Program.cs) |
+> | Gate: giá trị thật trong cột audit | `src/BE/Tests/PlatformManager.Core.UnitTests/BackgroundJobs/AuditFieldsInBackgroundJobTests.cs:56` — có người thì ghi tên người, không ai thì `"system"` |
+> | Gate: seam activation (job chạy thật, filter thật được gọi) | **chưa có** — cần Docker, xem [`04-testing-strategy.md`](04-testing-strategy.md) §"Seam activation test" |
 >
-> **Module KHÔNG tự vá được**: interceptor ghi đè vô điều kiện, nên code nghiệp vụ có tự
-> gán `UpdatedBy` cũng bị đè. Và nhét `userName` vào tham số job là lối tắt sai — bug quay
-> lại nguyên vẹn ở job tiếp theo.
+> **`AuditInterceptor` và `IBackgroundJobScheduler` không đổi một dòng**, và `Core.*` không sửa
+> dòng nào — cả ba bước nằm ở host, nơi duy nhất được biết cả `HttpContext` lẫn Hangfire. Vì sao
+> chọn đường filter thay vì mở rộng chữ ký seam, và lịch sử lật quyết định:
+> `spec/danh-muc-dti/business-rules.md` §5.6 — **không chép lại ở đây** (`.claude/CLAUDE.md` §5).
 >
-> Ba bước: **(1)** chụp danh tính lúc enqueue, khi còn trong request · **(2)** thêm bản
-> cài `ICurrentUser` thứ hai cho phạm vi job · **(3)** đăng ký nó cho vòng đời job của
-> Hangfire. `AuditInterceptor` **không** phải sửa. `IBackgroundJobScheduler` **phải** mở
-> rộng — hôm nay nó chỉ nhận đúng một biểu thức gọi hàm, không có chỗ mang danh tính.
->
-> **Vì sao nó chặn tính năng đầu tiên dùng job nền:** đường import DTI ghi đè hàng loạt
-> lên dữ liệu của kỳ đã báo cáo. Đó là thao tác rủi ro nhất của cả tính năng, và hiện là
-> thao tác **duy nhất** không truy được người làm. Xem `spec/danh-muc-dti/business-rules.md`
-> §Nhật ký.
+> 🔄 **LẬT 2026-09-09, ghi nhận ở mục này 2026-09-10.** Bản trước ghi *"`IBackgroundJobScheduler`
+> **phải** mở rộng"* và neo đăng ký `ICurrentUser` vào `Program.cs:118` — dòng đó là cấu hình
+> `ApiBehaviorOptions`, không liên quan. Cả hai vế đều đã hết đúng.
 
 > **#14 có file chủ riêng: [14-file-storage.md](14-file-storage.md).** Trạng thái, bảng
 > "có thật hôm nay → sẽ thành" và thứ tự ưu tiên ở §2 file đó — **không chép lại ở đây**

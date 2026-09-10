@@ -14,6 +14,7 @@ import { ToastService } from '../toast/toast.service';
 import { CurrentUserService } from '../auth/current-user.service';
 import { SKIP_ERROR_TOAST } from '../http/http-context-tokens';
 import { IApiResult, IHttpErrorWithApiResult } from '../http/api-result.model';
+import { IToastAction, TOAST_AUTO_DISMISS_MS } from '../toast/toast.service';
 import { provideTranslateService } from '@ngx-translate/core';
 import { ICoreRoutes, provideCoreRoutes } from '../config/core-routes';
 import { useTranslationsInTest } from '../i18n/i18n.testing';
@@ -380,5 +381,180 @@ describe('httpErrorInterceptor — đường dẫn màn đăng nhập đến t�
     });
 
     httpMock.expectOne('/auth/login').flush(unauthorizedBody, { status: 401, statusText: 'Unauthorized' });
+  });
+});
+
+
+/**
+ * ═══ `status === 0` — KHÔNG kết nối được tới máy chủ ════════════════════════════════════════════
+ *
+ * Trước 2026-09-10 ca này rơi vào đúng nhánh của một lỗi server thường: người rút dây mạng nhận
+ * một toast không nói được chuyện gì vừa xảy ra và không có việc gì để làm tiếp. Bốn hành vi được
+ * khoá ở đây, và chúng khoá lẫn nhau — bỏ bất kỳ cái nào thì ba cái còn lại vẫn có thể xanh trong
+ * khi tính năng đã hỏng:
+ *
+ *  1. `status 0` đi vào nhánh mất kết nối (toast riêng, CÓ nút hành động);
+ *  2. lỗi HTTP thường KHÔNG đi vào nhánh đó (toast cũ, KHÔNG nút) — đây là ca đối chứng, thiếu nó
+ *     thì một nhánh bắt-tất-cả cũng làm test 1 xanh;
+ *  3. bấm nút gọi lại ĐÚNG request vừa hỏng, và kết quả về ĐÚNG nơi đã đặt hàng;
+ *  4. không bấm thì lỗi vẫn phải nổ ra sau cửa sổ thử lại — nếu không, mọi request hỏng lúc mất
+ *     mạng sẽ treo vĩnh viễn và màn hình quay spinner mãi mãi.
+ *
+ * Đo thời gian bằng `jasmine.clock()` chứ không `fakeAsync()`: dự án đã bỏ zone.js (zoneless) —
+ * cùng lý do đã ghi ở `core/toast/toast.service.spec.ts`.
+ */
+describe('httpErrorInterceptor — mất kết nối (status 0)', () => {
+  let http: HttpClient;
+  let httpMock: HttpTestingController;
+  let toast: ToastService;
+  let clockInstalled = false;
+
+  /** Lỗi mạng thật của trình duyệt: `ProgressEvent('error')` + `status: 0`. */
+  function failWithNetworkError(url: string): void {
+    httpMock.expectOne(url).error(new ProgressEvent('error'), { status: 0, statusText: 'Unknown Error' });
+  }
+
+  function useClock(): void {
+    jasmine.clock().install();
+    clockInstalled = true;
+  }
+
+  beforeEach(async () => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        provideHttpClient(withInterceptors([httpErrorInterceptor])),
+        provideHttpClientTesting(),
+        {
+          provide: Router,
+          useValue: { url: '/trang-chu', navigate: jasmine.createSpy('navigate') } as IRouterStub,
+        },
+        provideCoreRoutes(APP_ROUTES_TODAY),
+        provideTranslateService(),
+      ],
+    });
+    // Bảng dịch THẬT — nên mọi assert chuỗi bên dưới đồng thời là phép kiểm rằng khoá có mặt trong
+    // `public/i18n/vi.json`. Thiếu khoá thì ngx-translate trả về chính chuỗi khoá và test ĐỎ.
+    await useTranslationsInTest('vi');
+    http = TestBed.inject(HttpClient);
+    httpMock = TestBed.inject(HttpTestingController);
+    toast = TestBed.inject(ToastService);
+  });
+
+  // Gỡ clock TRƯỚC khi `await` — còn clock thì `setTimeout(0)` dưới đây không bao giờ chạy và cả
+  // spec treo.
+  afterEach(async () => {
+    if (clockInstalled) {
+      jasmine.clock().uninstall();
+      clockInstalled = false;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    httpMock.verify();
+  });
+
+  it('1 · status 0 → toast MẤT KẾT NỐI riêng, kèm nút hành động "Thử lại"', () => {
+    const errorSpy = spyOn(toast, 'error');
+
+    const sub = http.get('/criteria').subscribe({ error: () => undefined });
+    failWithNetworkError('/criteria');
+
+    const [text, title, action] = errorSpy.calls.mostRecent().args as [string, string, IToastAction];
+    expect(text).toBe('Không thể kết nối tới máy chủ. Kiểm tra kết nối mạng.');
+    expect(title).toBe('Mất kết nối');
+    expect(action.Label).toBe('Thử lại');
+    expect(typeof action.Run).toBe('function');
+
+    // Không bấm gì → huỷ đăng ký để cửa sổ thử lại không nổ sau khi spec đã kết thúc.
+    sub.unsubscribe();
+  });
+
+  it('1b · navigator.onLine === false → câu MẠNH hơn về thiết bị, cùng tiêu đề', () => {
+    // Spy trên prototype: `onLine` không phải thuộc tính riêng của `navigator`, nên
+    // `spyOnProperty(navigator, ...)` sẽ không tìm thấy descriptor để thay.
+    spyOnProperty(Navigator.prototype, 'onLine', 'get').and.returnValue(false);
+    const errorSpy = spyOn(toast, 'error');
+
+    const sub = http.get('/criteria').subscribe({ error: () => undefined });
+    failWithNetworkError('/criteria');
+
+    const [text, title] = errorSpy.calls.mostRecent().args;
+    expect(text).toBe(
+      'Thiết bị của bạn đang không có kết nối mạng. Kiểm tra Wi-Fi hoặc dây mạng rồi thử lại.',
+    );
+    expect(title).toBe('Mất kết nối');
+
+    sub.unsubscribe();
+  });
+
+  it('2 · ĐỐI CHỨNG — lỗi HTTP thường (500) KHÔNG rơi vào nhánh này: không nút, lỗi nổ NGAY', () => {
+    const errorSpy = spyOn(toast, 'error');
+    let errored = false;
+
+    http.get('/criteria').subscribe({ error: () => (errored = true) });
+    httpMock.expectOne('/criteria').flush(null, { status: 500, statusText: 'Server Error' });
+
+    // Nổ ngay trong cùng một tick — hành vi CŨ, không được đổi: chỉ ca mất kết nối mới hoãn lỗi.
+    expect(errored).toBeTrue();
+    expect(errorSpy).toHaveBeenCalledOnceWith('Đã có lỗi xảy ra. Vui lòng thử lại.', 'Lỗi hệ thống');
+    // Đúng 2 đối số ⇒ KHÔNG có action. `toHaveBeenCalledWith` bỏ qua đối số thứ ba `undefined`,
+    // nên phải đếm tay ở đây, nếu không một action lọt vào mọi toast lỗi vẫn xanh.
+    expect(errorSpy.calls.mostRecent().args.length).toBe(2);
+  });
+
+  it('3 · bấm "Thử lại" gọi lại ĐÚNG request vừa hỏng, kết quả về ĐÚNG nơi đã đặt hàng', (done) => {
+    let action: IToastAction | undefined;
+    spyOn(toast, 'error').and.callFake((_text, _title, a) => void (action = a));
+
+    http.post('/criteria', { code: 'DTI-01' }).subscribe({
+      next: (value) => {
+        // Đây là điều then chốt: response của lần gọi LẠI về tới người đặt hàng BAN ĐẦU. Một cách
+        // hiện thực kiểu "tự subscribe lại trong interceptor" sẽ bắn request đi nhưng không bao
+        // giờ chạy được nhánh này.
+        expect(value).toEqual({ ok: true });
+        done();
+      },
+      error: () => done.fail('không được rơi vào nhánh lỗi sau khi thử lại thành công'),
+    });
+
+    failWithNetworkError('/criteria');
+    action!.Run();
+
+    const retried = httpMock.expectOne('/criteria');
+    expect(retried.request.method).toBe('POST');
+    expect(retried.request.body).toEqual({ code: 'DTI-01' });
+    retried.flush({ ok: true });
+  });
+
+  it('4 · không bấm gì → hết cửa sổ thử lại thì lỗi gốc nổ ra, và KHÔNG toast lần hai', () => {
+    const errorSpy = spyOn(toast, 'error');
+    let caught: HttpErrorResponse | undefined;
+
+    useClock();
+    http.get('/criteria').subscribe({ error: (err: HttpErrorResponse) => (caught = err) });
+    failWithNetworkError('/criteria');
+
+    jasmine.clock().tick(TOAST_AUTO_DISMISS_MS - 1);
+    expect(caught).toBeUndefined();
+
+    jasmine.clock().tick(1);
+    expect(caught?.status).toBe(0);
+    // Một sự cố, một toast: `catchError` phía dưới phải bỏ qua `status 0` vì cổng thử lại đã lo.
+    // Toast thứ hai không chỉ thừa — nó đẩy toast mang nút bấm ra khỏi tầm mắt.
+    expect(errorSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('5 · request probe (SKIP_ERROR_TOAST) mất kết nối → không toast, lỗi nổ NGAY', () => {
+    const errorSpy = spyOn(toast, 'error');
+    let errored = false;
+
+    // `GET /auth/me` lúc khởi động đi đường này. Hoãn nó lại vài giây là treo màn hình khởi động
+    // đúng vào lúc mạng hỏng — lúc app cần trả lời "chưa đăng nhập" nhanh nhất.
+    http
+      .get('/auth/me', { context: new HttpContext().set(SKIP_ERROR_TOAST, true) })
+      .subscribe({ error: () => (errored = true) });
+    failWithNetworkError('/auth/me');
+
+    expect(errored).toBeTrue();
+    expect(errorSpy).not.toHaveBeenCalled();
   });
 });

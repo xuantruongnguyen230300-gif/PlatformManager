@@ -60,6 +60,11 @@
   <ItemGroup>
     <ProjectReference Include="..\PlatformManager.Core.Application\PlatformManager.Core.Application.csproj" />
     <ProjectReference Include="..\PlatformManager.Core.Domain\PlatformManager.Core.Domain.csproj" />
+    <!-- Core.Persistence (tách ra 2026-09-10): Infrastructure cần kiểu AppUser/AppRole và
+         PlatformManagerDbContext để dựng UserManager/SignInManager và đăng ký DbContext trong
+         AddCoreModule. Chiều ngược lại bị cấm — xem doc/kien-truc-core-module.md
+         §"Nguyên tắc phụ thuộc bắt buộc". -->
+    <ProjectReference Include="..\PlatformManager.Core.Persistence\PlatformManager.Core.Persistence.csproj" />
   </ItemGroup>
 
 </Project>

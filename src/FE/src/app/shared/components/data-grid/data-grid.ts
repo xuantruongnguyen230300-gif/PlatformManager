@@ -65,6 +65,23 @@ export interface IDataGridFrozenColumns {
  * doc/huong_dan/wiki-core/fe/trien-khai/05-gate.md; cổng TỰ ĐỘNG cho G4 xếp lịch "Sau F4" và
  * chưa hiện thực hoá, nên không có gì bắt lỗi hộ khi ai đó lách.
  *
+ * ## 🛑 Giới hạn đã biết — lưới này KHÔNG phát sắp xếp / lọc ra ngoài
+ *
+ * Output duy nhất là `pageChange`, và nó chỉ mang `page`/`pageSize`. `onLazyLoad` bên dưới nhận
+ * một `TableLazyLoadEvent` ĐẦY ĐỦ nhưng cố ý **vứt bỏ** `sortField` / `sortOrder` / `filters`.
+ *
+ * Đây KHÔNG phải thiếu sót chờ ai đó vá. Hai màn nghiệp vụ đầu tiên đã chốt sắp xếp/lọc nằm
+ * NGOÀI lưới: `spec/danh-muc-dti/ui-spec.md:178` (*"Không có ô sắp xếp ở màn này"*) và
+ * `spec/dashboard-dti/ui-spec.md:482` (*"Sắp xếp là việc của FE, không phải tham số API"*). Phần
+ * lọc thì `shared/components/toolbar/` đã lo (ô tìm kiếm + bảng lọc + chip). Mở thêm output khi
+ * chưa màn nào đòi là thiết kế API theo phỏng đoán — và một API đoán sai thì vẫn phải nuôi.
+ *
+ * **Màn hình thứ ba cần sort/filter phía SERVER thì đọc dòng này trước khi lắp**, không phải sau:
+ * việc phải làm là mở rộng có chủ đích cả ba tầng cùng lượt — `IDataGridPageChange` (hoặc một
+ * output thứ hai), `onLazyLoad`, và tham số của endpoint tương ứng — rồi ghi lại quyết định ở
+ * doc/huong_dan/wiki-core/fe/11-grid-and-metadata.md. Bật `p-table` sort ở template màn hình mà
+ * không đi qua đây sẽ chỉ sắp xếp ĐÚNG TRANG đang hiện, im lặng và sai.
+ *
  * Component NÀY không nhận `localeId` — nó không định dạng ngày. Chỗ áp dụng đúng ranh giới đó
  * là `platform/quan-tri-nguoi-dung/components/user-grid-table/user-grid-table.ts`: ở đó
  * `localeId` là `input` chứ không `inject(LanguageService)`, và JSDoc tại chỗ kể lại lỗi NG0201
@@ -138,12 +155,19 @@ export class DataGrid {
    */
   readonly frozenColumns = input<IDataGridFrozenColumns | undefined>(undefined);
 
+  /**
+   * Output DUY NHẤT của lưới, và nó chỉ mang `page`/`pageSize`. Sắp xếp/lọc KHÔNG đi qua đây —
+   * xem §"Giới hạn đã biết" ở JSDoc của class trước khi định thêm output thứ hai.
+   */
   readonly pageChange = output<IDataGridPageChange>();
 
   /**
    * PrimeNG phát `first` (0-based) + `rows`; tầng gọi và API đều làm việc với trang 1-based.
    * Quy đổi Ở ĐÂY một lần thay vì để mỗi màn hình tự nhớ — đây đúng loại phép tính lệch một đơn
    * vị mà chép đi chép lại sẽ sai ở đâu đó.
+   *
+   * **Chỉ đọc `first` và `rows`.** `sortField`/`sortOrder`/`filters` của sự kiện bị bỏ qua CÓ
+   * CHỦ ĐÍCH — xem §"Giới hạn đã biết" ở JSDoc của class.
    */
   protected onLazyLoad(event: TableLazyLoadEvent): void {
     const size = event.rows ?? this.pageSize();

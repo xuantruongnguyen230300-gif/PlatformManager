@@ -129,7 +129,23 @@ builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(options =
 });
 
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddScoped<ICurrentUser, HttpContextCurrentUser>();
+
+// Seam ICurrentUser có HAI bản cài, chọn theo NGỮ CẢNH CHẠY (chốt Q35 2026-09-09, xem
+// spec/danh-muc-dti/business-rules.md §5.6). Trước đó chỉ có HttpContextCurrentUser, nên trong
+// worker Hangfire — nơi KHÔNG có HttpContext — seam trả "không ai" và AuditInterceptor ghi
+// UpdatedBy = "system": thao tác rủi ro nhất của hệ thống (nạp đè một kỳ đã chốt số liệu) trở
+// thành thao tác không truy được người làm.
+//
+// Chọn ở ĐÂY chứ không nhét điều kiện vào một bản cài duy nhất: "đang chạy trong ngữ cảnh nào" là
+// việc của composition root, còn mỗi bản cài chỉ biết đúng một nguồn danh tính của mình.
+// AuditInterceptor KHÔNG phải sửa dòng nào — nó vẫn hỏi đúng seam này.
+builder.Services.AddSingleton<IBackgroundJobIdentityAccessor, BackgroundJobIdentityAccessor>();
+builder.Services.AddScoped<HttpContextCurrentUser>();
+builder.Services.AddScoped<BackgroundJobCurrentUser>();
+builder.Services.AddScoped<ICurrentUser>(sp =>
+    sp.GetRequiredService<IHttpContextAccessor>().HttpContext is not null
+        ? sp.GetRequiredService<HttpContextCurrentUser>()
+        : sp.GetRequiredService<BackgroundJobCurrentUser>());
 
 // Đường 1 và 2 của seam IModuleRegistrar: mỗi tầng tự đăng ký MediatR/FluentValidation/
 // repository/dịch vụ của mình (RegisterServices), rồi nộp assembly chứa IEntityTypeConfiguration
@@ -178,11 +194,21 @@ builder.Services.AddSwaggerGen();
 // doc/huong_dan/quy-uoc/be-cqrs-handler.md §"Command chạy lâu → job nền". Dùng CHUNG connection
 // string "Default" với PlatformManagerDbContext — Hangfire tự tạo schema "hangfire" lúc khởi
 // động lần đầu (KHÔNG đi qua EF Core migration).
-builder.Services.AddHangfire(config => config
+//
+// Overload (IServiceProvider, IGlobalConfiguration) — cần sp để lấy 2 singleton mà
+// BackgroundJobIdentityFilter phụ thuộc. Filter Hangfire là singleton nên KHÔNG nhận thẳng được
+// dịch vụ scoped; nó tự lấy ICurrentUser từ RequestServices của request đang enqueue.
+builder.Services.AddHangfire((sp, config) => config
     .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
     .UseSimpleAssemblyNameTypeSerializer()
     .UseRecommendedSerializerSettings()
-    .UsePostgreSqlStorage(options => options.UseNpgsqlConnection(builder.Configuration.GetConnectionString("Default"))));
+    .UsePostgreSqlStorage(options => options.UseNpgsqlConnection(builder.Configuration.GetConnectionString("Default")))
+    // Danh tính người dùng đi theo job (Q35): chụp lúc enqueue, đặt lại lúc worker chạy. Là FILTER
+    // TOÀN CỤC có chủ đích — mọi job đi qua Hangfire đều được phủ, kể cả job viết sau này, nên
+    // không nơi gọi nào phải "nhớ" truyền danh tính. Xem BackgroundJobIdentityFilter.cs.
+    .UseFilter(new BackgroundJobIdentityFilter(
+        sp.GetRequiredService<IHttpContextAccessor>(),
+        sp.GetRequiredService<IBackgroundJobIdentityAccessor>())));
 builder.Services.AddHangfireServer();
 
 // Seam IBackgroundJobScheduler → HangfireBackgroundJobScheduler. PHẢI gọi SAU AddHangfire()

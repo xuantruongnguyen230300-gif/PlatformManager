@@ -13,8 +13,8 @@ namespace PlatformManager.Core.Infrastructure.Persistence;
 /// IdentityDbContext&lt;AppUser,AppRole,Guid&gt; — 7 bảng chuẩn Identity tự sinh qua migration,
 /// không tự vẽ tay (xem doc/huong_dan/quy-uoc/be-api-controller.md §Auth/Permission).
 ///
-/// KHÔNG khai DbSet&lt;T&gt; cho entity của bất kỳ Module nào (Core.Infrastructure không được
-/// ProjectReference tới Modules.*.Domain) — Module tự gọi Set&lt;T&gt;() trực tiếp trên
+/// KHÔNG khai DbSet&lt;T&gt; cho entity của bất kỳ tầng nghiệp vụ nào (Core.Persistence không được
+/// ProjectReference tới Business.*.Domain) — tầng đó tự gọi Set&lt;T&gt;() trực tiếp trên
 /// PlatformManagerDbContext trong repository của mình (vẫn cùng 1 instance DbContext, chỉ khác
 /// cách truy cập). Model của entity thuộc tầng nào do CHÍNH tầng đó khai, qua
 /// <c>IModuleRegistrar.PersistenceAssembly</c> → <see cref="EfConfigurationAssembly"/> →
@@ -68,7 +68,7 @@ public class PlatformManagerDbContext(
 
         base.OnModelCreating(modelBuilder); // Identity map trước — configuration của ta override phần cần thiết (vd ValueGeneratedNever)
 
-        // Mỗi assembly (Core.Infrastructure của chính nó + assembly của từng Module đã đăng ký)
+        // Mỗi assembly (Core.Persistence của chính nó + assembly của từng tầng đã đăng ký)
         // tự sở hữu IEntityTypeConfiguration<T> của entity mình — KHÔNG hardcode tên assembly
         // Module cụ thể ở đây (xem doc/kien-truc-core-module.md §DbContext).
         foreach (var assembly in _configurationAssemblies)

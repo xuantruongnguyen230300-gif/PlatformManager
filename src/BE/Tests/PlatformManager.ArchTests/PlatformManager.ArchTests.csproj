@@ -34,6 +34,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Core\PlatformManager.Core.Domain\PlatformManager.Core.Domain.csproj" />
     <ProjectReference Include="..\..\Core\PlatformManager.Core.Application\PlatformManager.Core.Application.csproj" />
+    <ProjectReference Include="..\..\Core\PlatformManager.Core.Persistence\PlatformManager.Core.Persistence.csproj" />
     <ProjectReference Include="..\..\Core\PlatformManager.Core.Infrastructure\PlatformManager.Core.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Core\PlatformManager.Core.Api\PlatformManager.Core.Api.csproj" />
     <!-- Thêm 2026-09-01 cùng 4 ArchTest "sự TỒN TẠI / sự ĐƯỢC NỐI VÀO". Bắt buộc phải có, vì 2
@@ -45,7 +46,7 @@
     <ProjectReference Include="..\..\PlatformManager.Api\PlatformManager.Api.csproj" />
   </ItemGroup>
 
-  <!-- Kiểu của Api và của Core.Infrastructure (IdentityDbContext) chạm shared framework ASP.NET
+  <!-- Kiểu của Api và của Core.Persistence (IdentityDbContext) chạm shared framework ASP.NET
        Core — khai tường minh, cùng lý do đã ghi ở PlatformManager.Core.IntegrationTests.csproj. -->
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />

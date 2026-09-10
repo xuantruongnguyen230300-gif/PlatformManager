@@ -19,16 +19,16 @@ mục còn lại (correlation ID xuyên Process, metrics) thật sự chưa cầ
 1 process. Chi phí gần bằng 0:
 
 > ✅ **Đã làm, đối chiếu 2026-09-06**: đăng ký ở
-> `src/BE/PlatformManager.Api/Program.cs:204`, map ở
-> `src/BE/PlatformManager.Api/Program.cs:603` (`/health/live`),
-> `src/BE/PlatformManager.Api/Program.cs:607` (`/health/ready`) và
-> `src/BE/PlatformManager.Api/Program.cs:613` (`/health`).
+> `src/BE/PlatformManager.Api/Program.cs:247`, map ở
+> `src/BE/PlatformManager.Api/Program.cs:646` (`/health/live`),
+> `src/BE/PlatformManager.Api/Program.cs:650` (`/health/ready`) và
+> `src/BE/PlatformManager.Api/Program.cs:656` (`/health`).
 > Câu *"`Program.cs` hiện chưa có dòng `HealthCheck` nào"* ở bản trước của đoạn này
 > đã lạc hậu. Ba endpoint hiện có sẽ được **chặn ở nginx**, không công bố ra
 > Internet — xem [`../fe/17-phuc-vu-va-trien-khai.md`](../fe/17-phuc-vu-va-trien-khai.md) §6.3b.
 >
-> 🔄 **LẬT 2026-09-06.** Trích dẫn cũ là `Program.cs:104` — dòng đó **là một comment**
-> về `ApiBehaviorOptions`/model binding, không dính gì tới health check. Cổng
+> 🔄 **LẬT 2026-09-06.** Trích dẫn cũ là `Program.cs:104` — dòng đó, khi đo 2026-09-06,
+> **là một comment** về `ApiBehaviorOptions`/model binding, không dính gì tới health check. Cổng
 > `check-docs.sh` §6 chỉ kiểm số dòng có nằm trong file, nên một citation trỏ sai
 > chỗ vẫn qua được. Đo lại bằng lệnh:
 > `grep -n "AddHealthChecks\|MapHealthChecks" src/BE/PlatformManager.Api/Program.cs`.
@@ -61,7 +61,7 @@ app.UseHangfireDashboard("/hangfire", new DashboardOptions
 });
 ```
 
-> ✅ **Đã làm, đối chiếu 2026-09-06:** `src/BE/PlatformManager.Api/Program.cs:549`,
+> ✅ **Đã làm, đối chiếu 2026-09-06:** `src/BE/PlatformManager.Api/Program.cs:592`,
 > filter thật ở `src/BE/PlatformManager.Api/Common/HangfireDashboardAuthFilter.cs:18`
 > (`httpContext.User.IsInRole(Roles.SuperAdmin)`).
 
@@ -89,11 +89,11 @@ log FE ↔ log BE") — enrich sai/thiếu thì `traceId` user đưa cho support
 > 🔄 **LẬT 2026-09-06.** Mục này mang nhãn `🚧` cho một việc **đã làm xong**. Serilog
 > có thật trong `src/BE/PlatformManager.Api/PlatformManager.Api.csproj:24`
 > (`Serilog.AspNetCore` 10.0.0), đăng ký ở
-> `src/BE/PlatformManager.Api/Program.cs:63` với `WriteTo.File` +
+> `src/BE/PlatformManager.Api/Program.cs:65` với `WriteTo.File` +
 > `rollingInterval: RollingInterval.Day` + `retainedFileCountLimit: 7`
-> (`src/BE/PlatformManager.Api/Program.cs:75`), và enrichment `TraceId` chạy ở
+> (`src/BE/PlatformManager.Api/Program.cs:77`), và enrichment `TraceId` chạy ở
 > `src/BE/PlatformManager.Api/Common/TraceIdLogEnrichmentMiddleware.cs:24`, cắm vào
-> pipeline tại `src/BE/PlatformManager.Api/Program.cs:463`.
+> pipeline tại `src/BE/PlatformManager.Api/Program.cs:506`.
 > Bảng "Chuỗi đang khép kín theo hướng xấu" ngay dưới mô tả trạng thái **TRƯỚC** khi
 > thi công — giữ lại để thấy vì sao quyết định này ra đời, **không** phải hiện trạng.
 
@@ -101,7 +101,7 @@ log FE ↔ log BE") — enrich sai/thiếu thì `traceId` user đưa cho support
 
 | # | Đang có | Ở đâu |
 |---|---|---|
-| 1 | Mọi response lỗi trả `traceId` về client | Vẫn đúng, nhưng **số dòng đã đổi** (đối chiếu 2026-09-06): `src/BE/PlatformManager.Api/Program.cs:375` (nhánh 429 `OnRejected`), `:403` (401 `OnRedirectToLogin`), `:416` (403 `OnRedirectToAccessDenied`). Trích dẫn cũ `:232`/`:246`/`:204` đã lạc — `:204` nay là `AddHealthChecks` |
+| 1 | Mọi response lỗi trả `traceId` về client | Vẫn đúng, nhưng **số dòng đã đổi** (đối chiếu 2026-09-06): `src/BE/PlatformManager.Api/Program.cs:418` (nhánh 429 `OnRejected`), `:446` (401 `OnRedirectToLogin`), `:459` (403 `OnRedirectToAccessDenied`). Trích dẫn cũ `:232`/`:246`/`:204` đã lạc — `AddHealthChecks` nay ở `:247` (đo lại 2026-09-10) |
 | 2 | FE hiện mã đó cho người dùng | [`../fe/10-observability.md`](../fe/10-observability.md) |
 | 3 | ~~**Không có nơi nào lưu log**~~ — **đã đóng 2026-09-06** | `grep -rn Serilog src/BE --include=*.csproj` nay trả `PlatformManager.Api.csproj:24`, không còn rỗng |
 
@@ -173,8 +173,8 @@ Nghĩa là log **không phải** nơi giữ vết cho hành động nhạy cảm
 
 | | Đã chốt sẽ thành | Đo được hôm nay |
 |---|---|---|
-| Thư viện log | Serilog, ghi file xoay vòng theo ngày | `Serilog.AspNetCore` ở `src/BE/PlatformManager.Api/PlatformManager.Api.csproj:24`; `WriteTo.File` + `RollingInterval.Day` ở `src/BE/PlatformManager.Api/Program.cs:71` |
-| Giữ 7 ngày | 7 file ngày | `retainedFileCountLimit: 7` — `src/BE/PlatformManager.Api/Program.cs:75` |
+| Thư viện log | Serilog, ghi file xoay vòng theo ngày | `Serilog.AspNetCore` ở `src/BE/PlatformManager.Api/PlatformManager.Api.csproj:24`; `WriteTo.File` + `RollingInterval.Day` ở `src/BE/PlatformManager.Api/Program.cs:73` |
+| Giữ 7 ngày | 7 file ngày | `retainedFileCountLimit: 7` — `src/BE/PlatformManager.Api/Program.cs:77` |
 | `traceId` trong log | Mọi entry mang `TraceId` khớp giá trị trả về client | `LogContext.PushProperty("TraceId", …)` — `src/BE/PlatformManager.Api/Common/TraceIdLogEnrichmentMiddleware.cs:24` |
 | Mức log EF | `Warning` | `Serilog:MinimumLevel:Override:Microsoft.EntityFrameworkCore` = `Warning` trong `src/BE/PlatformManager.Api/appsettings.json`; section `Logging` **đã gỡ** đúng như ghi chú ở trên |
 | Thư mục `logs/` trong git | Giữ nguyên bị chặn | `src/BE/.gitignore` có `logs/` ([`../../quy-uoc/repo-artifact.md`](../../quy-uoc/repo-artifact.md) §5) |
@@ -239,8 +239,8 @@ traffic mới tới instance đó — đúng hành vi mong muốn), còn `/healt
 vẫn Healthy (process không bị restart oan).
 
 > ✅ **Đã tách, đối chiếu 2026-09-06.** Khuyến nghị này **đã vào code đúng như mẫu
-> trên**: tag `"live"`/`"ready"` khai ở `src/BE/PlatformManager.Api/Program.cs:205`
-> và `:206`, hai endpoint map ở `src/BE/PlatformManager.Api/Program.cs:603` và `:607`.
+> trên**: tag `"live"`/`"ready"` khai ở `src/BE/PlatformManager.Api/Program.cs:248`
+> và `:249`, hai endpoint map ở `src/BE/PlatformManager.Api/Program.cs:646` và `:650`.
 > Đoạn "chưa khẩn cấp" bên dưới là **lý do lịch sử** của quyết định, không phải việc
 > còn tồn đọng.
 

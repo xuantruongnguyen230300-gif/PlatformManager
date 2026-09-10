@@ -43,7 +43,7 @@ namespace PlatformManager.Api;
 // DTI được xây lại. KHÔNG sửa snapshot, KHÔNG xoá migration cũ, KHÔNG "dọn cho sạch".
 //
 // CẦN ĐỔI SCHEMA CORE TRONG LÚC ĐÓNG BĂNG? Viết tay file .sql delta đặt cạnh các file có sẵn ở
-// Core/PlatformManager.Core.Infrastructure/Persistence/Migrations/sql/ (thư mục .sql Ở LẠI Core —
+// Core/PlatformManager.Core.Persistence/Migrations/sql/ (thư mục .sql Ở LẠI Core —
 // nó là ARTIFACT Corebase ship cho dự án sau; chỉ các file .cs migration mới chuyển sang Api,
 // xem MigrationsAssembly bên dưới) rồi thêm tên nó vào
 // PostgresFixture.MigrationScripts (Tests/PlatformManager.Core.IntegrationTests/PostgresFixture.cs)
@@ -61,9 +61,9 @@ namespace PlatformManager.Api;
 /// kích hoạt seed/kết nối DB thật lúc chỉ đang sinh migration) — chỉ dùng lúc thiết kế
 /// (migrations add/script), KHÔNG dùng để chạy app.
 ///
-/// Đặt Ở ĐÂY (Api), KHÔNG đặt ở Core.Infrastructure — vì factory cần biết đủ assembly của MỌI
-/// Module đã đăng ký (để `dotnet ef migrations add` sinh migration đầy đủ, bao gồm cả bảng của
-/// Module) trong khi Core.Infrastructure tuyệt đối không được phép biết tới bất kỳ
+/// Đặt Ở ĐÂY (Api), KHÔNG đặt ở Core (Persistence/Infrastructure) — vì factory cần biết đủ assembly
+/// của MỌI tầng đã đăng ký (để `dotnet ef migrations add` sinh migration đầy đủ, bao gồm cả bảng của
+/// tầng nghiệp vụ) trong khi Core.* tuyệt đối không được phép biết tới bất kỳ
 /// Modules.*.Infrastructure nào (xem doc/kien-truc-core-module.md §DbContext). Api là composition
 /// root duy nhất thấy cả 2 bên nên đây là chỗ đúng cho factory này — khi thêm Module mới thì
 /// KHÔNG phải sửa file này chút nào, chỉ thêm registrar vào <see cref="HostModuleRegistrars"/>.
@@ -97,7 +97,7 @@ public class PlatformManagerDbContextFactory : IDesignTimeDbContextFactory<Platf
             npgsql.MigrationsHistoryTable("__EFMigrationsHistory", "core");
 
             // ── Migration thuộc HOST, Core ship .sql (người dùng chốt 2026-09-04) ──────────────
-            // Mặc định của EF là "assembly chứa DbContext" = PlatformManager.Core.Infrastructure.
+            // Mặc định của EF là "assembly chứa DbContext" = PlatformManager.Core.Persistence.
             // Để mặc định đó thì Migrations/ + ModelSnapshot rơi vào Core, và ModelSnapshot là một
             // file TRẠNG THÁI DÙNG CHUNG: dự án thứ hai thêm bảng nghiệp vụ đầu tiên là EF GHI ĐÈ
             // snapshot của Core để nhét bảng đó vào. Từ đó hai bên cùng sở hữu một file, và lần
@@ -106,7 +106,7 @@ public class PlatformManagerDbContextFactory : IDesignTimeDbContextFactory<Platf
             // thật), hoặc mất thay đổi của Core.
             //
             // Nên: mỗi dự án giữ Migrations/ + ModelSnapshot RIÊNG trong project host của mình.
-            // Corebase ship baseline .sql (Core/.../Persistence/Migrations/sql/) làm artifact
+            // Corebase ship baseline .sql (Core/PlatformManager.Core.Persistence/Migrations/sql/) làm artifact
             // schema, KHÔNG ship file .cs migration nào.
             //
             // Vẫn là MỘT DbContext duy nhất ⇒ khoá ngoại core ↔ business còn nguyên. Đó là lý do

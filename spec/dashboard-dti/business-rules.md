@@ -6,10 +6,25 @@ verified: chua-doi-chieu
 
 # Luật nghiệp vụ — Dashboard DTI
 
-> ## 📐 ĐÍCH ĐẾN — CHƯA THI CÔNG (viết 2026-09-05)
+> ## 📐 ĐÍCH ĐẾN — CHƯA THI CÔNG (viết 2026-09-05, soát lại hiện trạng 2026-09-10)
 >
-> Không có dòng code nào của tính năng này tồn tại. `src/FE/src/app/modules/dashboard/` và
-> module BE `DtiWeekly` gỡ 2026-08-29. Mọi câu dưới đây là **luật phải hiện thực**.
+> **Không một luật nào dưới đây đã được hiện thực** — không công thức tổng hợp, không so kỳ,
+> không export. Nhưng câu *"không có dòng code nào của tính năng này tồn tại"* của bản trước
+> **không còn đúng ở phía FE** — đối chiếu lại 2026-09-10:
+>
+> - **BE — chưa có gì.** Không project `PlatformManager.Business.*` nào, schema `business`
+>   chưa có bảng nào, chưa có migration nào. Module BE `DtiWeekly` gỡ 2026-08-29.
+> - **FE — bốn component đã dựng thật và có test (2026-09-09), trang thì vẫn là khung.**
+>   `src/FE/src/app/modules/dashboard/components/` có `kpi-tile`, `progress-bar`,
+>   `trend-chart`, `history-row`, mỗi cái kèm `*.spec.ts`. `trend-chart` vẽ bằng `p-chart`
+>   của PrimeNG trên `chart.js` (`src/FE/src/app/modules/dashboard/components/trend-chart/trend-chart.ts:115`).
+>   Trang `src/FE/src/app/modules/dashboard/pages/dashboard/dashboard.page.ts:8` vẫn chỉ là
+>   khung, và route dashboard **cố ý
+>   chưa khai** vào `app.routes.ts` vì nó sẽ THAY `/trang-chu` — bến an toàn của mọi
+>   chuyển hướng; lý do đầy đủ ghi tại chỗ,
+>   `src/FE/src/app/modules/dashboard/dashboard.routes.ts:8`.
+>
+> Mọi câu dưới đây vẫn là **luật phải hiện thực**.
 >
 > **Đích đến kiến trúc: `PlatformManager.Business.*`** — query tổng hợp vào
 > `Business.Application/Dashboard/`, controller vào `Business.Api`. **KHÔNG** dựng lại
@@ -78,7 +93,8 @@ overallProgress = Σ( progressPercent_i × maxScore_i ) / Σ( maxScore_i )
 > 2. Dashboard hiện **% theo `Tiến độ %`** (Q11). Hai con số **sẽ khác nhau**, và chênh bao
 >    nhiêu thì **không đoán trước được** — vế sau phụ thuộc người nhập, không phụ thuộc dữ liệu.
 > 3. Ngay sau import, vế sau **chưa có giá trị nào**: `overallProgress` và `groups[].progress`
->    **vắng mặt**, `trend` rỗng, trong khi `table` đã đủ 62 dòng.
+>    **vắng mặt**, `trend` có đủ các kỳ nhưng **không kỳ nào mang `value`** (Q44, §1.5 — bản
+>    trước 2026-09-10 ghi `trend` rỗng), trong khi `table` đã đủ 62 dòng.
 >
 > Đừng "sửa" khác biệt đó bằng cách đổi công thức, và **đừng dùng số theo điểm làm kỳ vọng cho
 > test của Dashboard** — test sẽ đỏ trên dữ liệu đúng.
@@ -90,7 +106,15 @@ overallProgress = Σ( progressPercent_i × maxScore_i ) / Σ( maxScore_i )
 
 ### 1.2 Gộp Tháng và "Tất cả trong năm"
 
-- `mode=week` ⇒ tính trên đúng các bản ghi có `AssessmentDate` nằm trong tuần ISO đó.
+- `mode=week` ⇒ mỗi chỉ tiêu góp **đúng một** bản ghi: bản có `AssessmentDate` **lớn nhất**
+  trong tuần ISO đó — **Q46 (chốt 2026-09-10)**, đồng bộ với màn Danh mục. Luật đọc có file
+  chủ là `spec/danh-muc-dti/business-rules.md` §5.2 — không định nghĩa lại ở đây.
+
+  > 🔄 **LẬT 2026-09-10 (Q46).** Bản trước: *"tính trên đúng các bản ghi có `AssessmentDate`
+  > nằm trong tuần ISO đó"*. Câu đó không nói hai bản ghi của cùng một chỉ tiêu trong cùng
+  > tuần thì xử lý thế nào, nên đọc được thành "đưa cả hai vào công thức §1.1", tức chỉ tiêu
+  > đó được đếm hai lần. Màn Danh mục vốn lấy bản mới nhất; hai màn tính khác nhau thì cùng
+  > một tuần ra hai con số.
 - `mode=month` / `mode=year` ⇒ **trung bình cộng `overallProgress` của các kỳ-tuần CÓ dữ
   liệu** trong phạm vi, **không** carry-forward. Kỳ nào không có thao tác nào cho một chỉ
   tiêu thì chỉ tiêu đó bị loại khỏi mẫu tính của kỳ đó — chứ không kéo số tuần trước sang.
@@ -131,14 +155,53 @@ delta = overallProgress(kỳ hiện tại) − overallProgress(kỳ liền trư�
 
 ### 1.5 Biểu đồ xu hướng (`trend`)
 
-| `mode` | `label` | Trục X hiển thị |
+| `mode` | `period` — khoá định danh | `periodLabel` — nhãn trục X, **BE dựng sẵn** (Q43) |
 | --- | --- | --- |
-| `week` | `"YYYY-Www"` | **khoảng ngày** — `06/07 – 12/07` (Q12) |
-| `month`, `year` | `"Th.1" … "Th.12"` | `Th.1 … Th.12` |
+| `week` | `"YYYY-Www"` | **khoảng ngày** — `06/07 – 12/07` (Q12, dấu gạch theo T5) |
+| `month`, `year` | `"YYYY-MM"` | `"Th.1"` … `"Th.12"` (T7) |
 
-- **Chỉ trả điểm CÓ dữ liệu.** Không nội suy, không chèn điểm `null` cho đủ 52 tuần. Chuỗi
-  thưa vẽ ra đường đứt đoạn, và đó là sự thật; một đường liền do nội suy là số liệu bịa.
-- Giá trị kẹp `[0, 100]`.
+- **BE dựng nhãn trục X, FE vẽ nguyên chuỗi** — **Q43 (chốt 2026-09-10)**. FE **không** tự quy
+  đổi `"YYYY-Www"` ra khoảng ngày; lý do trùng với lý do BE dựng nhãn kỳ của từng dòng (§6.3).
+  Mã tuần vẫn đi kèm, làm **khoá định danh riêng** (`period`), tách khỏi chuỗi hiển thị.
+- **Trả ĐỦ các kỳ của phạm vi; kỳ không có dữ liệu mang `value: null`** — **Q44 (chốt
+  2026-09-10)**. Phạm vi theo chế độ:
+  - `mode=week` ⇒ **cửa sổ 12 tuần KẾT THÚC ở tuần đang xem** (tuần mà `date` chỉ tới —
+    không phải tuần hiện tại của lịch) — **Q54**. Cửa sổ **cắt ở đầu năm** đang lọc, không
+    lấn sang năm trước: xem tuần 3 ⇒ tuần 1…3 — **Q57** (cả hai chốt 2026-09-10). Tuần thuộc
+    năm nào: định nghĩa ISO của `spec/danh-muc-dti/business-rules.md` §5.1. `year` **phải bằng
+    năm ISO của tuần chứa `date`** (vd `date = 2025-12-29` thuộc tuần 1/2026 ⇒ `year = 2026`);
+    lệch ⇒ `400` — **Q61 (chốt 2026-09-10)**, mã ở `doc/contracts/dashboard.md` DB-1 § Mã lỗi.
+    Chỉ lệch khi gửi **cả hai**: bỏ trống `year` ⇒ lấy chính năm ISO của tuần chứa `date` —
+    **Q63 (chốt 2026-09-10)**; bỏ trống cả `date` lẫn `year` ⇒ tuần hiện tại / năm hiện tại.
+    Chế độ Tháng không có chuyện lệch năm ISO — tháng dương lịch luôn nằm gọn trong một năm —
+    nên Q61 và Q63 là luật của riêng chế độ Tuần.
+  - `mode=month|year` ⇒ `year` là **năm hiện tại** ⇒ từ kỳ đầu năm tới **kỳ hiện tại**, không
+    trả kỳ tương lai; `year` là **năm đã qua** ⇒ trọn năm.
+
+  > 🔄 **LẬT 2026-09-10 (Q54 + Q57).** Bản sáng cùng ngày áp định nghĩa *"đầu năm tới kỳ hiện
+  > tại / trọn năm"* cho **cả** chế độ Tuần — tức tới 37 rồi 52–53 nhãn khoảng ngày trên một
+  > trục. Q54 thu hẹp riêng chế độ Tuần; người dùng chọn 12 tuần thay cho 6 tuần của thiết kế
+  > đã duyệt. Tuần rỗng trong cửa sổ vẫn là `null`.
+  >
+  > **Việc còn mở:** cho 12 nhãn khoảng ngày vừa trục — lý do T7 (*12 nhãn khoảng-ngày không đủ
+  > chỗ*) nay áp vào chính chế độ này. Đề xuất Design đang soạn, **chờ duyệt**:
+  > `doc/Design/Frontend/PlatformManager/Components/TrendChart.md`. File này không chọn.
+- **Không nội suy** — `null` là "không có số", không phải một số đoán ra. Vế này của bản cũ giữ
+  nguyên.
+
+  > 🔄 **LẬT 2026-09-10 (Q44).** Bản trước: *"Chỉ trả điểm CÓ dữ liệu. Không nội suy, không
+  > chèn điểm `null` cho đủ 52 tuần. Chuỗi thưa vẽ ra đường đứt đoạn, và đó là sự thật; một
+  > đường liền do nội suy là số liệu bịa."*
+  >
+  > **Lý do cũ SAI về kỹ thuật, không chỉ lỗi thời.** Trục X của `chart.js` ở đây là trục
+  > **category**: nó chỉ có ô cho những nhãn được gửi. Bỏ hẳn một kỳ thì trục mất luôn ô của kỳ
+  > đó, và hai điểm kề nhau được nối **thẳng** — không có chỗ đứt nào. Chuỗi thưa vì thế vẽ ra
+  > đúng thứ câu cũ muốn cấm: một đường liền đi qua kỳ trống. Chỉ một `null` nằm đúng ô của kỳ
+  > (khi `spanGaps` tắt — mặc định của `chart.js`) mới ngắt được đường.
+  >
+  > Đừng "dọn" `null` ra khỏi `trend` cho gọn, và đừng khôi phục câu cũ vì nó nghe hợp lý — đó
+  > là quay lại đúng lỗi này.
+- Giá trị kẹp `[0, 100]` — áp cho kỳ **có** giá trị; `null` đi nguyên, không kẹp thành `0`.
 - **Trục X chế độ Tháng giữ `Th.1 … Th.12`, không đổi sang khoảng ngày — CHỐT 2026-09-05
   (T7), không còn để ngỏ.** Lý do: 12 nhãn khoảng-ngày không đủ chỗ trên trục. Chế độ tuần
   thì đã là khoảng ngày (Q12), và khoảng ngày của tháng vẫn đọc được ở thanh chọn kỳ + nhãn
@@ -232,6 +295,15 @@ Chỉ báo chênh lệch (`.delta`) là chuyện **khác**, không liên quan t�
 
 Ba điều kiện: `search` (mã hoặc tên) · `groupId` · `status`.
 
+`search` **không phân biệt hoa/thường và không phân biệt dấu** — **Q47 (chốt 2026-09-10)**,
+giống hệt ô tìm của màn Danh mục. Cách cài (cột chuẩn hoá) có file chủ là
+`spec/danh-muc-dti/business-rules.md` §1 — không mô tả lại ở đây. Export dùng chung object
+bộ lọc (§4.6) nên tự hưởng theo.
+
+**Kiểu khớp** của `search` (khớp tên thế nào, khớp mã thế nào) — **Q59 (chốt 2026-09-10)**:
+cùng luật khớp của màn Danh mục, file chủ vẫn là `spec/danh-muc-dti/business-rules.md` §1.
+Không định nghĩa lại ở đây; export tự hưởng theo như trên.
+
 **Luật phạm vi — chỗ dễ làm sai nhất của màn này:**
 
 > Bộ lọc chỉ áp cho **`table`**. `kpi`, `groups`, `trend` LUÔN tính trên **toàn bộ** chỉ tiêu
@@ -324,7 +396,7 @@ trong tháng" sẽ bỏ sót dữ liệu của hai tuần đầu-cuối.
 | ---: | --- | --- | --- |
 | 1 | `Mã` | `Criteria.Code` | |
 | 2 | `Chỉ tiêu` | `Criteria.Name` | |
-| 3 | `Nhóm` | `CriteriaGroup.Name` | |
+| 3 | `Nhóm` | `CriteriaGroup.Name` — **tên trần**, **không** tiền tố `Code.` (Q55, xem dưới bảng) | |
 | 4 | `Điểm tối đa` | `MaxScore` | |
 | 5 | `Tự đánh giá` | `SelfScore` | `—` |
 | 6 | `Thẩm định` | `VerifiedScore` | `—` |
@@ -338,6 +410,12 @@ trong tháng" sẽ bỏ sót dữ liệu của hai tuần đầu-cuối.
 **11 cột đầu ánh xạ 1-1 với 11 cột của file import** (`spec/danh-muc-dti/business-rules.md`
 §6.2), và `Minh chứng/Ghi chú` giữ nguyên tên. Vì vậy file tải về **nạp ngược lại được** —
 người dùng sửa trong Excel rồi import lên, không mất trường nào.
+
+**Cột 3 `Nhóm` ghi TÊN TRẦN — Q55 (chốt 2026-09-10).** Đúng chuỗi `CriteriaGroup.Name`, như
+file import; dạng `Code. Name` của **Q42** là luật **màn hình** và **không** áp cho file xuất. Lý
+do là round-trip: import khớp nhóm theo đúng chuỗi tên, nên một ô `1. Hạ tầng và Nền tảng số`
+nạp ngược lại sẽ không khớp nhóm nào. Dòng 10 `Bộ lọc đang áp` (§4.2) là mô tả cho người đọc,
+không phải dữ liệu nạp lại, nên nó vẫn được ghi `Nhóm: 1. Hạ tầng và Nền tảng số`.
 
 > ### ⚠️ Cột 7 là ngoại lệ DUY NHẤT của quy tắc "trùng tên với file import" — và nó an toàn
 >
@@ -522,6 +600,7 @@ ngày (nó là thứ người dùng thật sự đọc) và khoảng trắng qua
 | `periodLabel` / `previousPeriodLabel` của `GET /api/dashboard` | **BE** | Đã là trường của card DB-1 |
 | Nhãn kỳ của **từng dòng lưới** (cột `Kỳ của số liệu`, Q31) | **BE** | Cùng lý do dưới đây |
 | Option trong ô chọn kỳ | **FE**, từ `weeksInYear`/`monthsInYear` của DB-3 | DB-3 đã trả `value` + `date`, đủ dựng (ghi chú cuối DB-3) |
+| **Nhãn trục X của `trend`** (`trend[].periodLabel`), cả chế độ Tuần lẫn Tháng/Năm | **BE** — **Q43 (chốt 2026-09-10)** | Cùng lý do dưới đây: nhãn tuần là khoảng ngày, dựng ở FE nghĩa là FE phải có lịch ISO riêng. Trước 2026-09-10 bảng này **không có dòng** cho trục X — chỗ hiển thị kỳ duy nhất không ai được giao |
 
 > **Vì sao BE dựng nhãn kỳ của từng dòng thay vì trả mã `"2026-W33"` cho FE tự ghép:** để
 > ghép được, FE phải quy `"2026-W33"` về khoảng ngày, tức phải có **lịch ISO** của riêng nó.
@@ -546,8 +625,28 @@ từng đọc bản trước không mang theo giả định cũ:
 | Tên thư mục `spec/` | đã xong 2026-09-05 | ⚠️ cổng KHÔNG bắt được loại tham chiếu này — `check-docs.sh` §4 chỉ quét tiền tố `src/` và `doc/`, không quét `spec/` |
 | Ô KPI nào có giá trị ngay sau import | **T12** (2026-09-06) — ô 1, 2 hiện `—`; ô 3, 4 hiện `0`; ô 5 có số thật | §1.6, file chủ |
 | Nhãn kỳ của cột `Kỳ của số liệu` | **Q38** (2026-09-06) — chỉ khoảng ngày | §6.2 |
+| Nhóm chỉ tiêu hiển thị thế nào | **Q42** (2026-09-10) — `Code. Name`, vd `1. Hạ tầng và Nền tảng số` | `spec/dashboard-dti/ui-spec.md` §3.3, §3.5 |
+| Ai dựng nhãn trục X chế độ Tuần | **Q43** (2026-09-10) — **BE**, dạng khoảng ngày; mã tuần giữ làm khoá riêng | §1.5, §6.3; `doc/contracts/dashboard.md` DB-1 luật 2 |
+| `trend` làm gì với kỳ không có dữ liệu | **Q44** (2026-09-10) — trả **đủ** các kỳ, kỳ rỗng `value: null` | §1.5; `doc/contracts/dashboard.md` DB-1 luật 2 |
+| Hai bản ghi cùng chỉ tiêu trong một tuần | **Q46** (2026-09-10) — lấy bản `AssessmentDate` lớn nhất | §1.2 → file chủ `spec/danh-muc-dti/business-rules.md` §5.2 |
+| Tìm kiếm có phân biệt dấu không | **Q47** (2026-09-10) — **không**, giống màn Danh mục | §3; `doc/contracts/dashboard.md` DB-1 |
+| Nhãn hai ô KPI đầu ở chế độ Tháng/Năm | **Q52** (2026-09-10) — nhãn đổi **theo chế độ kỳ** (tuần / tháng / năm), không ghim chữ "tuần" | `spec/dashboard-dti/ui-spec.md` §3.2 → copy ở file chủ `doc/Design/Frontend/PlatformManager/Components/KpiTile.md` § Copy |
+| Biểu đồ chế độ Tuần trả bao nhiêu tuần | **Q54** (2026-09-10) — cửa sổ **12 tuần kết thúc ở tuần đang xem** (theo `date`), không phải tuần hiện tại của lịch | §1.5; `doc/contracts/dashboard.md` DB-1 luật 2; `spec/dashboard-dti/ui-spec.md` §3.4 |
+| Cột `Nhóm` của file xuất | **Q55** (2026-09-10) — **tên trần** `CriteriaGroup.Name`; Q42 không áp cho file xuất (round-trip) | §4.3; `doc/contracts/dashboard.md` DB-4 |
+| Cửa sổ 12 tuần chạm đầu năm | **Q57** (2026-09-10) — **cắt ở đầu năm** đang lọc, không lấn sang năm trước | §1.5; `doc/contracts/dashboard.md` DB-1 luật 2 |
+| Kiểu khớp của tìm kiếm | **Q59** (2026-09-10) — cùng luật khớp của màn Danh mục | §3 → file chủ `spec/danh-muc-dti/business-rules.md` §1; `doc/contracts/dashboard.md` DB-1 |
+| `date` và `year` lệch năm ISO (chế độ Tuần) | **Q61** (2026-09-10) — `400` + `DASHBOARD.PERIOD_YEAR_MISMATCH` | §1.5; `doc/contracts/dashboard.md` DB-1 § Mã lỗi |
+| Bỏ trống `year` khi `date` thuộc năm khác | **Q63** (2026-09-10) — lấy năm ISO của tuần chứa `date`; chỉ `400` khi gửi cả hai mà lệch | §1.5; `doc/contracts/dashboard.md` DB-1 |
+| Tham số lạ trên URL (link cũ) | **Q62** (2026-09-10) — FE đưa về mặc định, sửa URL, không báo gì, không gọi API với giá trị sai | `spec/dashboard-dti/ui-spec.md` §2 |
 
-**Không còn mục nào để ngỏ trong cả cụm DTI.** Hai câu hỏi từng mở ở
+Mười ba dòng cuối là của vòng **2026-09-10**; chúng không phải mục từng để ngỏ ở đây mà là chốt
+mới, ghi vào bảng này để có **một** chỗ tra theo mã Q.
+
+> 🔄 **LẬT 2026-09-10.** Chỗ này từng ghi *"Không còn mục nào để ngỏ trong cả cụm DTI"* — sai
+> hiện trạng: phía Dashboard vẫn còn mục mở, vd cách cho 12 nhãn khoảng ngày vừa trục (§1.5).
+
+**Các mục còn mở của cả cụm DTI có một danh sách chủ: `spec/danh-muc-dti/business-rules.md`
+§8** — không chép sang đây. Hai câu hỏi từng mở ở
 `spec/danh-muc-dti/business-rules.md` §8 đã đóng ngày 2026-09-06 bằng **Q37** (chỉ nhập theo
 tuần) và **Q35** (nhật ký job nền ghi đúng người). Cả hai **không** đổi gì ở màn này:
 `mode=week` vẫn lọc theo `AssessmentDate` — Q37 chọn phương án **không** dựng cột kỳ riêng,

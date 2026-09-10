@@ -8,11 +8,11 @@ namespace PlatformManager.ArchTests;
 /// dưới <c>src/BE/Core/</c> được là mã migration EF (lớp <c>Migration</c>, lớp
 /// <c>ModelSnapshot</c>, thuộc tính <c>[Migration(...)]</c>, tham số <c>MigrationBuilder</c>).
 /// Chúng thuộc project HOST — hôm nay là <c>PlatformManager.Api</c>. Riêng thư mục
-/// <c>Core/…/Persistence/Migrations/sql/</c> thì Ở LẠI Core: đó là artifact schema Corebase ship.
+/// <c>Core/PlatformManager.Core.Persistence/Migrations/sql/</c> thì Ở LẠI Core: artifact schema Corebase ship.
 ///
 /// <para><b>Lỗi thật nó ngăn — mất bảng của dự án thứ hai.</b> EF không đọc database để biết cần
 /// sinh gì; nó so model hiện tại với <c>ModelSnapshot</c>, một file TRẠNG THÁI ghi đè được. Nếu
-/// snapshot nằm trong Core.Infrastructure thì lượt <c>migrations add</c> đầu tiên của dự án thứ
+/// snapshot nằm trong một project Core thì lượt <c>migrations add</c> đầu tiên của dự án thứ
 /// hai sẽ GHI ĐÈ nó để nhét bảng nghiệp vụ của dự án đó vào. Từ đó Core và dự án 2 cùng sở hữu
 /// một file trạng thái, và lần Core ship bản vá là lần merge hỏng: mất bảng dự án 2 khỏi snapshot
 /// (lượt sinh migration kế tiếp EF tưởng bảng chưa tồn tại và SINH LẠI <c>CREATE TABLE</c> lên
@@ -150,7 +150,7 @@ public class MigrationsLocationTests
     {
         var sqlDirectory = Path.Combine(
             RepoSourceTree.CoreDirectory,
-            "PlatformManager.Core.Infrastructure", "Persistence", "Migrations", "sql");
+            "PlatformManager.Core.Persistence", "Migrations", "sql");
 
         Assert.True(Directory.Exists(sqlDirectory),
             $"Không còn thư mục '{sqlDirectory}'. File .sql là ARTIFACT SCHEMA mà Corebase ship cho dự án " +

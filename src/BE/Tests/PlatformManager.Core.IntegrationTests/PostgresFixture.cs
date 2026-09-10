@@ -11,7 +11,7 @@ namespace PlatformManager.Core.IntegrationTests;
 
 /// <summary>
 /// Postgres THẬT trong container, schema dựng từ CHÍNH các file
-/// <c>src/BE/Core/PlatformManager.Core.Infrastructure/Persistence/Migrations/sql/*.sql</c> mà
+/// <c>src/BE/Core/PlatformManager.Core.Persistence/Migrations/sql/*.sql</c> mà
 /// người dùng chạy tay lên DB thật — KHÔNG dùng <c>EnsureCreated()</c> từ model EF.
 ///
 /// Vì sao chọn nguồn .sql (quyết định 2026-08-19): như vậy test kiểm luôn tính đúng của chính
@@ -197,7 +197,7 @@ public sealed class PostgresFixture : IAsyncLifetime
     }
 
     private static readonly string[] MigrationsSqlDirectorySegments =
-        ["src", "BE", "Core", "PlatformManager.Core.Infrastructure", "Persistence", "Migrations", "sql"];
+        ["src", "BE", "Core", "PlatformManager.Core.Persistence", "Migrations", "sql"];
 
     private static async Task ApplyMigrationScriptsAsync(string connectionString)
     {

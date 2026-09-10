@@ -10,11 +10,19 @@ updated: "2026-09-09"
 # UI Spec — Danh mục DTI
 
 > 📐 **ĐÍCH ĐẾN — CHƯA THI CÔNG.** Toàn bộ file này mô tả màn hình **sẽ dựng**.
-> Code cũ (`src/FE/src/app/modules/danh-muc-dti/`) đã bị xoá 2026-08-29 và thư
-> mục `src/FE/src/app/modules/` hiện **không tồn tại** — không dòng nào dưới đây
-> được đọc như hiện trạng. Chỗ nào trích `src/FE/src/styles.scss` hoặc
-> `src/FE/src/app/app.routes.ts` là Core **đang sống**, đã mở file đối chiếu
-> ngày 2026-09-05.
+> Code cũ của màn bị xoá 2026-08-29.
+>
+> **Hiện trạng FE, đối chiếu 2026-09-10** (bản trước của đoạn này nói `modules/`
+> *"không tồn tại"* — sai từ 2026-09-09): thư mục
+> `src/FE/src/app/modules/danh-muc-dti/` đã có, route `/danh-muc/dti` đã khai
+> (`src/FE/src/app/app.routes.ts:40`), nhưng đó là **KHUNG có chủ đích** — trang
+> chỉ có hàng tiêu đề và một câu nói rõ nó chưa xong, lý do ghi tại chỗ ở
+> `src/FE/src/app/modules/danh-muc-dti/pages/danh-muc-dti/danh-muc-dti.page.ts:7`.
+> **Không vùng nào, không trạng thái nào, không dialog nào dưới đây đã dựng** —
+> không dòng nào của file này được đọc như hiện trạng.
+>
+> Chỗ nào trích `src/FE/src/styles.scss` hoặc `src/FE/src/app/app.routes.ts` là
+> Core **đang sống**, đã mở file đối chiếu ngày 2026-09-05.
 
 ## 0. Nguồn và ranh giới của file này
 
@@ -65,8 +73,10 @@ và cùng khuôn hai cấp với `/quan-tri/nguoi-dung` của Core. Tầng:
 `modules/danh-muc-dti/` (nghiệp vụ, không phải `platform/`) theo
 `doc/kien-truc-core-module.md` §Nguyên tắc áp dụng khi thêm module mới.
 
-- Khai `loadChildren` **một dòng** vào `src/FE/src/app/app.routes.ts` — hôm nay
-  file đó chỉ có route Core. Đếm bằng lệnh, đừng chép số:
+- Khai `loadChildren` **một dòng** vào `src/FE/src/app/app.routes.ts`. ✅ Dòng đó
+  ĐÃ CÓ THẬT từ lượt dựng khung 2026-09-09 — đối chiếu 2026-09-10:
+  `src/FE/src/app/app.routes.ts:40`; file **không** còn chỉ có route Core như bản
+  trước của gạch đầu dòng này ghi. Đếm bằng lệnh, đừng chép số:
   `grep -c "loadChildren" src/FE/src/app/app.routes.ts`.
 - Guard khai trong `danh-muc-dti.routes.ts` của chính feature: **đúng hai cái**,
   `authGuard → mustChangePasswordGuard` (`doc/huong_dan/quy-uoc/fe-routing-guard.md`
@@ -88,6 +98,21 @@ lọc dùng `replaceUrl: true`. URL là nguồn sự thật; component đọc qu
 mới gọi API, **không** giữ bản sao state song song. Ở lại trong signal: dữ liệu
 đã tải, cờ loading, dialog nào đang mở, bản nháp form chưa lưu.
 
+**Tham số lọc lạ trên URL (link cũ, gõ tay) — chốt Q62 (2026-09-10).** FE đưa **đúng
+tham số đó về mặc định** (§5.1), ghi lại URL bằng `replaceUrl: true`, **không** báo gì,
+và **không** gọi API với giá trị sai — việc làm sạch xảy ra **trước** lần gọi DM-2 đầu
+tiên. "Lạ" nghĩa là nằm ngoài miền của ô lọc: `status` ngoài bốn giá trị Q4 · `period`
+sai khuôn (`all` / `YYYY-Www` / `YYYY-MM`) · `groupId` không phải GUID hoặc không có
+trong danh sách DM-1 · `year` / `page` / `pageSize` không phải số nguyên hoặc ngoài miền
+(§7.2).
+
+- `fe-routing-guard.md` §8 **chưa có** quy ước cho ca này, nên luật ghi ở đây cho màn
+  này. Màn thứ hai cần đúng luật đó thì chuyển nó lên §8 kia rồi rút chỗ này còn một
+  dòng trỏ — đừng để hai bản.
+- **BE vẫn giữ** `CRITERIA.STATUS_INVALID` và `CRITERIA.ASSESSMENT_PERIOD_INVALID`
+  (`doc/contracts/danh-muc-dti.md` §Mã lỗi của DM-2): nơi gọi khác vẫn phải bị từ chối.
+  Q62 chỉ làm người dùng bình thường không bao giờ gặp hai mã đó.
+
 ## 3. Layout theo vùng
 
 Khung ngoài là app shell (`Sidebar` + `Topbar` + `main` + `Toast`,
@@ -103,7 +128,7 @@ thiếu nửa nào lưới cũng âm thầm về chiều cao nội dung (§3.2).
 | --- | --- | --- | --- | --- |
 | V1 | Khung trang | `Card` | `.card` — `styles.scss` § `.card` | `.dti-grid-card` là layout page-local kèm theo, không phải component |
 | V2 | Hàng tiêu đề | `Card` §Anatomy | `.title` — `styles.scss` § `.title` | `<h2>Danh mục DTI</h2>` + `<span class="muted" aria-live="polite">` với số chỉ tiêu (Q16 a + b) |
-| V3 | Băng thông báo (có điều kiện) | `NoticeBanner` | `.notice` — `styles.scss` § `.notice` | **Bốn vai loại trừ nhau**, tối đa một băng render. Thứ tự ưu tiên: (a) "chưa import lần nào" — §5.3 (T9); (b) chỉ đọc vì chọn tháng/năm, **kèm cách thoát** — §5.5.1 (Q37); (c) chỉ đọc vì không có quyền ghi — §5.6.1 (Q39); (d) nhắc kỳ đích khi kỳ đang chọn **không trùng nơi lời ghi sẽ rơi vào** — **hai** ca: một **tuần đã qua**, **và** `Tất cả` (mọi lời ghi vào **tuần hiện tại**, `spec/danh-muc-dti/business-rules.md` §5.3 bước 1) — §5.5. Chọn đúng **tuần hiện tại** thì hai thứ trùng nhau ⇒ **không có băng**. Lối đi tiếp luôn là **link chữ inline**, không phải nút (T11) |
+| V3 | Băng thông báo (có điều kiện) | `NoticeBanner` | `.notice` — `styles.scss` § `.notice` | **Ba vai loại trừ nhau**, tối đa một băng render. Thứ tự ưu tiên: (a) "chưa import lần nào" — §5.3 (T9); (b) chỉ đọc vì chọn tháng/năm, **kèm cách thoát** — §5.5.1 (Q37); ~~(c) chỉ đọc vì không có quyền ghi~~ — **gỡ 2026-09-10 (Q51)**: thiếu quyền ghi thì **không có băng**, §5.6.1 (bản trước ghi "Bốn vai"); (d) nhắc kỳ đích khi kỳ đang chọn **không trùng nơi lời ghi sẽ rơi vào** — **hai** ca: một **tuần đã qua**, **và** `Tất cả` (mọi lời ghi vào **tuần hiện tại**, `spec/danh-muc-dti/business-rules.md` §5.3 bước 1) — §5.5. Chọn đúng **tuần hiện tại** thì hai thứ trùng nhau ⇒ **không có băng**. Lối đi tiếp luôn là **link chữ inline**, không phải nút (T11) |
 | V4 | Thanh công cụ | `Toolbar` | `.toolbar.no-print` — `styles.scss` § `.toolbar` | Xem §3.1 |
 | V5 | Lưới dữ liệu | `DataTable` qua `<app-data-grid class="grid-host">` (biến thể **ghim cột**) + `Table` | `.tablewrap` do **chính component** dựng; chiều cao theo chuỗi flex `page-fill` ⇄ `grid-host`, `scrollHeight="flex"` | Xem §3.2. Biến thể ghim cột do Q30 mở rộng hợp đồng — `Components/DataTable.md` § Variants |
 | V6 | Ô trạng thái trong lưới | `Badge` | `.badge.ok` / `.warn` / `.bad` / `.neutral` — `styles.scss` § `.badge` | Ánh xạ Q10 |
@@ -225,7 +250,8 @@ số của 2025, sửa một dòng, và tin rằng bản ghi đi vào 2025. Cộ
 cũng không cứu được, vì T14 đã bỏ năm khỏi chuỗi hiển thị (§3.2.2 luật c) — theo
 lập luận "mọi dòng đều thuộc năm đang lọc", một lập luận **chỉ đúng khi đọc**.
 
-🛑 **Chọn một tuần cụ thể của năm cũ thì VẪN SỬA ĐƯỢC.** Nhập bù kỳ đã qua là quyết
+🛑 **Chọn một tuần cụ thể của năm cũ thì VẪN SỬA ĐƯỢC** — khẳng định lại bằng Q41
+(2026-09-10). Nhập bù kỳ đã qua là quyết
 định đã chốt ở Q20 và T15 **không** lật nó. Khác biệt giữa hai ca là kỳ đích **có
 hiện trên màn hình hay không**: chọn `Tuần 33/2025` thì kỳ đích chính là thứ người
 dùng vừa chọn; chọn `Tất cả` thì kỳ đích là một tuần của năm khác, không xuất hiện
@@ -334,10 +360,11 @@ cột được khai thành **biến thể chung** của component ở
 **chỉ tuyên bố màn Danh mục dùng biến thể đó và ghim cột nào** — không định nghĩa
 lại cơ chế, không đặt tên class riêng, không copy giá trị `min-width` sang đây.
 
-📐 **Ghim cột khai qua input `frozenColumns` của `<app-data-grid>` — chốt
-2026-09-09, CHƯA THI CÔNG.** Input đó **chưa tồn tại** trong component đang chạy
-(`src/FE/src/app/shared/components/data-grid/data-grid.ts`), phải thêm trước khi
-dựng màn này. Tên, kiểu và hành vi chính xác của input thuộc
+✅ **Ghim cột khai qua input `frozenColumns` của `<app-data-grid>` — chốt
+2026-09-09, và input đó ĐÃ CÓ THẬT trong component đang chạy (đối chiếu
+2026-09-10: `src/FE/src/app/shared/components/data-grid/data-grid.ts:139`).**
+Màn này chỉ việc khai `[frozenColumns]` ở call site — không phải mở rộng
+component trước rồi mới dựng màn. Tên, kiểu và hành vi chính xác của input thuộc
 `Components/DataTable.md` § Variants — file này chỉ nói **hai cột nào** bị ghim.
 
 🛑 **KHÔNG đặt `pFrozenColumn` ở call site.** `pFrozenColumn` và `alignFrozen` là
@@ -380,14 +407,15 @@ tính theo số cột **đang render**, không hardcode.
 Đây không phải hiệu ứng phụ, nó là **phản hồi trực quan** của Q26: ở chế độ `Tất
 cả`, lời ghi rơi vào **tuần hiện tại** chứ không ghi đè kỳ cũ đang hiển thị. Người
 dùng vừa sửa một dòng đang hiển thị số của tuần 31 và thấy ô kỳ nhảy từ
-`27/07–02/08` sang `31/08–06/09` biết ngay hai điều: bản ghi mới đã được tạo cho
+`27/07 – 02/08` sang `31/08 – 06/09` biết ngay hai điều: bản ghi mới đã được tạo cho
 tuần này, và số của tuần 31 **vẫn còn nguyên**.
 
 *(Bản trước của mục này ghi "kỳ hiện tại". Sau Q37 chỉ còn một đơn vị nhập nên nói
 thẳng là **tuần** — "kỳ" để mở khả năng nó là tháng, và khả năng đó đã bị đóng.)*
 
-- Giá trị mới lấy **từ response** của lời ghi (§7.3, §7.4 — response là một dòng
-  lưới đầy đủ), không phải do FE tự đặt bằng đồng hồ máy khách. Đồng hồ máy khách
+- Giá trị mới lấy **từ response** của lời ghi (§7.3 nhánh sửa, §7.4 — response là một
+  dòng lưới đầy đủ; **thêm mới** thì từ lần tải lại lưới, Q49), không phải do FE tự
+  đặt bằng đồng hồ máy khách. Đồng hồ máy khách
   sai múi giờ hoặc lệch ngày là đủ để ô này nói dối đúng vào lúc nó quan trọng nhất.
 - Áp cho **cả hai** đường ghi: dialog `Sửa chỉ tiêu` (V9) và hai ô sửa inline.
 - Ở chế độ một **tuần** cụ thể, cột không render nên luật (b) không có gì để làm —
@@ -519,8 +547,20 @@ Lỗi từ server hiện ở `.form-error` (`styles.scss` § `.form-error`) ngay
 `.dialog-actions`. `.dialog-actions` (`styles.scss` § `.dialog-actions`) chứa `Huỷ` (`.btn`) và
 `Lưu chỉ tiêu` (`.btn.primary`).
 
-Response trả về **cùng shape với một dòng của lưới**, nên đóng dialog xong FE
-**thay đúng dòng đó tại chỗ**, không gọi lại cả danh sách.
+Sau khi lưu, **hai nhánh khác nhau** (Q49, chốt 2026-09-10):
+
+| Nhánh | Response | FE làm gì |
+| --- | --- | --- |
+| **Sửa** — `PUT /api/criteria/{id}` (DM-4) | `CriteriaRowDto` — cùng shape một dòng lưới | **thay đúng dòng đó tại chỗ**, không gọi lại danh sách |
+| **Thêm** — `POST /api/criteria` (DM-3) | `CriteriaDto` — **không** phải dòng lưới | **tải lại lưới** (DM-2) theo state đang có trên URL (§2) |
+
+Vì sao thêm mới phải tải lại: vị trí của dòng mới do **sắp xếp và phân trang phía server**
+quyết — trang đang xem có thể không chứa nó. FE tự chèn là FE tự sắp, tức dựng nguồn sự thật
+thứ hai cho thứ tự dòng.
+
+> 🔄 **LẬT 2026-09-10 (Q49).** Bản trước ghi *"Response trả về cùng shape với một dòng của
+> lưới, nên đóng dialog xong FE thay đúng dòng đó tại chỗ"* cho **cả** thêm lẫn sửa. Sai với
+> nhánh thêm: DM-3 trả `CriteriaDto`. Hợp đồng giữ nguyên; spec sửa theo.
 
 ### 3.4 Import — 2 dialog nối tiếp
 
@@ -537,8 +577,16 @@ vùng `aria-live` (a11y §4 mục 4).
 
 **Dialog Kết quả import** — mở khi job `Succeeded`. Khối `.import-summary` gồm
 một câu tổng hợp (tổng số dòng, số thành công `.ok`, số lỗi `.err`, số chỉ tiêu
-tự tạo mới) rồi một `<ul>`, mỗi lỗi một `<li class="err">` theo khuôn
-`Dòng {số dòng} — mã "{mã}": {thông điệp}`. Đóng dialog → lưới **refetch**.
+tự tạo mới) rồi một `<ul>`, mỗi lỗi một `<li class="err">`: số dòng (`rowNumber`) +
+câu FE dựng từ bảng dịch của `code`, ráp `messageParams` vào. Mã chỉ tiêu là **tham
+số** `Code`, không phải trường riêng, và có mã lỗi không mang nó
+(`IMPORT.ROW_CODE_MISSING`). Đóng dialog → lưới **refetch**.
+
+> 🔄 **Sửa 2026-09-10 — theo shape đã chốt 2026-09-09.** Bản trước ghi khuôn
+> `Dòng {số dòng} — mã "{mã}": {thông điệp}`, trong đó `{thông điệp}` là câu BE ghép sẵn.
+> Hợp đồng đã gỡ `message` khỏi `errors[]` (`doc/contracts/danh-muc-dti.md` DM-7 bước 2):
+> mỗi phần tử chỉ còn `{ rowNumber, code, messageParams }`. Chuỗi verbatim của từng mã
+> **chưa chốt** — thuộc `Screens/02-danh-muc-dti.md` § Copy, không định nghĩa ở đây.
 
 Job `Failed` (lỗi hạ tầng) **không** mở dialog kết quả — hiện `Toast` lỗi. Ranh
 giới này thuộc contract: lỗi từng dòng đi vào `result.errors`, job crash đi vào
@@ -582,8 +630,14 @@ hai cách hiển thị và hai câu nói khác nhau, và ranh giới là *ngư�
 | Điều kiện 1 | **"không phải của bạn"** | `hidden` | không tự thoát được — phải được cấp quyền |
 | Điều kiện 2 và 3 | **"không phải lúc này"** | `disabled` | đổi bộ lọc: chọn một tuần, hoặc quay về năm hiện tại |
 
-Điều kiện 2 và 3 **cộng dồn chứ không thay nhau** — `editBlockedBy` có thể mang cả
-hai mã cùng lúc, và dải băng V3 phải nêu **hết**, không phải một câu chung chung.
+Điều kiện 2 và 3 **loại trừ nhau** với bộ mã hôm nay — `PERIOD_OUT_OF_YEAR` chỉ sinh
+khi `period = "all"`, `PERIOD_NOT_WEEKLY` chỉ khi kỳ là tháng — nên khi có quyền,
+`editBlockedBy` mang **tối đa một** mã. Dải băng V3 vẫn đọc **cả mảng** (§7.1a ràng
+buộc 2), không viết `[0]`.
+
+> 🔄 **LẬT 2026-09-10 (Q48).** Bản trước ghi *"Điều kiện 2 và 3 **cộng dồn chứ không
+> thay nhau** — `editBlockedBy` có thể mang cả hai mã cùng lúc"*. Sai theo bất biến ở
+> `doc/contracts/danh-muc-dti.md` DM-2 mục 3.
 
 ⚠️ Đừng đọc điều kiện 3 thành *"năm cũ thì cấm"*: `Năm = 2025` + `Kỳ = Tuần 40/2025`
 **vẫn sửa được** (kỳ đích nằm trong 2025). Chỉ `Năm = 2025` + `Kỳ = Tất cả` mới
@@ -681,8 +735,9 @@ dùng thông điệp trong bảng.
   nào.
 - Băng và hai vai kia của V3 **loại trừ nhau trên thực tế**: chưa có chỉ tiêu nào
   thì không có gì để ghi vào tuần nào, và cũng không có gì để chỉ-đọc. Nếu nhiều
-  điều kiện cùng đúng thì thứ tự ưu tiên là **rỗng → chỉ đọc (Q37/Q39) → nhắc kỳ
-  đích**: cái trên nói việc cần làm trước cái dưới.
+  điều kiện cùng đúng thì thứ tự ưu tiên là **rỗng → chỉ đọc vì bộ lọc (Q37/T15) →
+  nhắc kỳ đích**: cái trên nói việc cần làm trước cái dưới. *(🔄 LẬT 2026-09-10: bản
+  trước ghi `Q37/Q39` — Q51 gỡ vai thiếu quyền khỏi băng.)*
 - Khi không có quyền ghi (Q39), băng rỗng **bỏ hai lối đi** vì cả hai đều đã bị ẩn —
   lúc đó nó chỉ còn là câu thông báo. Đừng trỏ tới một nút không tồn tại.
 - `colspan` tính theo **số cột đang render**, nhớ rằng cột `Kỳ của số liệu` chỉ có
@@ -829,7 +884,7 @@ xử lý**, nên gộp vào một mục:
 
 | Ca | Mã (§7.1a) | Điều kiện | Thoát bằng cách |
 | --- | --- | --- | --- |
-| **Q37** | `PERIOD_NOT_WEEKLY` | `Kỳ trong năm` là **tháng** hoặc cả năm | chọn một **tuần**, hoặc `Tất cả` |
+| **Q37** | `PERIOD_NOT_WEEKLY` | `Kỳ trong năm` là **tháng** hoặc cả năm | **tuỳ năm (Q60)**: năm hiện tại → chọn một **tuần**, hoặc `Tất cả`; **năm cũ** → **chỉ** chọn một **tuần cụ thể**, vì `Tất cả` của năm cũ chỉ đọc (T15). *(🔄 LẬT 2026-09-10: bản trước ghi "chọn một tuần, hoặc `Tất cả`" cho mọi năm.)* |
 | **T15** | `PERIOD_OUT_OF_YEAR` | kỳ đích **không nằm trong năm đang lọc** — thực tế là ca `năm cũ` + `Tất cả` | chọn một **tuần cụ thể của năm đang xem**, hoặc quay về năm hiện tại |
 
 Cả hai **khác hẳn** trạng thái chỉ-đọc-vì-thiếu-quyền ở §5.6.1 — nguyên nhân khác,
@@ -840,7 +895,7 @@ lối thoát khác, nên **không gộp thành một nhánh template**:
 | Nguyên nhân | lựa chọn của chính người dùng | tài khoản không được cấp key |
 | Người dùng tự thoát được không | **CÓ** — đổi bộ lọc | **KHÔNG** — phải được cấp quyền |
 | Affordance ghi | **hiện nhưng `disabled`** — *"không phải lúc này"* | **ẩn hẳn** — *"không phải của bạn"* |
-| Có dải nhắc không | **CÓ**, và dải phải nêu cách thoát | có, nhưng chỉ để giải thích |
+| Có dải nhắc không | **CÓ**, và dải phải nêu cách thoát | **KHÔNG** — Q51 (2026-09-10), khẳng định Q39. *(🔄 LẬT: bản trước ghi "có, nhưng chỉ để giải thích".)* |
 
 **Vì sao `disabled` chứ không ẩn:** người dùng này **có** quyền ghi và sẽ ghi ngay
 sau đây; ẩn nút đi rồi hiện lại khi họ đổi ô lọc là làm toolbar nhảy và làm người
@@ -858,10 +913,26 @@ một control không làm gì).
 mảng `editBlockedBy` (§7.1a): **một dòng cho mỗi mã**, theo đúng thứ tự mảng. Một
 câu chung chung kiểu "chọn lại bộ lọc để sửa" bắt người dùng thử từng ô.
 
-Ca `Năm = 2025` + `Kỳ = Tháng 8` là lý do mảng phải mang **nhiều** phần tử: sửa
-riêng đơn vị kỳ thành `Tất cả` thì vẫn trượt tiếp `PERIOD_OUT_OF_YEAR`. Nêu cả hai
-mã cùng lúc cho người dùng thấy đích đến trong một lần — **một tuần cụ thể của
-2025**. Chuỗi verbatim thuộc `Screens/02-danh-muc-dti.md` § Copy.
+**`NO_WRITE_PERMISSION` KHÔNG sinh dòng băng nào** (Q51, 2026-09-10). Khi thiếu quyền,
+mảng chỉ có đúng mã đó (§7.1a), nên ca thiếu quyền **không có băng** — §5.6.1 ràng
+buộc 4. "Một dòng cho mỗi mã" ở trên chỉ nói về hai mã lọc.
+
+**Câu băng của ca `PERIOD_OUT_OF_YEAR` (năm cũ + `Tất cả`) đã duyệt NGUYÊN VĂN**
+(Q50, 2026-09-10). File chủ của câu đó là `Screens/02-danh-muc-dti.md` § Copy — không
+chép sang đây.
+
+Ca `Năm = 2025` + `Kỳ = Tháng 8` cho **đúng** `["PERIOD_NOT_WEEKLY"]` (Q48) — **một**
+dòng băng. Cái vấp của nó là **nối tiếp**: đổi riêng đơn vị kỳ thành `Tất cả` thì
+trượt tiếp `PERIOD_OUT_OF_YEAR`. Lối thoát một bước là **một tuần cụ thể của 2025**
+(Q41). **Q60 (2026-09-10) đóng chỗ này:** dòng băng của `PERIOD_NOT_WEEKLY` gợi ý thoát
+**tuỳ năm đang xem** — năm hiện tại: *chọn một tuần hoặc `Tất cả`*; năm cũ: **chỉ** *chọn
+một tuần cụ thể* (hàng Q37 của bảng đầu mục). Mã vẫn do server trả; FE chỉ chọn **câu** theo
+ô `Năm đánh giá`, không tự suy điều kiện ghi (§7.1a ràng buộc 1). Chuỗi verbatim của cả hai
+biến thể thuộc `Screens/02-danh-muc-dti.md` § Copy — không chép sang đây.
+
+> 🔄 **LẬT 2026-09-10 (Q48).** Bản trước ghi ca này là *"lý do mảng phải mang
+> **nhiều** phần tử"* và bảo nêu cả hai mã cùng lúc. Hợp đồng không bao giờ trả hai
+> mã đó cùng nhau.
 
 **Cột `Kỳ của số liệu` render hay không tuỳ ca** — nó chỉ phụ thuộc chế độ kỳ
 (§3.2.2 luật a), không phụ thuộc trạng thái chỉ đọc:
@@ -944,10 +1015,16 @@ Bốn ràng buộc thi công:
    một ô mà bàn phím Tab vẫn dừng vào và trình đọc màn hình vẫn đọc là "nút" —
    đúng dạng lỗi a11y mà `doc/huong_dan/wiki-core/fe/15-accessibility.md` §4 gọi
    tên.
-4. **Không dựng trạng thái rỗng riêng.** Trang vẫn là trang bình thường, đầy dữ
-   liệu. Nếu cần một dòng giải thích thì đó là `NoticeBanner` ở V3 với biến thể
-   **mặc định** (thông tin) — không phải `.warn`, không phải `.bad`: không có
-   quyền ghi là **cấu hình tài khoản**, không phải lỗi và không phải cảnh báo.
+4. **Không dựng trạng thái rỗng riêng, và KHÔNG có dải băng giải thích** (Q51,
+   chốt 2026-09-10, khẳng định Q39). Trang vẫn là trang bình thường, đầy dữ liệu;
+   khác biệt duy nhất là không có gì để bấm. Không có quyền ghi là **cấu hình tài
+   khoản** — không phải lỗi, không phải cảnh báo, và cũng không phải thứ người dùng
+   tự làm gì được, nên một dải băng ở đây không dẫn đi đâu.
+
+   > 🔄 **LẬT 2026-09-10 (Q51).** Bản trước ghi *"Nếu cần một dòng giải thích thì đó là
+   > `NoticeBanner` ở V3 với biến thể mặc định"*, và bảng vùng §3 xếp nó thành một vai của
+   > V3. Gỡ cả hai. Băng rỗng vì chưa import (§5.3) **không** bị ảnh hưởng: băng đó hiện
+   > cho mọi người, người thiếu quyền chỉ thấy nó mất hai lối đi.
 
 FE lấy quyền từ đâu, và trường nào của API phản ánh nó — thuộc
 `doc/contracts/danh-muc-dti.md` (AGENT B khai trong cùng vòng 2026-09-06). FE
@@ -1008,7 +1085,7 @@ trường đổi thì card là nguồn chốt, bảng này đuổi theo.
 | *(khoá hàng)* | `criteriaId` | `CriteriaId` | guid | `dataKey` của `p-table` |
 | Mã | `code` | `Code` | string | ≤ 20 ký tự, có thể 3 cấp |
 | Tên | `name` | `Name` | string | |
-| Nhóm | `groupName` (+ `groupCode`, `groupId`) | `GroupName` / `GroupCode` / `GroupId` | string / guid | `groupId` dùng cho bộ lọc |
+| Nhóm | `groupName` (+ `groupCode`, `groupId`) | `GroupName` / `GroupCode` / `GroupId` | string / guid | hiển thị **`{groupCode}. {groupName}`** — vd `1. Hạ tầng và Nền tảng số` (Q42, `spec/danh-muc-dti/business-rules.md` §1.6); `groupId` dùng cho bộ lọc |
 | Điểm tối đa | `maxScore` | `MaxScore` | number | > 0 |
 | Tự đánh giá | `selfScore` | `SelfScore` | number \| null | null → `—` |
 | Thẩm định | `verifiedScore` | `VerifiedScore` | number \| null | null → `—` |
@@ -1084,16 +1161,17 @@ hoán đổi — đó đúng là ranh giới `hidden` ≠ `disabled` của §4.
 | --- | --- |
 | Không có quyền ghi | **đúng MỘT** phần tử: `["NO_WRITE_PERMISSION"]` |
 | Có quyền, mọi điều kiện đạt | `[]` |
-| Có quyền, một hoặc hai điều kiện trượt | **MỌI** điều kiện đang trượt, theo thứ tự |
+| Có quyền, có điều kiện trượt | **MỌI** điều kiện đang trượt, theo thứ tự — với bộ mã hôm nay tối đa **một** (Q48) |
 
 Hai vế đó có lý do khác nhau, đừng "sửa cho nhất quán":
 
 - **Không có quyền ⇒ chỉ một mã.** Hai mã kia là lời mời *"đổi bộ lọc rồi sẽ ghi
   được"* — mời một người vĩnh viễn không ghi được đi đổi bộ lọc là dẫn họ vào ngõ
   cụt. Người này còn **không nhìn thấy** affordance nào để mà bật.
-- **Có quyền ⇒ liệt kê hết.** Ca `Năm = 2025` **và** `Kỳ = Tháng 8` mà chỉ trả một
-  mã thì người dùng sửa xong cái thứ nhất, tưởng đã xong, rồi vấp tiếp cái thứ hai.
-  Trả cả hai cho họ thấy đích đến trong một lần: **một tuần cụ thể của 2025**.
+- **Có quyền ⇒ liệt kê hết.** Với bộ mã hôm nay "hết" là **tối đa một** mã — hai mã
+  lọc loại trừ nhau (Q48). Luật giữ nguyên để một điều kiện thứ tư về sau không đổi
+  cách FE đọc mảng. *(🔄 LẬT 2026-09-10: bản trước dẫn ca `Năm = 2025` + `Kỳ = Tháng 8`
+  như ca trả hai mã — ca đó chỉ trả `["PERIOD_NOT_WEEKLY"]`.)*
 
 **Ba ràng buộc thi công:**
 
@@ -1115,8 +1193,8 @@ nguyên** ba trường cấp màn đang có; chỉ refetch danh sách mới nạ
 
 | Điều khiển UI | Query param API | Query param URL | Giá trị |
 | --- | --- | --- | --- |
-| Ô tìm kiếm | `search` | `q` | chuỗi tự do; khớp Mã **hoặc** Tên, không phân biệt hoa/thường và **không phân biệt dấu** — FE không tự bỏ dấu trước khi gửi |
-| Nhóm chỉ tiêu | `groupId` | `groupId` | guid; rỗng = tất cả |
+| Ô tìm kiếm | `search` | `q` | chuỗi tự do; khớp Mã **hoặc** Tên, không phân biệt hoa/thường và **không phân biệt dấu** (Q47 — server so với cột chuẩn hoá; kiểu khớp: tên chứa chuỗi, mã khớp theo đoạn — Q59; cả hai ở `spec/danh-muc-dti/business-rules.md` §1.2) — FE không tự bỏ dấu trước khi gửi |
+| Nhóm chỉ tiêu | `groupId` | `groupId` | guid; rỗng = tất cả. Mỗi option hiện **`{code}. {name}`** từ DM-1 — vd `1. Hạ tầng và Nền tảng số` (Q42) |
 | Trạng thái | `status` | `status` | đúng 1 trong 4 chuỗi tiếng Việt nguyên văn của Q4; rỗng = tất cả |
 | Năm đánh giá | `year` | `year` | int; mặc định = năm hiện tại. Năm cũ **vẫn sửa được** nếu chọn một tuần cụ thể; chỉ `năm cũ` + `Tất cả` mới chỉ đọc (T15, §3.1) |
 | Kỳ trong năm | `period` | `period` | `all` (mặc định) \| `YYYY-Www` \| `YYYY-MM` |
@@ -1149,14 +1227,17 @@ thân request ở `assessment.period` (Q20, CONTRACT DM-4).
 | Nhóm trường dialog | Vị trí trong payload |
 | --- | --- |
 | Mã / Tên / Nhóm / Điểm tối đa | phẳng ở gốc: `code`, `name`, `groupId`, `maxScore` |
-| *(không phải trường của form)* | `assessment.period` — **kỳ đích**, bắt buộc khi có `assessment` |
+| *(không phải trường của form)* | `assessment.period` — **kỳ đích**, bắt buộc khi có `assessment`; **nguyên giá trị** ô `Kỳ trong năm`, kể cả `"all"` (Q40, §7.4b) |
+| *(không phải trường của form)* | `assessment.year` — giá trị ô `Năm đánh giá`; **bắt buộc khi `assessment.period = "all"`** (T15), server bỏ qua khi `period` là một tuần |
 | Tự đánh giá / Thẩm định / Trạng thái / Phụ trách / Hạn xử lý / Minh chứng | trong object lồng `assessment`: `selfScore`, `verifiedScore`, `status`, `ownerId`, `deadline`, `note`, kèm `version` |
 
 Object lồng chứ không phải sáu trường phẳng trộn lẫn, vì hai nhóm ghi vào **hai
 bảng khác nhau** với vòng đời khác nhau — và vì `assessment` **vắng mặt** phải
 phân biệt được với `assessment` có mọi trường rỗng (xoá trắng dữ liệu đánh giá).
 
-Response là **một dòng lưới đầy đủ** (cùng shape §7.1) → thay dòng tại chỗ.
+Response: **sửa** (`PUT`) trả một dòng lưới đầy đủ (cùng shape §7.1) → thay dòng tại chỗ;
+**thêm** (`POST`) trả `CriteriaDto`, không phải dòng lưới → **tải lại lưới** (Q49, §3.3).
+*(🔄 LẬT 2026-09-10: bản trước ghi mọi response của dialog đều là một dòng lưới.)*
 
 ### 7.4 Sửa inline → payload
 
@@ -1170,61 +1251,73 @@ Gửi kèm `version`.
 
 | Trường | Payload |
 | --- | --- |
-| *(không phải trường của ô sửa)* | `period` — **kỳ đích**, bắt buộc |
+| *(không phải trường của ô sửa)* | `period` — **kỳ đích**, bắt buộc; **nguyên giá trị** ô `Kỳ trong năm`, kể cả `"all"` (Q40, §7.4b) |
+| *(không phải trường của ô sửa)* | `year` — giá trị ô `Năm đánh giá`; **bắt buộc khi `period = "all"`** (T15), server bỏ qua khi `period` là một tuần |
 | Tiến độ % | `progressPercent` — FE kẹp `[0,100]` trước khi gửi |
 | Minh chứng/Ghi chú | `note` |
 
 Response cũng là một dòng lưới đầy đủ → thay dòng tại chỗ, không refetch danh sách.
 
-### 7.4b Quy `Kỳ trong năm` → `period` của lời ghi — một hàm, một chỗ
+### 7.4b Ô `Kỳ trong năm` → `period` + `year` của lời ghi — FE gửi NGUYÊN, SERVER quy đổi (Q40)
 
-Cả §7.3, §7.4 và import (§7.5) đều cần **cùng** một giá trị `period`, và cả ba
-endpoint đều **từ chối `"all"`** (`400 CRITERIA.ASSESSMENT_PERIOD_INVALID`). Q26
-định nghĩa phép quy đổi:
+> 🔄 **LẬT 2026-09-10 (Q40).** Bản trước của mục này nói ngược hợp đồng ở ba chỗ: *"cả ba
+> endpoint đều **từ chối `"all"`** (`400 CRITERIA.ASSESSMENT_PERIOD_INVALID`)"*; bảng quy đổi
+> *"`Tất cả` → định danh TUẦN hiện tại — **FE thay thế trước khi gửi**"*; và ràng buộc 3
+> *"**`"all"` không bao giờ được ra dây**"*. Hợp đồng đã **nhận** `"all"` từ Q26 (2026-09-05)
+> và quy nó về tuần ISO chứa hôm nay **ở server** (`doc/contracts/danh-muc-dti.md` DM-4, khối
+> Q26). Q40 chốt: **hợp đồng thắng** — lịch ISO nằm ở **một** chỗ, là BE.
 
-| Ô `Kỳ trong năm` đang chọn | `period` gửi đi |
-| --- | --- |
-| một **tuần** (`YYYY-Www`) | **chính nó** |
-| `Tất cả` (`all`) | **định danh TUẦN hiện tại** (Q26 + Q37) — FE thay thế trước khi gửi |
-| một **tháng** (`YYYY-MM`) hoặc cả năm | **không có lời ghi nào để gửi** — bảng chỉ đọc (Q37, §5.5.1) |
+Cả §7.3, §7.4 và import (§7.5) gửi **cùng** một cặp giá trị, lấy thẳng từ bộ lọc:
 
-Sau Q37, `period` gửi đi **luôn có dạng `YYYY-Www`**. Một `YYYY-MM` ra dây là dấu
-hiệu điều kiện chỉ-đọc ở §5.5.1 đã bị bỏ sót ở đâu đó, không phải một ca cần quy
-đổi thêm — **đừng** viết nhánh quy tháng về tuần cho "chắc". Lý do ở §3.1: mọi cách
-neo tháng vào một tuần đều sai.
+| Ô `Kỳ trong năm` đang chọn | `period` gửi đi | `year` gửi kèm |
+| --- | --- | --- |
+| một **tuần** (`YYYY-Www`) | **chính nó** | không bắt buộc — năm đã nằm trong chuỗi tuần; gửi thì server bỏ qua |
+| `Tất cả` (`all`) | **`"all"` nguyên văn** | **bắt buộc** = giá trị ô `Năm đánh giá` (T15) |
+| một **tháng** (`YYYY-MM`) hoặc cả năm | **không có lời ghi nào để gửi** — bảng chỉ đọc (Q37, §5.5.1) | — |
 
-⚠️ **Và `YYYY` của `period` phải khớp `Năm đánh giá` đang lọc** (T15) — đây chính là
-phát biểu chính xác của điều kiện 3. Chọn `Tuần 33/2025` khi đang lọc 2025 thì khớp,
-ghi được. Chọn `Tất cả` khi đang lọc 2025 thì FE thay bằng tuần hiện tại của
-**2026**, lệch năm, và đó là ca T15 chặn.
+Server làm hai việc mà FE **không** làm: quy `"all"` về tuần ISO chứa hôm nay, và kiểm T15
+bằng `year` (`year` ≠ năm hiện tại ⇒ `400 …PERIOD_OUT_OF_YEAR`). FE biết lời ghi rơi vào tuần
+nào **sau** khi lưu, qua `assessmentPeriod` / `assessmentPeriodLabel` của response (§3.2.2
+luật b) — không đoán trước.
 
-Ràng buộc thi công: khi thay `all` bằng tuần hiện tại, **kiểm năm khớp trước khi
-gửi**. Lệch thì đó là lỗi logic ở tầng bật/tắt control (`isEditable` lẽ ra đã
-`false`), **không** phải ca cần tự sửa bằng cách đổi năm hộ người dùng.
+Sau Q37, `period` gửi đi chỉ có hai dạng: `YYYY-Www` hoặc `"all"`. Một `YYYY-MM` ra dây là
+dấu hiệu điều kiện chỉ-đọc ở §5.5.1 đã bị bỏ sót ở đâu đó, không phải một ca cần quy đổi
+thêm — **đừng** viết nhánh quy tháng về tuần cho "chắc". Lý do ở §3.1: mọi cách neo tháng vào
+một tuần đều sai.
 
-Ba ràng buộc, cả ba đều là chỗ đã hỏng ở bản trước hoặc dễ hỏng lần sau:
+Ba ràng buộc thi công:
 
-1. **Đặt phép quy đổi ở đúng MỘT chỗ** — một hàm trong `services/` của feature, ba
-   đường ghi cùng gọi. Ba bản sao của cùng một `if` là ba cơ hội để một đường ghi
-   vào kỳ khác hai đường kia, và triệu chứng sẽ là "số nhảy lung tung" chứ không
-   phải một lỗi trỏ về nguyên nhân.
-2. **Không lấy tuần hiện tại từ đồng hồ máy khách.** Đọc từ
-   `GET /api/dashboard/periods` (§7.2) — cùng nguồn với ô chọn kỳ. Máy khách lệch
-   ngày hoặc lệch múi giờ vào đêm Chủ nhật là đủ để lời ghi rơi sang tuần khác.
-3. **`"all"` không bao giờ được ra dây.** Nếu chưa nạp xong danh sách kỳ mà người
-   dùng bấm lưu, **chặn ở FE** (nút chờ) thay vì gửi `"all"` và đọc `400` — lỗi đó
-   không nói được gì có ích cho người dùng. Cùng lý do, `YYYY-MM` cũng không bao
-   giờ ra dây (Q37).
+1. **Dựng cặp `{ period, year }` ở đúng MỘT chỗ** — một hàm trong `services/` của feature,
+   ba đường ghi cùng gọi. Sau Q40 hàm này không còn quy đổi gì, nhưng vẫn phải là một chỗ:
+   ba bản sao là ba cơ hội để một đường quên `year` khi `"all"` — đường đó nhận `400` validate
+   trong khi hai đường kia chạy.
+2. **FE không tự tính tuần hiện tại cho lời ghi, không tự so năm trước khi gửi.** T15 là
+   việc của server; ở FE nó chỉ hiện ra qua `isEditable` / `editBlockedBy` (§7.1a) — control
+   đã `disabled` thì không có lời ghi nào để gửi.
+3. **`YYYY-MM` không bao giờ ra dây** (Q37) — giữ nguyên từ bản trước.
+
+> **Ghi chú lịch sử — ràng buộc cũ của mục này: bài học còn, cơ chế đã khác.**
+>
+> - *"Không lấy tuần hiện tại từ đồng hồ máy khách"* (ràng buộc 2 cũ). Bài học — máy khách
+>   lệch ngày hoặc lệch múi giờ vào đêm Chủ nhật là đủ để lời ghi rơi sang tuần khác — **nay
+>   được thoả tự động**: FE không tính tuần nào cả, server quyết theo đồng hồ của nó. Đó chính
+>   là lý do Q40 chọn server. Bài học vẫn áp cho chỗ **hiển thị** kỳ đích trước khi lưu (tiêu đề
+>   V9, băng V3 — §5.5 mục 2): nhãn tuần hiện tại vẫn đọc từ `GET /api/dashboard/periods`,
+>   không từ đồng hồ máy khách.
+> - *"Chưa nạp xong danh sách kỳ mà bấm lưu thì chặn ở FE"* và *"khi thay `all` bằng tuần hiện
+>   tại, kiểm năm khớp trước khi gửi"* — **hết đối tượng**: lời ghi không còn cần danh sách
+>   kỳ, và FE không còn thay gì.
 
 ### 7.5 Import
 
 | UI | Endpoint / trường |
 | --- | --- |
 | Chọn file | `POST /api/import`, `multipart/form-data`, **field tên `file`**, chấp nhận `.csv` `.xlsx` `.xls` (Q6) → trả `{ jobId }` với HTTP **200** (không phải 202) |
-| Kỳ đích của cả file | field `period` **bắt buộc**, đi cùng `multipart` (Q20). Luôn là **một tuần** `YYYY-Www` (Q37). Quy từ ô `Kỳ trong năm` theo §7.4b — ở chế độ `Tất cả` thì đó là **tuần hiện tại** (Q26), không phải "kỳ của từng dòng trong file" |
+| Kỳ đích của cả file | field `period` **bắt buộc**, đi cùng `multipart` (Q20) — **nguyên giá trị** ô `Kỳ trong năm`: một tuần `YYYY-Www` hoặc `"all"` (Q40, §7.4b). Server quy `"all"` về **tuần hiện tại** (Q26) và lưu tuần đã quy đổi vào job (Q45, `spec/danh-muc-dti/business-rules.md` §1.5) — không phải "kỳ của từng dòng trong file". Đang chọn tháng thì không có lời ghi nào (Q37). *(🔄 LẬT 2026-09-10: bản trước ghi "luôn là một tuần `YYYY-Www`", tức FE tự quy `all` — sai theo Q40.)* |
+| Năm đang xem | field `year`, đi cùng `multipart` — **bắt buộc khi `period = "all"`** (T15); server bỏ qua khi `period` là một tuần |
 | Đang chạy | `GET /api/import/{jobId}` → `status` ∈ `Pending` / `Running` / `Succeeded` / `Failed` |
 | Câu tổng hợp | `result.totalRows`, `result.successCount`, `result.errorCount`, `result.criteriaCreatedCount` |
-| Danh sách lỗi | `result.errors[]` = `{ rowNumber, code?, message }` |
+| Danh sách lỗi | `result.errors[]` = `{ rowNumber, code, messageParams? }` — **không** có `message`: câu người dùng đọc do FE dựng từ bảng dịch của `code` với `messageParams` (hợp đồng vá 2026-09-09, `doc/contracts/danh-muc-dti.md` DM-7 bước 2). *(Bản trước ghi `{ rowNumber, code?, message }` — shape cũ.)* |
 | Lỗi hạ tầng | `errorMessage` khi `status = "Failed"` (khi đó `result` **vắng mặt**) |
 
 📌 **Nhật ký của import phải ghi ĐÚNG người nạp file, không phải `"system"`**
@@ -1283,6 +1376,7 @@ mới có số. Chuỗi verbatim thuộc `Screens/02-danh-muc-dti.md` § Copy.
 | --- | --- |
 | `@ngx-translate/core` + `@ngx-translate/http-loader` trong `dependencies` | `src/FE/package.json` — kiểm: `grep -n 'ngx-translate' src/FE/package.json` |
 | Bảng dịch `vi` + `en` có nội dung thật | `src/FE/public/i18n/vi.json`, `src/FE/public/i18n/en.json` |
+| Nhóm khoá **DỰ ÁN** — tách khỏi nhóm Core bằng FILE (bổ sung, đối chiếu 2026-09-10) | `src/FE/public/i18n-app/vi.json`, `src/FE/public/i18n-app/en.json` — nhánh `danh-muc-dti.*` đã có từ lượt dựng khung 2026-09-09. 📖 Ranh giới hai nhóm: `doc/huong_dan/wiki-core/fe/08-i18n.md` §Khuôn CoreBase |
 | Cơ chế nạp + đổi ngôn ngữ tại chỗ + đặt `<html lang>` + nhãn PrimeNG | `src/FE/src/app/core/i18n/core-i18n.ts` |
 | Test canh khuôn khoá, parity `vi`↔`en`, parity tham số `{{…}}` | `src/FE/src/app/app-i18n.spec.ts` |
 
@@ -1348,6 +1442,12 @@ sách còn lại đúng những gì thật sự chưa có đáp án:
 4. **Hai file mô tả cùng khe V3 bằng hai taxonomy khác nhau — cần người duyệt hợp
    nhất, ĐỪNG tự gộp.** Ghi nhận 2026-09-09:
 
+   > **ĐÓNG MỘT PHẦN 2026-09-10 bằng Q51.** Chỗ lệch mà Q51 giải quyết là cột cuối của bảng
+   > dưới — vai *"không có quyền ghi"*: người thiếu quyền **không** có dải băng, nên vai đó
+   > đã gỡ khỏi hàng V3 (§3) và hai file nay cùng không có nó. Phần còn lại — hai file chia
+   > khe băng theo **hai trục** khác nhau — **vẫn mở**, chưa hợp nhất; danh sách mục mở của cả
+   > cụm ở `spec/danh-muc-dti/business-rules.md` §8.1. Bảng dưới giữ nguyên như lúc ghi nhận.
+
    | | Phân vai theo trục | Có vai "không có quyền ghi" (Q39) |
    | --- | --- | --- |
    | File này (§3, hàng V3) | *chưa import · chỉ đọc vì kỳ · chỉ đọc vì quyền · nhắc kỳ đích* | **có** |
@@ -1389,6 +1489,6 @@ sách còn lại đúng những gì thật sự chưa có đáp án:
 > | **Kỳ đích rơi ra ngoài năm đang lọc** | **Bảng CHỈ ĐỌC** — T15 (§3.1, §5.5.1), xử lý giống ca chọn tháng của Q37. Thực tế chỉ cắn vào ca `năm cũ` + `Tất cả`: lời ghi rơi vào tuần hiện tại của **2026**, một năm không hiện ở đâu trên màn. `năm cũ` + **một tuần của năm đó** thì **vẫn sửa được** (Q20 không bị lật). Điều kiện ghi vì thế có **ba** vế, không phải hai |
 > | **FE đọc quyền ghi ở đâu** | **CẤP MÀN**, cạnh `items`: `canWrite` (⇒ ẩn) · `isEditable` (⇒ `disabled`) · `editBlockedBy` (mảng mã lý do, luôn có mặt) — DM-2 chốt lại 2026-09-06 (§7.1a). **KHÔNG** còn là trường của dòng, và DM-4/DM-6 **không** trả nó nữa |
 > | **Chiều cao lưới** | **Chuỗi flex `page-fill` ⇄ `grid-host` + `scrollHeight="flex"`** — 2026-09-09 (§3.2, §6). Token `--grid-h` **không** dùng cho lưới này. Spec sửa theo component đang chạy, không sửa component theo spec |
-> | **Cách ghim cột về mặt kỹ thuật** | 📐 **Input `frozenColumns` của `<app-data-grid>`**, chưa thi công — 2026-09-09 (§3.2.1). **Không** đặt `pFrozenColumn` ở call site: nó buộc trang import `TableModule`, phá luật *"`data-grid` là nơi duy nhất khai `p-table`"*. Giữ luật, mở hợp đồng component |
+> | **Cách ghim cột về mặt kỹ thuật** | ✅ **Input `frozenColumns` của `<app-data-grid>`** — chốt 2026-09-09, input ĐÃ CÓ THẬT trong component (đối chiếu 2026-09-10: `src/FE/src/app/shared/components/data-grid/data-grid.ts:139`); §3.2.1. **Không** đặt `pFrozenColumn` ở call site: nó buộc trang import `TableModule`, phá luật *"`data-grid` là nơi duy nhất khai `p-table`"*. Giữ luật, mở hợp đồng component |
 > | **Nguồn dữ liệu ô `Phụ trách`** | **Tái dùng `GET /api/users`** — 2026-09-09 (§3.3). Không thêm endpoint mới; quyền khớp sẵn (Q36 seed key DTI cho `Admin`, `UsersController` gate `SuperAdmin`/`Admin`). Shape ở `doc/contracts/users.md`, không chép sang đây |
 > | **Khi nào băng V3 nhắc kỳ đích hiện ra** | **HAI ca**: một **tuần đã qua**, **và** chế độ **`Tất cả`** — 2026-09-09 (§5.5). Ca `Tất cả` là ca bị bỏ sót và nguy hiểm hơn: mỗi dòng hiện số của một kỳ khác nhau trong khi **mọi** lời ghi rơi vào **tuần hiện tại** (`spec/danh-muc-dti/business-rules.md` §5.3 bước 1), và vì nó **hợp lệ theo thiết kế** nên không mã lỗi nào chặn — băng là chỗ duy nhất báo được. Cùng cơ chế T15 đã tả, chỉ khác là bản trong cùng năm. Chọn đúng **tuần hiện tại** thì **không** có băng. Hệ quả: băng hiện ngay ở trạng thái mặc định (§5.1) |

@@ -193,22 +193,26 @@ Ai chỉ cài PERM-1 rồi tưởng đã phân quyền là đã bỏ trống to�
 
 ---
 
-## 4. `PlatformManager.Core.Infrastructure` — EF Core, Identity, hiện thực seam
+## 4. `PlatformManager.Core.Persistence` + `PlatformManager.Core.Infrastructure` — EF Core, Identity, hiện thực seam
 
 ```bash
-find src/BE/Core/PlatformManager.Core.Infrastructure -name "*.cs" -not -path "*Migrations*" | sort
+find src/BE/Core/PlatformManager.Core.Persistence src/BE/Core/PlatformManager.Core.Infrastructure -name "*.cs" -not -path "*Migrations*" | sort
 ```
+
+Tám dòng đầu bảng (DbContext → `AppUser`/`AppRole`) sống ở `Core.Persistence` từ 2026-09-10, phần
+còn lại ở `Core.Infrastructure`. Namespace của nhóm đầu **vẫn** là `PlatformManager.Core.Infrastructure.*`
+— lý do: `doc/kien-truc-core-module.md` §DbContext.
 
 | Tên | Loại | Ở đâu | Giữ luật gì |
 | --- | --- | --- | --- |
-| `PlatformManagerDbContext` | DbContext | `src/BE/Core/PlatformManager.Core.Infrastructure/Persistence/PlatformManagerDbContext.cs` | **Một** DbContext cho toàn hệ (1 Postgres). Kế thừa `IdentityDbContext<AppUser, AppRole, Guid>`. Schema mặc định `core`; tầng nghiệp vụ khai `business` tường minh trong `ToTable()`. Hằng `SoftDeleteFilterKey` là **public** vì ArchTest tra đúng khoá đó |
-| `EfConfigurationAssembly` | record | `src/BE/Core/PlatformManager.Core.Infrastructure/Persistence/EfConfigurationAssembly.cs` | **Seam đảo phụ thuộc cho EF**: mỗi tầng tự đăng ký assembly chứa `IEntityTypeConfiguration<T>` của mình qua DI, `OnModelCreating` quét từng assembly đã đăng ký. Nhờ vậy Core **không** cần `ProjectReference` tới tầng nghiệp vụ nào |
-| `*Configuration` | `IEntityTypeConfiguration<T>` | `src/BE/Core/PlatformManager.Core.Infrastructure/Persistence/Configurations/SysMenuConfiguration.cs` (và 4 file cạnh nó) | Nơi khai **unique index lọc** `HasFilter("\"IsDeleted\" = false")` — vế thứ hai của soft-delete, khác hẳn global query filter |
-| `AuditInterceptor` | `SaveChangesInterceptor` | `src/BE/Core/PlatformManager.Core.Infrastructure/Persistence/Interceptors/AuditInterceptor.cs` | Ghi 4 field audit cho **mọi** `BaseEntity` đang SaveChanges. Lúc `Added` set luôn `UpdatedAt`/`UpdatedBy` — để FE không phải viết `updatedAt ?? createdAt` ở mọi chỗ. **Không** chạm `AppUser`/`AppRole` (chúng không kế thừa `BaseEntity`), đó là lý do `AppUser.CreatedBy`/`UpdatedBy` phải ghi tay |
-| `UnitOfWork` | class | `src/BE/Core/PlatformManager.Core.Infrastructure/Persistence/UnitOfWork.cs` | `SaveChangesAsync` + `DiscardTrackedChanges()` (dọn change-tracker khi một dòng import lỗi giữa chừng, tránh rò entity chưa lưu sang dòng sau) |
-| `CoreSeeder` | class | `src/BE/Core/PlatformManager.Core.Infrastructure/Persistence/CoreSeeder.cs` | Seed role + 2 tài khoản bootstrap + menu + quyền. **DML thuần, idempotent**, và chỉ chạy khi có `--seed` — không bao giờ chạy lúc app khởi động |
-| `BootstrapOptions` | options | `src/BE/Core/PlatformManager.Core.Infrastructure/Persistence/BootstrapOptions.cs` | **Không có giá trị mặc định, và không được đặt** — một tài khoản quản trị với mật khẩu ai cũng đoán được còn tệ hơn hẳn một app từ chối khởi động |
-| `AppUser` · `AppRole` | Identity entity | `src/BE/Core/PlatformManager.Core.Infrastructure/Identity/AppUser.cs` · `src/BE/Core/PlatformManager.Core.Infrastructure/Identity/AppRole.cs` | **Không** kế thừa `BaseEntity` — Identity tự quản vòng đời bằng field riêng (`LockoutEnd`/`SecurityStamp`). Đây là chủ đích, không phải sót |
+| `PlatformManagerDbContext` | DbContext | `src/BE/Core/PlatformManager.Core.Persistence/PlatformManagerDbContext.cs` | **Một** DbContext cho toàn hệ (1 Postgres). Kế thừa `IdentityDbContext<AppUser, AppRole, Guid>`. Schema mặc định `core`; tầng nghiệp vụ khai `business` tường minh trong `ToTable()`. Hằng `SoftDeleteFilterKey` là **public** vì ArchTest tra đúng khoá đó |
+| `EfConfigurationAssembly` | record | `src/BE/Core/PlatformManager.Core.Persistence/EfConfigurationAssembly.cs` | **Seam đảo phụ thuộc cho EF**: mỗi tầng tự đăng ký assembly chứa `IEntityTypeConfiguration<T>` của mình qua DI, `OnModelCreating` quét từng assembly đã đăng ký. Nhờ vậy Core **không** cần `ProjectReference` tới tầng nghiệp vụ nào |
+| `*Configuration` | `IEntityTypeConfiguration<T>` | `src/BE/Core/PlatformManager.Core.Persistence/Configurations/SysMenuConfiguration.cs` (và 4 file cạnh nó) | Nơi khai **unique index lọc** `HasFilter("\"IsDeleted\" = false")` — vế thứ hai của soft-delete, khác hẳn global query filter |
+| `AuditInterceptor` | `SaveChangesInterceptor` | `src/BE/Core/PlatformManager.Core.Persistence/Interceptors/AuditInterceptor.cs` | Ghi 4 field audit cho **mọi** `BaseEntity` đang SaveChanges. Lúc `Added` set luôn `UpdatedAt`/`UpdatedBy` — để FE không phải viết `updatedAt ?? createdAt` ở mọi chỗ. **Không** chạm `AppUser`/`AppRole` (chúng không kế thừa `BaseEntity`), đó là lý do `AppUser.CreatedBy`/`UpdatedBy` phải ghi tay |
+| `UnitOfWork` | class | `src/BE/Core/PlatformManager.Core.Persistence/UnitOfWork.cs` | `SaveChangesAsync` + `DiscardTrackedChanges()` (dọn change-tracker khi một dòng import lỗi giữa chừng, tránh rò entity chưa lưu sang dòng sau) |
+| `CoreSeeder` | class | `src/BE/Core/PlatformManager.Core.Persistence/CoreSeeder.cs` | Seed role + 2 tài khoản bootstrap + menu + quyền. **DML thuần, idempotent**, và chỉ chạy khi có `--seed` — không bao giờ chạy lúc app khởi động |
+| `BootstrapOptions` | options | `src/BE/Core/PlatformManager.Core.Persistence/BootstrapOptions.cs` | **Không có giá trị mặc định, và không được đặt** — một tài khoản quản trị với mật khẩu ai cũng đoán được còn tệ hơn hẳn một app từ chối khởi động |
+| `AppUser` · `AppRole` | Identity entity | `src/BE/Core/PlatformManager.Core.Persistence/Identity/AppUser.cs` · `src/BE/Core/PlatformManager.Core.Persistence/Identity/AppRole.cs` | **Không** kế thừa `BaseEntity` — Identity tự quản vòng đời bằng field riêng (`LockoutEnd`/`SecurityStamp`). Đây là chủ đích, không phải sót |
 | `IdentityService` · `UserAdminService` · `UserLookupService` | class | `src/BE/Core/PlatformManager.Core.Infrastructure/Identity/IdentityService.cs` (và 2 file cạnh nó) | Hiện thực 3 seam của §2.3, orchestrate qua `UserManager`/`SignInManager`/`RoleManager` |
 | `PermissionChecker` | class | `src/BE/Core/PlatformManager.Core.Infrastructure/Permissions/PermissionChecker.cs` | **Đúng 1 query** `EXISTS`, INNER JOIN `AspNetRoles` — join chứ không lọc thẳng, để dòng `RolePermission` **mồ côi** bị loại. **Không cache**: quyền thu hồi phải có hiệu lực ngay |
 | `RequirePermissionFilter` | `IAsyncAuthorizationFilter` | `src/BE/Core/PlatformManager.Core.Infrastructure/Permissions/RequirePermissionFilter.cs` | Cơ chế cưỡng chế thật của `[RequirePermission]`. Không khai attribute = không chặn thêm gì — hai cơ chế (`[Authorize]` + permission-key) **cộng dồn**, không thay thế |
@@ -229,7 +233,7 @@ find src/BE/Core/PlatformManager.Core.Infrastructure -name "*.cs" -not -path "*M
 
 ```bash
 ls src/BE/PlatformManager.Api/Persistence/Migrations/            # .cs + ModelSnapshot (host)
-ls src/BE/Core/PlatformManager.Core.Infrastructure/Persistence/Migrations/sql/   # .sql (Core ship)
+ls src/BE/Core/PlatformManager.Core.Persistence/Migrations/sql/   # .sql (Core ship)
 ```
 
 **Chuyển 2026-09-04:** migration `.cs` + `ModelSnapshot` nay thuộc **project host**, chỉ thư mục
@@ -237,7 +241,7 @@ ls src/BE/Core/PlatformManager.Core.Infrastructure/Persistence/Migrations/sql/  
 chốt và thao tác cho dự án 2: đọc `doc/cau-truc-database.md` §5.3.
 
 Schema thật áp bằng file `.sql` chạy tay
-(`src/BE/Core/PlatformManager.Core.Infrastructure/Persistence/Migrations/sql/0001_initial_baseline.sql`),
+(`src/BE/Core/PlatformManager.Core.Persistence/Migrations/sql/0001_initial_baseline.sql`),
 **không** bằng `dotnet ef database update` — lệnh đó bị `settings.json` chặn. Migration chỉ là cỗ
 máy tính delta để sinh ra chính file `.sql` đó, nên `MigrationsAssembly` khai đúng một chỗ:
 design-time factory `src/BE/PlatformManager.Api/PlatformManagerDbContextFactory.cs`, **không** khai
@@ -390,7 +394,7 @@ những cái tên dưới đây trong `src/BE/` thì **không phải code thiế
 | Validator fail nhưng response không đúng envelope | `ValidationBehavior` **ném**, `GlobalExceptionHandler` mới dịch — kiểm `UseExceptionHandler()` còn được gọi không |
 | Lỗi validation hiện **lặp hai lần** trong `fields` | Mỗi validator phải có `ValidationContext` riêng — xem `ValidationBehavior` |
 | Lưu ma trận phân quyền lần nào cũng 409 | `MatrixVersion` — token phải tính **chỉ trên dòng đang sống**; đọc bằng `IgnoreQueryFilters()` là trộn cả lịch sử vào token |
-| Xoá mềm rồi thêm lại cùng `Code` thì trùng khoá | Unique index phải có `HasFilter("\"IsDeleted\" = false")` — xem `src/BE/Core/PlatformManager.Core.Infrastructure/Persistence/Configurations/SysMenuConfiguration.cs` |
+| Xoá mềm rồi thêm lại cùng `Code` thì trùng khoá | Unique index phải có `HasFilter("\"IsDeleted\" = false")` — xem `src/BE/Core/PlatformManager.Core.Persistence/Configurations/SysMenuConfiguration.cs` |
 | Thêm entity mới, dữ liệu đã xoá mềm vẫn lọt ra API | `SoftDeleteQueryFilterTests` — thường là quên đăng ký `EfConfigurationAssembly`, hoặc đảo thứ tự trong `OnModelCreating` |
 | `dotnet ef migrations add` sinh `DropTable` | 🛑 Đọc khối cảnh báo đầu `src/BE/PlatformManager.Api/PlatformManagerDbContextFactory.cs` **trước khi chạy**, và `doc/cau-truc-database.md` §5 |
 | DB Production trống, không ai đăng nhập được | `SeedCommand` — chạy binary với `--seed`. Seed **không** chạy lúc app khởi động, đó là chủ đích |

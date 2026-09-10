@@ -233,6 +233,7 @@
       "close": "Close",
       "confirm": "Confirm",
       "reload": "Reload",
+      "retry": "Try again",
       "saving": "Saving…"
     },
     "app": {
@@ -264,6 +265,7 @@
       "notFound": "The requested data was not found.",
       "notFoundTitle": "Not found",
       "offline": "Cannot reach the server. Check your network connection.",
+      "offlineDevice": "Your device is not connected to a network. Check your Wi-Fi or cable, then try again.",
       "offlineTitle": "No connection",
       "tooMany": "You have sent too many requests — please wait a moment and try again.",
       "tooManyTitle": "Too many requests",

@@ -1,0 +1,55 @@
+// Breakpoint tokens — NGUỒN DUY NHẤT cho mọi `@media` theo bề rộng trong src/FE.
+//
+// Chiều cập nhật: doc/Design/Frontend/PlatformManager/Tokens/ → file này (KHÔNG ngược lại).
+// Xem doc/huong_dan/wiki-core/fe/04-design-token-system.md §Chiều. Giá trị dưới đây chép từ
+// `Tokens/spacing.md` §"Token Table — Breakpoints" và `Tokens/tokens.json` `global.breakpoint.*`.
+// Đổi số ở đây mà không đổi hai file kia là làm code đi trước thiết kế — sai chiều đã chốt.
+//
+// 🛑 VÌ SAO LÀ BIẾN SASS CHỨ KHÔNG PHẢI CSS CUSTOM PROPERTY như `--brand`/`--sp-*`.
+//
+// `@media (max-width: var(--bp-mobile))` là cú pháp HỢP LỆ — không trình duyệt nào báo lỗi, không
+// bước build nào cảnh báo — nhưng nó KHÔNG BAO GIỜ KHỚP. Media query được đánh giá trước khi
+// custom property phân giải, nên điều kiện luôn sai và toàn bộ khối responsive bên trong lặng lẽ
+// biến mất. Đó là đúng loại hỏng không ai nhìn thấy: giao diện vẫn dựng, chỉ là không còn co giãn.
+// Biến Sass thì ngược lại — nó biến mất lúc build, giá trị đã được thay vào chuỗi `@media` thật,
+// và gõ sai tên biến là LỖI BIÊN DỊCH ngay (`Undefined variable`), tức có cơ chế chặn thật sự.
+//
+// Giới hạn còn lại, ghi ra để không ai tưởng đã hết: `tokens.json` và file này vẫn là hai nguồn
+// phải khớp TAY — không có `var()` nào ép được. Sửa một bên thì mở bên kia.
+//
+// Cách dùng (đường dẫn tương đối tới file này, KHÔNG cần cấu hình includePaths trong angular.json):
+//   @use '../../../core/theme/breakpoints' as bp;
+//   @include bp.mobile { .toolbar > * { flex: 1 1 100%; } }
+
+/// Sidebar thành drawer trượt ngoài, shell hết offset, nút hamburger hiện ra.
+$tablet: 980px;
+
+/// Toolbar giãn hết bề ngang, `.filter-panel` co lại, `.form-grid` về một cột.
+$mobile: 560px;
+
+/// Ngưỡng DESKTOP — dẫn xuất, không gõ tay.
+///
+/// Đây là cạnh trên liền kề của `$tablet`: khối `min-width` này phải bắt đầu ĐÚNG một pixel trên
+/// chỗ khối `max-width: $tablet` kết thúc. Viết `981px` bằng tay là để ngỏ một lỗi câm — đổi
+/// `$tablet` sang `1024px` rồi quên sửa số kia sẽ tạo dải 981px–1024px không rơi vào khối nào,
+/// nơi sidebar vừa không phải drawer vừa không có flyout. Dẫn xuất thì quan hệ đó không gãy được.
+/// Giá trị sinh ra vẫn đúng `981px` như `Tokens/spacing.md` khai.
+$desktop: $tablet + 1px;
+
+@mixin tablet {
+  @media (max-width: $tablet) {
+    @content;
+  }
+}
+
+@mixin mobile {
+  @media (max-width: $mobile) {
+    @content;
+  }
+}
+
+@mixin desktop {
+  @media (min-width: $desktop) {
+    @content;
+  }
+}

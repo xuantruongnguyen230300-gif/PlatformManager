@@ -130,6 +130,17 @@ muốn gửi link ("xem đúng tuần tôi đang xem"), nên bỏ state vào sig
 đúng ba thứ mà §8 liệt kê: F5 mất kỳ đang xem, không gửi được link, nút Back nhảy
 khỏi trang.
 
+**Tham số lạ trên URL — Q62 (chốt 2026-09-10).** Link cũ hoặc URL sửa tay có thể mang
+giá trị không hợp lệ (vd `mode` lạ, `status` ngoài 4 giá trị, `period` không thuộc
+`year`). FE **tự đưa tham số đó về mặc định và sửa lại URL** (`replaceUrl: true`),
+**không** báo gì cho người dùng, và **không** gọi API với giá trị sai. `fe-routing-guard.md`
+§8 chỉ chốt URL là nguồn sự thật, chưa có quy ước cho giá trị lạ — nên luật này ghi ở đây.
+
+Các mã `DASHBOARD.MODE_INVALID` / `DASHBOARD.STATUS_INVALID` /
+`DASHBOARD.PERIOD_YEAR_MISMATCH` **vẫn giữ ở BE** (`doc/contracts/dashboard.md` DB-1 § Mã
+lỗi) làm lưới chặn cuối. Người dùng bình thường không gặp chúng, nên chúng **không cần câu
+hiển thị**.
+
 ## 3. Layout theo vùng
 
 Khung ngoài là app shell (`Sidebar` + `Topbar` + `main` + `Toast`,
@@ -218,6 +229,17 @@ dòng: `.label` (nhãn, `--fs-xs`, màu `muted`), `.value` (số lớn, 21px, we
 > kỳ` / `So với kỳ trước` trong khi file chủ ghi `Tiến độ chung tuần này` / `So
 > với tuần trước`. Đúng cái §5 của `.claude/CLAUDE.md` sinh ra để ngăn.)*
 
+**Nhãn `.label` của ô 1 và ô 2 đổi THEO CHẾ ĐỘ kỳ — chốt Q52 (2026-09-10).** Ba bộ
+nhãn Tuần / Tháng / Năm; FE chọn theo `mode` của response DB-1. Chế độ **Năm** là khi
+người dùng chọn option `— Tất cả (tổng hợp theo năm) —` trong ô kỳ ở V1 (`mode=year`,
+§3.1) — người dùng xác nhận 2026-09-10; không có nút "Năm" riêng trên `.segmented`. Chuỗi của cả ba chế độ
+thuộc `KpiTile.md` § Copy — không chép sang đây.
+
+> 🔄 **LẬT 2026-09-10 (Q52).** Trước ngày này copy của hai ô chỉ có một bộ, ghim chữ
+> *"tuần"* (`Tiến độ chung tuần này` / `So với tuần trước`), và câu hỏi *"ở chế độ Tháng /
+> Tất cả thì hai ô ghi gì"* bị để ngỏ — màn hình ở chế độ Tháng sẽ gọi số của một tháng là
+> "tuần này". Bộ chữ "tuần" nay là copy của **riêng chế độ Tuần**.
+
 Thuộc về file này, không thuộc `KpiTile.md`: ánh xạ **ô KPI → trường dữ liệu**
 (§7.2) và hành vi khi thiếu dữ liệu (§5.3 — hiện `—`, không hiện `0`).
 
@@ -255,6 +277,11 @@ thanh `ProgressBar` (`.bar` > `.fill`, cao 9px, bo `--radius-pill`, nền
 
 Vẽ theo **`Tiến độ %`** (Q11), không phải theo điểm thẩm định. Danh sách nhóm lấy
 từ API — **không hardcode ở FE**.
+
+**Tên nhóm hiện dạng `Code. Name`** — `1. Hạ tầng và Nền tảng số` — chốt **Q42**
+(2026-09-10). Ghép từ `groupCode` + `groupName` của `groups[]`: DB-1 mang sẵn cả hai
+trường, không cần trường mới. Chuỗi verbatim của sáu nhóm:
+`doc/Design/Frontend/PlatformManager/Screens/01-dashboard.md` § Copy.
 
 🛑 **Hệ quả của Q24 rơi thẳng vào vùng này, và RỖNG ≠ 0.** `Tiến độ %` để **trống**
 khi import, người dùng tự nhập. Nên **ngay sau khi import xong, mọi thanh nhóm ở đây
@@ -308,9 +335,19 @@ dưới nếp gấp.
 
 - Trục Y ghim `[0, 100]`, nhãn hậu tố `%`. `tension: 0` (đường gấp khúc),
   `fill: true`, `pointRadius: 4`.
-- **Chỉ vẽ điểm CÓ dữ liệu** — không nội suy, không `spanGaps`
+- **Mỗi kỳ một ô trên trục; kỳ rỗng để trống, đường ngắt đúng chỗ đó.** BE trả **đủ**
+  các kỳ, kỳ không có dữ liệu mang `value: null` (Q44, 2026-09-10 —
+  `doc/contracts/dashboard.md` DB-1 luật 2). FE đưa `null` thẳng vào dataset: **không**
+  kẹp nó về `0`, **không** bật `spanGaps`, không nội suy
   (`doc/huong_dan/wiki-core/fe/12-charting.md`).
-- **Trục X, chế độ tuần**: khoảng ngày, ví dụ `06/07 – 12/07` (Q12).
+
+  > 🔄 **LẬT 2026-09-10 (Q44).** Bản trước: *"Chỉ vẽ điểm CÓ dữ liệu — không nội suy,
+  > không `spanGaps`"*. Trên trục category của `chart.js`, bỏ một điểm thì hai điểm kề nhau
+  > được nối thẳng — không có khoảng đứt nào; chỉ `null` giữ đúng ô của kỳ mới ngắt được
+  > đường. Lý do đầy đủ: `spec/dashboard-dti/business-rules.md` §1.5.
+- **Trục X, chế độ tuần**: khoảng ngày, ví dụ `06/07 – 12/07` (Q12) — chuỗi **BE dựng
+  sẵn** ở `trend[].periodLabel` (Q43, 2026-09-10). FE vẽ nguyên chuỗi, **không** tự quy
+  đổi mã tuần ra ngày.
 - **Trục X, chế độ tháng: `Th.1 … Th.12` — chốt T7 (2026-09-05), không còn là câu
   hỏi mở.** Không phải khoảng ngày, vì 12 nhãn khoảng-ngày không đủ chỗ trên trục.
   Sự bất đối xứng giữa hai chế độ là **có chủ ý và đã được chấp nhận**: chế độ tuần
@@ -318,6 +355,18 @@ dưới nếp gấp.
   của tháng đang xem đọc ở V1 (`.period-display`) và ở nhãn kỳ — thông tin không
   mất đi, nó chỉ không nằm trên trục. Đừng "sửa cho đồng bộ" thành khoảng ngày;
   file chủ của quyết định này là `Components/TrendChart.md`.
+
+  > 🔄 **LẬT 2026-09-10 (Q54 + Q57).** Vế *"chế độ tuần hiện tối đa vài nhãn nên khoảng
+  > ngày vừa chỗ"* không còn là tiền đề. Chế độ Tuần nay vẽ **cửa sổ 12 tuần kết thúc ở
+  > tuần đang xem** (Q54 — người dùng chọn 12 thay cho 6 tuần W28–W33 của bản duyệt), **cắt
+  > ở đầu năm** đang lọc: xem tuần 3 thì trục chỉ có tuần 1…3 (Q57). Phạm vi chính xác:
+  > `doc/contracts/dashboard.md` DB-1 luật 2. Dấu ⚠️ *"mâu thuẫn chưa giải"* đặt ở đây sáng
+  > cùng ngày được đóng bằng hai mã này.
+  >
+  > **Việc còn mở:** cho **12 nhãn khoảng ngày** vừa trục — chính lý do T7 dùng cho chế độ
+  > tháng (*12 nhãn khoảng-ngày không đủ chỗ*) nay áp vào chế độ tuần. Đề xuất Design đang
+  > soạn, **chờ duyệt**: `doc/Design/Frontend/PlatformManager/Components/TrendChart.md`.
+  > File này không chọn.
 - Biểu đồ **phải có nội dung thay thế** cho trình đọc màn hình (`role="img"` +
   `aria-label` mô tả kỳ đầu, kỳ cuối và xu hướng) — a11y §4 mục 6. Bảng chi tiết
   ở V5 không thay thế được, vì nó là số của **một** kỳ chứ không phải chuỗi thời
@@ -354,6 +403,10 @@ Nút gỡ chip cũng theo component: `.icon-btn` mang
 **Bộ lọc còn đúng 2 điều kiện: Nhóm chỉ tiêu và Trạng thái** (Q22). Ô lọc `Mức
 thay đổi so với kỳ trước` **đã bỏ**.
 
+Option của ô `Nhóm chỉ tiêu` hiện dạng **`Code. Name`** (Q42, 2026-09-10) — cùng khuôn
+với thanh nhóm ở §3.3, ghép từ `groupCode` + `groupName` (DB-1 mang cả hai ở `groups[]`
+lẫn `table[]`).
+
 **Ô sắp xếp còn đúng 2 lựa chọn** (Q22): `Theo mã chỉ tiêu` (mặc định) và
 `Chênh lệch lớn nhất`. Hai lựa chọn `Tăng nhiều nhất` và `Tiến độ thấp nhất` **đã
 bỏ**. Ô sắp xếp không phải điều kiện lọc nên nó ở lại trên hàng, phía
@@ -388,7 +441,7 @@ và caption đọc `{tổng}/{tổng} chỉ tiêu`.
 🛑 **Lọc bảng KHÔNG được đổi KPI, thanh nhóm hay biểu đồ.** CONTRACT DB-1 chốt
 `search`/`groupId`/`status` **chỉ áp cho `table`**; `kpi`, `groups`, `trend` luôn
 tính trên **toàn bộ** chỉ tiêu của kỳ. Lý do thuộc về người đọc chứ không phải
-phép tính: nếu lọc một nhóm mà ô "Tiến độ chung tuần này" tụt theo, người xem sẽ
+phép tính: nếu lọc một nhóm mà ô "Tiến độ chung" (ô KPI 1 — nhãn theo chế độ kỳ, Q52) tụt theo, người xem sẽ
 tưởng tiến độ toàn xã thay đổi — một con số đúng phép tính nhưng trả lời sai câu
 hỏi đang được hỏi. Vì vậy caption `{đang hiện}/{tổng} chỉ tiêu` ở `.title` của V5
 là **bắt buộc**: nó là chỗ duy nhất trên màn nói rằng bảng đang hẹp hơn phần còn
@@ -617,15 +670,17 @@ loading chồng nhau. Xem `spec/danh-muc-dti/ui-spec.md` §5.2.
 **Năm** ca rỗng khác nhau, và gộp lại là mất thông tin:
 
 **"Chưa có dữ liệu" KHÔNG phải lỗi.** CONTRACT DB-1 §0 chốt: BE trả `IApiResult`
-**thành công** với `groups`/`trend`/`table` là **mảng rỗng**, không trả `404`. Nên
-FE không được đẩy ca này vào nhánh xử lý lỗi.
+**thành công** với `groups`/`table` là **mảng rỗng** và `trend` đủ các kỳ nhưng không
+kỳ nào mang `value` (Q44, 2026-09-10 — trước đó ghi `trend` rỗng), không trả `404`.
+Nên FE không được đẩy ca này vào nhánh xử lý lỗi, và trạng thái rỗng của biểu đồ nhận
+biết bằng *"không kỳ nào có giá trị"*, **không** bằng *"mảng rỗng"*.
 
 | Ca | Hiển thị |
 | --- | --- |
 | Chưa có kỳ nào trong năm đang chọn | `NoticeBanner` ở **V0**, nêu rõ năm nào chưa có dữ liệu và trỏ sang màn Danh mục để nhập/import; V2–V5 và V8 ẩn |
 | **Đã có chỉ tiêu, chưa có `Tiến độ %`** | `NoticeBanner` + nút sang `/danh-muc/dti` — xem §5.3.1 (Q32) |
 | Kỳ đang chọn không có dữ liệu (năm thì có) | KPI hiện `—` thay vì `0` — không có dữ liệu ≠ tiến độ bằng 0; V5 hiện thông điệp rỗng của bảng |
-| Biểu đồ chỉ có 1 điểm | vẽ đúng 1 điểm, **không** vẽ đường; không nội suy để "cho đẹp" |
+| Biểu đồ chỉ có **1 kỳ mang giá trị** (các kỳ khác `null`) | vẽ đúng 1 điểm, **không** vẽ đường; không nội suy để "cho đẹp" |
 | Lịch sử chỉ có kỳ đầu tiên | hàng duy nhất hiện `Kỳ đầu` ở cột delta |
 
 Phân biệt `—` và `0` là yêu cầu **nghiệp vụ**, không phải thẩm mỹ: cả hai đều là
@@ -824,8 +879,8 @@ gọi qua service dùng chung ở `shared/services/`.
 | KPI 4 — Không tăng | `kpi.flat` | `Kpi.Flat` | |
 | KPI 5 — Hoàn thành | `kpi.done` / `kpi.totalCriteria` | `Kpi.Done` / `Kpi.TotalCriteria` | hiển `{done}/{total}` |
 | *(không có chỗ dùng nào trên màn)* | `kpi.down` | `Kpi.Down` | Bản trước ghi *"dùng cho option lọc 'Giảm' ở V5"* — option đó **đã bỏ** cùng ô lọc "Mức thay đổi" (Q22, §3.5). Trường vẫn về trong response; FE map nhưng **không** render, và đừng dựng control mới chỉ để có chỗ dùng nó |
-| Hàng nhóm | `groups[] = { groupId, groupCode, groupName, progress }` | `IGroupProgress` | `progress` là **`Tiến độ %`** (Q11) |
-| Điểm biểu đồ | `trend[] = { label, value }` | `ITrendPoint` | chỉ điểm có dữ liệu; nhãn theo §3.4 |
+| Hàng nhóm | `groups[] = { groupId, groupCode, groupName, progress }` | `IGroupProgress` | `progress` là **`Tiến độ %`** (Q11). Nhãn hiển thị `{groupCode}. {groupName}` (Q42, §3.3) |
+| Điểm biểu đồ | `trend[] = { period, periodLabel, value }` | `ITrendPoint` | **Một phần tử cho mỗi kỳ** (Q44). Kỳ rỗng thì `value` **vắng mặt** trên dây ⇒ mapper đổi thành `null`, **không** thành `0`. `periodLabel` là nhãn trục X BE dựng sẵn — FE không ghép lại (Q43); `period` là khoá. *(Trước 2026-09-10: `{ label, value }`, chỉ điểm có dữ liệu.)* |
 
 ### 7.3 Bảng chi tiết — 9 cột (bộ trường ĐỔI theo Q8)
 
@@ -834,7 +889,7 @@ gọi qua service dùng chung ở `shared/services/`.
 | *(khoá hàng)* | `criteriaId` | `CriteriaId` | |
 | Mã | `code` | `Code` | |
 | Chỉ tiêu | `name` | `Name` | |
-| Nhóm | `groupName` (+ `groupCode`, `groupId`) | `GroupName` / `GroupCode` / `GroupId` | `groupId` dùng cho bộ lọc |
+| Nhóm | `groupName` (+ `groupCode`, `groupId`) | `GroupName` / `GroupCode` / `GroupId` | `groupId` dùng cho bộ lọc. Hiển thị `{groupCode}. {groupName}` — Q42, cùng khuôn §3.3; header và bề rộng cột theo `doc/Design/Frontend/PlatformManager/Screens/01-dashboard.md` § Layout Blueprint |
 | Điểm tối đa | `maxScore` | `MaxScore` | |
 | Tự đánh giá | `selfScore` | `SelfScore` | **THÊM** so với card cũ |
 | Thẩm định | `verifiedScore` | `VerifiedScore` | **THÊM** |
@@ -952,7 +1007,10 @@ Copy verbatim từng chuỗi thuộc `Screens/01-dashboard.md` (AGENT A).
 Vòng 2026-09-05 (Q25–Q34, T7–T9) đóng **bốn** mục; vòng 2026-09-06 (Q35–Q39,
 T10–T13) đóng nốt mục lớn nhất còn lại. Vòng **2026-09-09** chốt thêm ba điều (caption
 ô KPI 1 · nhãn ô 1 của hàng lịch sử ở chế độ Tháng · xác nhận lại Q29 — ba hàng cuối
-của bảng dưới) và **không mở mục mới** nào. Danh sách còn lại đúng một mục:
+của bảng dưới) và **không mở mục mới** nào. Vòng **2026-09-10** chốt Q42 · Q43 · Q44 ·
+Q46 · Q47 · Q52 · Q54 · Q57 · Q59 · Q61 · Q62 · Q63 — sổ theo mã Q ở
+`spec/dashboard-dti/business-rules.md` §7, mặt hiển thị ở §2, §3.2, §3.3, §3.4, §3.5, §7.2
+của file này. Danh sách còn lại đúng một mục:
 
 1. ~~**Chỉ báo "file xuất chỉ chứa phần đang lọc".**~~ **CHỐT 2026-09-06 — hai lớp,
    không phải một.**

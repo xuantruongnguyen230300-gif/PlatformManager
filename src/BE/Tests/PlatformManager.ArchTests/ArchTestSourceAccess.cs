@@ -50,6 +50,11 @@ internal static class ProductAssemblies
     [
         typeof(Core.Domain.Common.BaseEntity).Assembly,
         typeof(Core.Application.DependencyInjection).Assembly,
+        // Thêm 2026-09-10 cùng project PlatformManager.Core.Persistence (tách khỏi Core.Infrastructure).
+        // Nạp qua PlatformManagerDbContext — namespace của nó VẪN là …Core.Infrastructure.Persistence
+        // (giữ để ModelSnapshot ở host còn biên dịch) nhưng assembly là Core.Persistence. Thiếu dòng này
+        // thì AuditInterceptor rơi khỏi InterceptorWiringTests, và PersistenceLayerBoundaryTests mất tập quét.
+        typeof(PlatformManagerDbContext).Assembly,
         typeof(Core.Infrastructure.DependencyInjection).Assembly,
         // Thêm 2026-09-09 cùng project PlatformManager.Core.Api (Q8). Nạp qua chính
         // ApiControllerBase — kiểu public duy nhất của assembly đó hôm nay. Nó ABSTRACT nên

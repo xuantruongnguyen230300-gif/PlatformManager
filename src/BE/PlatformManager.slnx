@@ -2,6 +2,7 @@
   <Folder Name="/Core/">
     <Project Path="Core/PlatformManager.Core.Domain/PlatformManager.Core.Domain.csproj" />
     <Project Path="Core/PlatformManager.Core.Application/PlatformManager.Core.Application.csproj" />
+    <Project Path="Core/PlatformManager.Core.Persistence/PlatformManager.Core.Persistence.csproj" />
     <Project Path="Core/PlatformManager.Core.Infrastructure/PlatformManager.Core.Infrastructure.csproj" />
     <Project Path="Core/PlatformManager.Core.Api/PlatformManager.Core.Api.csproj" />
   </Folder>

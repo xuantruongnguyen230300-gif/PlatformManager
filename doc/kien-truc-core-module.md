@@ -27,15 +27,15 @@ sai suốt từ đó.
 
 | Có thật hôm nay (2026-08-29) | Sẽ thành |
 | --- | --- |
-| `Core.Domain`, `Core.Application`, `Core.Infrastructure` | tách thêm `Core.Common` + `Core.Persistence` + `Core.Api` → 6 project |
+| `Core.Domain`, `Core.Application`, `Core.Infrastructure`, `Core.Api` (2026-09-09), `Core.Persistence` (✅ tách 2026-09-10, xem §DbContext) | tách thêm `Core.Common` → 6 project |
 | ✅ `ApiControllerBase` **đã ở** `Core.Api` — **Q8, chốt và thi công 2026-09-09** (`src/BE/Core/PlatformManager.Core.Api/ApiControllerBase.cs:32`) | 4 controller Core chuyển sang nốt; xem §`Core.Api` giữ `ApiControllerBase` bên dưới |
 | **Không còn project `Modules.*` nào trong solution** — module nghiệp vụ duy nhất (`Modules.DtiWeekly.*`) đã gỡ 2026-08-29 | `Business.{Domain,Application,Persistence,Infrastructure,Api}` khi module nghiệp vụ đầu tiên được dựng lại |
 | `PlatformManager.Api` (host mỏng) | giữ nguyên |
 | `Tests/` — `PlatformManager.ArchTests`, `PlatformManager.Core.UnitTests`, `PlatformManager.Core.IntegrationTests` | giữ nguyên |
 
-**Chưa tồn tại:** `Core.Common`, `Core.Persistence`, mọi `Business.*`.
+**Chưa tồn tại:** `Core.Common`, mọi `Business.*`. **`Core.Persistence` đã tách 2026-09-10.**
 **`Core.Api` đã dựng 2026-09-09** (Q8) — hiện chỉ chứa `ApiControllerBase`.
-`PlatformManagerDbContext` và `CoreSeeder` hiện ở `Core.Infrastructure/Persistence/`;
+`PlatformManagerDbContext` và `CoreSeeder` hiện ở `Core.Persistence/` (§DbContext, khối 2026-09-10);
 mọi controller hiện ở `PlatformManager.Api/Controllers/`.
 
 **`IModuleRegistrar` thì đã thi công 2026-09-08** — nó KHÔNG còn nằm trong danh sách
@@ -314,7 +314,7 @@ Hợp đồng ở trên nay là code chạy thật, đúng 4 thành viên đã c
 | Cơ chế gom — đường DI + đường EF | `src/BE/Core/PlatformManager.Core.Infrastructure/Modules/ModuleRegistrationExtensions.cs:33` (`AddModules`), nộp `EfConfigurationAssembly` tại `:69` |
 | Cơ chế gom — đường controller | cùng file, `:84` (`AddModuleApplicationParts`) |
 | Danh sách tầng của dự án — nguồn sự thật DUY NHẤT | `src/BE/PlatformManager.Api/Modules/HostModuleRegistrars.cs:23` |
-| Host nối đủ 3 đường | `src/BE/PlatformManager.Api/Program.cs:88` (dựng danh sách) · `:107` (ApplicationPart) · `:144` (DI + EF) |
+| Host nối đủ 3 đường | `src/BE/PlatformManager.Api/Program.cs:88` (dựng danh sách) · `:107` (ApplicationPart) · `:160` (DI + EF) |
 | Design-time đọc CÙNG danh sách đó | `src/BE/PlatformManager.Api/PlatformManagerDbContextFactory.cs:128` |
 | ArchTest canh | `src/BE/Tests/PlatformManager.ArchTests/ModuleRegistrarSeamTests.cs:58` (quên nối ⇒ đỏ) · `:127` · `:152` · `:202` (ba đường) |
 
@@ -382,6 +382,60 @@ Core gọi tên assembly của host, đúng thứ Corebase mang sang dự án 2 
 (khoá ngoại core↔business đổi lấy snapshot dùng chung).
 📖 Vấn đề, chốt, hệ quả và thao tác cho dự án 2: đọc `doc/cau-truc-database.md` §5.3
 
+#### ✅ CÓ THẬT — tách `Core.Persistence` khỏi `Core.Infrastructure` (chốt + thi công + đối chiếu 2026-09-10)
+
+Quyết định người dùng 2026-09-10: **tách trước khi dựng bất kỳ project `Business.*` nào**. Lý do:
+cạnh `Business.Persistence → Core.Persistence` ở §"Nguyên tắc phụ thuộc bắt buộc" tồn tại để tầng
+nghiệp vụ dùng chung **kiểu** `PlatformManagerDbContext`; chừng nào kiểu đó còn ở
+`Core.Infrastructure` thì `Business.Persistence` chỉ lấy được nó bằng cách reference
+`Core.Infrastructure` — cạnh đồ thị đích không khai. Phạm vi: **chỉ** `Core.Persistence` (không
+tách `Core.Common`), refactor cấu trúc — **không đổi hành vi, không đổi schema, không migration**.
+
+**Cái gì chuyển, cái gì ở lại** — 17 file chuyển bằng `mv` (không `git mv`), nội dung **giống
+hệt** blob `HEAD` sau khi chuẩn hoá CRLF (17/17):
+
+| Từ `Core.Infrastructure/…` | Sang `Core.Persistence/…` |
+| --- | --- |
+| `Persistence/` — `PlatformManagerDbContext`, 5 `*Configuration`, `AuditInterceptor`, 3 repository, `UnitOfWork`, `CoreSeeder`, `BootstrapOptions`, `EfConfigurationAssembly` | gốc project (bỏ tầng thư mục `Persistence/` thừa), giữ `Configurations/`, `Interceptors/`, `Repositories/` |
+| `Identity/AppUser.cs`, `Identity/AppRole.cs` | `Identity/` — `IdentityDbContext<AppUser, AppRole, Guid>` buộc kiểu này đi cùng DbContext |
+| `Persistence/Migrations/sql/` | `Migrations/sql/` — vẫn ở Core, đúng chốt §5.3 |
+| **Ở lại** `Core.Infrastructure`: `IdentityService`/`UserAdminService`/`UserLookupService`, `AddCoreModule` (đăng ký DI + `UseNpgsql`), `CoreModuleRegistrar` | — `AddCoreModule` vẫn là composition duy nhất của Core; `Npgsql` không vào `Core.Persistence` |
+
+| Vai | Neo `file:dòng` (đối chiếu 2026-09-10) |
+| --- | --- |
+| Project nằm trong solution | `src/BE/PlatformManager.slnx:5` |
+| Chỉ hai cạnh ra: Domain + Application | `src/BE/Core/PlatformManager.Core.Persistence/PlatformManager.Core.Persistence.csproj:37` · `:38` |
+| DbContext · `AppUser` | `src/BE/Core/PlatformManager.Core.Persistence/PlatformManagerDbContext.cs:26` · `src/BE/Core/PlatformManager.Core.Persistence/Identity/AppUser.cs:11` |
+| `Core.Infrastructure → Core.Persistence` | `src/BE/Core/PlatformManager.Core.Infrastructure/PlatformManager.Core.Infrastructure.csproj:67` |
+| Host thấy Persistence tường minh | `src/BE/PlatformManager.Api/PlatformManager.Api.csproj:44` |
+| Registrar nộp assembly Persistence — dòng không đổi, kết quả tự theo kiểu | `src/BE/Core/PlatformManager.Core.Infrastructure/Modules/CoreModuleRegistrar.cs:39` |
+| `MigrationsAssembly` vẫn là lời gọi duy nhất, ở factory | `src/BE/PlatformManager.Api/PlatformManagerDbContextFactory.cs:120` |
+| ArchTests nhìn thấy assembly mới | `src/BE/Tests/PlatformManager.ArchTests/ArchTestSourceAccess.cs:57` · `src/BE/Tests/PlatformManager.ArchTests/CoreMustNotKnowBusinessNameTests.cs:156` |
+| Luật mới — `*.Persistence ⇏ *.Infrastructure/*.Api` | `src/BE/Tests/PlatformManager.ArchTests/PersistenceLayerBoundaryTests.cs:45` (assembly) · `:70` (`.csproj`) |
+| Đường dẫn artifact `.sql` | `src/BE/Tests/PlatformManager.ArchTests/MigrationsLocationTests.cs:153` · `src/BE/Tests/PlatformManager.Core.IntegrationTests/PostgresFixture.cs:200` |
+
+**Vì sao giữ namespace cũ trong assembly mới (nợ có chủ đích).** `PlatformManagerDbContextModelSnapshot.cs`
+và `…_InitialCreate.Designer.cs` ở host mang `using PlatformManager.Core.Infrastructure.Persistence;`
+và `[DbContext(typeof(PlatformManagerDbContext))]`. Đó là tham chiếu **lúc biên dịch**, không chỉ
+là tên kiểu dạng chuỗi. Đổi namespace thì hai file đó không biên dịch được nữa ⇒ buộc phải sửa
+tay snapshot hoặc sinh migration — cả hai đều ngoài phạm vi lượt này. Trả nợ bằng một lượt
+riêng: đổi namespace + `migrations add` sinh migration **rỗng** để snapshot đuổi kịp. Lượt đó cần
+người dùng chốt.
+
+**Nghiệm thu — đo 2026-09-10:**
+
+| # | Phép thử | Kết quả |
+| --- | --- | --- |
+| 1 | `dotnet build src/BE/PlatformManager.slnx -c Release` | ✅ 0 cảnh báo, 0 lỗi (baseline cùng ngày cũng 0/0) |
+| 2 | `grep -c '<Project Path=' src/BE/PlatformManager.slnx` | ✅ 8 → 9, bằng số `*.csproj` trên đĩa (9) |
+| 3 | Đồ thị | ✅ `Core.Persistence.csproj` chỉ 2 `ProjectReference` (Domain, Application); `Core.Api.csproj` chỉ nhắc Persistence trong chú thích cấm; `MigrationsAssembly(` đúng 1 lời gọi thật, ở factory |
+| 4 | `dotnet test` ArchTests · UnitTests | ✅ 68 → **70** (2 luật `PersistenceLayerBoundaryTests`) · 197 → **197** |
+| 5 | **Canary** — một file trong `Core.Persistence`: controller kế thừa thẳng `ControllerBase` + literal `"DtiWeekly"` + dùng kiểu của `Core.Api`, kèm `ProjectReference` → `Core.Api` | ✅ đúng **4** test đỏ: `CoreSource_MustNotContain_BusinessNameStringLiteral`, `EveryController_Inherits_ApiControllerBase`, và cả hai luật `PersistenceLayerBoundaryTests`. Hoàn tác ⇒ 70/70 xanh |
+| 6 | `dotnet ef migrations has-pending-model-changes --project PlatformManager.Api --startup-project PlatformManager.Api` | ✅ *"No changes have been made to the model since the last migration."* — không cần kết nối DB |
+| 7 | `grep` đường dẫn cũ `Core.Infrastructure/Persistence` · `Core.Infrastructure/Identity/App*` trong `doc/ spec/ .claude/ src/` | ✅ chỉ còn: bảng "Từ → Sang" ngay trên, ghi chú lịch sử `doc/cau-truc-database.md` §5.3 nghiệm thu #1, và file lịch sử `doc/cau-truc-database.sql` (banner `TÀI LIỆU LỊCH SỬ`, cố ý không sửa) |
+| 8 | `bash .claude/check-docs.sh` | ✅ PASS |
+| 9 | `dotnet test` `Core.IntegrationTests` | ⏸ **chưa đo** — Docker không chạy trên máy thi công (`docker version`: không kết nối được daemon). Phần **chưa được xác minh bằng chạy thật**: `PostgresFixture` đọc `.sql` từ đường dẫn mới, và host boot thật với assembly mới. Phép thử 1 + 4 + 6 phủ việc biên dịch, model EF và đường dẫn tĩnh (`MigrationsLocationTests` kiểm cùng thư mục), nhưng không thay được lần chạy đó |
+
 ### ArchTest cần có
 
 > ### 🚧 Trạng thái từng rule — đối chiếu 2026-09-01
@@ -392,8 +446,9 @@ Core gọi tên assembly của host, đúng thứ Corebase mang sang dự án 2 
 > | Rule | Trạng thái | Vì sao |
 > |---|---|---|
 > | `Core_MustNotReference_Business` | ✅ **Đã có, TÊN KHÁC** | Thi công dưới tên `Core_MustNotReference_AnyModulesAssembly` (`src/BE/Tests/PlatformManager.ArchTests/CoreModuleBoundaryTests.cs`). Cùng một luật |
-> | `Core_MustNotKnowBusinessName` | ✅ **Đã có** (đối chiếu 2026-09-06) | Thi công dưới tên `CoreSource_MustNotContain_BusinessNameStringLiteral` (`src/BE/Tests/PlatformManager.ArchTests/CoreMustNotKnowBusinessNameTests.cs:80`), kèm 3 test tự-kiểm bộ dò (`:162`, `:192`, `:211`). 🔄 LẬT 2026-09-06 — ô này giữ nhãn `🚧 Đang thi công 2026-09-01` cho tới lượt đối chiếu này, tức 5 ngày sau khi test đã vào code |
+> | `Core_MustNotKnowBusinessName` | ✅ **Đã có** (đối chiếu 2026-09-06) | Thi công dưới tên `CoreSource_MustNotContain_BusinessNameStringLiteral` (`src/BE/Tests/PlatformManager.ArchTests/CoreMustNotKnowBusinessNameTests.cs:80`), kèm 3 test tự-kiểm bộ dò (`:171`, `:201`, `:220` — 🔄 neo lại 2026-09-10: bộ cũ `:162`/`:192`/`:211` đã trôi, trỏ vào dòng trống/chú thích). 🔄 LẬT 2026-09-06 — ô này giữ nhãn `🚧 Đang thi công 2026-09-01` cho tới lượt đối chiếu này, tức 5 ngày sau khi test đã vào code |
 > | `Api_MustNotReference_PersistenceOrInfrastructure_Directly` | ✅ **Đã có** (thi công + đối chiếu 2026-09-09) | `src/BE/Tests/PlatformManager.ArchTests/ApiLayerBoundaryTests.cs:61`, kèm luật thứ hai ở mức văn bản `.csproj` (`:109`). Xem khối 🔄 ngay dưới bảng |
+> | `Application_MustNotReference_PersistenceOrInfrastructure` | ✅ **Đã có** (thi công + đối chiếu 2026-09-10) | Hai mức + một ca đối chứng ở `src/BE/Tests/PlatformManager.ArchTests/ApplicationLayerBoundaryTests.cs`: mức assembly `:39`, mức `.csproj` `:61`, ca `Business.Application → Core.Persistence` dựng tay `:100`. Áp cho **mọi** `*.Application`, không riêng Core. Sinh ra từ finding của `core-reviewer` ngay sau lượt tách `Core.Persistence`: trước đó `Core.Application` chỉ bị chặn nhờ **vòng tham chiếu** (hệ quả phụ, không phải luật), còn `Business.Application → Core.Persistence` không có gì chặn. Canary 2026-09-10 đỏ ở cả hai mức, mỗi mức đỏ đúng vì luật mới |
 > | `OnlyHostApi_MustReference_BothUnits` | 📐 **ĐÍCH ĐẾN** | `Business.*` chưa tồn tại. Kiểm: `find src/BE -name "*.csproj" -not -path "*/obj/*" \| grep Business` → **PASS khi không dòng nào ra**, tức chưa có tầng nghiệp vụ để luật này đo |
 > | `Core_Common_MustHaveZeroProjectReference` | 📐 **ĐÍCH ĐẾN** | `Core.Common` chưa là project riêng — hiện chỉ là thư mục `Common/` bên trong từng project |
 >
@@ -553,9 +608,9 @@ Chỗ mang, đo được:
 
 | Nơi | Mang gì | Trạng thái |
 |---|---|---|
-| `CoreSeeder` (`Core.Infrastructure`) | **4 mục menu** khai cứng: nhãn tiếng Việt, route `/quan-tri/nguoi-dung`, class icon `pi-shield` | ✅ **ĐÃ TÁCH 2026-09-02** — xem "Đã thi công (BE)" bên dưới |
+| `CoreSeeder` (`Core.Infrastructure` lúc đo; nay `Core.Persistence`, 2026-09-10) | **4 mục menu** khai cứng: nhãn tiếng Việt, route `/quan-tri/nguoi-dung`, class icon `pi-shield` | ✅ **ĐÃ TÁCH 2026-09-02** — xem "Đã thi công (BE)" bên dưới |
 | FE `core/auth/*.guard.ts` | **3 route** khai cứng: `/dang-nhap`, `/doi-mat-khau`, `/trang-chu` | ✅ **ĐÃ TÁCH 2026-09-02** — xem "Đã thi công (FE)" bên dưới |
-| `CoreSeeder` (`Core.Infrastructure`) | **2 email** `@platformmanager.local` + **2 tên hiển thị** tiếng Việt của tài khoản bootstrap | ✅ **ĐÃ TÁCH 2026-09-02** — xem "Đã thi công (BE) — tài khoản bootstrap" bên dưới |
+| `CoreSeeder` (`Core.Infrastructure` lúc đo; nay `Core.Persistence`, 2026-09-10) | **2 email** `@platformmanager.local` + **2 tên hiển thị** tiếng Việt của tài khoản bootstrap | ✅ **ĐÃ TÁCH 2026-09-02** — xem "Đã thi công (BE) — tài khoản bootstrap" bên dưới |
 | FE `core/theme/` (preset PrimeNG) | **10 hằng số màu** thương hiệu (`BRAND` `GOOD` `WARN` `BAD` `BG` `CARD` `TEXT` `MUTED` `LINE` `BORDER_STRONG`) | ✅ **ĐÃ TÁCH 2026-09-02** — xem "Đã thi công (FE — bảng màu + tên sản phẩm)" bên dưới |
 | FE `core/title/page-title.strategy.ts` + template của `shared/components/{sidebar,auth-card}/` | **Tên sản phẩm** ở 3 chỗ — 2 chỗ đã biết, chỗ thứ 3 (`auth-card`) chỉ lộ ra lúc thi công | ✅ **ĐÃ TÁCH 2026-09-02** khỏi `core/` + `shared/` — xem mục cùng tên. ⚠️ Dấu này **không** phủ `platform/`, xem hàng dưới |
 | FE `platform/**` — màn Core theo khối cây ở mục trên | **Tên sản phẩm** trong template lẫn `.ts` của màn Core | ✅ **ĐÃ TÁCH 2026-09-03** — xem "Đã thi công (FE) — đóng ba đường thoát" bên dưới. Canh bằng phép thử 7 |
@@ -620,7 +675,7 @@ tài liệu vận hành và phép nghiệm thu triển khai phải sửa theo.
 Tên đăng nhập (`"SuperAdmin"`, `"Admin"`) **ở lại Core** vì chúng soi gương `Roles.*`. Đã kiểm
 2026-09-02: mọi guard phân quyền dựa vào **vai**, không dựa vào tên —
 `SuperAdminAccountGuard.cs:48` dùng `Roles.SuperAdmin`, `:69` và `:78` dùng `IsInRole`. Chỗ duy
-nhất tên tồn tại như *dữ liệu* là `CoreSeeder.cs:47` (hằng `SuperAdminUserName`).
+nhất tên tồn tại như *dữ liệu* là `CoreSeeder.cs:49` (hằng `SuperAdminUserName`; neo lại 2026-09-10, trước ghi `:47`).
 
 > 🔄 LẬT 2026-09-06 — số dòng ở câu trên là `:42` cho tới lượt đối chiếu này, và `:42` là một
 > **tham số hàm dựng** (`ICoreBootstrapAccountSource bootstrapAccountSource`), không phải hằng tên
@@ -701,11 +756,12 @@ Nửa BE của quyết định này đã vào code. Nửa FE ở mục ngay sau.
 |---|---|
 | Seam (Core khai, không hiện thực) | `src/BE/Core/PlatformManager.Core.Application/Menu/ICoreMenuSeedSource.cs:21` + `MenuSeedItem.cs:45` |
 | Dữ liệu (host khai) | `src/BE/PlatformManager.Api/Seeding/AppMenuSeedSource.cs:41` |
-| Đăng ký DI | `src/BE/PlatformManager.Api/Program.cs:133` |
-| Cơ chế (giữ ở Core, không còn dữ liệu) | `src/BE/Core/PlatformManager.Core.Infrastructure/Persistence/CoreSeeder.cs:274` (`SeedMenuAsync`) |
+| Đăng ký DI | `src/BE/PlatformManager.Api/Program.cs:166` |
+| Cơ chế (giữ ở Core, không còn dữ liệu) | `src/BE/Core/PlatformManager.Core.Persistence/CoreSeeder.cs:301` (`SeedMenuAsync`) |
 
 *(🔄 LẬT 2026-09-06 — cả **bốn** số dòng trong bảng trên đã trượt và được sửa lại lần này:
-`MenuSeedItem.cs:36`→`:45`, `Program.cs:124`→`:133`, `CoreSeeder.cs:268`→`:274`. Bản trước ghi
+`MenuSeedItem.cs:36`→`:45`, `Program.cs:124`→`:133` (sửa tiếp 2026-09-10: `:133`→`:166`),
+`CoreSeeder.cs:268`→`:274` (sửa tiếp 2026-09-10: `:274`→`:301`, dòng cũ đã trỏ vào giữa một lời gọi log). Bản trước ghi
 "hai số dòng đã cập nhật 2026-09-02" — đúng lúc viết, sai từ lượt sửa code kế tiếp.)*
 
 Core **cố ý không có hiện thực mặc định** cho seam: một bản mặc định trả danh sách rỗng sẽ biến
@@ -752,8 +808,8 @@ bên trên trước khi sửa gì ở đây.
 |---|---|
 | Seam (Core khai, không hiện thực) | `src/BE/Core/PlatformManager.Core.Application/Bootstrap/ICoreBootstrapAccountSource.cs:42` + `BootstrapAccountProfile.cs:23` |
 | Dữ liệu (host khai) | `src/BE/PlatformManager.Api/Seeding/AppBootstrapAccountSource.cs:27` |
-| Đăng ký DI | `src/BE/PlatformManager.Api/Program.cs:140` |
-| Cơ chế + luật (giữ ở Core) | `src/BE/Core/PlatformManager.Core.Infrastructure/Persistence/CoreSeeder.cs:109` (`SeedBootstrapUserAsync`) · `:152` (`GuardAgainstInvalidProfiles`) |
+| Đăng ký DI | `src/BE/PlatformManager.Api/Program.cs:173` |
+| Cơ chế + luật (giữ ở Core) | `src/BE/Core/PlatformManager.Core.Persistence/CoreSeeder.cs:136` (`SeedBootstrapUserAsync`) · `:179` (`GuardAgainstInvalidProfiles`) — neo lại 2026-09-10, trước ghi `:109`/`:152` (một chú thích và một dòng trống) |
 | Test canh | `src/BE/Tests/PlatformManager.Core.IntegrationTests/Bootstrap/CoreSeederBootstrapAccountSourceTests.cs:30` |
 
 **Hình dạng seam là phần quan trọng nhất, không phải vị trí file.** Nó phơi ra **hai thuộc tính có

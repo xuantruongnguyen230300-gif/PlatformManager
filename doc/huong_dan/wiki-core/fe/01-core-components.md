@@ -42,7 +42,7 @@ bên `be/`.
 | 11 | **i18n** (dịch lúc **chạy**, **vi + en**, đổi ngôn ngữ ngay trong app) | Viết lại toàn bộ chuỗi khi bật đa ngôn ngữ | ✅ **CƠ CHẾ ĐÃ CHẠY (đối chiếu 2026-09-06)** — `@ngx-translate/core` v18, `core/i18n/` (`LanguageService`, `ApiErrorMessageService`), bảng dịch `src/FE/public/i18n/{vi,en}.json`, nút đổi ngôn ngữ `shared/components/language-switcher/`, và cổng G12 chặn chữ tiếng Việt trong template. 🔄 LẬT 2026-09-06: bản trước ghi "ĐANG THI CÔNG". Trạng thái từng phần: [08-i18n.md](08-i18n.md) |
 | 12 | **Responsive/breakpoint token hoá** | Mỗi component tự định nghĩa `@media` riêng, không đồng bộ | Nên có sớm |
 | 13 | **Grid engine + đồng bộ metadata với BE** | Tự viết grid nâng cao tốn kém, rủi ro mở rộng thật trong domain ERP/chuyển đổi số; menu/cột grid do BE điều khiển không có hợp đồng chung | **PrimeNG `p-table` ngay** (đã đảo ngược quyết định "đợi ngưỡng"), metadata JSON đã thiết kế sẵn — xem [11-grid-and-metadata.md](11-grid-and-metadata.md) |
-| 14 | **Biểu đồ (charting)** | Tự vẽ canvas tay không mở rộng được khi cần nhiều loại biểu đồ | 📐 **CHƯA THI CÔNG (đối chiếu 2026-09-06)** — hướng đã chốt là PrimeNG `p-chart` (Chart.js), nhưng `chart.js` **đã gỡ khỏi `src/FE/package.json` ngày 2026-09-04** cùng lượt xoá `TrendChart`, và không màn hình nào còn biểu đồ. Cài lại khi có màn hình cần — xem [12-charting.md](12-charting.md) |
+| 14 | **Biểu đồ (charting)** | Tự vẽ canvas tay không mở rộng được khi cần nhiều loại biểu đồ | Hướng đã chốt: PrimeNG `p-chart` (Chart.js). **Trạng thái thi công đọc ở file chủ [12-charting.md](12-charting.md)** — không chép ra đây (🔄 SỬA 2026-09-10: ô này từng chép trạng thái *"chưa thi công, `chart.js` đã gỡ"* và lạc hậu ngay lượt sau — đúng khuôn `.claude/CLAUDE.md` §5 cảnh báo) |
 | 15 | **Performance (zoneless, defer, virtual scroll, bundle budget)** | Zone.js overhead, bundle phình to âm thầm, list dài giật lag | Bắt buộc, ngày đầu — xem [13-performance.md](13-performance.md) |
 | 16 | **Isolation lỗi runtime theo từng vùng UI** (`ErrorHandler` toàn cục + cô lập cục bộ tại nơi rủi ro) | 1 widget lỗi (biểu đồ, tính toán phức tạp) không được kéo theo cả trang, và không ai biết lỗi vừa xảy ra | Bắt buộc, ngày đầu (`ErrorHandler`) — cô lập từng widget chỉ khi widget đó rủi ro cao, xem mục dưới |
 | 17 | **Runtime environment config** (1 bundle build ra chạy được nhiều môi trường, không hardcode lúc build) | Build lại riêng cho từng môi trường tốn CI; artifact test ở staging khác artifact thật sự deploy production | Nên có sớm — khi có ≥2 môi trường triển khai thật (staging + production) |
@@ -73,7 +73,7 @@ Trạng thái theo mục — **không kèm số**:
 
 | Mục | Trạng thái |
 |---|---|
-| #2, #5, #9 | Đã có ở mức tối giản — mapper ở `platform/*/services/*.mapper.ts`, state bằng `signal()` thường (chưa file `*.store.ts` nào, đúng ngưỡng đã chốt ở [fe-architecture.md](../../quy-uoc/fe-architecture.md)), toast tách đôi: service ở `core/toast/`, component ở `shared/components/toast/`. 🔄 LẬT 2026-09-06: bản trước ghi mapper nằm ở `modules/*/services/` — thư mục `src/app/modules/` **không tồn tại** (2 module nghiệp vụ gỡ 2026-08-29) |
+| #2, #5, #9 | Đã có ở mức tối giản — mapper ở `platform/*/services/*.mapper.ts`, state bằng `signal()` thường (chưa file `*.store.ts` nào, đúng ngưỡng đã chốt ở [fe-architecture.md](../../quy-uoc/fe-architecture.md)), toast tách đôi: service ở `core/toast/`, component ở `shared/components/toast/`. 🔄 SỬA 2026-09-10: `src/FE/src/app/modules/` **có thật trở lại** (module nghiệp vụ dựng 2026-09-09, khai ở `src/FE/eslint.config.js:29`) — bản trước ghi thư mục này *"không tồn tại"*. Vị trí mapper ở trên vẫn đúng; liệt kê bằng `find src/FE/src/app -name "*.mapper.ts"` thay vì tin câu chép sẵn, ranh giới `platform/` ↔ `modules/` đọc ở [fe-architecture.md](../../quy-uoc/fe-architecture.md) |
 | #1 | Xem [02-http-envelope.md](02-http-envelope.md) — đối chiếu envelope thật trước khi kết luận |
 | #3 | Token đã có trong `styles.scss`; nguồn chuẩn là `doc/Design/` ([04-design-token-system.md](04-design-token-system.md)) |
 | #4 | Thiếu trạng thái tương tác — `doc/Design/Frontend/PlatformManager/COMPONENTS.md` tự ghi nhận |
@@ -82,6 +82,7 @@ Trạng thái theo mục — **không kèm số**:
 | #10 | Chưa cần (chưa production) |
 | #11 | ✅ **Cơ chế đã chạy** (đối chiếu 2026-09-06) — xem dòng #11 ở bảng trên. Trạng thái từng phần và lệnh đo nằm ở [08-i18n.md](08-i18n.md); file chủ giữ lệnh, đừng dựng bộ lệnh thứ hai ở đây |
 | #12 | Breakpoint chưa hệ thống hoá thành token |
+| #19 | ✅ **Đã có** (đối chiếu 2026-09-10) — `status === 0` đi nhánh riêng, toast mang nút "Thử lại" gọi lại đúng request vừa hỏng. Neo `file:dòng` + ba quyết định không suy ra được từ code: §#19 dưới. Banner offline toàn trang thì **cố ý chưa xây** |
 | #20, #21, #22 | Xem [14-security.md](14-security.md), [15-accessibility.md](15-accessibility.md), [16-nen-tang-va-nang-cap.md](16-nen-tang-va-nang-cap.md) |
 
 ## Bổ sung 2026-08-24 — đối chiếu thực hành ngành cho hệ thống tầm trung: 4 khoảng trống
@@ -314,46 +315,66 @@ client trả lỗi network (status `0`), khác hẳn lỗi nghiệp vụ trong e
 `IApiResult` (xem [02-http-envelope.md](02-http-envelope.md)) vì BE chưa từng
 nhận được request đó. Nếu code xử lý mọi lỗi HTTP như nhau, user thấy "Đã có
 lỗi xảy ra" mơ hồ y hệt lỗi nghiệp vụ thật — trong khi hành động đúng của
-user hoàn toàn khác nhau (kiểm tra mạng, không phải thử lại/liên hệ support).
+user hoàn toàn khác nhau.
 
-```typescript
-// core/http/network-status.interceptor.ts
-export const networkStatusInterceptor: HttpInterceptorFn = (req, next) => {
-  const toast = inject(ToastService);
-  return next(req).pipe(
-    catchError((err: HttpErrorResponse) => {
-      if (err.status === 0) { // request không tới được server — mất mạng/DNS/CORS
-        toast.error('Mất kết nối mạng. Kiểm tra lại đường truyền.');  // API thật là `error`, KHÔNG `showError`
-      }
-      return throwError(() => err);
-    }),
-  );
-};
-```
+#### ✅ CÓ THẬT (đối chiếu 2026-09-10) — nhánh riêng + nút "Thử lại"
 
-```typescript
-// core/network/network-status.service.ts — banner khi mất mạng kéo dài
-@Injectable({ providedIn: 'root' })
-export class NetworkStatusService {
-  readonly isOnline = signal(navigator.onLine);
-  constructor() {
-    window.addEventListener('online', () => this.isOnline.set(true));
-    window.addEventListener('offline', () => this.isOnline.set(false));
-  }
-}
-```
+Chốt của người dùng 2026-09-10: **toast riêng, kèm nút gọi lại đúng request
+vừa hỏng**. Đã thi công; đọc code thay vì tin đoạn mô tả này:
 
-```html
-<!-- app.html -->
-@if (!networkStatus.isOnline()) {
-  <div class="offline-banner">Mất kết nối mạng — thay đổi có thể chưa được lưu.</div>
-}
-```
+| Việc | Ở đâu |
+|---|---|
+| Nhận ra `status === 0`, tách khỏi nhánh lỗi HTTP thường | `src/FE/src/app/core/interceptors/http-error.interceptor.ts:146` |
+| Chọn câu theo `navigator.onLine` | `src/FE/src/app/core/interceptors/http-error.interceptor.ts:150` |
+| Cắm cổng vào pipeline, TRƯỚC `catchError` | `src/FE/src/app/core/interceptors/http-error.interceptor.ts:205` |
+| `catchError` bỏ qua `status 0` để không toast lần hai | `src/FE/src/app/core/interceptors/http-error.interceptor.ts:242` |
+| Toast đỡ được một hành động tuỳ chọn | `src/FE/src/app/core/toast/toast.service.ts:33` |
+| Cửa sổ bấm được = tuổi thọ toast, MỘT hằng số | `src/FE/src/app/core/toast/toast.service.ts:44` |
+| Nút hiển thị | `src/FE/src/app/shared/components/toast/toast.html:16` |
+| Bốn hành vi bị khoá bằng test | `src/FE/src/app/core/interceptors/http-error.interceptor.spec.ts:406` |
 
-Mức tối thiểu hợp lý cho quy mô này dừng ở đây: interceptor phân biệt lỗi
-mạng với lỗi nghiệp vụ + banner `navigator.onLine`. Chi phí gần bằng 0, nên
-có sớm — không cần thêm gì (Service Worker/cache offline vẫn đúng là Nhóm B,
-giữ nguyên quyết định đã có ở [13-performance.md](13-performance.md)).
+Ba quyết định trong đó **không** suy ra được từ code, nên ghi ở đây:
+
+1. **Nút thử lại đi qua `retry({ delay })`, không phải một callback tự
+   `subscribe` lại.** Chỉ `retry` mới resubscribe *chính nguồn*, nên kết quả
+   lần gọi lại về đúng nơi đã đặt hàng. Cách kia bắn request đi rồi vứt
+   response — lưới vẫn trống, và người dùng thấy nút không làm gì cả.
+2. **Giá phải trả: lỗi `status 0` bị HOÃN** đúng bằng tuổi thọ toast (nút còn
+   trên màn hình thì cơ hội thử lại còn mở). Trong khoảng đó spinner vẫn quay.
+   Đổi lại, người dùng có một việc làm được thay vì một câu báo lỗi cụt.
+3. **Nhiều request hỏng cùng lúc thì ra nhiều toast — có chủ đích**, khác hẳn
+   cờ chống lặp của nhánh 401 ở cùng file. Ở 401, ba request dẫn tới **một**
+   việc (điều hướng); ở đây mỗi toast **sở hữu một request riêng**, gộp lại là
+   những request kia mất luôn đường thử lại.
+
+⚠️ **`status === 0` không chỉ có nghĩa mất mạng** — CORS chặn preflight, TLS
+hỏng, request bị huỷ, server đóng kết nối giữa chừng đều ra `0`. Vì vậy câu
+chữ mặc định nói *"không thể kết nối tới máy chủ"* (điều duy nhất quan sát
+được) chứ không quả quyết *"bạn đã mất mạng"*.
+
+`navigator.onLine` chỉ được dùng theo **một chiều**: `false` ⇒ hệ điều hành
+báo không có mạng nào cả, nói thẳng được. `true` **không** chứng minh ra được
+Internet (captive portal, VPN rớt, DNS hỏng, server sập) nên nó chỉ khiến ta
+rơi về câu trung tính. Giới hạn này ghi cả trong JSDoc tại
+`src/FE/src/app/core/interceptors/http-error.interceptor.ts:78`.
+
+Bốn khoá dịch nằm ở nhóm **CoreBase** (`public/i18n/`, không phải
+`public/i18n-app/` — hạ tầng HTTP đi theo CoreBase sang sản phẩm thứ hai);
+`shared.httpError.offline` và `offlineTitle` đã có sẵn từ trước, hai khoá mới
+là `shared.httpError.offlineDevice` (`src/FE/public/i18n/vi.json:268`) và
+`shared.action.retry` (`src/FE/public/i18n/vi.json:236`). Đủ cả `vi` lẫn `en`
+— `src/FE/src/app/app-i18n.spec.ts` canh parity, thiếu một bên là test đỏ.
+
+#### 📐 ĐÍCH ĐẾN — CHƯA THI CÔNG: banner offline toàn trang
+
+Bản trước của mục này còn phác một `NetworkStatusService` (`signal` bọc
+`navigator.onLine` + hai listener `online`/`offline`) và một banner thường
+trực trên `app.html`. **Chưa xây, và cố ý chưa.** Banner ấy chỉ trả lời được
+đúng chiều `false` của `navigator.onLine` — chiều mà toast trên đã nói rồi,
+đúng lúc người dùng đang thực sự chờ một request. Một dải chữ thường trực
+thêm vào chỉ có giá trị khi có **thao tác soạn thảo dài** cần cảnh báo "thay
+đổi có thể chưa được lưu"; hôm nay chưa màn hình nào như vậy. Dựng khi xuất
+hiện màn đầu tiên đúng mô tả đó, đừng dựng "cho đủ bộ".
 
 ## Mục lục `fe/`
 

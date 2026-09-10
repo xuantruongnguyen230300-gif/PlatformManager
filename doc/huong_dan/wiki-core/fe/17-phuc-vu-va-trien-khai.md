@@ -274,8 +274,8 @@ find . -maxdepth 3 -name "nginx*.conf" -not -path "*/node_modules/*"
 
 | Việc | Có thật hôm nay | Sẽ thành |
 |---|---|---|
-| Đọc `X-Forwarded-Proto` / `X-Forwarded-For` | ✅ **Đã có** (đối chiếu 2026-09-08) — `ForwardedHeadersOptions` dựng ở [`src/BE/PlatformManager.Api/Program.cs:479`](../../../../src/BE/PlatformManager.Api/Program.cs) (`XForwardedProto \| XForwardedFor`, `ForwardLimit = 1`), `KnownProxies` khai tường minh loopback v4+v6 ở `Program.cs:488`–`:489`, `app.UseForwardedHeaders(...)` ở `Program.cs:490`. 🔄 **SỬA 2026-09-08:** ô này trước ghi *"chỉ là comment ở `Program.cs:127`, không có lời gọi nào"* — dòng 127 nay là chú thích về module nghiệp vụ, không liên quan | `UseForwardedHeaders` đặt **đầu pipeline**, trước `app.UseExceptionHandler()` ở [`Program.cs:492`](../../../../src/BE/PlatformManager.Api/Program.cs); `KnownProxies` = loopback v4 + v6; `ForwardLimit` = 1 |
-| Allowlist CORS cho domain thật | Không nguồn nào **trong repo** đặt `Cors:AllowedOrigins`: [`src/BE/PlatformManager.Api/appsettings.json`](../../../../src/BE/PlatformManager.Api/appsettings.json) không có khoá `Cors`, và không có `appsettings.Production.json`. Hình dạng + ràng buộc của allowlist kiểm ở [`src/BE/PlatformManager.Api/Common/CorsPolicyOptions.cs:48`](../../../../src/BE/PlatformManager.Api/Common/CorsPolicyOptions.cs) (`[Required]` ở `:48`, `[MinLength(1)]` ở `:50` — số cũ `:38` lệch 10 dòng từ 2026-09-08, khi chú thích lớp được viết lại); chỗ bind và fail-fast ở [`src/BE/PlatformManager.Api/Program.cs:217`](../../../../src/BE/PlatformManager.Api/Program.cs) + [`Program.cs:227`](../../../../src/BE/PlatformManager.Api/Program.cs) — `ValidateOnStart()` **chỉ** gắn ở Production. Giá trị dev là **cấu hình cục bộ từng máy**, xem ghi chú dưới bảng | Origin thật nạp từ biến môi trường / secret store — **không** commit vào git ([`../be/09-security-beyond-auth.md`](../be/09-security-beyond-auth.md) §"Quản lý secret") |
+| Đọc `X-Forwarded-Proto` / `X-Forwarded-For` | ✅ **Đã có** (đối chiếu 2026-09-08) — `ForwardedHeadersOptions` dựng ở [`src/BE/PlatformManager.Api/Program.cs:522`](../../../../src/BE/PlatformManager.Api/Program.cs) (`XForwardedProto \| XForwardedFor`, `ForwardLimit = 1`), `KnownProxies` khai tường minh loopback v4+v6 ở `Program.cs:531`–`:532`, `app.UseForwardedHeaders(...)` ở `Program.cs:533` (neo đo lại 2026-09-10). 🔄 **SỬA 2026-09-08:** ô này trước ghi *"chỉ là comment ở `Program.cs:127`, không có lời gọi nào"* — dòng 127, khi đo 2026-09-08, là chú thích về module nghiệp vụ, không liên quan | `UseForwardedHeaders` đặt **đầu pipeline**, trước `app.UseExceptionHandler()` ở [`Program.cs:535`](../../../../src/BE/PlatformManager.Api/Program.cs); `KnownProxies` = loopback v4 + v6; `ForwardLimit` = 1 |
+| Allowlist CORS cho domain thật | Không nguồn nào **trong repo** đặt `Cors:AllowedOrigins`: [`src/BE/PlatformManager.Api/appsettings.json`](../../../../src/BE/PlatformManager.Api/appsettings.json) không có khoá `Cors`, và không có `appsettings.Production.json`. Hình dạng + ràng buộc của allowlist kiểm ở [`src/BE/PlatformManager.Api/Common/CorsPolicyOptions.cs:48`](../../../../src/BE/PlatformManager.Api/Common/CorsPolicyOptions.cs) (`[Required]` ở `:48`, `[MinLength(1)]` ở `:50` — số cũ `:38` lệch 10 dòng từ 2026-09-08, khi chú thích lớp được viết lại); chỗ bind và fail-fast ở [`src/BE/PlatformManager.Api/Program.cs:260`](../../../../src/BE/PlatformManager.Api/Program.cs) + [`Program.cs:270`](../../../../src/BE/PlatformManager.Api/Program.cs) — `ValidateOnStart()` **chỉ** gắn ở Production. Giá trị dev là **cấu hình cục bộ từng máy**, xem ghi chú dưới bảng | Origin thật nạp từ biến môi trường / secret store — **không** commit vào git ([`../be/09-security-beyond-auth.md`](../be/09-security-beyond-auth.md) §"Quản lý secret") |
 | Ép HTTPS + HSTS | Không có `UseHttpsRedirection`, không có `UseHsts` | Đặt ở **nginx**, không ở `Program.cs` — theo §5, mô hình B thì web server phát |
 | Security header (`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`) | Không có | **nginx** — cùng lý do |
 | File cấu hình nginx trong repo | ✅ **`nginx.conf` ở gốc repo** (đối chiếu 2026-09-06) — đã phủ HTTPS+HSTS, ba security header, chặn `/health`, và hai `proxy_set_header X-Forwarded-*` | Thay `server_name` + đường dẫn chứng chỉ bằng domain thật (§6.5) |
@@ -308,7 +308,7 @@ Hai dòng đầu bảng trên **không phải** loại "có thể hỏng". Chún
 deploy đầu, và hỏng theo kiểu khó chẩn đoán nhất — health check vẫn xanh:
 
 - **Thiếu `UseForwardedHeaders`.** nginx cắt TLS rồi chuyển HTTP thuần vào Kestrel.
-  Cookie CSRF khai `SecurePolicy = Always` ([`Program.cs:445`](../../../../src/BE/PlatformManager.Api/Program.cs))
+  Cookie CSRF khai `SecurePolicy = Always` ([`Program.cs:488`](../../../../src/BE/PlatformManager.Api/Program.cs))
   nên app từ chối phát nó trên kết nối nó **tưởng** là không bảo mật. `GET /api/antiforgery/token`
   trả 500, FE không bao giờ có token, không request ghi nào đi qua.
 - **Allowlist CORS rỗng ở Production.** `WithOrigins()` với mảng rỗng chặn **mọi**
@@ -365,7 +365,7 @@ Không phép thử nào trong ba phép này chạy được ở máy dev, vì m�
 
 Phép thử 3 là phép thử quan trọng nhất và dễ bỏ qua nhất: nó phân biệt *"vá đúng"*
 với *"vá xong nhưng đã vô hiệu hoá rate limit"*. Hạn mức `login` là 5 lượt/phút
-phân vùng theo IP ([`Program.cs:131`](../../../../src/BE/PlatformManager.Api/Program.cs));
+phân vùng theo IP ([`Program.cs:332`](../../../../src/BE/PlatformManager.Api/Program.cs));
 nếu `KnownProxies` khai sai thì mọi người dùng gộp về một phân vùng, hoặc kẻ tấn công
 tự chọn phân vùng bằng header giả — cả hai trường hợp phép thử 3 đều **không** trả 429.
 

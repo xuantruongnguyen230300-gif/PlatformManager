@@ -136,7 +136,7 @@ Thư viện: **CsvHelper** cho CSV, **NPOI** cho cả `.xls` (HSSF) lẫn `.xlsx
 
 > ✅ **Nay cưỡng chế BẰNG MÁY (thêm 2026-09-09, finding F3).** Hai tiền tố `"NPOI"` và
 > `"CsvHelper"` đã vào `ForbiddenAssemblyPrefixes` của
-> `src/BE/Tests/PlatformManager.ArchTests/LayerDependencyTests.cs:29`.
+> `src/BE/Tests/PlatformManager.ArchTests/LayerDependencyTests.cs:48-49`.
 >
 > Trước đó `PlatformManager.Core.Infrastructure.csproj:46` **tuyên bố** *"LayerDependencyTests
 > cưỡng chế"* trong khi mảng chỉ có `Microsoft.EntityFrameworkCore`, `Microsoft.AspNetCore`,

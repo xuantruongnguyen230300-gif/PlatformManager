@@ -339,10 +339,12 @@ component destroy.
 > làm interceptor hoặc retry sai chỗ: retry mãi 1 lỗi 403 (không bao giờ hết
 > lỗi), hoặc không retry 1 lỗi mạng đáng lẽ tự khỏi sau 1 giây.
 
-> 📐 **ĐÍCH ĐẾN — CHƯA THI CÔNG (đối chiếu 2026-09-06).** Toán tử dưới đây chưa được viết;
-> `core/http/` hiện chỉ có `api-result.model.ts`, `paged-result.model.ts`,
-> `http-context-tokens.ts`, `csrf.service.ts`, `csrf-init.provider.ts`. Kiểm bằng
-> `grep -rn "retryTransient" src/FE/src` — 0 dòng.
+> 📐 **ĐÍCH ĐẾN — CHƯA THI CÔNG (đối chiếu 2026-09-10).** Toán tử dưới đây chưa được viết.
+> Tiêu chí PASS: `grep -rn "retryTransient" src/FE/src` trả **0 dòng**. Muốn biết `core/http/`
+> hiện có gì thì `ls src/FE/src/app/core/http/` — đừng chép danh sách vào đây
+> (`.claude/CLAUDE.md` §6). Bản trước liệt kê tay 5 file và danh sách đó mục ruỗng đúng
+> **cùng ngày** `server-field-errors.ts` được nâng lên thư mục này, trong khi lệnh `grep` ngay
+> bên cạnh — thứ THẬT SỰ chứng minh điều đoạn văn muốn nói — vẫn đúng nguyên.
 
 ```ts
 // core/http/retry-transient.operator.ts  (chưa tồn tại — đích đến)

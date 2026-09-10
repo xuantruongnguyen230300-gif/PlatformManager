@@ -100,7 +100,7 @@ thấy được cả dòng đã xoá mềm); và lưu hai lần cùng một cặ
 |---|---|
 | Tính token băm, kèm cảnh báo cấm `IgnoreQueryFilters()` | `src/BE/Core/PlatformManager.Core.Application/Permissions/MatrixVersion.cs:19` |
 | `GET` trả `version` | `src/BE/Core/PlatformManager.Core.Application/Permissions/GetPermissionMatrixQuery.cs:25` |
-| Xoá mềm thay `RemoveRange` | `src/BE/Core/PlatformManager.Core.Infrastructure/Persistence/Repositories/SysMenuRoleRepository.cs:91` |
+| Xoá mềm thay `RemoveRange` | `src/BE/Core/PlatformManager.Core.Persistence/Repositories/SysMenuRoleRepository.cs:91` |
 | Rule phủ đủ + rule id lạ, **ở validator nên chặn trước khi chạm dữ liệu** | `src/BE/Core/PlatformManager.Core.Application/Permissions/UpdatePermissionMatrixCommand.cs:98` |
 
 Một bổ sung ngoài quyết định gốc, đã chốt 2026-08-31: **`sysMenuId` không tồn tại ⇒ 400**, trước
@@ -112,7 +112,7 @@ Một bổ sung ngoài quyết định gốc, đã chốt 2026-08-31: **`sysMenu
 |---|---|
 | `GET` (cả hai) trả `version` | `src/BE/Core/PlatformManager.Core.Application/Permissions/GetPermissionMatrixQuery.cs:25,34` |
 | `PUT` (cả hai) nhận `version` | `src/BE/Core/PlatformManager.Core.Application/Permissions/UpdatePermissionMatrixCommand.cs:22`; FE gửi ở `src/FE/src/app/platform/phan-quyen/services/phan-quyen.service.ts:51,78` |
-| `ReplaceAllAsync` xoá **mềm**, không `RemoveRange` | `src/BE/Core/PlatformManager.Core.Infrastructure/Persistence/Repositories/SysMenuRoleRepository.cs:91` |
+| `ReplaceAllAsync` xoá **mềm**, không `RemoveRange` | `src/BE/Core/PlatformManager.Core.Persistence/Repositories/SysMenuRoleRepository.cs:91` |
 | Hàm băm `version` lọc `IsDeleted = false` (cấm `IgnoreQueryFilters()`) | `src/BE/Core/PlatformManager.Core.Application/Permissions/MatrixVersion.cs:19`; ràng buộc nhắc lại ở `SysMenuRoleRepository.cs:59-64` |
 | Payload thiếu phần tử ⇒ **400** ở validator | `UpdatePermissionMatrixCommand.cs:98` (lớp), `:134-150` (chiều thiếu) |
 | `sysMenuId` lạ ⇒ **400**, không còn 500 vỡ khoá ngoại | `UpdatePermissionMatrixCommand.cs:120-129` |

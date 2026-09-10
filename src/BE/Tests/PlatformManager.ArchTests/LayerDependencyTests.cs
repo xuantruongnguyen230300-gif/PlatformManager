@@ -49,12 +49,12 @@ public class LayerDependencyTests
         "CsvHelper",
     ];
 
-    private static List<string> ForbiddenReferencesOf(Assembly assembly) =>
+    internal static List<string> ForbiddenReferencesOf(Assembly assembly) =>
         assembly.GetReferencedAssemblies()
             .Select(a => a.Name!)
             .Where(n => ForbiddenAssemblyPrefixes.Any(p => n.StartsWith(p, StringComparison.Ordinal))
-                        // Bất kỳ project *.Infrastructure nào của chính repo này.
-                        || n.Contains(".Infrastructure", StringComparison.Ordinal))
+                        // Bất kỳ project *.Persistence/*.Infrastructure nào (.Persistence thêm 2026-09-10, xem ApplicationLayerBoundaryTests).
+                        || n.Contains(".Infrastructure", StringComparison.Ordinal) || n.Contains(".Persistence", StringComparison.Ordinal))
             .ToList();
 
     [Fact]

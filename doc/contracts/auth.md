@@ -145,7 +145,7 @@ Request (`[FromBody]`, phẳng):
 `Admin` DUY NHẤT) — mật khẩu đọc từ `BootstrapOptions` (User Secrets `Bootstrap:SuperAdminPassword`
 / `Bootstrap:AdminPassword` lúc dev, biến môi trường `Bootstrap__SuperAdminPassword` /
 `Bootstrap__AdminPassword` lúc production; fail-fast — app không khởi động được nếu thiếu). Xem
-`src/BE/Core/PlatformManager.Core.Infrastructure/Persistence/BootstrapOptions.cs`.
+`src/BE/Core/PlatformManager.Core.Persistence/BootstrapOptions.cs`.
 **Dựng DB mới để đăng nhập thử — đúng hai lệnh** (đối chiếu 2026-09-08):
 
 ```bash
@@ -211,7 +211,7 @@ HTTP/1.1 400 Bad Request
 
 > 🔄 **SỬA 2026-09-06.** Bản trước viết *"HAI tầng"* ngay trên một bảng có **ba** dòng, và đoạn
 > văn dưới bảng còn ghi *"tiêu cả hai limiter"* + *"ăn vào hạn mức 100"*. Cả ba chỗ đều lệch
-> khỏi `src/BE/PlatformManager.Api/Program.cs:244,251,263` (5 / 200 / 10) — bảng đã được cập nhật
+> khỏi `src/BE/PlatformManager.Api/Program.cs:287,294,306` (5 / 200 / 10) — bảng đã được cập nhật
 > 2026-09-01 nhưng văn xuôi quanh nó thì không, đúng dạng lỗi `check-docs.sh` không bắt được.
 
 | Tầng | Hạn mức | Áp cho |

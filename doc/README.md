@@ -38,7 +38,7 @@ verified: 2026-09-06
 | **Giao diện: layout, copy, token, component, ảnh màn hình** | [`Design/`](Design/) — nguồn UI **duy nhất**, cả FE lẫn BE |
 | **Hợp đồng API một endpoint cụ thể** | [`contracts/`](contracts/) |
 | **Schema thật, bảng/cột/index đang chạy** | [`cau-truc-database.md`](cau-truc-database.md) — schema `core`; bảng nghiệp vụ ở [`cau-truc-database-business.md`](cau-truc-database-business.md) |
-| **Dựng DB từ trống (chạy trong DBeaver)** | [`db-khoi-tao.sql`](db-khoi-tao.sql) — sinh tự động từ `src/BE/Core/PlatformManager.Core.Infrastructure/Persistence/Migrations/sql/0001_initial_baseline.sql`, đừng sửa tay. Sau đó chạy lệnh seed: `dotnet run --project src/BE/PlatformManager.Api -- --seed` |
+| **Dựng DB từ trống (chạy trong DBeaver)** | [`db-khoi-tao.sql`](db-khoi-tao.sql) — sinh tự động từ `src/BE/Core/PlatformManager.Core.Persistence/Migrations/sql/0001_initial_baseline.sql`, đừng sửa tay. Sau đó chạy lệnh seed: `dotnet run --project src/BE/PlatformManager.Api -- --seed` |
 | **Chấm review: cái gì là finding, cái gì không** | [`huong_dan/quy-uoc/tieu-chi-review.md`](huong_dan/quy-uoc/tieu-chi-review.md) |
 | **"Core đủ chưa, còn thiếu mảng nào"** | [`huong_dan/wiki-core/be/01-core-components.md`](huong_dan/wiki-core/be/01-core-components.md) §Áp dụng |
 | **Kiến thức nền về core (chuẩn chung, không riêng dự án)** | [`huong_dan/wiki-core/`](huong_dan/wiki-core/) |

@@ -31,10 +31,10 @@ public sealed class CoreModuleRegistrar(bool requireBootstrapOptions = false) : 
         services.AddCoreModule(configuration, requireBootstrapOptions);
 
     /// <summary>
-    /// Assembly CHÍNH NÓ (Core.Infrastructure) — nơi sống của AppUserConfiguration/
-    /// AppRoleConfiguration/SysMenuConfiguration/SysMenuRoleConfiguration/
-    /// RolePermissionConfiguration. Lấy qua <c>typeof</c> chứ không gõ chuỗi tên assembly: đổi
-    /// tên project thì lỗi biên dịch, không phải lỗi lúc chạy.
+    /// Assembly <c>Core.Persistence</c> (tách 2026-09-10) — nơi sống của AppUserConfiguration/
+    /// AppRoleConfiguration/SysMenuConfiguration/SysMenuRoleConfiguration/RolePermissionConfiguration.
+    /// KHÔNG phải assembly của chính registrar này. Lấy qua <c>typeof</c> chứ không gõ chuỗi tên
+    /// assembly: đổi tên/chuyển project thì kết quả tự đi theo kiểu, không phải lỗi lúc chạy.
     /// </summary>
     public Assembly PersistenceAssembly => typeof(PlatformManagerDbContext).Assembly;
 

@@ -71,7 +71,7 @@ Ca đó đáng ghi lại vì nó là **khuôn nhận diện**, không phải chu
 
 `PUT /api/admin/permissions` **không** cập nhật từng dòng — nó thay thế **toàn bộ** tập:
 đánh dấu xoá mềm mọi dòng đang sống rồi chèn lại một thế hệ đầy đủ theo payload
-(`src/BE/Core/PlatformManager.Core.Infrastructure/Persistence/Repositories/SysMenuRoleRepository.cs:89-91`
+(`src/BE/Core/PlatformManager.Core.Persistence/Repositories/SysMenuRoleRepository.cs:89-91`
 và `:115`). Dòng còn lại sau đó là dòng **đã đánh dấu xoá**, không phải dòng hiện hành, nên
 **không còn dòng nào để so token theo dòng** — `WHERE xmin = @cũ` không có gì để bám vào.
 

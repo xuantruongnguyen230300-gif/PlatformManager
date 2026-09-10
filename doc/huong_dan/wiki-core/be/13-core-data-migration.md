@@ -86,7 +86,7 @@ migration:
 
 ✅ **Đóng 2026-08-24** (khoảng trống mô tả dưới đây tồn tại thật cho tới đúng
 ngày này, không phải lý thuyết): `CoreSeeder.SeedRolePermissionsAsync()`
-(`src/BE/Core/PlatformManager.Core.Infrastructure/Persistence/CoreSeeder.cs`)
+(`src/BE/Core/PlatformManager.Core.Persistence/CoreSeeder.cs`)
 nay seed đủ 3 `ResourceKeys.All` cho `Admin`/`User` ở Development, gọi ngay
 sau `SeedRolesAsync()` trong `SeedAsync()`.
 
@@ -160,8 +160,8 @@ mô đội nhỏ.
 
 > 🔄 **LẬT 2026-09-06.** Mục này còn nhãn `🚧` cho việc **đã xong**. Cả hai quyết định
 > đã vào code: lệnh seed riêng ở `src/BE/PlatformManager.Api/Common/SeedCommand.cs`
-> (nhận diện tham số tại `src/BE/PlatformManager.Api/Program.cs:36`, chạy rồi thoát tại
-> `src/BE/PlatformManager.Api/Program.cs:456`), và `ValidateOnStart()` nay **có điều
+> (nhận diện tham số tại `src/BE/PlatformManager.Api/Program.cs:38`, chạy rồi thoát tại
+> `src/BE/PlatformManager.Api/Program.cs:499`), và `ValidateOnStart()` nay **có điều
 > kiện** qua tham số `requireBootstrapOptions`
 > (`src/BE/Core/PlatformManager.Core.Infrastructure/DependencyInjection.cs:164`).
 > Phần "Khoảng trống" dưới đây mô tả trạng thái **trước** khi thi công.
@@ -198,8 +198,8 @@ Production app **bắt buộc** phải có `Bootstrap__SuperAdminPassword` và
 Phản xạ tự nhiên là làm giống mục 2026-08-27: viết thêm script SQL. Không được cho
 `AspNetUsers` — mật khẩu phải đi qua bộ băm của ASP.NET Identity
 (`UserManager.CreateAsync`,
-`src/BE/Core/PlatformManager.Core.Infrastructure/Persistence/CoreSeeder.cs:242` — đối chiếu
-2026-09-06, trích dẫn cũ `CoreSeeder.cs:115` đã lạc). `INSERT` viết tay sinh ra tài
+`src/BE/Core/PlatformManager.Core.Persistence/CoreSeeder.cs:269` — neo lại 2026-09-10; trước đó
+`:242` (đối chiếu 2026-09-06) rồi `:115`, cả hai đã lạc). `INSERT` viết tay sinh ra tài
 khoản **không đăng nhập được**. Role và menu thì SQL làm được; tài khoản thì không,
 và tách hai nửa ra hai cơ chế là tự tạo cho mình hai thứ phải giữ đồng bộ.
 
@@ -223,13 +223,13 @@ lầm *"đặt được secret nghĩa là đã bootstrap"*.
 
 | | Trước (2026-08-30) | Đo được hôm nay |
 |---|---|---|
-| Chạy seeder | Chỉ ở Development, gate `IsDevelopment()` bọc quanh `CoreSeeder.SeedAsync()` | Gate đã gỡ — `grep -n "IsDevelopment" src/BE/PlatformManager.Api/Program.cs` **không còn dòng nào bọc seeder**. Đường chạy: `src/BE/PlatformManager.Api/Program.cs:36` (nhận `--seed`) → `:456` (`SeedCommand.RunAsync`) rồi thoát |
+| Chạy seeder | Chỉ ở Development, gate `IsDevelopment()` bọc quanh `CoreSeeder.SeedAsync()` | Gate đã gỡ — `grep -n "IsDevelopment" src/BE/PlatformManager.Api/Program.cs` **không còn dòng nào bọc seeder**. Đường chạy: `src/BE/PlatformManager.Api/Program.cs:38` (nhận `--seed`) → `:499` (`SeedCommand.RunAsync`) rồi thoát |
 | `BootstrapOptions` | `ValidateOnStart()` không điều kiện — API đòi 2 secret ở mọi môi trường | Có điều kiện — `src/BE/Core/PlatformManager.Core.Infrastructure/DependencyInjection.cs:164`; tiến trình API không đòi 2 secret nữa |
 | `RolePermissions` | Có `scripts/seed-role-permissions.sql` (từ 2026-08-29) | **Lệnh seed là đường chính** — nó gọi `SeedRolePermissionsAsync()` nên phủ luôn bảng này. Script SQL giữ lại cho trường hợp chỉ có quyền truy cập DB, không chạy được binary |
 
 > 🔄 **LẬT 2026-09-06.** Dòng đầu bảng cũ trích `src/BE/PlatformManager.Api/Program.cs:376`
-> làm bằng chứng cho gate `IsDevelopment()`; dòng 376 hôm nay là `TraceId` trong nhánh
-> `OnRejected` của rate limiter — **không liên quan gì**. Đây đúng loại lỗi mà cổng
+> làm bằng chứng cho gate `IsDevelopment()`; dòng 376, khi đo 2026-09-06, là `TraceId` trong
+> nhánh `OnRejected` của rate limiter — **không liên quan gì**. Đây đúng loại lỗi mà cổng
 > `check-docs.sh` §6 không bắt được: số dòng vẫn nằm trong file nên vẫn PASS.
 
 ### Nghiệm thu

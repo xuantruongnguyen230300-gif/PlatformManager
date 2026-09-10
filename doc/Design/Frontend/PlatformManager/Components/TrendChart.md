@@ -131,6 +131,29 @@ The line is drawn **straight-segment**, not smoothed. A missing period keeps its
 slot on the x axis and breaks the line rather than being dropped: a gap in the
 data must read as a gap, not as a straight run between its two neighbours.
 
+**Decision Q44, 2026-09-10, puts this rule into the contract:** the backend returns
+every period up to the current one, and a period with no data carries
+`value: null`. Dropping the point would not leave a gap at all: on a category axis
+`chart.js` joins the two neighbouring points with one straight segment, so the gap
+has to arrive as a `null` in its own slot.
+
+> 🚧 **ĐÃ CHỐT — ĐANG THI CÔNG (Q44).** The component built on 2026-09-09 follows
+> the opposite rule. Checked 2026-09-10:
+>
+> | Có thật hôm nay | Sẽ thành |
+> | --- | --- |
+> | `ITrendPoint.Value` is a plain `number`, and the `points` input is documented as already stripped of empty periods, with a 🛑 against inserting `null` (`src/FE/src/app/modules/dashboard/components/trend-chart/trend-chart.ts:17-20`, `src/FE/src/app/modules/dashboard/components/trend-chart/trend-chart.ts:124-129`) | a nullable value, one point per period |
+> | Every value goes through `Math.min(100, Math.max(0, value))` (`src/FE/src/app/modules/dashboard/components/trend-chart/trend-chart.ts:174`, and `:226` for the screen-reader table). `Math.max(0, null)` is `0`, so a `null` passed in today would plot as **0%**, not as a gap | `null` skips the clamp and reaches the dataset as `null` |
+> | `hasData` is `points().length > 0` (`src/FE/src/app/modules/dashboard/components/trend-chart/trend-chart.ts:142`), so an all-`null` series would render empty axes instead of the `.muted` sentence | the gate counts periods that carry a value, as § Anatomy already says |
+> | The spec pins the old rule — *"không có giá trị null nào lọt vào chuỗi"* (`src/FE/src/app/modules/dashboard/components/trend-chart/trend-chart.spec.ts:155-159`) | a test that a `null` period leaves a gap |
+>
+> `spanGaps` is **not** set anywhere in the component, so `chart.js` keeps its
+> default and does not bridge a `null`. That half needs no change:
+>
+> ```bash
+> grep -n 'spanGaps' src/FE/src/app/modules/dashboard/components/trend-chart/trend-chart.ts   # PASS = no output, or spanGaps: false
+> ```
+
 ⚠️ **The `.proto-*` selectors above are prototype scaffolding**, a static SVG
 standing in for a real chart renderer. Their geometry is the approved *design*, and
 that half still holds. The other half no longer does: the renderer stopped being an
@@ -145,12 +168,74 @@ Decision Q12 replaced the period codes on the x axis with **date ranges**:
 
 | Mode | X-axis labels | Approved values |
 | --- | --- | --- |
-| Week | date range per tick | `06/07 – 12/07` · `13/07 – 19/07` · `20/07 – 26/07` · `27/07 – 02/08` · `03/08 – 09/08` · `10/08 – 16/08` |
+| Week | date range per tick; **twelve weeks, ending at the week being viewed** — decision Q54 | `25/05 – 31/05` · `01/06 – 07/06` · `08/06 – 14/06` · `15/06 – 21/06` · `22/06 – 28/06` · `29/06 – 05/07` · `06/07 – 12/07` · `13/07 – 19/07` · `20/07 – 26/07` · `27/07 – 02/08` · `03/08 – 09/08` · `10/08 – 16/08` |
 | Month | month abbreviation, **not** a date range — decision T7 | `Th.1` … `Th.12` |
+
+**Who writes those labels — decision Q43, 2026-09-10:** the backend sends each
+week-mode tick ready-made (`06/07 – 12/07`). The week code stays in the payload as
+the period's identity key, and the frontend does no ISO-week-to-date arithmetic. The
+shipped component already expects exactly that: `ITrendPoint.Label` is a
+pre-formatted string, and the component builds no label of its own
+(`src/FE/src/app/modules/dashboard/components/trend-chart/trend-chart.ts:7-20`). Q43
+changes nothing in this file; it settles which side of the contract fills that string.
 
 The month mode deliberately keeps the short form: twelve date-range labels do not
 fit across one card width. A month's range is read from the period selector and the
 `Kỳ đang xem` label instead.
+
+> 🔄 **LẬT 2026-09-10 (Q54) — the week axis now carries twelve weeks, not six.** The
+> approved prototype draws six — weeks 28–33, `06/07 – 12/07` … `10/08 – 16/08`
+> (`doc/Design/Frontend/PlatformManager/Prototypes/index.html` § `.proto-chart-axis-x`).
+> The product owner chose twelve, ending at the week being viewed. The twelve values in
+> the table above are ISO weeks 22–33 of 2026 written in the Q43 form — composed for
+> this spec, not drawn in the prototype, which is now the stale side.
+>
+> **What the window does at a year boundary** (viewing week 3, does it reach back into
+> the previous year?) is **not this file's to define**. The question is with the product
+> owner, and the answer belongs to `doc/contracts/dashboard.md` § CONTRACT DB-1 → `trend`.
+> Read it there. As read on 2026-09-10 DB-1 still describes the pre-Q54 range — every
+> period from the start of the year up to the current one — so the contract has not
+> caught up yet.
+>
+> **T7's reason now applies to the week axis too.** T7 kept `Th.1 … Th.12` because twelve
+> date-range labels do not fit across one card width. Q54 puts twelve date-range labels
+> on the week axis, and Q43 (the backend sends each label ready-made) stays exactly as it
+> is. Something on the axis has to give; what gives is settled just below (duyệt 2026-09-10, Q54).
+
+#### Fitting twelve week labels — duyệt 2026-09-10 (Q54)
+
+> 🚧 **ĐÃ CHỐT — ĐANG THI CÔNG.** Approved 2026-09-10; the component does not do it yet.
+>
+> | Có thật hôm nay | Sẽ thành |
+> | --- | --- |
+> | x-axis ticks carry only a colour and a font size (`src/FE/src/app/modules/dashboard/components/trend-chart/trend-chart.ts:201-205`), so the library tilts crowded labels and then drops some | horizontal labels, evenly thinned, the viewed week always labelled — points 1–5 below |
+
+**As built today** the x axis sets only a colour and a font size
+(`src/FE/src/app/modules/dashboard/components/trend-chart/trend-chart.ts:201-205`), so
+`chart.js` falls back on its own defaults for a crowded axis: it tilts the labels, up to
+50°, and then drops some. Neither behaviour was designed.
+
+The approved rule:
+
+1. **Every label stays exactly as the backend sends it** — `25/05 – 31/05`, never split
+   or shortened on the frontend. Q43 is untouched.
+2. **Labels stay horizontal and are thinned evenly** until they no longer collide
+   (`maxRotation: 0` plus the library's own `autoSkip`). Every week keeps its slot and its
+   point; only the tick text is skipped. No tilted labels — they eat into a plot whose
+   height is fixed at 220px.
+3. **The viewed week's label is always shown.** The rightmost tick is the one the reader
+   came for; if even thinning would drop it, it is shown anyway.
+4. **Any week's full range is one hover away.** The tooltip's title is the category
+   label, which is the backend's range string. The screen-reader table already lists all
+   twelve (§ Normalize on redesign #2).
+5. **No breakpoint rule of its own.** The same thinning shows fewer labels on a narrower
+   card, down to the phone width where the chart card spans the full row.
+
+Alternatives set aside: **two-line labels** (start above end) would
+make the frontend split a string the backend owns — the formatting Q43 moved out of the
+frontend — and twelve two-line labels still do not fit a phone-width card. **Tilted
+labels** are what the library does today by default, which is point 2's reason for
+ruling them out.
 
 **Settled 2026-09-05 by decision T7**, which was the last open question on this
 component. What T7 closed is whether the month axis should be widened to carry date
@@ -221,7 +306,9 @@ radius 4. The 12% fill opacity is **not** in this list — it is carried by
 
 Verbatim copy: card heading `Biểu đồ tiến độ hàng tuần` · card caption
 `Tiến độ chung` · plot accessible label
-`Biểu đồ đường tiến độ chung theo tuần, từ tuần 28 đến tuần 33 năm 2026`. These are the
+`Biểu đồ đường tiến độ chung theo tuần, từ tuần 22 đến tuần 33 năm 2026` (🔄 LẬT
+2026-09-10, Q54: the prototype reads `từ tuần 28`, a six-week window; the wording across
+a year boundary waits on `doc/contracts/dashboard.md` § CONTRACT DB-1). These are the
 Vietnamese renderings, not markup: the app translates through `@ngx-translate/core` v18
 (`src/FE/public/i18n/{vi,en}.json`), so each needs a key with an English sibling, and the
 accessible label needs a parameterised key because it carries the week numbers and the year.
@@ -234,7 +321,8 @@ prototype-only block § `.proto-chart`, § `.proto-chart-grid line`,
 § `.proto-chart-axis-y text`, § `.proto-chart-axis-x text`, § `.proto-chart-area`,
 § `.proto-chart-line`, § `.proto-chart-point circle`),
 `doc/Design/Frontend/PlatformManager/Prototypes/index.html` § `#screen-dashboard` → `app-trend-chart` (the approved
-geometry, the six date-range x labels and the accessible label),
+geometry, the six date-range x labels and the accessible label — the last two widened
+to twelve weeks by Q54 on 2026-09-10, so for those the prototype is the stale side),
 `src/FE/package.json:49-55` (the `//dependencies` note, which now records **both**
 moves — dropped 2026-09-04, put back 2026-09-09 — and the check to run before anyone
 removes it a third time; the dependency itself is `src/FE/package.json:68`),
@@ -252,7 +340,7 @@ removes it a third time; the dependency itself is `src/FE/package.json:68`),
 - ✅ Keep the y axis pinned to `[0, 100]`. An auto-scaled axis makes a 2-point movement look like a cliff.
 - ❌ Don't add a second series or a categorical palette. There is one series, and no series-2 colour is defined anywhere in the token layer.
 - ❌ Don't add a legend; one hidden series needs none.
-- ❌ Don't drop empty periods from the axis. Removing the label removes the gap, and the chart then asserts a continuity that does not exist — the precise failure the straight-line-with-a-break rule prevents.
+- ❌ Don't drop empty periods from the axis. Removing the label removes the gap, and the chart then asserts a continuity that does not exist — the precise failure the straight-line-with-a-break rule prevents. Since decision Q44 (2026-09-10) the contract sends them as `value: null`: pass the `null` through untouched and leave `spanGaps` off.
 - ❌ Don't claim `.chart-skeleton` as this component's class; it belongs to the host page and is shared with the history panel.
 
 ## Normalize on redesign
@@ -284,7 +372,12 @@ top of this file. That work belongs to
 
 <!-- Open questions this spec must not answer on its own. Raised 2026-09-05, emptied the same day. -->
 
-**Nothing is open on this component.** The last item — the month-mode x-axis labels —
+**Nothing is open on this component.** The week-axis label fit that Q54 reopened was
+approved on 2026-09-10 — § The x axis changed on 2026-09-05 → *Fitting twelve week
+labels*. The window's year-boundary behaviour is still open, but it belongs to
+`doc/contracts/dashboard.md` § CONTRACT DB-1, not here.
+
+Before Q54 the last item — the month-mode x-axis labels —
 was settled by decision T7 on 2026-09-05. The one task that used to sit in a folder
 this file may not edit — re-adding `chart.js` — closed on 2026-09-09; § Handoff
 records it. What remains is composition on the Dashboard page, tracked by that
@@ -298,3 +391,6 @@ screen's spec.
 | What renders the chart | `p-chart` over `chart.js`, as before — decision Q17, 2026-09-05 | § banner above |
 | Whether the four `chart-*` roles return | Yes — decision Q17 | [`../Tokens/colors.md`](../Tokens/colors.md) § Chart Palette |
 | Whether the chart follows the detail table's filters | **No.** The line always shows overall progress for the period; the table's filters change only the table | `spec/dashboard-dti/business-rules.md` |
+| Who writes the week-mode x-axis labels | **The backend**, ready-made; the week code stays as the identity key — decision Q43, 2026-09-10 | § The x axis changed on 2026-09-05 |
+| What a period with no data sends | **The period, with `value: null`** — every period up to the current one — decision Q44, 2026-09-10. The shipped component does not honour it yet | § Anatomy → the 🚧 block |
+| How many weeks the week axis shows | **Twelve, ending at the week being viewed** — decision Q54, 2026-09-10. How the labels fit: duyệt 2026-09-10 (Q54) — horizontal, evenly thinned, the viewed week always labelled; the year boundary is DB-1's to define | § The x axis changed on 2026-09-05 |

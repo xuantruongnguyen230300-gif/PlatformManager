@@ -15,7 +15,7 @@
 
   -- Migration thuoc HOST, Core ship .sql (nguoi dung chot 2026-09-04) --------------
   File .cs migration + ModelSnapshot song trong PROJECT HOST (PlatformManager.Api),
-  KHONG con trong Core.Infrastructure. Ly do: ModelSnapshot la file TRANG THAI dung
+  KHONG con trong project Core nao. Ly do: ModelSnapshot la file TRANG THAI dung
   chung - de o Core thi du an thu hai them bang nghiep vu dau tien se GHI DE snapshot
   cua Core, va lan Core ship ban va la lan merge hong. Moi du an giu Migrations/ +
   ModelSnapshot RIENG; Core chi ship baseline .sql lam artifact schema.
@@ -24,8 +24,8 @@
   bang may: PlatformManager.ArchTests/MigrationsLocationTests.cs - file .cs migration
   nam duoi src/BE/Core la test do.
 
-  Thu muc .sql thi O LAI Core (Core/PlatformManager.Core.Infrastructure/Persistence/
-  Migrations/sql/) - do la artifact Corebase ship, va integration test doc thang tu do.
+  Thu muc .sql thi O LAI Core (Core/PlatformManager.Core.Persistence/Migrations/sql/,
+  chuyen tu Core.Infrastructure 2026-09-10) - artifact Corebase ship, integration test doc thang tu do.
 
 .PARAMETER AddMigration
   Ten migration moi can tao (vd "AddOwnerIndex") - chay `dotnet ef migrations add`
@@ -53,7 +53,7 @@
   Chi tao migration moi (class C#) tu thay doi entity - KHONG dung DB.
 
 .EXAMPLE
-  ./db.ps1 -ScriptOutput Core/PlatformManager.Core.Infrastructure/Persistence/Migrations/sql/0002_add_owner_index.sql
+  ./db.ps1 -ScriptOutput Core/PlatformManager.Core.Persistence/Migrations/sql/0002_add_owner_index.sql
   Sinh file .sql moi tu cac migration chua duoc ap - tu doc lai, tu chay tay tren
   Postgres, KHONG co buoc nao trong script nay dung vao DB that. Duong dan vi du tro
   vao thu muc sql/ cua Core: do la cho dat dung cua artifact schema.
@@ -72,7 +72,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 $beRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
-# DbContext song o Core.Infrastructure, nhung MIGRATION thi thuoc HOST (chot 2026-09-04) - nen
+# DbContext song o Core.Persistence, nhung MIGRATION thi thuoc HOST (chot 2026-09-04) - nen
 # --project VA --startup-project deu tro toi $apiProject. Truoc do --project tro toi
 # "Core/PlatformManager.Core.Infrastructure"; de nguyen the thi `dotnet ef` ghi Migrations/ +
 # ModelSnapshot vao Core - dung cai vua go bo. Xem .DESCRIPTION.

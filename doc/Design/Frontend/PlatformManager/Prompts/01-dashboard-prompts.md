@@ -160,13 +160,16 @@ LAYOUT — the page:
    the label, the caption or the card. The five tiles, in order, with their populated values:
      1. "Tiến độ chung tuần này" — "82,1%" — default tone (#152033) —
         "Bình quân Tiến độ %, gia quyền theo Điểm tối đa"
-     2. "So với tuần trước" — "↑ 2,3 đ.%" — good tone (#0e7050) — "Tuần 32/2026 (03/08–09/08/2026)"
+     2. "So với tuần trước" — "↑ 2,3 đ.%" — good tone (#0e7050) — "Tuần 32/2026 (03/08 – 09/08/2026)"
      3. "Chỉ tiêu tăng" — "18" — good tone (#0e7050) — "Có tiến bộ so với kỳ trước"
      4. "Không tăng" — "27" — warn tone (#965e08) — "Cần chú ý theo dõi"
      5. "Hoàn thành" — "26/62" — default tone (#152033) —
         "Số chỉ tiêu ở trạng thái Hoàn thành"
    Tiles 3 and 4 keep their tone at every value: "Chỉ tiêu tăng: 0" still renders green. That is
    as-designed, not a bug to fix.
+   The labels above are WEEK mode. Tiles 1 and 2 change label with the period mode (approved
+   2026-09-10): month mode "Tiến độ chung tháng này" / "So với tháng trước"; the all-year option
+   "Tiến độ chung năm nay" / "So với năm trước". Tiles 3–5 keep their labels in every mode.
 
 3. TWO-COLUMN REGION, 14px below the KPI row: a grid of 1.15fr and 0.85fr with a 14px gap. Each
    child is a card laid out as a flex column so its body fills the remaining height.
@@ -195,9 +198,18 @@ LAYOUT — the page:
        suffix, drawn as 100% / 75% / 50% / 25% / 0%, so two periods are always comparable and a run
        of high values never rescales the axis. The line is STRAIGHT-SEGMENT, not smoothed, and a
        missing period keeps its slot and BREAKS the line rather than being dropped — a gap in the
-       data must read as a gap. X-axis labels in week mode are date ranges:
-       "06/07 – 12/07" · "13/07 – 19/07" · "20/07 – 26/07" · "27/07 – 02/08" · "03/08 – 09/08" ·
-       "10/08 – 16/08". In month mode they are the short forms "Th.1" … "Th.12", NOT date ranges.
+       data must read as a gap. Week mode spans TWELVE weeks ending at the week being viewed, one
+       slot per week, labelled with date ranges:
+       "25/05 – 31/05" · "01/06 – 07/06" · "08/06 – 14/06" · "15/06 – 21/06" · "22/06 – 28/06" ·
+       "29/06 – 05/07" · "06/07 – 12/07" · "13/07 – 19/07" · "20/07 – 26/07" · "27/07 – 02/08" ·
+       "03/08 – 09/08" · "10/08 – 16/08". In this illustration the first six weeks hold no data —
+       the oldest saved period is "06/07 – 12/07", which the history panel marks "Kỳ đầu" — so they
+       keep their slots with no point and no line, and the line starts at "06/07 – 12/07". Twelve
+       labels do not fit across the card: keep them HORIZONTAL and draw only every other one,
+       ending on the viewed week — "01/06 – 07/06" · "15/06 – 21/06" · "29/06 – 05/07" ·
+       "13/07 – 19/07" · "27/07 – 02/08" · "10/08 – 16/08". (This label fit was approved
+       on 2026-09-10.) In month mode the labels are the
+       short forms "Th.1" … "Th.12", NOT date ranges.
 
 4. DETAIL TABLE CARD, 16px below the two-column region (a literal, not on the spacing scale):
    4a. Title row: "62 chỉ tiêu DTI" in 14px/700 on the left, and on the right the live count
@@ -300,7 +312,7 @@ yet, because the screen has never shipped; allocating the `dashboard.*` keys is 
   "5. Hoạt động Kinh tế số" · "6. Hoạt động Xã hội số"
 - Chart panel heading "Biểu đồ tiến độ hàng tuần" (it reads "hàng tháng" in month mode), caption
   "Tiến độ chung"; the chart's accessible label
-  "Biểu đồ đường tiến độ chung theo tuần, từ tuần 28 đến tuần 33 năm 2026"; the placeholder shown
+  "Biểu đồ đường tiến độ chung theo tuần, từ tuần 22 đến tuần 33 năm 2026"; the placeholder shown
   while its code chunk downloads: "Đang tải biểu đồ…" (a real ellipsis, U+2026)
 - Detail table heading "62 chỉ tiêu DTI"; live count "62/62 chỉ tiêu"
 - Search placeholder "Tìm mã hoặc tên chỉ tiêu..." (THREE DOTS, not an ellipsis character); its

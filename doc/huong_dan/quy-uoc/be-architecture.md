@@ -157,8 +157,8 @@ Cưỡng chế bằng máy, không bằng câu văn — hai luật, hai tầng k
 
 | Canh gì | Test |
 | --- | --- |
-| `Core.Application` chỉ được reference **abstraction** cấu hình, không provider/binder nào | `Core_Application_MustNotReference_ConfigurationPackages_Beyond_Abstractions` (`src/BE/Tests/PlatformManager.ArchTests/LayerDependencyTests.cs:112`) |
-| Trong mã nguồn `Core.Application`, `IConfiguration` chỉ được xuất hiện ở **đúng file khai hợp đồng** | `CoreApplicationSource_MustNotMention_IConfiguration_OutsideRegistrarContract` (`LayerDependencyTests.cs:151`) |
+| `Core.Application` chỉ được reference **abstraction** cấu hình, không provider/binder nào | `Core_Application_MustNotReference_ConfigurationPackages_Beyond_Abstractions` (`src/BE/Tests/PlatformManager.ArchTests/LayerDependencyTests.cs:125`) |
+| Trong mã nguồn `Core.Application`, `IConfiguration` chỉ được xuất hiện ở **đúng file khai hợp đồng** | `CoreApplicationSource_MustNotMention_IConfiguration_OutsideRegistrarContract` (`LayerDependencyTests.cs:164`) |
 
 Luật thứ hai là luật thật sự chặn rủi ro tiền lệ: một handler nhận `IConfiguration` rồi dùng
 `cfg["Foo"]` **không** tạo tham chiếu package mới nào, nên luật thứ nhất không thấy nó.
@@ -221,7 +221,7 @@ public sealed class SmtpNotificationSender(IOptions<SmtpOptions> options) : INot
 **Seam có thật, hiện thực có thật, nhưng CHƯA ĐƯỢC ĐĂNG KÝ** (đối chiếu 2026-09-06):
 `INotificationSender` + `SmtpNotificationSender` + `AddNotificationInfrastructure()` đều tồn
 tại ở Core, nhưng **không dòng nào gọi** `AddNotificationInfrastructure()` — chủ đích, lý do
-ghi thẳng trong `src/BE/PlatformManager.Api/Program.cs:177-185`: chưa có consumer nào, và bật
+ghi thẳng trong `src/BE/PlatformManager.Api/Program.cs:220-227`: chưa có consumer nào, và bật
 lên sẽ làm app **không khởi động được** (`SmtpOptions.ValidateOnStart()` gặp `appsettings.json`
 thiếu section `Smtp`), kéo đỏ luôn toàn bộ integration test.
 
@@ -257,7 +257,7 @@ Trạng thái hôm nay (đối chiếu 2026-09-08):
   (`src/BE/Core/PlatformManager.Core.Application/PlatformManager.Core.Application.csproj:18`).
   Đây là **ngoại lệ đã khai** ở §"Ngoại lệ DUY NHẤT…" phía trên, có 2 ArchTest giữ cho nó không
   lan ra. `*.Domain` thì vẫn tuyệt đối sạch — `Core.Domain` có **zero** package reference, canh
-  bởi `LayerDependencyTests.cs:47`.
+  bởi `LayerDependencyTests.cs:61`.
 - Vế "chưa có validate nào" cũng không còn đúng: `ValidateOnStart()` nay là **luật có gate** —
   mọi `*Options` mang `[Required]` phải có một đường gọi `ValidateOnStart()`, canh bởi
   `OptionsValidateOnStartTests.EveryRequiredOptions_HasA_ValidateOnStart_CodePath`
@@ -358,7 +358,7 @@ allowlist rỗng lộ ra ngay lời gọi API đầu tiên chứ không âm th�
 
 `Program.cs` **không** gọi từng tầng bằng một extension method riêng. Nó gom mọi
 `IModuleRegistrar` rồi đăng ký một lượt qua `AddModules` — đường DI + cấu hình EF ở
-`src/BE/PlatformManager.Api/Program.cs:144`, đường `ApplicationPart` ở `:107`:
+`src/BE/PlatformManager.Api/Program.cs:160`, đường `ApplicationPart` ở `:107`:
 
 ```csharp
 builder.Services.AddModules(builder.Configuration, moduleRegistrars);
@@ -372,7 +372,8 @@ builder.Services.AddModules(builder.Configuration, moduleRegistrars);
 > đi **chung** đường registrar với tầng nghiệp vụ chứ không có lối riêng (§`IModuleRegistrar`
 > của [`../../kien-truc-core-module.md`](../../kien-truc-core-module.md)). `AddBusinessModule`
 > thì chưa bao giờ tồn tại. Cùng lượt gỡ neo `Program.cs:126` mà bản trước gán cho lời gọi
-> `AddCoreModule(...)`: dòng đó là một dòng cấu hình `JsonNamingPolicy`, không liên quan.
+> `AddCoreModule(...)`: dòng đó, khi đo 2026-09-09, là một dòng cấu hình `JsonNamingPolicy`,
+> không liên quan.
 `PlatformManagerDbContext` (định nghĩa trong `Core.Persistence`) không được
 hardcode reference tới `Business.*` — `Api` (host) truyền danh sách
 `Assembly` (`*.Persistence` của từng tầng đã đăng ký) vào lúc cấu hình
@@ -530,8 +531,8 @@ thành luật ArchTest — không có gì thêm cần làm ngoài giữ nguyên 
 
   | Luật | Test giữ nó |
   | --- | --- |
-  | `Core.Domain` có **zero** package reference | `LayerDependencyTests.cs:47` |
-  | `Core.Application` không chạm EF Core / ASP.NET Core / bất kỳ hạ tầng nào | `LayerDependencyTests.cs:61` |
+  | `Core.Domain` có **zero** package reference | `LayerDependencyTests.cs:61` |
+  | `Core.Application` không chạm EF Core / ASP.NET Core / bất kỳ hạ tầng nào | `LayerDependencyTests.cs:75` |
   | Core không reference assembly nghiệp vụ nào | `CoreModuleBoundaryTests.cs` — `Core_MustNotReference_AnyModulesAssembly` |
 
   > **📐 ĐÍCH ĐẾN — CHƯA THI CÔNG: `*.Api` không reference `*.Persistence`/`*.Infrastructure`

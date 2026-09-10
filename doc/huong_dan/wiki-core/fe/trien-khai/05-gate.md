@@ -19,14 +19,38 @@ verified: 2026-09-06
 | G2 | Mọi `@for` có `track` | ESLint rule Angular (`@angular-eslint/template/...`) hoặc grep `@for` không kèm `track` trên cùng khối | Ngay từ đầu — F0 |
 | G3 | Không còn `*ngIf`/`*ngFor`/`*ngSwitch`/`@Input()`/`@Output()`/`NgModule` | Grep — đã dùng ở audit trước, giữ làm gate thường trực | Ngay từ đầu |
 | G4 | Component dumb (`components/`) không inject `HttpClient`/service data | `bash scripts/fe-gate.sh` (section G4) — quét `inject(...)` trong mọi thư mục `components/`, sau khi đã bỏ chú thích. Hai trục miễn trừ RỜI NHAU, xem §G4 | ✅ **Đã bật 2026-09-08, XANH** — bốn canary hai chiều đã chạy, xem §G4 |
-| G5 | Mọi file `services/*.service.ts` có ít nhất 1 file `.spec.ts` cạnh nó | Script đối chiếu tên file | Sau F2 |
+| G5 | Mọi `*.service.ts` có `.spec.ts` **cùng tên** cạnh nó | `bash scripts/fe-gate.sh` (section G5) | **Đã bật 2026-09-10** — xác nhận đỏ-rồi-xanh bằng canary (thêm tạm `core/toast/canary-probe.service.ts` không spec → gate FAIL, `exit 1`; xoá đi → PASS). Phạm vi **rộng hơn** dòng mô tả cũ, xem ghi chú dưới bảng |
 | G6 | Không import trực tiếp DTO trong `components/`/`pages/` (chỉ `services/` được import) | Grep `Dto` trong `components/`, `pages/` ngoài `services/` | Ngay từ đầu — đã PASS ở audit trước, giữ làm gate để không trôi |
-| G7 | Bundle không vượt ngân sách | `angular.json` `budgets` — `ng build` fail khi vượt `maximumError` (xem `../13-performance.md` §4) | Sau F4 — chỉnh ngưỡng theo số đo thật, không giữ mặc định của `ng new` |
-| G8 | `modules/<A>/` không import trực tiếp nội bộ `modules/<B>/` (module nghiệp vụ khác) | ESLint `eslint-plugin-import` rule `no-restricted-paths` — chặn import chéo giữa 2 module nghiệp vụ, vẫn cho phép import từ `core/`/`shared/`/`platform/` (xem `doc/kien-truc-core-module.md`) | Ngay khi có module nghiệp vụ thứ 2. **Hôm nay là no-op có chủ đích (đối chiếu 2026-09-06)**: `BUSINESS_MODULES` trong `src/FE/eslint.config.js` rỗng nên cả block rule bị bỏ hẳn — `src/app/modules/` chưa tồn tại, không có gì để vi phạm. Lý do phải bỏ hẳn block (schema đòi `zones` ≥ 1 phần tử) ghi ngay tại chỗ khai |
+| G7 | Bundle không vượt ngân sách | `angular.json` `budgets` — `ng build` fail khi vượt `maximumError` (xem `../13-performance.md` §4) | **Đã bật, phủ cả lazy chunk (đối chiếu 2026-09-10)** — ba budget: `initial`, `anyScript` (`src/FE/angular.json:51`), `anyComponentStyle`. Ngưỡng đặt theo số đo thật, không giữ mặc định của `ng new`; `anyScript` đã canary đỏ-rồi-xanh. Xem §G7 |
+| G8 | `modules/<A>/` không import trực tiếp nội bộ `modules/<B>/` (module nghiệp vụ khác) | ESLint `eslint-plugin-import` rule `no-restricted-paths` — chặn import chéo giữa 2 module nghiệp vụ, vẫn cho phép import từ `core/`/`shared/`/`platform/` (xem `doc/kien-truc-core-module.md`) | **Đang chạy thật (đối chiếu 2026-09-10)** — `BUSINESS_MODULES` ở `src/FE/eslint.config.js:29` khai `['dashboard', 'danh-muc-dti']`, khớp đúng hai thư mục có trên đĩa, nên zone được sinh và `ng lint` soi thật. Xem khối 🔄 ngay dưới bảng |
 | G9 | `core/` KHÔNG import ngược lên `shared/`/`platform/`/`modules/` — `core/` là tầng đáy | ESLint `import/no-restricted-paths`, zone `target: ./src/app/core` (`eslint.config.js` — hằng `coreLayerZones`), chạy qua `ng lint` | **Đã bật 2026-08-24** (`src/FE/eslint.config.js` — hằng `coreLayerZones`, xác nhận bằng canary: thử import tạm `shared/` từ 1 file `core/` → `ng lint` báo lỗi, rồi revert). Vi phạm thật đã xảy ra trước đó: `core/interceptors/http-error.interceptor.ts` import `ToastService` từ `shared/services/` — đã sửa bằng cách chuyển `ToastService` vào `core/toast/toast.service.ts` (service hạ tầng, đúng chỗ ở `core/`); component hiển thị `shared/components/toast/toast.ts` import ngược lại từ `core/` — đúng chiều được phép |
 | G10 | *(số chưa cấp phát — để trống có chủ đích, tránh phải đánh lại số khi thêm gate)* | — | — |
 | G11 | Không màu literal `rgb()`/`rgba()` trong SCSS của `core/` + `shared/` + `platform/` | `bash scripts/fe-gate.sh` (section G11) — tha đúng **một** dạng, và tha theo CÚ PHÁP: `rgb(var(--x) / a)`; **không** tha theo giá trị | **Đã bật 2026-09-03** (`scripts/fe-gate.sh`), xác nhận đỏ-rồi-xanh: lúc thêm, gate liệt đúng 4 dòng (`sidebar.scss:115` nền mục menu đang chọn — chính là `--brand` viết thập phân, `sidebar.scss:211` scrim, `toast.scss:25` bóng đổ, `topbar.scss:5` nền topbar), rồi xanh sau khi 4 giá trị được promote thành token ở `src/FE/src/styles.scss` § `--surface-nav-active`, `--overlay-backdrop`, `--surface-topbar`, `--shadow-toast` |
 | G12 | Template `.html` không chứa chữ tiếng Việt — mọi câu người dùng đọc phải đến từ `public/i18n/<code>.json` | `bash scripts/fe-gate.sh` (section G12) — quét dấu thanh tiếng Việt trong `src/app/**/*.html`, **bỏ qua comment HTML** | ✅ **Đã bật 2026-09-05, XANH (đối chiếu 2026-09-06)** — `bash scripts/fe-gate.sh` thoát 0, section G12 báo OK. 🔄 LẬT 2026-09-06: bản trước ghi *"đang ĐỎ, Pha D chưa xong"*; Pha D đã xong. Xem §G12 |
+
+> ### 🔄 LẬT 2026-09-10 — G8 thôi là no-op
+>
+> Ô "Khi nào bật" của G8 trước đây ghi *"Hôm nay là no-op có chủ đích (đối chiếu
+> 2026-09-06): `BUSINESS_MODULES` rỗng nên cả block rule bị bỏ hẳn — `src/app/modules/`
+> chưa tồn tại, không có gì để vi phạm."* Câu đó **hết đúng từ 2026-09-09**, khi hai
+> module nghiệp vụ được dựng lại.
+>
+> Vì sao đáng ghi ra thay vì lặng lẽ sửa: một gate no-op và một gate đang canh **trông
+> giống hệt nhau** ở đầu ra — cả hai đều không in gì. Suốt thời gian câu trên còn đó,
+> `doc/huong_dan/quy-uoc/tieu-chi-review.md` cũng dạy reviewer rằng *"G8 không khai zone
+> nào cho `modules/` — và đó không phải finding"*, tức **hai** file cùng bảo người kiểm
+> hãy bỏ qua đúng thứ G8 sinh ra để bắt. Cả hai đã sửa cùng ngày.
+>
+> Phép thử đang chạy thật, kiểm bằng lệnh chứ đừng tin bảng:
+>
+> ```bash
+> ls -d src/FE/src/app/modules/*/          # thư mục module thật trên đĩa
+> grep -n 'BUSINESS_MODULES' src/FE/eslint.config.js   # tập khai trong config
+> ```
+>
+> **Tiêu chí PASS: hai tập KHỚP nhau.** Lệch chiều nào cũng là finding — thư mục có mà
+> chưa khai thì module đó ngoài lưới; khai mà thư mục không có thì `no-restricted-paths`
+> không phân giải nổi `target`, rule thành no-op **nhưng vẫn trông như đang chạy**.
 
 ## G4 — vì sao chặn theo TÊN SERVICE, không chỉ theo danh sách file
 
@@ -215,13 +239,49 @@ cả hai. Cái giá đó đắt hơn con số ngưỡng.
 mọi component style. Nên đây là lựa chọn nhị phân: hoặc nới cho tất cả, hoặc sửa file vi phạm.
 Không có đường thứ ba, đừng đi tìm.
 
-**Lỗ mù còn nguyên, ghi ra để không ai tưởng G7 phủ hết:** `angular.json` chỉ khai budget
-cho `initial` và `anyComponentStyle` — **không có luật nào cho lazy chunk**. Chunk
-`quan-tri-nguoi-dung-page` nặng ~574 kB raw, tức lớn hơn cả initial bundle, mà đi qua cổng
-im lặng. Nguyên nhân đã truy ra: một component trong nhánh này import `TableModule` của PrimeNG, và
-đó là nơi **duy nhất** trong app dùng nó.
+### ✅ LỖ MÙ LAZY CHUNK ĐÃ BỊT (2026-09-10, quyết định người dùng)
 
-🔄 LẬT 2026-09-06 — **chỗ import đã DI CHUYỂN, lỗ mù thì không.** Bản trước chỉ đích danh
+Trước ngày này `angular.json` chỉ khai budget cho `initial` và `anyComponentStyle` — **không có
+luật nào cho lazy chunk**. Chunk `quan-tri-nguoi-dung-page` nặng hơn cả initial bundle mà đi qua
+cổng im lặng.
+
+**Chốt: `anyScript`, cảnh báo `600kb`, lỗi `800kb`** (`src/FE/angular.json:51`).
+
+Vì sao `anyScript` chứ không phải type khác — bốn type còn lại đều trả lời sai câu hỏi
+*"một lazy chunk có phình không"*:
+
+| Type | Đo cái gì | Vì sao không dùng |
+|---|---|---|
+| `anyScript` | **từng file script một** | ✅ đúng thứ cần: một lazy chunk = một file `.js` |
+| `bundle` | một bundle gọi ĐÍCH DANH theo `name` | phải khai tay từng chunk; chunk mới sinh ra là chunk ngoài lưới, im lặng |
+| `allScript` | TỔNG mọi script | một chunk phình 300 kB lẫn vào tổng, không nổi lên |
+| `all` | TỔNG mọi file | như trên, còn loãng hơn |
+| `any` | từng file **bất kể loại** | phủ cả ảnh/font — ngưỡng hợp cho JS sẽ vô nghĩa với chúng |
+
+`anyScript` áp cho **mọi** file script, initial lẫn lazy — có chủ đích: một file 800 kB là quá
+nặng bất kể nó nằm ở tầng nào. Budget đo **raw size**, không phải transfer size (đo được lúc
+canary: chunk 581.18 kB raw / 102 kB transfer bị bắt theo con số 581.18).
+
+Ngưỡng chọn theo cùng nguyên tắc đã dùng cho `initial` và `anyComponentStyle` ở trên — đo trước,
+đặt sau, và chừa dư địa thay vì đặt sát số đo hiện tại: chunk lớn nhất hôm nay là
+`quan-tri-nguoi-dung-page` **581.18 kB**, tức phình thêm ~3% là vàng ngay, còn 800 kB là mốc
+thật sự chặn.
+
+🛑 **Đã canary, vì repo này có tiền lệ gate "xanh vì nó không chạy":** hạ tạm xuống
+`100kb`/`150kb` → `ng build` thoát **1**, in `WARNING` cho 3 script và `ERROR` cho 2, trong đó có
+đúng chunk `quan-tri-nguoi-dung-page`; khôi phục `600kb`/`800kb` → build xanh, **không cảnh báo**.
+Lặp lại được:
+
+```bash
+grep -A3 '"type": "anyScript"' src/FE/angular.json   # ngưỡng đang khai
+cd src/FE && npx ng build                            # PASS = thoát 0, không dòng WARNING/ERROR nào
+```
+
+**Nguyên nhân chunk to thì vẫn còn nguyên, budget không sửa hộ:** một component trong nhánh này
+import `TableModule` của PrimeNG, và đó là nơi **duy nhất** trong app dùng nó. Budget chỉ đảm bảo
+lần phình kế tiếp không đi qua im lặng.
+
+🔄 LẬT 2026-09-06 — **chỗ import đã DI CHUYỂN**, và lúc đó lỗ mù thì chưa. Bản trước chỉ đích danh
 `user-grid-table.ts`; nay `TableModule` chỉ còn được import ở
 `src/FE/src/app/shared/components/data-grid/data-grid.ts:4`, và `DataGrid` có đúng một nơi
 dùng — `user-grid-table.ts:4`. Nghĩa là PrimeNG Table vẫn rơi vào cùng lazy chunk đó; đổi
@@ -311,7 +371,13 @@ hỏng với *"No binary for ChromeHeadless"*.
 >
 > - **G4 đã hiện thực 2026-09-08** (section `G4` trong `scripts/fe-gate.sh`) — xem §G4 cho
 >   thiết kế và bốn canary.
-> - **G5 vẫn chưa hiện thực.**
+> - **G5 đã hiện thực 2026-09-10** (section `G5` trong `scripts/fe-gate.sh`) — xác nhận
+>   đỏ-rồi-xanh bằng canary, xem cột "Khi nào bật" của G5 trong bảng đầu file. Gate quét
+>   **mọi** `*.service.ts` chứ không riêng thư mục `services/`: đo lúc thêm cho **10** file,
+>   trong đó chỉ **3** nằm dưới một thư mục tên `services/`. Bó theo tên thư mục là để 7 file
+>   hạ tầng dùng chung (`core/toast/`, `core/i18n/`, `core/auth/`…) ngoài lưới trong khi vẫn
+>   in OK — mà đó đúng là loại service mà một lỗi ánh xạ lan ra mọi màn hình. Rộng hơn nhưng
+>   **không hợp thức hoá nợ nào**: cả 10 file đã có spec cùng tên sẵn, gate xanh từ dòng đầu.
 >
 > Vì sao phải viết cả dòng đầu chứ không lặng lẽ bật G4: từ lúc F4 xong tới 2026-09-08, cột
 > "Khi nào bật" của G4 ghi *"Sau F4"* — tức đã **quá hạn** — mà chỗ này lại chỉ nêu đích danh

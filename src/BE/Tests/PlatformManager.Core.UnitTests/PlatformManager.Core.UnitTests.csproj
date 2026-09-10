@@ -26,7 +26,18 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Core\PlatformManager.Core.Application\PlatformManager.Core.Application.csproj" />
+    <!-- Core.Persistence (tách 2026-09-10): AuditFieldsInBackgroundJobTests ghép AuditInterceptor thật. -->
+    <ProjectReference Include="..\..\Core\PlatformManager.Core.Persistence\PlatformManager.Core.Persistence.csproj" />
     <ProjectReference Include="..\..\Core\PlatformManager.Core.Infrastructure\PlatformManager.Core.Infrastructure.csproj" />
+    <!-- Thêm 2026-09-10 cùng Q35 (danh tính người dùng trong job nền). Cùng lý do mà
+         PlatformManager.ArchTests.csproj đã phải reference host: bản cài ICurrentUser THỨ HAI
+         (BackgroundJobCurrentUser) và BackgroundJobIdentityFilter CHỈ sống ở PlatformManager.Api —
+         host là chỗ hợp lệ duy nhất biết cả HttpContext lẫn Hangfire, và chốt 2026-09-09 buộc cả
+         ba bước nằm ở đó (0 dòng sửa trong Core.*). Không reference thì luồng quyết định của
+         chúng không có nơi nào kiểm được bằng unit test.
+         KHÔNG đảo chiều luật kiến trúc nào: test project luôn được phép thấy toàn bộ, xem khối
+         chú thích tương ứng ở PlatformManager.ArchTests.csproj. -->
+    <ProjectReference Include="..\..\PlatformManager.Api\PlatformManager.Api.csproj" />
   </ItemGroup>
 
 </Project>

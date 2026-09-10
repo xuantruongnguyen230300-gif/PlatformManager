@@ -249,7 +249,7 @@ Tầng Domain khai mã bằng một bản ghi RIÊNG,
 `src/BE/Core/PlatformManager.Core.Domain/Common/DomainError.cs:36` — không phải
 `ErrorDescriptor`, vì `Core.Domain` không được phụ thuộc `Core.Application` (luật
 tầng ở [`be-architecture.md`](be-architecture.md), cưỡng chế bởi
-`src/BE/Tests/PlatformManager.ArchTests/LayerDependencyTests.cs:47`). Khuôn khai
+`src/BE/Tests/PlatformManager.ArchTests/LayerDependencyTests.cs:61`). Khuôn khai
 **giống hệt** `{Entity}Errors.cs` ở đây, chỉ khác tên kiểu; ví dụ sống:
 `src/BE/Core/PlatformManager.Core.Domain/Entities/SysMenuErrors.cs:12`.
 
@@ -469,16 +469,16 @@ public async Task<IActionResult> GetStatus(Guid jobId, CancellationToken ct)
   > (chỉ dùng `System.Linq.Expressions` của BCL). Hiện thực
   > [`HangfireBackgroundJobScheduler.cs:15`](../../../src/BE/Core/PlatformManager.Core.Infrastructure/BackgroundJobs/HangfireBackgroundJobScheduler.cs)
   > — inject `IBackgroundJobClient` chứ không dùng facade tĩnh `BackgroundJob`.
-  > Đăng ký DI ở [`Program.cs:175`](../../../src/BE/PlatformManager.Api/Program.cs)
-  > (`AddBackgroundJobInfrastructure()`, gọi **sau** `AddHangfire` ở `:164`, tách riêng
+  > Đăng ký DI ở [`Program.cs:218`](../../../src/BE/PlatformManager.Api/Program.cs)
+  > (`AddBackgroundJobInfrastructure()`, gọi **sau** `AddHangfire` ở `:201`, tách riêng
   > khỏi `AddCoreModule` để đọc `Program.cs` là thấy từng mảnh hạ tầng bật ở đâu
   > — cùng ý đồ thiết kế với `AddNotificationInfrastructure`, nhưng lưu ý
   > `AddNotificationInfrastructure` **chưa được gọi ở đâu cả** (đối chiếu lại 2026-09-06):
   > chưa có consumer, và `SmtpOptions.ValidateOnStart()` sẽ chặn app khởi động
-  > vì thiếu section `Smtp` — lý do đầy đủ ghi ở `Program.cs:177-185`).
+  > vì thiếu section `Smtp` — lý do đầy đủ ghi ở `Program.cs:220-230`).
   > *(🔄 LẬT 2026-09-06: hai số cũ — `Program.cs:87` cho lời gọi và "comment ngay cạnh
-  > dòng 87" — đều sai. Dòng 87 là `builder.Services` mở đầu cụm `AddControllers`, không
-  > liên quan job nền.)*
+  > dòng 87" — đều sai. Dòng 87, khi đo 2026-09-06, là `builder.Services` mở đầu cụm
+  > `AddControllers`, không liên quan job nền.)*
   > **Chưa có handler nào gọi seam (2026-08-29).** Chỗ dùng thật duy nhất là
   > `StartImportCommand` của module DtiWeekly, đã xoá cùng module. Seam + hiện
   > thực + gate đều còn nguyên ở Core; chỗ dùng sẽ trở lại khi Import được dựng
@@ -487,7 +487,7 @@ public async Task<IActionResult> GetStatus(Guid jobId, CancellationToken ct)
   > cùng `Hangfire.Core`.
 
   > ⚠️ **Giới hạn của ArchTest — đo được, đừng tin quá tay.**
-  > [`LayerDependencyTests.cs:35`](../../../src/BE/Tests/PlatformManager.ArchTests/LayerDependencyTests.cs)
+  > [`LayerDependencyTests.cs:36`](../../../src/BE/Tests/PlatformManager.ArchTests/LayerDependencyTests.cs)
   > liệt `Hangfire` vào danh sách cấm, dùng chung cho cả `Core.Application` lẫn
   > `Modules.*.Application`. Nhưng nó đọc `GetReferencedAssemblies()`, mà
   > Roslyn **lược khỏi manifest** mọi reference không có code nào chạm tới.

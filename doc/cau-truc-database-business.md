@@ -50,7 +50,12 @@ cột.
 | `CriteriaGroups` | `PlatformManager.Business.Domain` | [`../spec/danh-muc-dti/business-rules.md`](../spec/danh-muc-dti/business-rules.md) §1.1 |
 | `Criteria` | `PlatformManager.Business.Domain` | cùng file, §1.2 |
 | `CriteriaAssessments` | `PlatformManager.Business.Domain` | cùng file, §1.3 |
-| `ImportJobs` | `PlatformManager.Business.Domain` | bộ cột giữ nguyên như hàng `ImportJobs` ở §Danh sách bảng dưới đây |
+| `ImportJobs` | `PlatformManager.Business.Domain` | cùng file, §1.5 — bộ cột cũ **cộng** một cột tuần đích đã quy đổi (Q45) |
+
+> 🔄 **LẬT 2026-09-10 (Q45).** Hàng `ImportJobs` ở trên từng ghi *"bộ cột giữ nguyên như hàng
+> `ImportJobs` ở §Danh sách bảng dưới đây"*. Không còn giữ nguyên: Q45 thêm một cột lưu **tuần
+> đích đã quy đổi** (không bao giờ là `"all"`). Đặc tả từng cột nay ở file chủ, như ba bảng kia —
+> hàng `ImportJobs` ở §Danh sách bảng là **lịch sử**, đừng chép cột từ đó.
 
 **Ba luật khai bảng, cả ba đều hỏng im lặng nếu quên:**
 

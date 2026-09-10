@@ -9,6 +9,15 @@
           <b class="toast-title">{{ toast.Title }}</b>
         }
         <span class="toast-text">{{ toast.Text }}</span>
+        <!-- Nút hành động tuỳ chọn (hôm nay: "Thử lại" của toast mất kết nối). Đặt TRONG
+             `.toast-body` chứ không cạnh nút đóng: nó là một phần của thông điệp, và ở toast hẹp
+             thì nó cần xuống dòng riêng thay vì chen ngang. Bấm xong thì toast biến mất luôn —
+             hành động đã nhận, để nó nằm lại 5 giây nữa chỉ mời người dùng bấm lần hai. -->
+        @if (toast.Action; as action) {
+          <button type="button" class="btn sm toast-action" (click)="runAction(toast)">
+            {{ action.Label }}
+          </button>
+        }
       </span>
       <button
         type="button"

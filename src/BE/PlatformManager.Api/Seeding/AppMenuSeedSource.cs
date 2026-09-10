@@ -10,7 +10,7 @@ namespace PlatformManager.Api.Seeding;
 /// <para><b>Vì sao ở host chứ không ở Core</b> (chuyển 2026-09-02): host là nơi DUY NHẤT được
 /// biết dữ liệu riêng của dự án này. Ba thứ trong bảng dưới — nhãn, route, icon — đều chắc chắn
 /// khác ở dự án thứ hai dựng trên cùng CoreBase; để chúng trong
-/// <c>Core.Infrastructure/Persistence/CoreSeeder.cs</c> nghĩa là muốn tái dùng Core thì phải mổ
+/// <c>Core.Persistence/CoreSeeder.cs</c> nghĩa là muốn tái dùng Core thì phải mổ
 /// vào trong Core. Cơ chế seed (upsert theo <c>Code</c>, hồi sinh dòng đã xoá mềm, gán
 /// <c>SysMenuRole</c>) vẫn ở Core — xem <see cref="ICoreMenuSeedSource"/>.</para>
 ///

@@ -89,10 +89,10 @@ public class ApiLayerBoundaryTests
             "doc/kien-truc-core-module.md muc \"Nguyên tắc phụ thuộc bắt buộc\".");
     }
 
-    private static readonly Regex ProjectReferenceInclude =
+    internal static readonly Regex ProjectReferenceInclude =
         new(@"<ProjectReference\s+[^>]*Include\s*=\s*""([^""]+)""", RegexOptions.Compiled);
 
-    private static readonly Regex XmlComment =
+    internal static readonly Regex XmlComment =
         new(@"<!--.*?-->", RegexOptions.Singleline | RegexOptions.Compiled);
 
     /// <summary>

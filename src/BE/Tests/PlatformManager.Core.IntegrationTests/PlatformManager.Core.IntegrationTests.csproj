@@ -42,6 +42,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Core\PlatformManager.Core.Domain\PlatformManager.Core.Domain.csproj" />
     <ProjectReference Include="..\..\Core\PlatformManager.Core.Application\PlatformManager.Core.Application.csproj" />
+    <ProjectReference Include="..\..\Core\PlatformManager.Core.Persistence\PlatformManager.Core.Persistence.csproj" />
     <ProjectReference Include="..\..\Core\PlatformManager.Core.Infrastructure\PlatformManager.Core.Infrastructure.csproj" />
     <!-- Host thật — cần cho WebApplicationFactory<Program>. Chỉ test project mới được tham chiếu
          Api; ranh giới Core/Modules vẫn do ArchTests canh (xem CoreModuleBoundaryTests). -->

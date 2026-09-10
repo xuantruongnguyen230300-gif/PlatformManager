@@ -21,7 +21,7 @@ verified: 2026-09-06
 > xem `src/FE/src/app/platform/login/pages/login/login.page.ts:93` (`userName`/`password` là
 > `signal('')`) và `src/FE/src/app/platform/quan-tri-nguoi-dung/components/user-form-dialog/user-form-dialog.ts`.
 >
-> **Điều đó KHÔNG làm file này vô dụng** — các mục về validate 2 lớp, bind lỗi từ `fields`,
+> **Điều đó KHÔNG làm file này vô dụng** — các mục về validate 2 lớp, bind lỗi từ `fieldErrors`,
 > `dirty` + điều hướng, khoá nút lúc gửi đều là luật độc lập với cơ chế form. Nhưng đừng chép
 > nguyên khối `FormGroup` nào ở đây vào code: nó sẽ là **cơ chế thứ hai** trong một codebase
 > đang có đúng một, tức đúng thứ §5 `.claude/CLAUDE.md` cấm. Chưa có quyết định "đổi sang
@@ -46,7 +46,7 @@ khi màn hình hẹp). Modal/dialog nhỏ **chỉ** dùng cho xác nhận ngắn
 | Server (`ValidationBehavior`/`ErrorDescriptor` phía BE) | Business rule cần DB (trùng mã, FK tồn tại) | Lúc submit |
 
 Client validate **không thay thế** server validate — chỉ để UX phản hồi
-nhanh. Submit vẫn phải xử lý được lỗi 400 (`fields`) trả về từ BE dù client
+nhanh. Submit vẫn phải xử lý được lỗi 400 (`fields` + `fieldErrors`) trả về từ BE dù client
 đã "pass" hết (race condition, dữ liệu đổi giữa lúc mở form và lúc submit).
 
 > Bổ sung 2026-08-24, đối chiếu thực hành ngành cho hệ thống tầm trung: đoạn
@@ -64,7 +64,7 @@ nhanh. Submit vẫn phải xử lý được lỗi 400 (`fields`) trả về t�
 > nguồn chung (ngoài phạm vi hiện tại — chưa có nhu cầu). Giảm nhẹ được bằng
 > kỷ luật: **FE validate chỉ để phản hồi nhanh, KHÔNG bao giờ tự quyết "hợp
 > lệ" thay BE** — mọi lỗi 400 từ BE, kể cả field FE tưởng đã "chắc chắn
-> đúng", đều phải hiển thị được (đúng cơ chế bind `fields` ở mục dưới). Khi
+> đúng", đều phải hiển thị được (đúng cơ chế bind `fieldErrors` ở mục dưới). Khi
 > 2 luật lệch nhau, **BE luôn thắng** và FE phải có đường hiển thị lỗi đó —
 > không tự đoán, không im lặng bỏ qua vì "chắc chắn đã pass validate rồi".
 
@@ -111,10 +111,29 @@ export function uniqueEmailValidator(userService: UserService): AsyncValidatorFn
   form (blur ít gọi API hơn nhưng phản hồi chậm hơn) — debounce ở trên áp
   dụng đúng bất kể chọn cái nào.
 
-## Bind lỗi từ `fields` vào form
+## Bind lỗi từ `fieldErrors` vào form
 
 Key từ BE là **PascalCase** (`MaxScore`, `Roles`) — cố ý khác phần còn lại của payload, xem
 [`../../quy-uoc/fe-api-client.md`](../../quy-uoc/fe-api-client.md) §Envelope.
+
+> ### ⚠️ Envelope có HAI trường lỗi theo ô — chỉ MỘT trong hai dịch được
+>
+> | Trường | Kiểu | Khai tại | Dịch được? |
+> | --- | --- | --- | --- |
+> | `fields` | `Record<string, string[]>` | `src/FE/src/app/core/http/api-result.model.ts:77` | ❌ chuỗi trần BE dựng sẵn |
+> | `fieldErrors` | `Record<string, ApiFieldError[]>` | `src/FE/src/app/core/http/api-result.model.ts:98` | ✅ mang `code` + `messageParams` |
+>
+> Mục này nói về **`fieldErrors`** — đó là trường `groupServerFieldErrors` nhận, và là trường
+> **duy nhất** tra được sang bảng dịch qua `ApiErrorMessageService.fieldMessage`.
+>
+> **`fields` VẪN CÒN trên dây, chưa gỡ.** Hai trường cố ý chạy song song cho tới bước 11 của
+> [`../be/16-i18n-va-ma-loi.md`](../be/16-i18n-va-ma-loi.md) §7 — bước "DỌN: gỡ trường cũ khỏi
+> envelope", `doc/huong_dan/wiki-core/be/16-i18n-va-ma-loi.md:547`. Đừng đọc thấy `fieldErrors` ở
+> đây rồi tưởng `fields` đã biến mất; và ngược lại, đừng viết form mới đọc `result.fields`: code
+> vẫn chạy, câu vẫn hiện ra, chỉ **mất sạch mã lỗi và mọi bản dịch** — hỏng IM LẶNG. Đây là lỗi
+> đã xảy ra thật ngày 2026-09-06, ghi lại tại chỗ ở
+> `src/FE/src/app/platform/quan-tri-nguoi-dung/components/user-form-dialog/user-form-dialog.ts:116-117`
+> (*"BE **để trống** `fields` và chỉ điền `fieldErrors`, nên bản trước bỏ lọt toàn bộ mã Identity"*).
 
 > ### 🔄 LẬT 2026-09-06 — mẫu cũ gọi một hàm KHÔNG tồn tại, và giải sai bài toán
 >
@@ -129,24 +148,59 @@ Key từ BE là **PascalCase** (`MaxScore`, `Roles`) — cố ý khác phần c�
 >   `fields['Roles']` sẽ **trượt, và lỗi biến mất im lặng** — người dùng thấy form từ chối mà
 >   không ô nào đỏ.
 >
-> Bản đang chạy — `groupServerFieldErrors`, `user-form-dialog.ts:59` — làm đúng hai việc, không
-> việc nào bỏ được:
+> Bản đang chạy — `groupServerFieldErrors`, `src/FE/src/app/core/http/server-field-errors.ts:35`
+> (đối chiếu 2026-09-10) — làm đúng **ba** việc, không việc nào bỏ được:
 >
 > 1. **Cắt hậu tố chỉ số** `[\d+]` ở cuối khoá.
-> 2. **Gộp nhiều thông điệp về cùng một ô** thành một chuỗi — mỗi ô chỉ có một chỗ để hiện.
+> 2. **Dịch từng lỗi** qua callback `translate` — phần tử của `fieldErrors` là `ApiFieldError`
+>    (mã lỗi + tham số), **không** phải câu tiếng Việt dựng sẵn. (Phần tử của `fields` **là** chuỗi
+>    dựng sẵn — đó là trường khác, xem bảng đầu mục.)
+> 3. **Gộp nhiều thông điệp về cùng một ô** thành một chuỗi — mỗi ô chỉ có một chỗ để hiện.
 
 ```ts
-// user-form-dialog.ts — giữ PascalCase, cắt chỉ số, gộp thông điệp
-function groupServerFieldErrors(fields: Record<string, string[]> | null): Record<string, string> {
-  if (!fields) return {};
+// core/http/server-field-errors.ts — giữ PascalCase, cắt chỉ số, dịch, gộp thông điệp
+export function groupServerFieldErrors(
+  fieldErrors: Record<string, ApiFieldError[]> | null,
+  translate: (error: ApiFieldError) => string,
+): Record<string, string> {
+  if (!fieldErrors) return {};
   const grouped: Record<string, string[]> = {};
-  for (const [rawKey, messages] of Object.entries(fields)) {
+  for (const [rawKey, errors] of Object.entries(fieldErrors)) {
     const key = rawKey.replace(/\[\d+\]$/, '');          // `Roles[0]` → `Roles`
-    grouped[key] = [...(grouped[key] ?? []), ...messages];
+    grouped[key] = [...(grouped[key] ?? []), ...errors.map(translate)];
   }
-  return Object.fromEntries(Object.entries(grouped).map(([k, m]) => [k, m.join(' ')]));
+  return Object.fromEntries(Object.entries(grouped).map(([key, messages]) => [key, messages.join(' ')]));
 }
 ```
+
+> 🔄 **SỬA 2026-09-10 — chữ ký ở mẫu cũ KHÔNG biên dịch được, chép ra là gãy.** Bản trước
+> khai `fields: Record<string, string[]>` và **không có** tham số `translate`. Kiểu phần tử thật
+> là `ApiFieldError`, và không có nó thì không dịch được lỗi qua `ApiErrorMessageService` — mẫu cũ
+> ngầm giả định BE trả câu tiếng Việt dựng sẵn, tức đi ngược [08-i18n.md](08-i18n.md).
+> Neo `user-form-dialog.ts:59` kèm theo cũng trỏ nhầm dòng.
+>
+> **Vá tiếp cùng ngày:** tham số đổi tên `fields` → `fieldErrors`. Kiểu đã đúng từ lượt trên,
+> nhưng cái TÊN thì vẫn đang dạy sai tên trường của envelope — và nó là chữ ký công khai ở tầng
+> đáy, tức thứ người viết form tiếp theo chép theo, đúng lúc trường trùng tên kia sắp bị gỡ ở
+> bước 11. Thân hàm không đổi.
+
+> ### 🔄 CHUYỂN CHỖ 2026-09-10 — hàm nay ở `core/http/`, KHÔNG chép lại vào dialog mới
+>
+> Trước ngày này hàm nằm **không export** trong file component của một màn `platform/`
+> (`user-form-dialog.ts`). Nó không biết gì về màn đó: đầu vào là `fieldErrors` của envelope,
+> thứ mọi form gặp 400 đều nhận. Nay ở `src/FE/src/app/core/http/server-field-errors.ts`, cạnh
+> `api-result.model.ts` nơi `ApiFieldError` được khai; `user-form-dialog.ts` import lại từ đó.
+>
+> Lý do nâng, không phải "cho gọn": spec Danh mục DTI đặc tả **bốn** dialog —
+> `spec/danh-muc-dti/ui-spec.md` V9–V12 (`spec/danh-muc-dti/ui-spec.md:122-125`), 📐 **CHƯA DỰNG**,
+> xem chính spec đó khai *"không dialog nào dưới đây đã dựng"* (`spec/danh-muc-dti/ui-spec.md:21`).
+> Người viết dialog thứ hai hoặc chép lại hàm, hoặc bỏ sót mẹo (1) — và bỏ sót thì lỗi biến mất im
+> lặng, đúng ca đã mô tả ngay trên. Lý do nâng vẫn đứng vững dù bốn dialog kia chưa tồn tại: nơi
+> gọi thứ hai là điều **spec đã chốt sẽ có**, còn cái giá của một bản sao thì trả ngay lúc nó ra
+> đời. Hành vi khoá bằng `server-field-errors.spec.ts` (khoá có chỉ số, nhiều thông điệp một ô,
+> `fieldErrors` null).
+>
+> Chữ ký và hành vi **giữ nguyên** trong lượt chuyển này — nếu cần đổi, chốt ở đây trước.
 
 ## Message hiển thị
 

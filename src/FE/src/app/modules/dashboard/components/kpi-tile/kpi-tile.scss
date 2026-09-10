@@ -1,3 +1,5 @@
+@use '../../../../core/theme/breakpoints' as bp;
+
 /* Nguồn: doc/Design/Frontend/PlatformManager/Components/KpiTile.md § Anatomy — mọi giá trị dưới
    đây chép từ bản dựng đã duyệt (Prototype § `app-kpi-tile`), không phát minh thêm.
 
@@ -47,7 +49,7 @@
   }
 }
 
-@media (max-width: 560px) {
+@include bp.mobile {
   .kpi .value {
     font-size: 18px;
   }

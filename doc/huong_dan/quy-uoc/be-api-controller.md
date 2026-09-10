@@ -394,7 +394,7 @@ tiếp — **không** controller nào tự `try-catch`/tự hardcode status code
 Bắt **3** loại lỗi không đi qua `HandleResult` và dịch cả ba thành đúng `IApiResult`
 envelope ở trên, không lộ stack trace. Hiện thực là một lớp `IExceptionHandler` —
 `src/BE/PlatformManager.Api/Common/GlobalExceptionHandler.cs`, đăng ký ở
-`Program.cs:153` (`AddExceptionHandler<GlobalExceptionHandler>()`):
+`Program.cs:186` (`AddExceptionHandler<GlobalExceptionHandler>()`):
 
 ```csharp
 public sealed class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) : IExceptionHandler
@@ -804,11 +804,11 @@ nhau, cấu hình khai bằng hằng số ở đầu `src/BE/PlatformManager.Api
 
 | # | Hàng rào | Phân vùng theo | Hạn mức | Kiểu cửa sổ | Hằng số |
 |---|---|---|---|---|---|
-| 1 | Policy `login` | IP (`Connection.RemoteIpAddress`) | 5/phút | `FixedWindow` | `Program.cs:244` |
-| 2 | `GlobalLimiter` (mọi request) | IP | 200/phút | `SlidingWindow`, 6 đoạn × 10s | `Program.cs:251`, `:252` |
-| 3 | `GlobalLimiter` nhánh login | **tên đăng nhập** | 10 / 5 phút | `SlidingWindow`, 5 đoạn × 1 phút | `Program.cs:263`–`:265` |
+| 1 | Policy `login` | IP (`Connection.RemoteIpAddress`) | 5/phút | `FixedWindow` | `Program.cs:287` |
+| 2 | `GlobalLimiter` (mọi request) | IP | 200/phút | `SlidingWindow`, 6 đoạn × 10s | `Program.cs:294`, `:295` |
+| 3 | `GlobalLimiter` nhánh login | **tên đăng nhập** | 10 / 5 phút | `SlidingWindow`, 5 đoạn × 1 phút | `Program.cs:306`–`:308` |
 
-Hàng rào 2 và 3 nối bằng `PartitionedRateLimiter.CreateChained` (`Program.cs:312`), nên
+Hàng rào 2 và 3 nối bằng `PartitionedRateLimiter.CreateChained` (`Program.cs:355`), nên
 chúng **cộng dồn** chứ không thay thế nhau.
 
 **Hàng rào 3 chặn đúng kịch bản hai hàng rào kia bỏ lọt:** brute-force **phân tán** từ

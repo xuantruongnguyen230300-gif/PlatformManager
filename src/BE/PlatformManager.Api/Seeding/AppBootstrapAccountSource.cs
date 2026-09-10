@@ -8,7 +8,7 @@ namespace PlatformManager.Api.Seeding;
 ///
 /// <para><b>Vì sao ở host chứ không ở Core</b> (chuyển 2026-09-02): cả tên miền lẫn ngôn ngữ đều
 /// là thứ riêng của dự án này, và chắc chắn khác ở dự án thứ hai dựng trên cùng CoreBase. Để
-/// chúng trong <c>Core.Infrastructure/Persistence/CoreSeeder.cs</c> nghĩa là muốn tái dùng Core
+/// chúng trong <c>Core.Persistence/CoreSeeder.cs</c> nghĩa là muốn tái dùng Core
 /// thì phải mổ vào trong Core. Phần LUẬT thì vẫn ở Core và host không đụng tới được: đúng hai tài
 /// khoản, mỗi tài khoản một vai, <c>MustChangePassword = true</c>, tên đăng nhập
 /// <c>"SuperAdmin"</c>/<c>"Admin"</c> soi gương <c>Roles.*</c> — xem

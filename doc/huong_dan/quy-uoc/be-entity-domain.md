@@ -77,7 +77,7 @@ public abstract class BaseEntity
   entity mới nào quên khai thì mất filter, không có gì báo.
 
   > ✅ CÓ THẬT (đối chiếu lại 2026-09-06, mở file đếm dòng) — vòng lặp global ở
-  > `src/BE/Core/PlatformManager.Core.Infrastructure/Persistence/PlatformManagerDbContext.cs:102`
+  > `src/BE/Core/PlatformManager.Core.Persistence/PlatformManagerDbContext.cs:102`
   > (trong `ApplySoftDeleteQueryFilters`, khai từ `:100`), gọi ở `:77` **sau**
   > `ApplyConfigurationsFromAssembly` (`:75`);
   > *(**🔄 LẬT 2026-09-06 — lần thứ BA cùng một chỗ.** Bốn số của lần đối chiếu
@@ -119,7 +119,7 @@ màn hình. Ai cần phân biệt hai trạng thái đó thì so `UpdatedAt != C
 bỏ hai dòng gán ở nhánh `Added`.
 
 > ✅ CÓ THẬT (đối chiếu 2026-09-08, mở file đếm dòng) — trong
-> `src/BE/Core/PlatformManager.Core.Infrastructure/Persistence/Interceptors/AuditInterceptor.cs`:
+> `src/BE/Core/PlatformManager.Core.Persistence/Interceptors/AuditInterceptor.cs`:
 > nhánh `case EntityState.Added:` (`:41`) ghi `CreatedAt`/`CreatedBy` (`:42-43`) **và**
 > `UpdatedAt`/`UpdatedBy` (`:48-49`); nhánh `case EntityState.Modified:` (`:51`) chỉ ghi
 > `:52-53`. Cả bốn dòng dùng chung một `now` (`:35`) nên bản ghi mới có `CreatedAt` **bằng
@@ -134,8 +134,8 @@ của nó ghi tay ở tầng service — **theo luật trên chỉ một nửa**
 | Cặp cột | Ai ghi | Lúc INSERT |
 |---|---|---|
 | `BaseEntity.CreatedAt`/`UpdatedAt` | `AuditInterceptor` | cả 2, cùng giá trị |
-| `AppUser.DateCreate`/`DateUpdate` | tay, ở service | **chỉ `DateCreate`** — `DateUpdate` để null tới lần sửa đầu (`UserAdminService.cs:151`, `CoreSeeder.cs:234`) |
-| `AppUser.CreatedBy`/`UpdatedBy` | tay, ở service | cả 2 (`UserAdminService.cs:156-157`, `CoreSeeder.cs:238-239`) |
+| `AppUser.DateCreate`/`DateUpdate` | tay, ở service | **chỉ `DateCreate`** — `DateUpdate` để null tới lần sửa đầu (`UserAdminService.cs:151`, `CoreSeeder.cs:261`) |
+| `AppUser.CreatedBy`/`UpdatedBy` | tay, ở service | cả 2 (`UserAdminService.cs:156-157`, `CoreSeeder.cs:265-266` — neo lại 2026-09-10) |
 
 > **🔄 SỬA 2026-09-09 — hai ô trên từng nêu `UserLookupService` làm ca thứ ba, nay không còn.**
 > `IUserLookupService` khi đó có nhánh **tự tạo `AppUser`** khi cột `Phụ trách` của file import
@@ -170,7 +170,7 @@ Kiểm lại bằng lệnh, đừng tin bảng này:
 
 ```bash
 grep -n "class SysMenuRole\|class RolePermission\|class SysMenu" src/BE/Core/PlatformManager.Core.Domain/Entities/*.cs
-grep -n "CreatedBy\|UpdatedBy" src/BE/Core/PlatformManager.Core.Infrastructure/Identity/AppUser.cs
+grep -n "CreatedBy\|UpdatedBy" src/BE/Core/PlatformManager.Core.Persistence/Identity/AppUser.cs
 ```
 
 PASS: ba entity đầu đều hiện `: BaseEntity`; `AppUser` hiện cả `CreatedBy` lẫn `UpdatedBy`.
@@ -210,8 +210,8 @@ Vế thứ ba mới là vế cho phép **khôi phục**. Biết ai làm mà khô
 
 | Cần | Đã có ở |
 |---|---|
-| Lọc `e => !e.IsDeleted` tự động cho mọi `BaseEntity` | `src/BE/Core/PlatformManager.Core.Infrastructure/Persistence/PlatformManagerDbContext.cs:119` — filter ĐẶT TÊN (`SoftDeleteFilterKey`, khai ở `:33`) |
-| Điền `CreatedBy`/`UpdatedBy` tự động | `src/BE/Core/PlatformManager.Core.Infrastructure/Persistence/Interceptors/AuditInterceptor.cs` |
+| Lọc `e => !e.IsDeleted` tự động cho mọi `BaseEntity` | `src/BE/Core/PlatformManager.Core.Persistence/PlatformManagerDbContext.cs:119` — filter ĐẶT TÊN (`SoftDeleteFilterKey`, khai ở `:33`) |
+| Điền `CreatedBy`/`UpdatedBy` tự động | `src/BE/Core/PlatformManager.Core.Persistence/Interceptors/AuditInterceptor.cs` |
 | Khuôn index unique lọc theo `IsDeleted` | baseline `src/BE/PlatformManager.Api/Persistence/Migrations/20260831165117_InitialCreate.cs:327` (`filter: "\"IsDeleted\" = false"`) |
 
 Nghĩa là mọi truy vấn đọc **không đổi một dòng code** — bộ lọc toàn cục lo phần đó.
@@ -305,7 +305,7 @@ public class Criteria : BaseEntity
 > 2. `CreatedAt = DateTimeOffset.UtcNow` trong factory và `UpdatedAt = DateTimeOffset.UtcNow`
 >    trong mutation method. **Không gán tay hai field này** — `AuditInterceptor` điền chúng
 >    lúc `SaveChangesAsync`
->    (`src/BE/Core/PlatformManager.Core.Infrastructure/Persistence/Interceptors/AuditInterceptor.cs`),
+>    (`src/BE/Core/PlatformManager.Core.Persistence/Interceptors/AuditInterceptor.cs`),
 >    và code mẫu gán tay dạy đúng thứ interceptor sinh ra để khỏi phải làm. Entity thật của
 >    Core không gán: `SysMenu.Create` (`SysMenu.cs:29-37`) và `SysMenu.ReviveWith`
 >    (`SysMenu.cs:55-60`) đều không chạm `CreatedAt`/`UpdatedAt`.
@@ -546,5 +546,5 @@ bắt được (khác với coupling qua `using` mà ArchTest quét được).
    > `PlatformManager.Api/PlatformManagerDbContextFactory.cs`, lệch thì EF báo thẳng
    > *"Your target project … doesn't match your migrations assembly"*. Luật này được
    > cưỡng chế bằng ArchTest `MigrationsLocationTests`. Chỉ thư mục `.sql`
-   > (`Core/PlatformManager.Core.Infrastructure/Persistence/Migrations/sql/`) là **ở lại**
+   > (`Core/PlatformManager.Core.Persistence/Migrations/sql/`) là **ở lại**
    > Core — đó là artifact Corebase ship, và integration test đọc thẳng từ đó.

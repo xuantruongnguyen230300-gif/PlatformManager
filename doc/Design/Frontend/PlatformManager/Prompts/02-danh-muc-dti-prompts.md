@@ -182,7 +182,8 @@ notice, the toolbar and the paginator all staying put. Everything below sits in 
      1  "Mã"                  min-width 70px,  left,  bold code. THREE levels occur ("4.22.11"), not
                               just two. FROZEN TO THE LEFT EDGE
      2  "Tên"                 min-width 220px, left,  the full criterion name
-     3  "Nhóm"                min-width 120px, left,  the group label
+     3  "Nhóm"                min-width 120px, left,  the group label as "Code. Name" — e.g.
+                              "1. Hạ tầng và Nền tảng số"
      4  "Kỳ của số liệu"      min-width 110px, left,  the DATE RANGE of the week the row's figures
                               were saved for — "10/08 – 16/08" — with NO week number and NO year.
                               This column is present ONLY in the "Tất cả" mode you are drawing; pick
@@ -225,7 +226,8 @@ notice, the toolbar and the paginator all staying put. Everything below sits in 
    right. Only ONE is open at a time; draw each as its own frame:
    6a. "Sửa chỉ tiêu" / "Thêm chỉ tiêu" — width min(560px, 92vw). TWO field groups. Group 1, the
        criterion itself: "Mã" (required, max 20 characters), "Tên chỉ tiêu" (required, a textarea),
-       then a two-column pair "Nhóm" (required) + "Điểm tối đa" (required, numeric, min 0.01, step
+       then a two-column pair "Nhóm" (required; a select whose options read
+       "1. Hạ tầng và Nền tảng số" … "6. Hoạt động Xã hội số") + "Điểm tối đa" (required, numeric, min 0.01, step
        0.01). Group 2, the period assessment: a two-column pair "Tự đánh giá" + "Thẩm định" (both
        numeric, min 0, step 0.01), a two-column pair "Trạng thái" (the four values) + "Hạn xử lý" (a
        date), then "Phụ trách" (a select) and "Minh chứng/Ghi chú" (a textarea, min-height 64px).
@@ -299,7 +301,7 @@ building it.
 - Form placeholders: "vd 1.1" · "Nhập tên đầy đủ chỉ tiêu..." · "vd 10" · "vd 5" · "vd 0" ·
   "Số văn bản - ngày - trích yếu, mỗi minh chứng 1 dòng..."
 - Assignee, unassigned option: "— Chưa phân công —"
-- Form validation error: "Mã chỉ tiêu \"1.4\" đã tồn tại trong nhóm này."
+- Form validation error: "Mã chỉ tiêu \"1.4\" đã tồn tại trong danh mục."
 - Form actions: "Huỷ" and "Lưu chỉ tiêu"
 - Delete confirmation heading "Xác nhận"; message "Xoá chỉ tiêu \"1.4 — Mức độ ứng dụng AI\"?";
   actions "Huỷ" and "Xoá"
@@ -314,10 +316,14 @@ building it.
 - Target-period banner, a past week selected:
   "Đang nhập cho Tuần 31/2026 (27/07 – 02/08/2026). Số liệu bạn sửa sẽ lưu vào tuần này, không phải tuần hiện tại."
   ; in "Tất cả" mode it becomes "Đang nhập cho Tuần 33/2026 (10/08 – 16/08/2026) — tuần hiện tại."
-- Aggregate read-only banner, a MONTH selected:
-  "Đang xem số liệu tổng hợp của Tháng 8/2026 (01/08 – 31/08/2026) — chỉ đọc. Chọn một tuần cụ thể trong ô \"Kỳ trong năm\" để nhập hoặc sửa số liệu."
-- Past-year read-only banner:
-  "Đang xem số liệu năm 2025 — chỉ đọc. Chuyển ô \"Năm đánh giá\" về 2026 để nhập hoặc sửa số liệu."
+- Aggregate read-only banner, a MONTH selected — two wordings, chosen by the year:
+  in the CURRENT year (copy pending approval since 2026-09-10 — draw it as written):
+  "Đang xem số liệu tổng hợp của Tháng 8/2026 (01/08 – 31/08/2026) — chỉ đọc. Chọn một tuần cụ thể hoặc \"Tất cả (mới nhất trong năm)\" trong ô \"Kỳ trong năm\" để nhập hoặc sửa số liệu."
+  in a PAST year, where "Tất cả" is read-only and must not be offered:
+  "Đang xem số liệu tổng hợp của Tháng 8/2025 (01/08 – 31/08/2025) — chỉ đọc. Chọn một tuần cụ thể trong ô \"Kỳ trong năm\" để nhập hoặc sửa số liệu."
+- Past-year read-only banner — shown ONLY for a past year with "Tất cả (mới nhất trong năm)". Approved
+  wording (duyệt 2026-09-10, Q50):
+  "Đang xem số liệu năm 2025 — chỉ đọc. Chọn một tuần cụ thể trong ô \"Kỳ trong năm\" để nhập hoặc sửa số liệu của tuần đó, hoặc chuyển ô \"Năm đánh giá\" về 2026."
 - Empty-catalogue banner:
   "Danh mục chưa có chỉ tiêu nào. Dùng nút \"Import CSV/Excel\" ở trên để nhập danh mục từ file."
 - ⚠ ONE STRING MUST NEVER BE DRAWN. The retired sentence
@@ -329,14 +335,17 @@ STATES:
 - Default (a week or "Tất cả" is selected, current year, the user may write): every write affordance
   is live — both toolbar actions, the two inline-editable columns, and the per-row "Sửa" / "Xoá". NO
   notice bar. This is the state to draw first.
-- Editing a PAST WEEK: still fully editable — AGE IS NOT A REASON FOR READ-ONLY on this screen. The
+- Editing a PAST WEEK — of this year OR OF ANY EARLIER YEAR: still fully editable — AGE IS NOT A
+  REASON FOR READ-ONLY on this screen. The
   same controls do the same jobs; the only change is that the target-period banner appears, naming
   the week the writes will land in.
 - A MONTH is selected — read-only: the two toolbar buttons stay VISIBLE AND DISABLED (opacity 0.5,
   cursor not-allowed), the per-row "Sửa" / "Xoá" do the same, and the two editable columns lose their
   affordance. Search, all four filter conditions, sorting and paging are untouched. The aggregate
   banner explains why. A month is not a period anything is saved to — it is the sum of its weeks.
-- A PAST YEAR is selected — read-only, drawn exactly like the month case, with the past-year banner.
+- A PAST YEAR with "Tất cả (mới nhất trong năm)" selected — read-only, drawn exactly like the month
+  case, with the past-year banner. A past year with a SPECIFIC WEEK selected is fully editable (the
+  past-week state above); a past year with a MONTH is the month case, with the aggregate banner.
 - The user has NO write permission — read-only, but NOT locked out, and this state HIDES rather than
   disables: both toolbar action buttons are GONE (with them gone the action group collapses and
   leaves no gap), the "Hành động" column is GONE ENTIRELY — column and header, since an empty frozen
@@ -455,7 +464,7 @@ grid into cards, hiding columns on narrow viewports, or turning it into a master
 keep the first and last columns pinned against that scroll.
 
 **Note 3 — read-only comes in two visually different flavours, and the difference is the point.** A
-month or a past year DISABLES the write controls in place (they stay visible at opacity 0.5); a
+month, or "Tất cả" in a past year, DISABLES the write controls in place (they stay visible at opacity 0.5); a
 missing permission REMOVES them (and takes the whole `Hành động` column with it). Never merge the two
 treatments.
 
@@ -553,7 +562,7 @@ This screen is one card holding a fourteen-column data grid that scrolls horizon
 and last columns pinned to the edges. Never restack it, never hide columns per viewport, never
 substitute an accordion or a master-detail layout. Exactly two columns are inline-editable
 ("Tiến độ %" and "Minh chứng/Ghi chú"); "Chênh lệch" is computed and has no input anywhere. Only one
-of the four dialogs can be open at a time. Read-only from a month or a past year DISABLES the write
+of the four dialogs can be open at a time. Read-only from a month, or from "Tất cả" in a past year, DISABLES the write
 controls in place; read-only from a missing permission REMOVES them and drops the actions column
 entirely — never draw those two the same way. The product is translated with @ngx-translate (bundles
 vi.json + en.json): every Vietnamese string you are given is the rendering of the vi bundle — draw it

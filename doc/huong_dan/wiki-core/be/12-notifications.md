@@ -13,9 +13,9 @@ verified: 2026-09-06
 > |---|---|
 > | `INotificationSender` + `NotificationRequest` + `INotificationTemplateRenderer` | ✅ có, `src/BE/Core/PlatformManager.Core.Application/Notifications/` |
 > | `SmtpNotificationSender` + `SmtpOptions` | ✅ có, `src/BE/Core/PlatformManager.Core.Infrastructure/Notifications/` |
-> | `AddNotificationInfrastructure()` | ✅ tồn tại, ❌ **không dòng nào gọi** — chủ đích, lý do ở `src/BE/PlatformManager.Api/Program.cs:177-185` |
+> | `AddNotificationInfrastructure()` | ✅ tồn tại, ❌ **không dòng nào gọi** — chủ đích, lý do ở `src/BE/PlatformManager.Api/Program.cs:220-230` |
 > | Consumer (handler/job nào gọi `SendAsync`) | ❌ **không có** |
-> | Hangfire | ✅ cấu hình đầy đủ (`Program.cs:164-175`), nhưng **0 job nghiệp vụ** dùng |
+> | Hangfire | ✅ cấu hình đầy đủ (`Program.cs:201-218`), nhưng **0 job nghiệp vụ** dùng |
 > | `RecurringJob` / lịch biểu định kỳ | ❌ chưa có — mới chỉ fire-and-forget |
 >
 > Bật lên **sẽ làm app không khởi động được**: `SmtpOptions` dùng `ValidateOnStart()` và
@@ -268,10 +268,11 @@ Cách phát hiện bounce phụ thuộc kênh gửi:
 
 | Mảnh | Hôm nay (đối chiếu 2026-09-06) | Dùng làm gì |
 | --- | --- | --- |
-| **Hangfire đã cấu hình đầy đủ** | ✅ `PlatformManager.Api/Program.cs:164-175` (`UsePostgreSqlStorage`, `AddHangfireServer`, `AddBackgroundJobInfrastructure`), dashboard `/hangfire` khoá cứng `Roles.SuperAdmin` (`HangfireDashboardAuthFilter.cs:18`) | Chạy job gửi nền + job định kỳ. **Không cần dựng gì thêm.** |
+| **Hangfire đã cấu hình đầy đủ** | ✅ `PlatformManager.Api/Program.cs:201-218` (`UsePostgreSqlStorage`, `AddHangfireServer`, `AddBackgroundJobInfrastructure`), dashboard `/hangfire` khoá cứng `Roles.SuperAdmin` (`HangfireDashboardAuthFilter.cs:18`) | Chạy job gửi nền + job định kỳ. **Không cần dựng gì thêm.** |
+| **Danh tính người kích hoạt job** (thêm 2026-09-10) | ✅ `.UseFilter(new BackgroundJobIdentityFilter(...))` nằm trong cùng chuỗi cấu hình ở trên (`PlatformManager.Api/Program.cs:209`) — chụp `ICurrentUser.UserName` lúc enqueue, worker đọc lại qua bản cài `ICurrentUser` thứ hai (`BackgroundJobCurrentUser.cs`) | Job do người dùng kích hoạt ghi **đúng tên người đó** vào `CreatedBy`/`UpdatedBy`, không phải `"system"`. Job hệ thống vẫn ghi `"system"`. Nền của mọi job nền, **không riêng notification** |
 | **Seam enqueue** | ✅ `IBackgroundJobScheduler` (`Core.Application/Common/Interfaces/IBackgroundJobScheduler.cs:19`) — enqueue **qua đây**, không gọi thẳng `BackgroundJob.Enqueue` | Tầng Application không phụ thuộc Hangfire |
 | **Khuôn mẫu job nền hoàn chỉnh** | ❌ **không còn** — bản duy nhất từng tồn tại là đường Import của module DtiWeekly, xoá 2026-08-29 cùng module | Không có mẫu trong repo để chép; khuôn viết ra ở [`../../quy-uoc/be-cqrs-handler.md`](../../quy-uoc/be-cqrs-handler.md) §"Command chạy lâu → job nền" |
-| **Nguồn người nhận** | ✅ `Core.Infrastructure/Identity/AppUser` | Email/tên người nhận |
+| **Nguồn người nhận** | ✅ `Core.Persistence/Identity/AppUser` | Email/tên người nhận |
 
 Kiểm bằng lệnh (§6 của `.claude/CLAUDE.md`):
 
