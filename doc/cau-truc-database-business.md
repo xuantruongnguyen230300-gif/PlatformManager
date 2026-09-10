@@ -38,6 +38,53 @@ verified: 2026-09-03
 > | Kỳ suy ra từ phần ngày của `DateCreate`, kèm hàm SQL `IMMUTABLE` viết tay để index được | cột **`AssessmentDate`** riêng kiểu `date` — EF Core index thẳng, không cần hàm SQL tay |
 > | Chỉ có `ProgressPercent` | thêm **`SelfScore`** · **`VerifiedScore`**; `Chênh lệch` là trường **TÍNH** (`Thẩm định − Tự đánh giá`), **không lưu** |
 
+## 📐 ĐÍCH ĐẾN — CHƯA THI CÔNG: 4 bảng `business` của đợt dựng lại (khai 2026-09-09)
+
+**Chưa có dòng code nào**, và cũng chưa có migration nào — kiểm bằng chính lệnh ở banner
+trên (`grep -c 'ToTable("[A-Za-z]*", "business")' …ModelSnapshot.cs` → `0`). Mục này khai
+**bảng nào sẽ có, ở schema nào, entity thuộc project nào**; nó cố ý **không** chép lại từng
+cột.
+
+| Bảng (schema `business`) | Entity ở | Đặc tả từng cột — file chủ |
+| --- | --- | --- |
+| `CriteriaGroups` | `PlatformManager.Business.Domain` | [`../spec/danh-muc-dti/business-rules.md`](../spec/danh-muc-dti/business-rules.md) §1.1 |
+| `Criteria` | `PlatformManager.Business.Domain` | cùng file, §1.2 |
+| `CriteriaAssessments` | `PlatformManager.Business.Domain` | cùng file, §1.3 |
+| `ImportJobs` | `PlatformManager.Business.Domain` | bộ cột giữ nguyên như hàng `ImportJobs` ở §Danh sách bảng dưới đây |
+
+**Ba luật khai bảng, cả ba đều hỏng im lặng nếu quên:**
+
+1. **Khai schema TƯỜNG MINH trong `ToTable("<Tên>", "business")`.** Entity không khai schema
+   rơi vào `core` — [`cau-truc-database.md`](cau-truc-database.md) §1.1. Triệu chứng không
+   phải lỗi biên dịch mà là một bảng nghiệp vụ nằm lẫn trong schema đi theo CoreBase.
+2. **EF Configuration đặt ở `PlatformManager.Business.Persistence`**, để nó vào model qua
+   `PersistenceAssembly` của registrar tầng nghiệp vụ — cơ chế ở
+   [`kien-truc-core-module.md`](kien-truc-core-module.md) §`IModuleRegistrar`. Đặt nhầm sang
+   `Core.Persistence` là kéo entity nghiệp vụ vào Core.
+3. **`ImportJobs` là bảng NGHIỆP VỤ (Q11, chốt 2026-09-09)** — không phải bảng Core, dù nó
+   lưu *trạng thái tiến trình* chứ không lưu dữ liệu nghiệp vụ. Core chỉ giữ **cơ chế** chạy
+   job (`IBackgroundJobScheduler`) và lưu file; bảng theo dõi thuộc tầng nghiệp vụ dùng nó.
+   Chốt này khớp [`cau-truc-database.md`](cau-truc-database.md) (đã trỏ `ImportJobs` sang
+   file này từ trước) và
+   [`huong_dan/wiki-core/be/15-import-export.md`](huong_dan/wiki-core/be/15-import-export.md)
+   §1 (sửa cùng ngày — bản trước xếp "theo dõi trạng thái" nhầm vào cột Core).
+
+**Khoá ngoại xuyên schema — đúng một, đúng một chiều:**
+
+```
+business."CriteriaAssessments"."OwnerId"  →  core."AspNetUsers"."Id"
+```
+
+Không có FK nào đi ngược `core → business`. Đây cũng là lý do hai schema ở chung **một**
+database (Postgres không khai được FK xuyên database) — [`cau-truc-database.md`](cau-truc-database.md) §1.1.
+
+**`CriteriaEvidences` KHÔNG dựng lại** — bảng thứ năm của thiết kế cũ bị bỏ hẳn, `Minh
+chứng/Ghi chú` là **một ô text** trên `CriteriaAssessments` (bảng khác biệt ở banner trên).
+
+> **Mục này trở thành ✅ khi nào:** sau khi migration đầu tiên chạy, cập nhật §Danh sách bảng
+> bên dưới cho khớp schema thật rồi đổi `kind` của file khỏi `lich-su`. Đừng đổi nhãn trước
+> lúc đó — [`../.claude/CLAUDE.md`](../.claude/CLAUDE.md) §4.
+
 ## Vì sao file này tách khỏi file chủ schema `core`
 
 Khoá `scope` của [`.claude/CLAUDE.md`](../.claude/CLAUDE.md) §9 là khoá **của cả file**, không phải

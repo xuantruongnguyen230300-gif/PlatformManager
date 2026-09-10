@@ -163,7 +163,10 @@ widget tự `@if` fallback của chính nó:
 // <feature>/components/trend-chart/trend-chart.ts — widget rủi ro cao (gọi thư viện ngoài)
 // 🔄 LẬT 2026-09-06: mẫu cũ ghi `widgets/trend-chart/trend-chart.component.ts`. Repo KHÔNG có
 // tầng `widgets/` và KHÔNG dùng hậu tố `.component.ts` (Angular 20 style: `<ten>.ts`).
-export class TrendChartComponent {
+// 🔄 SỬA 2026-09-10: tên class mẫu cũ là `TrendChartComponent` — mâu thuẫn với chính hai dòng
+// trên (bỏ hậu tố ở TÊN FILE thì cũng bỏ ở TÊN CLASS). Widget này nay có thật:
+// src/FE/src/app/modules/dashboard/components/trend-chart/trend-chart.ts:120 khai `TrendChart`.
+export class TrendChart {
   readonly chartData = input.required<ChartData>();
   readonly renderError = signal<string | null>(null);
 

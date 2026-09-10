@@ -3,6 +3,7 @@
     <Project Path="Core/PlatformManager.Core.Domain/PlatformManager.Core.Domain.csproj" />
     <Project Path="Core/PlatformManager.Core.Application/PlatformManager.Core.Application.csproj" />
     <Project Path="Core/PlatformManager.Core.Infrastructure/PlatformManager.Core.Infrastructure.csproj" />
+    <Project Path="Core/PlatformManager.Core.Api/PlatformManager.Core.Api.csproj" />
   </Folder>
   <Project Path="PlatformManager.Api/PlatformManager.Api.csproj" />
   <Folder Name="/Tests/">

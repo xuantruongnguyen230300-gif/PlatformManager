@@ -43,7 +43,7 @@ Mức chấm: **PASS** (đúng) · **PARTIAL** (có nhưng thiếu/sai một ph�
   **vẫn kiểm thật** vì nó quét tham chiếu của `Core.*`, không cần module tồn tại.
 - Thấy tên `PlatformManager.Modules.<Tên>.*` quay lại — bản thân cái tên không
   sai; chỉ thành finding khi thiếu lý do tách domain (xem ngay dưới).
-- Chưa có `Core.Persistence`, `Core.Api`, `Business.*` — đang thi công.
+- Chưa có `Core.Persistence`, `Business.*` — đang thi công. `Core.Api` **đã dựng 2026-09-09**.
 
 **Là finding thật:**
 

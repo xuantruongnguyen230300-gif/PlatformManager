@@ -34,6 +34,19 @@ public class LayerDependencyTests
         // thực Hangfire nằm ở Core.Infrastructure — xem
         // doc/huong_dan/quy-uoc/be-cqrs-handler.md §"Command chạy lâu → job nền".
         "Hangfire",
+        // ── Thêm 2026-09-09 (finding F3) ────────────────────────────────────────────────────
+        // Đọc file import PHẢI đi qua seam IImportFileReader (Core.Application); hai thư viện
+        // dưới đây chỉ được có mặt ở Core.Infrastructure — xem
+        // doc/huong_dan/wiki-core/be/15-import-export.md §2.
+        //
+        // Vì sao thêm chứ không sửa chú thích cho khớp: PlatformManager.Core.Infrastructure.csproj
+        // (khối PackageReference của Import engine) TUYÊN BỐ "LayerDependencyTests cưỡng chế" —
+        // nhưng trước dòng này mảng không có NPOI lẫn CsvHelper, tức máy không cưỡng chế gì. Hôm
+        // nay Core.Application thật sự sạch nên chưa có vi phạm; đó chính là lúc rẻ nhất để đóng
+        // lỗ hổng, và đúng khuôn bài học 2026-09-08 ở .claude/CLAUDE.md §8 (luật tuyên bố được
+        // cưỡng chế bằng máy mà máy không chặn).
+        "NPOI",
+        "CsvHelper",
     ];
 
     private static List<string> ForbiddenReferencesOf(Assembly assembly) =>

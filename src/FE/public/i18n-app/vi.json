@@ -1,0 +1,30 @@
+{
+  "danh-muc-dti": {
+    "routeTitle": "Danh mục DTI",
+    "title": "Danh mục DTI",
+    "hint": {
+      "underConstruction": "Màn hình này đang được xây dựng. Danh sách chỉ tiêu, bộ lọc và các thao tác nhập liệu sẽ có ở bản cập nhật tới."
+    }
+  },
+  "dashboard": {
+    "routeTitle": "Tổng quan DTI",
+    "title": "Tổng quan DTI",
+    "action": {
+      "viewPeriod": "Xem",
+      "viewPeriodAriaLabel": "Xem kỳ {{From}} – {{To}}"
+    },
+    "grid": {
+      "groupAwaitingData": "Chưa có dữ liệu",
+      "historyDateRange": "{{From}} – {{To}}",
+      "historyFirstPeriod": "Kỳ đầu",
+      "historyOverallLead": "Tiến độ chung",
+      "trendAriaLabelFallback": "Biểu đồ đường tiến độ chung theo các kỳ đã lưu",
+      "trendEmpty": "Chưa có kỳ nào có dữ liệu để vẽ biểu đồ.",
+      "trendPeriodHeader": "Kỳ",
+      "trendValueHeader": "Tiến độ chung"
+    },
+    "hint": {
+      "underConstruction": "Màn hình này đang được xây dựng. Các chỉ số tổng hợp và biểu đồ xu hướng sẽ có ở bản cập nhật tới."
+    }
+  }
+}

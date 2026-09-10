@@ -158,7 +158,8 @@ Thứ tự đăng ký **chính là** thứ tự pipeline. Đảo hai dòng đó 
 | Tên | Loại | Ở đâu | Giữ luật gì |
 | --- | --- | --- | --- |
 | `RequirePermissionAttribute` | attribute | `src/BE/Core/PlatformManager.Core.Application/Permissions/RequirePermissionAttribute.cs` | **Metadata thuần**, không logic. Cưỡng chế thật nằm ở `RequirePermissionFilter` (§4) |
-| `ICoreResourceKeySource` + `ResourceKeyDefinition` | interface + record | `src/BE/Core/PlatformManager.Core.Application/Permissions/ICoreResourceKeySource.cs` | **Seam** danh mục permission-key: Core tiêu thụ, host cung cấp. Core cố ý **không** có hiện thực mặc định — thiếu đăng ký thì DI hỏng ngay thay vì trả về danh mục rỗng (deny-by-default sẽ biến thành 403 hàng loạt không lời giải thích) |
+| `ICoreResourceKeySource` + `ResourceKeyDefinition` | interface + record | `src/BE/Core/PlatformManager.Core.Application/Permissions/ICoreResourceKeySource.cs` | **Seam** danh mục permission-key: Core tiêu thụ, host cung cấp. Core cố ý **không** có hiện thực mặc định — thiếu đăng ký thì DI hỏng ngay thay vì trả về danh mục rỗng (deny-by-default sẽ biến thành 403 hàng loạt không lời giải thích). `ResourceKeyDefinition.SeedRoles` khai vai được cấp key ở **lần seed**, mặc định `[Admin, User]` (2026-09-09) |
+| `ResourceKeyCatalogStartupValidator` | `IHostedService` | `src/BE/Core/PlatformManager.Core.Infrastructure/Permissions/ResourceKeyCatalogStartupValidator.cs` | **Fail-fast cho DỮ LIỆU đi qua seam** (thêm 2026-09-09): chạy `Catalog()` một lần lúc khởi động ⇒ host khai danh mục sai thì **không boot**. Trước đó phép kiểm chỉ chạy khi có người DÙNG danh mục, nên cấu hình sai thành **500 lúc mở màn Phân quyền** thay vì lỗi lúc deploy. Guard trong `Catalog()` giữ nguyên làm lưới thứ hai — đường `--seed` không đi qua host |
 | `AppResourceKeys` + `AppResourceKeySource` | static class + hiện thực seam | `src/BE/PlatformManager.Api/Permissions/AppResourceKeySource.cs` | **Dữ liệu** của dự án này: permission-key **thô** (không tách View/Create/Delete) + tên hiển thị map **tĩnh**, không lưu DB. Trước 2026-09-03 nằm trong Core dưới tên `ResourceKeys`; tách ra vì đó là dữ liệu dự án, xem `doc/kien-truc-core-module.md` |
 | `MatrixVersion` | static class | `src/BE/Core/PlatformManager.Core.Application/Permissions/MatrixVersion.cs` | Token phiên bản **cấp tập hợp** cho hai ma trận phân quyền: băm SHA-256 của chính dữ liệu, không phải cột đếm. `GET` trả token, `PUT` gửi lại, server tính lại rồi so; lệch ⇒ 409 và **không ghi gì** |
 | `PermissionErrors` | static class | `src/BE/Core/PlatformManager.Core.Application/Permissions/PermissionErrors.cs` | `VersionConflict`. **Thiếu hẳn** `version` cũng rơi vào đây (409), không phải 400: với lệnh ghi đè toàn bộ, "không gửi token" và "gửi token cũ" đều là ghi mà không biết đang đè lên cái gì |
@@ -260,12 +261,12 @@ find src/BE/PlatformManager.Api -name "*.cs" | sort
 ```
 
 Đây là project **duy nhất** được thấy mọi tầng. Controller hiện đặt ở đây (`Controllers/`) vì
-`Core.Api` chưa tồn tại — đọc `doc/kien-truc-core-module.md` trước khi tạo file mới.
+`Core.Api` **đã dựng 2026-09-09** (Q8), hiện chỉ chứa `ApiControllerBase` — đọc `doc/kien-truc-core-module.md` trước khi thêm file vào đó.
 
 | Tên | Loại | Ở đâu | Giữ luật gì |
 | --- | --- | --- | --- |
 | `Program.cs` | top-level statements | `src/BE/PlatformManager.Api/Program.cs` | Composition root. **Thứ tự middleware là hợp đồng**, không phải sở thích — mỗi khối có comment nói rõ vì sao nó đứng ở đó |
-| `ApiControllerBase` | abstract class | `src/BE/PlatformManager.Api/Common/ApiControllerBase.cs` | `[Authorize]` đặt **ở base** ⇒ fail-closed mặc định, không opt-in (`AuthController.Logout` từng vô tình public vì thiếu cả hai attribute). `HandleResult<T>` là **nơi duy nhất** map `ErrorCode` → HTTP status |
+| `ApiControllerBase` | abstract class | `src/BE/Core/PlatformManager.Core.Api/ApiControllerBase.cs` | `[Authorize]` đặt **ở base** ⇒ fail-closed mặc định, không opt-in (`AuthController.Logout` từng vô tình public vì thiếu cả hai attribute). `HandleResult<T>` là **nơi duy nhất** map `ErrorCode` → HTTP status |
 | `GlobalExceptionHandler` | `IExceptionHandler` | `src/BE/PlatformManager.Api/Common/GlobalExceptionHandler.cs` | Lưới **ngoài** MediatR pipeline, dịch 3 loại: `ValidationException` → 400 kèm `fields`, `AntiforgeryValidationException` → 403, còn lại → 500. Không lộ stack trace |
 | `HttpContextCurrentUser` | class | `src/BE/PlatformManager.Api/Common/HttpContextCurrentUser.cs` | Hiện thực `ICurrentUser` từ `ClaimsPrincipal` của cookie session |
 | `CorsPolicyOptions` | options | `src/BE/PlatformManager.Api/Common/CorsPolicyOptions.cs` | Allowlist origin qua `IOptions<T>` chứ **không** `?? []` — allowlist rỗng chặn *mọi* origin trong khi `/health` vẫn xanh. `ValidateOnStart()` chỉ gắn ở Production, để Development vẫn chạy được với cấu hình sẵn trong repo |

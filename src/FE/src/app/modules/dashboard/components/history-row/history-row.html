@@ -1,0 +1,42 @@
+<!-- Bốn ô của lưới, đúng thứ tự: khoảng ngày · tiến độ · biến động · nút Xem.
+     Xem HistoryRow.md § Anatomy. -->
+
+<!-- Ô 1 — khuôn `{dd/MM} – {dd/MM/yyyy}`, dùng cho CẢ chế độ Tuần lẫn Tháng. -->
+<b>
+  @if (hasPeriod()) {
+    {{ 'dashboard.grid.historyDateRange' | translate: rangeParams() }}
+  } @else {
+    {{ 'shared.format.absentValue' | translate }}
+  }
+</b>
+
+<!-- Ô 2 — nhãn và con số tách làm hai phần tử vì con số phải in đậm; cùng khuôn Lead + <strong>
+     đang dùng ở platform/phan-quyen/components/resource-permission-matrix. -->
+<span>
+  {{ 'dashboard.grid.historyOverallLead' | translate }}
+  <b>
+    @if (hasProgress()) {
+      {{ progressText() }}
+    } @else {
+      {{ 'shared.format.absentValue' | translate }}
+    }
+  </b>
+</span>
+
+<!-- Ô 3 — kỳ cũ nhất in "Kỳ đầu"; đừng thay bằng một delta bằng 0. -->
+@if (isFirstPeriod()) {
+  <span class="muted">{{ 'dashboard.grid.historyFirstPeriod' | translate }}</span>
+} @else {
+  <app-delta-indicator [value]="delta()" format="percentagePoint" [localeId]="localeId()" />
+}
+
+<!-- Ô 4 — hành động duy nhất của hàng. `.no-print` vì nút chỉ có nghĩa khi bấm được
+     (doc/huong_dan/quy-uoc/fe-ui-conventions.md §"In ấn"). -->
+<button
+  type="button"
+  class="btn no-print"
+  [attr.aria-label]="'dashboard.action.viewPeriodAriaLabel' | translate: rangeParams()"
+  (click)="view.emit()"
+>
+  {{ 'dashboard.action.viewPeriod' | translate }}
+</button>

@@ -10,6 +10,8 @@ import { DOI_MAT_KHAU_ROUTES } from './platform/doi-mat-khau/doi-mat-khau.routes
 import { TRANG_CHU_ROUTES } from './platform/trang-chu/trang-chu.routes';
 import { QUAN_TRI_NGUOI_DUNG_ROUTES } from './platform/quan-tri-nguoi-dung/quan-tri-nguoi-dung.routes';
 import { PHAN_QUYEN_ROUTES } from './platform/phan-quyen/phan-quyen.routes';
+import { DANH_MUC_DTI_ROUTES } from './modules/danh-muc-dti/danh-muc-dti.routes';
+import { DASHBOARD_ROUTES } from './modules/dashboard/dashboard.routes';
 
 // Tham số đặt tên `config` chứ không phải `routes`: `routes` nay là bảng mục lục thật của app,
 // import ở đầu file — trùng tên sẽ che mất nó ngay trong file đang dùng cả hai.
@@ -113,6 +115,7 @@ const ALL_LEAF_ROUTES: readonly { readonly name: string; readonly routes: Routes
   { name: '/trang-chu', routes: TRANG_CHU_ROUTES, title: 'trang-chu.routeTitle' },
   { name: '/quan-tri/nguoi-dung', routes: QUAN_TRI_NGUOI_DUNG_ROUTES, title: 'quan-tri-nguoi-dung.routeTitle' },
   { name: '/quan-tri/phan-quyen', routes: PHAN_QUYEN_ROUTES, title: 'phan-quyen.routeTitle' },
+  { name: '/danh-muc/dti', routes: DANH_MUC_DTI_ROUTES, title: 'danh-muc-dti.routeTitle' },
 ];
 
 /**
@@ -150,6 +153,30 @@ describe('Bảng route — guard đúng và đủ (fe-routing-guard.md §1, §6)
   it('/quan-tri/phan-quyen: superAdminGuard (KHÔNG phải adminGuard — chống leo thang quyền)', () => {
     expect(guardsOf(PHAN_QUYEN_ROUTES)).toEqual([authGuard, mustChangePasswordGuard, superAdminGuard]);
     expect(guardsOf(PHAN_QUYEN_ROUTES)).not.toContain(adminGuard);
+  });
+
+  // 🛑 Chốt Q39 (spec/danh-muc-dti/ui-spec.md §2): màn Danh mục DTI KHÔNG có guard theo quyền.
+  // Quyền GHI chỉ ẩn affordance ghi bên trong màn — gắn guard quyền lên route sẽ đá người chỉ-đọc
+  // về trang chủ thay vì cho họ xem danh mục, và không có gì báo vì cả hai đều là "một trang mở
+  // ra được".
+  it('/danh-muc/dti: ĐÚNG authGuard → mustChangePasswordGuard, không guard vai trò nào (Q39)', () => {
+    expect(guardsOf(DANH_MUC_DTI_ROUTES)).toEqual([authGuard, mustChangePasswordGuard]);
+    expect(guardsOf(DANH_MUC_DTI_ROUTES)).not.toContain(adminGuard);
+    expect(guardsOf(DANH_MUC_DTI_ROUTES)).not.toContain(superAdminGuard);
+  });
+
+  /**
+   * `modules/dashboard/` CHƯA được khai vào `app.routes.ts` — có chủ đích (nó sẽ THAY `/trang-chu`
+   * theo chốt Q3, xem `modules/dashboard/dashboard.routes.ts`). Vì chưa có đường nào từ router tới
+   * nó, `loadLeafRoutes()` không chạm tới, nên hai ràng buộc dưới đây không ai canh nếu không viết
+   * ra ở đây — và chúng là hai ràng buộc của chính route mặc định tương lai:
+   * đủ hai guard, và KHÔNG guard theo vai trò (đích của mọi redirect "về chỗ an toàn").
+   */
+  it('modules/dashboard đã đủ guard và KHÔNG guard vai trò — sẵn cho lượt hoán đổi /trang-chu', () => {
+    expect(guardsOf(DASHBOARD_ROUTES)).toEqual([authGuard, mustChangePasswordGuard]);
+    expect(guardsOf(DASHBOARD_ROUTES)).not.toContain(adminGuard);
+    expect(guardsOf(DASHBOARD_ROUTES)).not.toContain(superAdminGuard);
+    expect(titleOf(DASHBOARD_ROUTES)).toBe('dashboard.routeTitle');
   });
 
   // Hai test dưới đây duyệt `app.routes.ts` THẬT (nạp `loadChildren`), KHÔNG dùng danh sách route

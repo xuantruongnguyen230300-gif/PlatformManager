@@ -4,7 +4,7 @@ scope: du-an
 verified: khong-ap-dung
 project: "PlatformManager"
 status: "target — not built"
-updated: "2026-09-08"
+updated: "2026-09-10"
 flow: "DTI Catalogue"
 screens: ["DTI Catalogue"]
 source_routes: ["/danh-muc/dti"]
@@ -68,12 +68,18 @@ already say, and it matches the two-level shape of the live Core route
 > **Shell:** the app shell — skip link + `Sidebar` + `Topbar` + `main` + `Toast`
 > (`src/FE/src/app/app.html:16-39`), rendered because this route will not set
 > `data.noShell`. `../DESIGN.md` → Layout describes this shell.
-> **Sources:** `Prototype/index.html` § `#screen-dti` — the prototype the product
-> owner approved point by point on 2026-09-04 and 2026-09-05, and the **only**
-> source for this screen's layout and copy;
-> `doc/Design/Frontend/PlatformManager/Prototypes/index.html` for the component
-> CSS it reuses; `spec/DTI_CanGiuoc_2026-08-11.csv` for the column set, the value
-> set and every figure; `src/FE/src/styles.scss` and
+> **Sources:** `doc/Design/Frontend/PlatformManager/Prototypes/index.html`
+> § `#screen-dti` — the prototype the product owner approved point by point on
+> 2026-09-04 and 2026-09-05, the **only** source for this screen's layout and copy,
+> and the same file that declares the component CSS it reuses. **Repointed
+> 2026-09-10** from a second copy of it that lived outside the repo
+> (`doc/Design/Frontend/PlatformManager/Prototypes/README.md` § In-repo master).
+> **The column set** is backed by the in-repo sample dataset `spec/danh-muc-dti/dti-mau-an-danh-62-dong.csv` — 62 rows,
+> eleven columns, `Phụ trách` and `Hạn xử lý` empty in all of them (measured
+> 2026-09-10). **The figures and the value set** are the prototype's, computed from
+> the BA's August 2026 spreadsheet, which is deliberately outside this repo (root `.gitignore`), so it is named rather than cited as a path; the sample is a different
+> dataset and does not reproduce them.
+> `src/FE/src/styles.scss` and
 > `src/FE/src/app/shared/components/` for the live Core layer it composes.
 > API contract → `doc/contracts/danh-muc-dti.md`; business rules →
 > `spec/danh-muc-dti/business-rules.md`; UI spec →
@@ -102,7 +108,7 @@ already say, and it matches the two-level shape of the live Core route
   - **`.title` row** — flex, space-between (`src/FE/src/styles.scss` § `.title`)
     - `<h2>Danh mục DTI</h2>` — renamed from `Danh mục & Đánh giá theo tuần` by decision Q16(a)
     - `<span class="muted" aria-live="polite">62 chỉ tiêu</span>` — **kept**, per decision Q16(b). Three reasons, all structural rather than aesthetic: `.title` declares `justify-content: space-between`, so the right-hand slot belongs to the contract and removing the element leaves the heading centred in a gap it was not designed for; the live Core screen `Quản trị người dùng` renders exactly this shape (`src/FE/src/app/platform/quan-tri-nguoi-dung/pages/quan-tri-nguoi-dung/quan-tri-nguoi-dung.page.html:12` — `<span class="muted" aria-live="polite">{{ totalCount() }} người dùng</span>`, pinned by a test in the sibling `.spec.ts`) so this is reuse, not invention; and `aria-live="polite"` is a WCAG 2.2 AA requirement here (`doc/huong_dan/wiki-core/fe/15-accessibility.md` § 3a — the rule is stated there as *"số dòng kết quả sau khi lọc/tìm kiếm"*, not at § 1 as an earlier note had it) because after a filter runs, the row count is the **only** evidence a screen-reader user gets that anything happened. Only the wording changes, from `N người dùng` to `N chỉ tiêu`
-  - **Period banners** — one `NoticeBanner` slot, four mutually exclusive occupants, decided by the `Năm đánh giá` and `Kỳ trong năm` selections together. Test the year **first**, because it outranks the period: **(a)** `Năm đánh giá` is not the current year → the past-year read-only banner (decision T15); **(b)** current year and a **month** selected → the aggregate read-only banner (decision Q37); **(c)** current year and a **past week** selected → the banner naming the week the edits will be written to; **(d)** current year with the current week or `Tất cả` → **no banner**. Copy for (a) and (b) is in § Copy; (c) is the one still open. ⚠️ Decision **Q20** reversed this region's meaning: a past period is now **editable**, so the banner no longer says "read-only" — it warns *where the writes are going*. Copy is not settled; see § Cần chốt. Suppressed when the current period is selected
+  - **Period banners** — one `NoticeBanner` slot, **five** mutually exclusive occupants, decided by the `Năm đánh giá` and `Kỳ trong năm` selections together. Test the year **first**, because it outranks the period: **(a)** `Năm đánh giá` is not the current year → the past-year read-only banner (decision T15); **(b)** current year and a **month** selected → the aggregate read-only banner (decision Q37); **(c)** current year and a **past week** selected → the banner naming the week the edits will be written to; **(d)** current year and **`Tất cả (mới nhất trong năm)`** → the same target-period banner in its `— tuần hiện tại.` form, because the rows on screen come from several different weeks while every write goes to the current one (**settled 2026-09-09**; the reasoning is under § Copy); **(e)** current year with the **current week** selected → **no banner**, there being nothing to warn about — what is on screen and what a write lands on are the same period. Copy for all of them is in § Copy. ⚠️ Decision **Q20** reversed this region's meaning: a past period is now **editable**, so the banner no longer says "read-only" — it warns *where the writes are going*. **That copy was settled 2026-09-06** and its two strings sit in § Copy with the rest; they were moved out of § Cần chốt on 2026-09-09 so that one section holds the shipped strings. Suppressed in case **(e)** only
   - **`Toolbar`** (`.toolbar.no-print`) — the same contract as the Dashboard's table toolbar, no new controls. **The DOM order below is the shipped component's, not the prototype's** (decision T1): `<app-toolbar>` renders search → filter → separator → chips → actions, while the approved prototype draws the chips *before* the separator. The component is the contract, so the spec follows it and the prototype is the side that needs syncing (§ Normalize on redesign).
     1. `.input-icon.search` — fixed 260px, `pi pi-search` adornment
     2. `<details class="filter">` → `<summary class="btn">` with `pi pi-filter`, the label `Lọc`, and a `.filter-count` badge **only when at least one condition differs from its default** → `.filter-panel` holding **four** `.form-row` conditions and a `.filter-foot`. A native `<details>`, so it opens without JavaScript.
@@ -113,7 +119,7 @@ already say, and it matches the two-level shape of the live Core route
     5. `.toolbar-actions` — two `Button`s: `Import CSV/Excel` (default) and `+ Thêm chỉ tiêu` (`.primary`)
 
     Every one of those five is conditional in the component, so a toolbar with no search, no filter or no chips collapses rather than leaving a gap. Anatomy and per-slot rules: [`../Components/Toolbar.md`](../Components/Toolbar.md).
-  - **`DataTable`** (`app-criteria-grid-table`) — the grid, scrolled at `--grid-h` / `--grid-h-min` with `rounded.table` (§ `app-criteria-grid-table .dti-grid-scroll`). **14 columns**, each with a `min-width` so the grid scrolls horizontally rather than crushing, and **both edge columns pinned against that scroll** (decision Q30, below):
+  - **`DataTable`** — rendered by the shared **`<app-data-grid>`**, with `app-criteria-grid-table` as its caller, exactly the role `user-grid-table` plays on the Core screen. The caller declares the columns as `TemplateRef`s and asks for the two pins through the **`frozenColumns` input (chốt 2026-09-09)**; it **must not** import `p-table` or use `pFrozenColumn` itself, because `data-grid` is the one place `p-table` is imported ([`../Components/DataTable.md`](../Components/DataTable.md) § CHỐT 2026-09-06 and § Frozen edge columns). Height comes from the `page-fill` ⇄ `grid-host` flex chain with `scrollHeight="flex"`, **not** from `--grid-h`; the frame keeps `rounded.table`. **14 columns**, each with a `min-width` so the grid scrolls horizontally rather than crushing, and **both edge columns pinned against that scroll** (decision Q30, below):
 
     | # | Header | min-width | Alignment | Content |
     | --- | --- | --- | --- | --- |
@@ -132,7 +138,7 @@ already say, and it matches the two-level shape of the live Core route
     | 13 | `Minh chứng/Ghi chú` | 220px | left | **inline-editable** (`.cell-editable`); one free-text field, not a list of evidence rows (decision Q5) |
     | 14 | `Hành động` | 120px | left | `Button` `.btn.sm` `Sửa` + `Button` `.btn.sm.danger` `Xoá`. **Frozen right** — Q30 |
 
-    Two of these are structural additions to the pre-retirement grid: `Chênh lệch` (#8, decisions Q2 and Q8) and `Kỳ của số liệu` (#4, decision Q31). The header of `Minh chứng/Ghi chú` changed from `Ghi chú`, and status moved from bare text to a coloured `Badge`. The `min-width` values are the approved prototype's own, declared inline on each `<th>` (`Prototype/index.html` § `app-criteria-grid-table` → `<thead>`) — read them there rather than trusting a total written into prose, which goes stale the first time one column moves.
+    Two of these are structural additions to the pre-retirement grid: `Chênh lệch` (#8, decisions Q2 and Q8) and `Kỳ của số liệu` (#4, decision Q31). The header of `Minh chứng/Ghi chú` changed from `Ghi chú`, and status moved from bare text to a coloured `Badge`. The `min-width` values are the approved prototype's own, declared inline on each `<th>` (`doc/Design/Frontend/PlatformManager/Prototypes/index.html` § `app-criteria-grid-table` → `<thead>`) — read them there rather than trusting a total written into prose, which goes stale the first time one column moves.
 
     **`Kỳ của số liệu` — the three rules it carries** (decisions Q31 and Q26, 2026-09-05; Q38, 2026-09-06):
 
@@ -144,7 +150,7 @@ already say, and it matches the two-level shape of the live Core route
        - **The year is dropped too**, which is where this differs from the history rows on the Dashboard (`10/08 – 16/08/2026`). Every row in this grid belongs to the year in the `Năm đánh giá` filter, so the year is already stated one control away and repeating it 62 times buys nothing. Change that filter and the whole column changes with it.
     3. **After a save, the cell switches to the current week.** Decision Q26 sends every write made in `Tất cả` mode to the *current* week rather than to the week the row was read from, and this cell is the entire user-visible evidence of that. A row that read `27/07 – 02/08` and now reads `10/08 – 16/08` has been written into this week — a different event from overwriting the older one — and the user has to be able to tell the two apart at the moment it happens, not afterwards from an audit trail.
 
-    **Frozen edge columns** (decision Q30, 2026-09-05) — `Mã` pinned left, `Hành động` pinned right, both against the horizontal scroll. Fourteen columns fit no viewport this product targets, and the two that must survive the scroll are precisely the identifier and the actions: every other column is a value you read once, while those two answer *which row is this* and *what may I do to it*. The two inline-editable columns sit at #12 and #13, so a user who has scrolled far enough to edit has already lost sight of `Mã` — that is the failure Q30 removes. This is **a variant of the component, not a patch on this screen**: the bindings, the conditions for using it and the costs it brings are recorded in [`../Components/DataTable.md`](../Components/DataTable.md) § Frozen edge columns, extended for this purpose on 2026-09-05. The static prototype cannot render it — it has no PrimeNG — and says so in a comment inside `app-criteria-grid-table`
+    **Frozen edge columns** (decision Q30, 2026-09-05) — `Mã` pinned left, `Hành động` pinned right, both against the horizontal scroll. Fourteen columns fit no viewport this product targets, and the two that must survive the scroll are precisely the identifier and the actions: every other column is a value you read once, while those two answer *which row is this* and *what may I do to it*. The two inline-editable columns sit at #12 and #13, so a user who has scrolled far enough to edit has already lost sight of `Mã` — that is the failure Q30 removes. This is **a variant of the component, not a patch on this screen**: the bindings, the conditions for using it and the costs it brings are recorded in [`../Components/DataTable.md`](../Components/DataTable.md) § Frozen edge columns, extended for this purpose on 2026-09-05 and re-shaped on **2026-09-09** into the `frozenColumns` input, so this screen's caller states *which* columns are pinned without importing PrimeNG's `TableModule` to say it. The static prototype cannot render it — it has no PrimeNG — and says so in a comment inside `app-criteria-grid-table`
   - **Inline-edit affordance** — `.cell-editable`: `cursor: pointer`, a transparent 1px dashed bottom border that turns `colors.brand` on hover, and a 2px `colors.brand` focus ring at 2px offset (§ `app-criteria-grid-table .cell-editable`, `:hover`, `:focus-visible`). Each cell carries `tabindex="0"` and `role="button"`, so the two editable columns are reachable by keyboard. **All of that is conditional**: the affordance is present only when the row is actually writable — a week (or `Tất cả`) is selected *and* the user holds the write key. In the two read-only states (Q37, Q39) the cells render as ordinary cells with no underline, no tab stop and no tooltip, because an affordance that does nothing is worse than none. Editing swaps the span for `.cell-edit` — a flex row holding a narrow right-aligned number input (74px) or a full-width text input, both borrowing the global `Input` treatment
   - **Paginator** — the `DataTable` contract, unmodified: page buttons plus a rows-per-page select offering 10 / 20 / 50, **defaulting to 10** (decision Q19, matching the live `Quản trị người dùng` grid — one default across the product, and no widening of the component contract). There is **no** `Hiển thị 1–10 trong 62 bản ghi` line: decision Q16(c) removed it because the live Core grid declares `[paginator]`, `[rows]`, `[first]`, `[totalRecords]` and `[rowsPerPageOptions]` but **not** `showCurrentPageReport`, and [`../Components/DataTable.md`](../Components/DataTable.md) records exactly that contract. Turning it on is a one-binding change but it widens the component contract, so it must be decided for **every** grid at once — § Cần chốt
 - **Four dialogs**, all native `<dialog>` per [`../Components/Dialog.md`](../Components/Dialog.md), belonging to this route rather than to routes of their own:
@@ -191,14 +197,14 @@ English sibling in `en.json` before the markup can pass.
 the app"* and instructed hardcoding. It was already false when written — the i18n layer landed
 2026-09-05 — and following it would have failed G12.
 
-Source for every row is `Prototype/index.html`
+Source for every row is `doc/Design/Frontend/PlatformManager/Prototypes/index.html`
 § `#screen-dti`; the region is named rather than a line number.
 
 | Element | Verbatim copy | Localization key | Source region |
 | --- | --- | --- | --- |
 | Card heading | `Danh mục DTI` | key TBA | `.title` |
 | Card count | `62 chỉ tiêu` (`aria-live="polite"`) | — (composed) | `.title` |
-| ~~Read-only banner~~ — **withdrawn 2026-09-05** | ~~`Đang xem dữ liệu lịch sử — chỉ đọc. Quay lại "Tất cả (mới nhất trong năm)" của năm hiện tại để chỉnh sửa.`~~ | — | The prototype still draws this sentence; decision **Q20** makes past periods editable, so it now states the opposite of the rule. **Do not ship this string.** Replacement copy is open — § Cần chốt |
+| ~~Read-only banner~~ — **withdrawn 2026-09-05** | ~~`Đang xem dữ liệu lịch sử — chỉ đọc. Quay lại "Tất cả (mới nhất trong năm)" của năm hiện tại để chỉnh sửa.`~~ | — | The prototype still draws this sentence; decision **Q20** makes past periods editable, so it now states the opposite of the rule. **Do not ship this string.** Its replacement is the target-period banner two rows below, settled 2026-09-06 |
 | Search placeholder | `Tìm mã hoặc tên chỉ tiêu...` (three dots, not an ellipsis character) | key TBA | `.input-icon.search` |
 | Search accessible name | `Tìm mã hoặc tên chỉ tiêu` | key TBA, on `aria-label` | `.input-icon.search` |
 | Filter trigger | `Lọc` + a `.filter-count` badge reading `1` in the approved state | key TBA + computed | `<summary class="btn">`; the badge counts **non-default** conditions only — decision T8 |
@@ -216,6 +222,8 @@ Source for every row is `Prototype/index.html`
 | Period cell value | `10/08 – 16/08` · `27/07 – 02/08` · `20/07 – 26/07` · `13/07 – 19/07` — the week's **date range only**, with no week number and no year | — (composed) | `Kỳ của số liệu` column. Decision **Q38** — a deliberate exception to Q12, reasoned in § Layout Blueprint rule 2 and recorded in § Normalize |
 | Aggregate read-only banner (a month selected) | `Đang xem số liệu tổng hợp của Tháng 8/2026 (01/08 – 31/08/2026) — chỉ đọc. Chọn một tuần cụ thể trong ô "Kỳ trong năm" để nhập hoặc sửa số liệu.` | — (composed) | **Written by this spec 2026-09-06 for decision Q37; not drawn in the prototype.** § States |
 | Past-year read-only banner | `Đang xem số liệu năm 2025 — chỉ đọc. Chuyển ô "Năm đánh giá" về 2026 để nhập hoặc sửa số liệu.` | — (composed) | **Written by this spec 2026-09-06 for decision T15; not drawn in the prototype.** § States |
+| Target-period banner (a past week selected) | `Đang nhập cho Tuần 31/2026 (27/07 – 02/08/2026). Số liệu bạn sửa sẽ lưu vào tuần này, không phải tuần hiện tại.` | — (composed) | **Settled 2026-09-06 for decision Q20; written by this spec, not drawn in the prototype.** Moved here from § Cần chốt on 2026-09-09. § Layout Blueprint → Period banners |
+| Target-period banner (`Tất cả (mới nhất trong năm)` selected) | `Đang nhập cho Tuần 33/2026 (10/08 – 16/08/2026) — tuần hiện tại.` | — (composed) | The same sentence with the contrast clause dropped, there being nothing to contrast with. Rendered in case **(d)** of § Layout Blueprint → Period banners — settled 2026-09-09, see the note below the table |
 | Empty-catalogue banner | `Danh mục chưa có chỉ tiêu nào. Dùng nút "Import CSV/Excel" ở trên để nhập danh mục từ file.` | key TBA | **Written by this spec on 2026-09-05 for decision T9 — not drawn in the prototype.** See § States |
 | Status values (the complete set of four) | `Chưa thực hiện` · `Đang thực hiện` · `Cần bổ sung minh chứng` · `Hoàn thành` | — (server values) | `app-status-badge` |
 | Empty assignee / deadline cell | `—` (em dash) | key TBA | `<tbody>` |
@@ -261,6 +269,33 @@ The separator between the period name and its range is a **colon** here and a
 **middle dot** on the Dashboard's period select. T5 settled the dash; it did not
 settle this. Recorded as-drawn and carried in § Normalize on redesign.
 
+> ### ✅ CHỐT 2026-09-09 — case (d) was two situations wearing one label, and it is now split
+>
+> This file used to contradict itself: § Layout Blueprint said the current week **and**
+> `Tất cả` show no banner, while the 2026-09-06 settlement supplied the
+> `— tuần hiện tại.` string for exactly that case. The contradiction came from one case
+> merging two situations that behave differently:
+>
+> | `Kỳ trong năm` | What the grid shows | Where a write lands | Banner |
+> | --- | --- | --- | --- |
+> | **the current week** | week 33's figures | week 33 | **no** — you edit what you are looking at, so there is nothing to warn about |
+> | **`Tất cả (mới nhất trong năm)`** | one row per criterion, each from whichever week it was last saved in — week 29, 31, 33 … | **the current week** | **yes** |
+>
+> The second row is why the banner has to exist. `spec/danh-muc-dti/business-rules.md`
+> §5.3 step 1 sends a write carrying `period = "all"` to **the ISO week containing
+> today**, so a user editing a row that displays week 29's number puts that value into
+> week 33 — and nothing else on screen says so.
+>
+> **This mechanism has been named once before.** Decision **T15** (2026-09-06, in the
+> same §5.3) found the cross-year version of it and wrote the sentence that fits this
+> case word for word: *"Bộ chọn kỳ nói 'ghi được', còn lệnh ghi thì đi chỗ khác."* T15
+> closed the cross-year half with a refusal,
+> `400 CRITERIA.ASSESSMENT_PERIOD_OUT_OF_YEAR`. The within-year half is **not** a defect
+> and no error code blocks it — it is the designed behaviour of `Tất cả` — so its remedy
+> is a warning rather than a refusal, and this banner is the warning. Decision **Q26**
+> completes the pair from the other end: after a save the `Kỳ của số liệu` cell switches
+> to the current week, so the banner warns before and the column confirms after.
+
 The three import error messages are the design's statement of what import
 validates: a score above its maximum, a status outside the fixed set of four, and
 an unmatched group name. The rules themselves belong to
@@ -271,7 +306,7 @@ failure is presented.
 
 <!-- How each state renders: default / loading / empty / error / validation display. -->
 
-- **default (a week is selected and the user may write):** every write affordance is live — `+ Thêm chỉ tiêu`, `Import CSV/Excel`, the two inline-editable columns, and the per-row `Sửa` / `Xoá`. No banner. Decision **Q37** makes the *unit* part of this condition, not just the date: **a week is the only kind of period anything can be written to.**
+- **default (the current week is selected and the user may write):** every write affordance is live — `+ Thêm chỉ tiêu`, `Import CSV/Excel`, the two inline-editable columns, and the per-row `Sửa` / `Xoá`. **No banner** — this is the one writable state that needs none, because what is displayed and what a write lands on are the same period (case **(e)** of § Layout Blueprint → Period banners, settled 2026-09-09). Decision **Q37** makes the *unit* part of this condition, not just the date: **a week is the only kind of period anything can be written to.**
 - **editing a past week:** ⚠️ **Decision Q20 reversed this state; decision Q37 then narrowed it to weeks.** A past *week* is fully editable — the user picks it in the `Kỳ trong năm` filter and every write lands on *that* week, not on today. The write affordances stay live and the same controls do the same jobs; what changes is only that a `NoticeBanner` appears naming the target period, because the one thing the user must not be able to do is enter data believing it is going somewhere else.
 
   **Age is no longer a reason for read-only on this screen** — that was the state Q20 removed, and the prototype's sentence saying otherwise is withdrawn. Read-only does still exist here, twice, for two reasons that have nothing to do with age: the period *unit* (Q37, next bullet) and the user's *permission* (Q39, below).
@@ -281,6 +316,7 @@ failure is presented.
   - **Who changed which period must be traceable**, and the audit fields already on every entity are the intended mechanism — no new screen surface is specified for it here.
 
   > 📖 The rule itself — what "the target period" means for a write, how the audit trail records it, whether anything at all is frozen — is owned by `spec/danh-muc-dti/business-rules.md` and `doc/contracts/danh-muc-dti.md`. This spec records only the screen surface.
+- **`Tất cả (mới nhất trong năm)` is selected — writable, and the banner is not optional here (settled 2026-09-09):** the grid shows the newest saved figure per criterion, so different rows come from different weeks (§ Layout Blueprint → `Kỳ của số liệu`, decision Q31), while **every write goes to the ISO week containing today** (`spec/danh-muc-dti/business-rules.md` §5.3 step 1, `period = "all"`). Editing a row that displays week 29's number therefore writes week 33. Nothing is disabled and every write affordance stays live; the `NoticeBanner` in its `— tuần hiện tại.` form is the whole mechanism keeping a user from entering data in the belief that it lands where they are looking. The reasoning and the T15 precedent are under § Copy. This state cannot combine with a past year — T15 makes `Tất cả` outside the current year read-only, two bullets below.
 - **a month is selected — the aggregate view, read-only (decision Q37, 2026-09-06):** `Kỳ trong năm` still lists months beside weeks, but choosing one puts the grid into a read-only state. `+ Thêm chỉ tiêu` and `Import CSV/Excel` stay **visible and disabled** (`Button` § States → disabled: `opacity: .5`, `cursor: not-allowed`); the per-row `Sửa` / `Xoá` do the same; the two `.cell-editable` columns lose their affordance for the duration. Search, all four filter conditions, sorting, paging and `Xuất báo cáo` are untouched — the month export is a first-class feature (decision Q15) and does not depend on this.
 
   **Why the unit decides this rather than a permission.** A month is not a period anything is saved *to*; it is the sum of the weeks inside it. Accepting a keystroke in a month view forces the app to invent which week the number belongs to, and the obvious guess is wrong in a way nobody would catch: anchoring `Tháng 8/2026` at its last day, `31/08`, lands in **ISO week 36**, a week that is in September. Q37 deletes the guess instead of making it safer — writes go to weeks, months are computed from them.
@@ -327,7 +363,7 @@ failure is presented.
 
   **Combined with the no-permission state (Q39) the banner drops its second sentence**, leaving `Danh mục chưa có chỉ tiêu nào.` alone. A reader without the write key cannot see the `Import CSV/Excel` button, so pointing at it would name a control that is not on their screen — the one way an empty state can be worse than a blank grid.
 
-  ⚠️ **This copy is written by this spec, not read off the prototype.** `Prototype/index.html` § `#screen-dti` draws no empty state at all — T9 is dated 2026-09-05, after the prototype was approved.
+  ⚠️ **This copy is written by this spec, not read off the prototype.** `doc/Design/Frontend/PlatformManager/Prototypes/index.html` § `#screen-dti` draws no empty state at all — T9 is dated 2026-09-05, after the prototype was approved.
 - **after a save while `Kỳ trong năm` is `Tất cả`:** the row's `Kỳ của số liệu` cell switches to the current week's date range, and that switch is the whole of the feedback. Decision Q26 routes the write to the current week, decision Q31 makes the destination visible; there is no dialog and no confirmation step in between. The figures stay where the user typed them, only the range moves. § Layout Blueprint → `Kỳ của số liệu`, rule 3.
 - **error:** a failed request surfaces as a `Toast` from the shell. In-dialog failures render in `.form-error` inside the dialog instead, so the user does not lose the form.
 - **validation:** three surfaces, deliberately different.
@@ -341,7 +377,7 @@ failure is presented.
 
 <!-- Behavior per breakpoint. -->
 
-- **≥981px (desktop default):** the page fills the viewport height; the grid scrolls inside its own region between `--grid-h-min` and `--grid-h` while the card, toolbar and paginator stay put.
+- **≥981px (desktop default):** the page fills the viewport height; the grid scrolls inside its own region — sized by the `page-fill` ⇄ `grid-host` flex chain with `scrollHeight="flex"`, **not** by `--grid-h` ([`../Components/DataTable.md`](../Components/DataTable.md) § SỬA 2026-09-06) — while the card, toolbar and paginator stay put.
 - **All widths — the grid scrolls horizontally, it does not restack.** Fourteen columns with explicit `min-width` values sum well past a laptop viewport, so horizontal scrolling is the design, not a failure. That is the `Table` / `DataTable` contract and it is why every column declares a minimum rather than a percentage. Since decision Q30 the two edge columns (`Mã`, `Hành động`) stay put while the middle scrolls, at every breakpoint — the pin has no responsive variant.
 - **≤980px (tablet):** the shell's sidebar becomes an off-canvas drawer; the toolbar wraps per the global `.toolbar` responsive rule. The grid is unchanged.
 - **≤560px (mobile):** the global `.form-grid` collapses from two columns to one, so the four paired fields in the `Sửa chỉ tiêu` dialog stack. `main` padding shrinks and the topbar hides the user name. The grid is still unchanged — on a 390px screen the user scrolls sideways through fourteen columns, which is the least comfortable moment in the whole product (§ Normalize on redesign). The frozen edges make this **worse, not better, on a phone**: `Mã` at 70px and `Hành động` at 120px are held permanently, leaving under 200px of scrollport between them. Q30 solves a desktop problem and pays for it here.
@@ -413,7 +449,7 @@ Prerequisites, once the screen is built:
 
 **The prototype and this spec now agree — re-measured 2026-09-05.** An earlier
 revision of this section listed three divergences (T1, T2, T5) and told the reader to
-re-sync the prototype. That has since happened: `Prototype/index.html` § `#screen-dti`
+re-sync the prototype. That has since happened: `doc/Design/Frontend/PlatformManager/Prototypes/index.html` § `#screen-dti`
 now places `.toolbar-sep` before `.filter-chips` and renders the chip's remove control
 as an icon button with `aria-label="Bỏ lọc …"` and no `title`, each change carrying a
 `SỬA 2026-09-05` comment that names its decision. The same pass brought in the
@@ -425,8 +461,8 @@ direction (Q25). T5 never applied to this screen: every period label in
 Do not take that on trust; it is the kind of claim that rots:
 
 ```bash
-grep -c 'SỬA 2026-09-05' Prototype/index.html                    # the sync pass left comments
-awk 'NR>=3232' Prototype/index.html | grep -c '[0-9]/[0-9][0-9]–[0-9]'   # T5 in #screen-dti — PASS = 0
+grep -c 'SỬA 2026-09-05' doc/Design/Frontend/PlatformManager/Prototypes/index.html                    # the sync pass left comments
+awk 'NR>=3232' doc/Design/Frontend/PlatformManager/Prototypes/index.html | grep -c '[0-9]/[0-9][0-9]–[0-9]'   # T5 in #screen-dti — PASS = 0
 ```
 
 Two things in this screen's design still cannot be read off the prototype, and both
@@ -436,19 +472,28 @@ marked as such where they appear.
 
 Screen-local quirks:
 
-1. **Fourteen columns is past what a grid can carry, and Q30 treats the symptom.** Even on a 1440px desktop the user scrolls sideways; on a phone the screen is barely usable. Pinning the two edges (decision Q30) keeps the row identifiable while that happens, which is worth doing — but it does not make the grid narrower, and on a phone it makes the scrollport narrower still (§ Responsive). The underlying problem is the column set: `Phụ trách` and `Hạn xử lý` are **empty in every single one of the 62 rows** of `spec/DTI_CanGiuoc_2026-08-11.csv`, and `Chênh lệch` is derived from two columns already on screen. A grid carrying three columns that add nothing on the only real dataset is worth revisiting before build, not after.
+1. **Fourteen columns is past what a grid can carry, and Q30 treats the symptom.** Even on a 1440px desktop the user scrolls sideways; on a phone the screen is barely usable. Pinning the two edges (decision Q30) keeps the row identifiable while that happens, which is worth doing — but it does not make the grid narrower, and on a phone it makes the scrollport narrower still (§ Responsive). The underlying problem is the column set: `Phụ trách` and `Hạn xử lý` are **empty in every single one of the 62 rows** of the in-repo sample dataset `spec/danh-muc-dti/dti-mau-an-danh-62-dong.csv`, and `Chênh lệch` is derived from two columns already on screen. A grid carrying three columns that add nothing on the dataset the app is being built against is worth revisiting before build, not after. The same was recorded of the BA's original before that file was left out of the repo; the sample is the half anyone can now re-measure:
+
+    ```bash
+    python -c "
+    import csv, io
+    rows = list(csv.DictReader(io.open('spec/danh-muc-dti/dti-mau-an-danh-62-dong.csv', encoding='utf-8-sig', newline='')))
+    print(len(rows), sum(1 for r in rows if r['Phụ trách'].strip() or r['Hạn xử lý'].strip()))
+    "   # PASS = 62 0
+    ```
 2. **Two editing models on one grid.** Two columns edit in place; ten more edit in a dialog reached by a per-row button. The distinction is defensible (decision Q9) but nothing on screen signals it — the dashed underline appears on exactly two of fourteen cells and there is no legend.
 3. **`Bấm đúp` (double-click) is the documented inline-edit gesture**, but the cells carry `role="button"` and `tabindex="0"`, and a keyboard user activates a button with Enter or Space, not a double-click. The tooltip therefore describes a gesture half the users cannot perform. Either document both, or make single-click the trigger.
 4. **The empty-note prompt is copy pretending to be a value.** `— bấm đúp để ghi chú` sits in the data column and reads like content. A placeholder treatment (muted, italic, or an explicit empty state) would separate instruction from data.
 5. **Period labels still use two separators across the product** — a colon here (`Tuần 33: 10/08 – 16/08/2026`), a middle dot on the Dashboard (`Tuần 33 · 10/08 – 16/08 · 82,1%`). Decision T5 settled the **dash**, not this. One owner now holds the formats (`spec/dashboard-dti/business-rules.md`), so the fix is to converge there rather than in either screen spec.
 6. **Row actions diverge from the Core grid** — text buttons here, icon buttons on `Quản trị người dùng`. Deliberate and recorded, but it means the product teaches two vocabularies for "edit this row".
-7. **The grid truncates in print** (capped at `--grid-h`), and the toolbar vanishes with `.no-print`, so a printed page is a window onto the data with no indication more exists. Defect **A4** — `grep -n '@media print' doc/Design/Frontend/PlatformManager/Prototypes/index.html` returns only chrome-hiding blocks; none releases `--grid-h`.
+7. **The grid truncates in print** (capped at the height of its scroll region, which since the 2026-09-06 `scrollHeight="flex"` change comes from the flex chain rather than from `--grid-h`), and the toolbar vanishes with `.no-print`, so a printed page is a window onto the data with no indication more exists. Defect **A4** — `grep -n '@media print' doc/Design/Frontend/PlatformManager/Prototypes/index.html` returns only chrome-hiding blocks; none releases `--grid-h`.
 8. **A second, near-identical import dialog exists in the prototype.** `app-csv-import-dialog` (`.csv` only) is kept beside `app-import-dialog` (`.csv,.xlsx,.xls`) for comparison, and the toolbar button routes to the second. Only one should survive into code — defect **A5**; both are still in `doc/Design/Frontend/PlatformManager/Prototypes/index.html` (§ `app-csv-import-dialog`, § `app-import-dialog`).
 9. **Two inline-edit input classes are camelCase** (`.progressInput`, `.noteInput`) against the repo's kebab-case convention — defect A6 in the same list. Rename before they are typed into a stylesheet.
 10. **The grid changes shape when a filter changes.** `Kỳ của số liệu` appears and disappears with the `Kỳ trong năm` condition (decision Q31, rule 1), so the column count, the total width and the horizontal scroll position all shift under the user as a side effect of filtering. It is the right call — a column repeating one value fourteen times is worse — but no other grid in the product does this, and nothing on screen announces it.
 11. **The period cell is the one period display in the product that omits the period's *name*** — a deliberate exception to decision Q12, settled by **decision Q38 on 2026-09-06**, not an oversight. Q12 requires a period to be shown as name *and* range; `Kỳ của số liệu` shows `10/08 – 16/08` and stops. Two reasons: 110px will not hold `Tuần 33: 10/08 – 16/08/2026` and the column is already inside a grid that scrolls too far sideways; and after decision Q37 **every row in this column is a week**, so the name carries no information the range does not. ⚠️ **Do not "fix" this in a consistency pass.** If the unit rule ever changes — if a month can appear in this column — the exception dies with it and the name has to come back, because that is the moment the name starts distinguishing something.
 12. **Three different conditions render a read-only grid.** No write key (Q39), a month selected (Q37) and a past year selected (T15) all strip the write affordances, and a user can hit more than one at once. The design distinguishes them — hidden versus disabled, and a different banner per cause — but the permission case is carried by *absence*, which is the hardest thing for a user to read. Naming the reason in one line would be more robust than a grammar of emptiness.
 13. **The same date range is written three ways across the product.** `10/08 – 16/08` in this column (T14), `10/08 – 16/08/2026` in the Dashboard's history rows, and `Tuần 33 · 10/08 – 16/08 · 82,1%` in its period select. Each drops what its context already supplies, which is right in isolation and means a reader moving between the two screens sees the same week in three shapes. The formats have one owner (`spec/dashboard-dti/business-rules.md`); what has no owner is the *rule for what may be dropped*.
+14. **This screen and `spec/danh-muc-dti/ui-spec.md` classify the same banner slot along two different axes** — recorded 2026-09-09, deliberately **not** resolved here. That file's § V3 lists four mutually exclusive roles: never-imported (T9) · read-only because a month or a year is selected (Q37) · read-only because the user lacks the write key (Q39) · target-week reminder. This file lists five, keyed off the `Năm đánh giá` / `Kỳ trong năm` pair: past year (T15) · month (Q37) · past week · `Tất cả` · current week. So `ui-spec` carries a **permission** role this list does not, while this file splits **past year** out of the unit case where `ui-spec` folds it in — and the empty-catalogue banner (T9) is a further occupant of the same slot that this file describes in § States rather than in the Period-banners list at all. Each list is internally consistent and neither is wrong; what does not exist is one agreed enumeration of what may occupy that single slot, which is how a sixth role gets invented next time. The `ui-spec` side is being handled by its own owner.
 
 ## Cần chốt
 
@@ -456,14 +501,11 @@ Screen-local quirks:
 
 1. ~~**Copy for the target-period banner.**~~ **Settled 2026-09-06.** The banner names the
    target week and states where the write lands; it is **not** a warning that editing is
-   blocked (Q20 inverted that). Verbatim:
-
-   > `Đang nhập cho Tuần 31/2026 (27/07 – 02/08/2026). Số liệu bạn sửa sẽ lưu vào tuần này, không phải tuần hiện tại.`
-
-   The `Tất cả` case reuses the same sentence with the current week and drops the contrast
-   clause, because there is nothing to contrast with:
-
-   > `Đang nhập cho Tuần 33/2026 (10/08 – 16/08/2026) — tuần hiện tại.`
+   blocked (Q20 inverted that). **The two verbatim strings are in § Copy**, alongside every
+   other shipped string on this screen — moved there on **2026-09-09**, because a closed item
+   in this section records a decision and must not become a second home for copy
+   (`.claude/CLAUDE.md` §5). Two other places in this file said the copy was still open on the
+   same day the settlement was written; both were corrected in the same pass.
 
    How the four surfaces divide the one story, so none of them repeats another: this banner
    says **where the write goes** · the `Kỳ của số liệu` column says **where each row came

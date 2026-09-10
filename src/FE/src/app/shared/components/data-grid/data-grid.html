@@ -3,7 +3,14 @@
      Thêm `.scroll` ở đây sẽ (1) làm `thead` position:sticky mất scrollport thật nên tiêu đề cột
      trôi mất khi cuộn, và (2) nhốt phân trang vào trong vùng cuộn.
      Lý do đầy đủ: doc/Design/Frontend/PlatformManager/Components/Table.md § `.scroll`. -->
-<div class="tablewrap" [style.--data-grid-min-width]="minWidth()">
+<!-- Hai class ghim mép do input `frozenColumns` quyết định — màn hình KHÔNG bao giờ tự viết
+     `pFrozenColumn`, xem JSDoc của input đó trong data-grid.ts. -->
+<div
+  class="tablewrap"
+  [class.frozen-left]="frozenColumns()?.left === true"
+  [class.frozen-right]="frozenColumns()?.right === true"
+  [style.--data-grid-min-width]="minWidth()"
+>
   <p-table
     [value]="rows()"
     [loading]="loading()"

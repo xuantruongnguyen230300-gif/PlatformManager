@@ -97,9 +97,14 @@ export interface ICoreI18n {
    * (doc/huong_dan/wiki-core/fe/08-i18n.md §Khuôn khoá dịch §5): sản phẩm thứ hai giữ nguyên
    * nguồn Core rồi thêm nguồn của mình vào sau, không phải sửa file dịch của nền tảng.
    *
-   * Hôm nay đúng MỘT nguồn (`/i18n/`) vì `platform/` chưa có màn nghiệp vụ nào — nhóm khoá dự án
-   * còn rỗng, nên chưa có file thứ hai để khai. Cơ chế ghép thì đã sẵn, không phải sửa `core/`
-   * khi nhóm đó xuất hiện.
+   * Sản phẩm này khai HAI nguồn kể từ 2026-09-09 — nhóm CoreBase rồi nhóm dự án, xem
+   * `app.config.ts` (`APP_I18N.resources`). Danh sách và thứ tự là DỮ LIỆU của dự án: `core/`
+   * không được biết tên nhóm nào, chỉ biết "nạp theo thứ tự, nguồn sau ghi đè".
+   *
+   * 🛑 Hệ quả cho TEST, chỗ dễ hỏng im lặng nhất: một spec nạp thiếu nguồn thì khoá của nhóm
+   * thiếu tra không trúng và ngx-translate trả lại chính chuỗi khoá. `useTranslationsInTest()`
+   * (`./i18n.testing.ts`) đọc `resources` từ chính token này, nên TestBed của màn nghiệp vụ phải
+   * cấp `CORE_I18N` — không cấp thì helper lùi về nhóm CoreBase một mình.
    */
   readonly resources: readonly string[];
 }

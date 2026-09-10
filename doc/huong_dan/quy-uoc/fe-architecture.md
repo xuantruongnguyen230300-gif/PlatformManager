@@ -23,7 +23,9 @@ src/FE/
 │   │                  # ../wiki-core/fe/02-http-envelope.md §"Tài nguyên tĩnh".
 │   ├── favicon.ico
 │   ├── fonts/         # woff2 tự host (không gọi Google Fonts lúc chạy)
-│   └── i18n/          # bảng dịch vi.json / en.json — nạp lúc chạy
+│   ├── i18n/          # bảng dịch nhóm CoreBase — ĐI THEO khi tách nền tảng
+│   └── i18n-app/      # bảng dịch nhóm DỰ ÁN — Ở LẠI. Hai thư mục ANH EM, có chủ đích:
+│                      # ../wiki-core/fe/08-i18n.md §Khuôn CoreBase
 ├── src/
 │   ├── environments/  # cấu hình COMPILE-TIME theo môi trường — apiBaseUrl, production
 │   ├── styles.scss    # token global :root + style toàn cục
@@ -66,19 +68,28 @@ src/app/
 ├── platform/   # màn hình "Core" (đăng nhập, đổi mật khẩu, quản trị người dùng, phân quyền)
 │               # — dùng lại được cho mọi sản phẩm dựng trên nền tảng này, KHÔNG phải nghiệp vụ
 └── modules/    # module NGHIỆP VỤ — lazy-loaded, mỗi module 1 domain.
-                # 📐 CHƯA TỒN TẠI hôm nay (đối chiếu 2026-09-06), xem ghi chú ngay dưới.
 ```
 
-> **`modules/` là chỗ đã dành sẵn, không phải thư mục đang có.** Đối chiếu 2026-09-06:
-> `src/FE/src/app/modules/` **không tồn tại** — hai module nghiệp vụ (`dashboard`,
-> `danh-muc-dti`) đã gỡ 2026-08-29 để xây lại. Hệ quả kéo theo, cả hai đều **có chủ đích**:
-> hằng `BUSINESS_MODULES` trong `src/FE/eslint.config.js` để rỗng nên **gate G8 hiện là
-> no-op**, và `app.routes.ts` không có route nghiệp vụ nào. Luật ranh giới bên dưới vẫn giữ
-> nguyên — nó có hiệu lực trở lại ngay khi module nghiệp vụ đầu tiên ra đời.
+> ✅ **CÓ THẬT (đối chiếu 2026-09-10) — `modules/` đã tồn tại, và cổng G8 đang CHẠY THẬT.**
+> Hằng `BUSINESS_MODULES` ở `src/FE/eslint.config.js:29` đã có tên module, nên
+> `import/no-restricted-paths` phân giải được `target` và chặn thật. Đọc từ đĩa thay vì tin
+> câu này ([`.claude/CLAUDE.md`](../../../.claude/CLAUDE.md) §6):
 >
 > ```bash
-> ls src/FE/src/app        # hôm nay: core  platform  shared  (+ file cấp app)
+> ls src/FE/src/app/modules
+> grep -n 'BUSINESS_MODULES = ' src/FE/eslint.config.js
 > ```
+>
+> **PASS = hai lệnh in ra CÙNG một tập tên.** Lệch nhau là G8 hỏng im lặng theo một trong hai
+> chiều: tên thừa ⇒ zone trỏ vào thư mục không có thật (no-op cho chính module đó); tên thiếu
+> ⇒ module đó không bị soi ranh giới. Cả hai đều để `ng lint` xanh.
+>
+> 🔄 **LẬT 2026-09-10.** Khối này trước đây khẳng định `modules/` *"📐 CHƯA TỒN TẠI hôm nay
+> (đối chiếu 2026-09-06)"* và *"`BUSINESS_MODULES` để rỗng nên **gate G8 hiện là no-op**"*.
+> Hai module nghiệp vụ đã dựng lại ngày 2026-09-09; cả hai câu sai kể từ đó. Đây là file
+> `kind: luat`, nên sai ở đây đắt hơn bình thường: người dựng module tiếp theo đọc xong sẽ
+> tưởng mình là người đầu tiên, bỏ qua bước 3 của §"Thêm một module nghiệp vụ mới" — và bước
+> đó chính là bước bật G8.
 
 `core/` và `shared/` là **cross-cutting** — không đặt logic riêng của một
 feature vào đây. Nếu một service/component chỉ dùng bởi đúng 1 feature, nó
@@ -242,9 +253,14 @@ tầng duy nhất **không có** ví dụ nào để mở ra xem.
 
 ## Thêm một module nghiệp vụ mới — thứ tự thao tác phía FE
 
-📐 **ĐÍCH ĐẾN — CHƯA THI CÔNG** (viết 2026-09-08). `src/FE/src/app/modules/` **chưa tồn tại**,
-nên chưa module nào đi qua các bước dưới. Mỗi bước chỉ mô tả cơ chế **đã có thật hôm nay** và
-nêu đích danh file phải sửa; không bước nào là dự kiến.
+✅ **CÓ THẬT (đối chiếu 2026-09-10) — hai module đã đi qua đúng các bước dưới.** Mỗi bước mô tả
+cơ chế đang chạy và nêu đích danh file phải sửa; không bước nào là dự kiến.
+
+> 🔄 **LẬT 2026-09-10.** Mục này viết 2026-09-08 với nhãn `📐 ĐÍCH ĐẾN — CHƯA THI CÔNG` và câu
+> *"`src/FE/src/app/modules/` **chưa tồn tại**, nên chưa module nào đi qua các bước dưới"*. Hết
+> đúng từ 2026-09-09. Nhãn 📐 trên một quy trình **đã có người đi qua** là dạng sai đắt: nó mời
+> người đọc coi các bước là gợi ý chưa kiểm chứng, trong khi bước 3 là thứ duy nhất giữ cho G8
+> không trở lại trạng thái no-op.
 
 > Chọn tầng trước đã: câu hỏi *"màn này có ý nghĩa với MỌI sản phẩm dựng trên nền tảng, hay chỉ
 > riêng domain nghiệp vụ hiện tại?"* ở đầu file quyết định `platform/` hay `modules/`. Các bước
@@ -254,21 +270,25 @@ nêu đích danh file phải sửa; không bước nào là dự kiến.
 |---|---|---|
 | 1 | Dựng cây feature theo §"Cấu trúc một feature" | `src/FE/src/app/modules/<ten>/…` (mới) |
 | 2 | Đăng ký route lazy `loadChildren` | `src/FE/src/app/app.routes.ts` |
-| 3 | **Bật lại cổng G8** — thêm `'<ten>'` vào `BUSINESS_MODULES` | `src/FE/eslint.config.js` |
-| 4 | Bọc chuỗi hiển thị theo khuôn `<màn>.<nhóm>.<tên>` | `src/FE/public/i18n/{vi,en}.json` |
+| 3 | **Bật cổng G8** — thêm `'<ten>'` vào `BUSINESS_MODULES` | `src/FE/eslint.config.js` |
+| 4 | Bọc chuỗi hiển thị theo khuôn `<màn>.<nhóm>.<tên>`, `<màn>` = **đúng tên thư mục ở bước 1** | `src/FE/public/i18n-app/{vi,en}.json` — nhóm **DỰ ÁN**, không phải `i18n/` |
 | 5 | Chạy đủ cổng | — |
 
 **Không bước nào sửa `core/`.** Đó là phép thử của bốn seam ở §Seam cấu hình cấp app: nếu thêm
 một module buộc phải mở `core/` ra sửa, seam đó thiếu — dừng lại và bổ sung seam theo khuôn ở
 §"Khi cần seam thứ năm", đừng khai cứng vào `core/`.
 
-**Bước 3 là bước dễ mất nhất, và mất thì không ai biết.** `BUSINESS_MODULES` đang rỗng nên G8 là
-**no-op** (lý do đầy đủ ghi tại chỗ khai trong `eslint.config.js`, và ở
-[`../wiki-core/fe/trien-khai/05-gate.md`](../wiki-core/fe/trien-khai/05-gate.md) dòng G8). Quên
-bước này thì `ng lint` vẫn xanh, chỉ là **xanh vì không kiểm gì cả** — đúng lúc luật cấm import
-chéo bắt đầu có ý nghĩa thì máy cưỡng chế nó lại không chạy. Ràng buộc kèm theo: cổng chỉ có
-hiệu lực khi có **từ hai** module trở lên, nhưng phải thêm tên **ngay từ module đầu tiên**, vì
-module thứ hai sẽ do người khác thêm vào một ngày khác.
+**Bước 3 là bước dễ mất nhất, và mất thì không ai biết.** Quên nó thì `ng lint` vẫn xanh, chỉ là
+**xanh vì không kiểm gì cả** — module mới không nằm trong zone nào nên ranh giới của nó không
+được soi, đúng lúc luật cấm import chéo bắt đầu có ý nghĩa. Lý do đầy đủ ghi tại chỗ khai trong
+`src/FE/eslint.config.js`, và ở
+[`../wiki-core/fe/trien-khai/05-gate.md`](../wiki-core/fe/trien-khai/05-gate.md) dòng G8.
+
+Ràng buộc kèm theo: cổng chỉ có hiệu lực **thật** khi có từ **hai** module trở lên (một module
+không có gì để import chéo), nhưng phải thêm tên **ngay từ module đầu tiên** — module thứ hai sẽ
+do người khác thêm vào một ngày khác. Chiều ngược cũng hỏng im lặng: một tên **thừa** trong
+`BUSINESS_MODULES` trỏ vào thư mục không có thật, và khi đó zone của chính module đó là no-op mà
+`ng lint` vẫn xanh.
 
 **Hai thứ KHÔNG làm ở FE:**
 
@@ -279,10 +299,17 @@ module thứ hai sẽ do người khác thêm vào một ngày khác.
 - **Quyền truy cập.** Ma trận role × menu là dữ liệu, không phải code FE — xem
   [`../../contracts/permissions.md`](../../contracts/permissions.md).
 
-**Bước 4, giới hạn phải biết trước:** cơ chế nạp **nhiều nguồn** bảng dịch đã có sẵn
-(`CORE_I18N.resources` là một mảng tiền tố, `app.config.ts`), nhưng **file dịch riêng cho nhóm
-khoá dự án thì 📐 chưa thi công** — hôm nay `vi.json`/`en.json` chứa toàn khoá Core. Chi tiết và
-lý do ở [`../wiki-core/fe/08-i18n.md`](../wiki-core/fe/08-i18n.md) §"Khoá nằm ở file nào".
+**Bước 4, ràng buộc phải biết trước:** cơ chế nạp **nhiều nguồn** bảng dịch đã có sẵn
+(`CORE_I18N.resources` là một mảng tiền tố, `app.config.ts`), và ✅ **nhóm khoá dự án đã có file
+thật** (`src/FE/public/i18n-app/`, đối chiếu 2026-09-10). Khoá của module nghiệp vụ đi vào thư
+mục đó, **không** vào `public/i18n/` — đặt nhầm thì chuỗi đi theo CoreBase sang sản phẩm khác
+trong khi màn hình thì không. Chi tiết, và vì sao **không nhánh gốc nào được nằm ở cả hai file**,
+ở [`../wiki-core/fe/08-i18n.md`](../wiki-core/fe/08-i18n.md) §"Khoá nằm ở file nào".
+
+> 🔄 **LẬT 2026-09-10.** Đoạn này trước đây ghi *"file dịch riêng cho nhóm khoá dự án thì 📐 chưa
+> thi công — hôm nay `vi.json`/`en.json` chứa toàn khoá Core"*, và bảng bước 4 trỏ thẳng vào
+> `public/i18n/`. Cả hai sai từ 2026-09-09, và cặp sai này dẫn thẳng tới hành động sai: người làm
+> theo sẽ đặt khoá màn nghiệp vụ vào đúng thư mục của nền tảng.
 
 ## Bảng trách nhiệm — quy tắc cứng
 

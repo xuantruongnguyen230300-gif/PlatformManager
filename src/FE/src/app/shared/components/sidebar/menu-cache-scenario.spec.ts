@@ -100,6 +100,10 @@ describe('Kịch bản đo B3 — số request GET /meta/menu trong 1 phiên là
   function logout(): void {
     auth.logout().subscribe();
     httpMock.expectOne('/auth/logout').flush(envelope(true));
+    // Đối xứng với `login()` ở trên: `AuthService.logout()` cũng mồi lại cookie CSRF (token cũ
+    // gắn với danh tính vừa thoát, không dùng được cho `POST /auth/login` kế tiếp) — phải flush
+    // cùng lúc, không thì request treo sang bước sau và `expectOne` của `login()` thấy 2 request.
+    httpMock.expectOne('/antiforgery/token').flush({ token: 'fake-csrf-token' });
   }
 
   it('S1: mở app → dashboard → danh mục → dashboard → đổi mật khẩu → dashboard → logout → login user khác → dashboard', () => {

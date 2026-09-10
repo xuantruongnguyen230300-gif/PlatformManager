@@ -1,7 +1,7 @@
 ---
 kind: luat
 scope: core
-verified: 2026-09-06
+verified: 2026-09-09
 ---
 
 # 1. Core thật sự của senior lâu năm thường thiết kế
@@ -27,8 +27,8 @@ Trước khi liệt kê, 1 nguyên tắc phải giữ xuyên suốt: **core khô
 | 11 | **Generic CRUD/Grid/Form engine** | Xem [03-metadata-driven-design.md](03-metadata-driven-design.md) — nguồn cột nên từ code, không phải DB tự do | Khi có ≥5-10 màn CRUD giống nhau |
 | 12 | **Widget/Dashboard rendering engine** | Dựng lại UI biểu đồ/KPI cho mỗi dashboard mới | Khi có ≥2-3 dashboard |
 | 13 | **Notification abstraction** (email/SMS/push — đổi kênh không đổi code gọi) | Đổi nhà cung cấp email phải sửa code khắp nơi | Khi có ≥2 kênh thông báo |
-| 14 | **File storage abstraction** (local/S3/Blob — swap được) | Xem [14-file-storage.md](14-file-storage.md) — upload, export, file mẫu, dọn file | Khi cần production-ready |
-| 15 | **Import/Export engine** (parse → validate từng dòng → map DTO → upsert) | Xem [15-import-export.md](15-import-export.md) — định dạng, ranh giới bộ lọc, hình dạng endpoint | **Ngưỡng đã đạt 2026-08-29** — chốt dựng thẳng ở Core |
+| 14 | **File storage abstraction** (local/S3/Blob — swap được) | Xem [14-file-storage.md](14-file-storage.md) — upload, export, file mẫu, dọn file | ✅ **Seam CÓ THẬT 2026-09-09** (`IFileStorage` + `LocalFileStorage` + `Storage:RootPath` fail-fast). Còn nợ: cơ chế dọn file, và chưa nơi gọi nào |
+| 15 | **Import/Export engine** (parse → validate từng dòng → map DTO → upsert) | Xem [15-import-export.md](15-import-export.md) — định dạng, ranh giới bộ lọc, hình dạng endpoint | ✅ **Nửa IMPORT có thật 2026-09-09** (`IImportFileReader` + 3 reader + bộ chọn + trần 10 MB). Nửa **export vẫn chưa** — `ITabularWriter` hoãn có chủ đích (Q9) |
 | 16 | **Outbound HTTP integration engine** (gọi API bên thứ 3, có resilience + **anti-SSRF guard**) | Retry tay không nhất quán; endpoint cấu hình DB có thể trỏ vào mạng nội bộ | Khi gọi API 3rd-party cấu hình được qua UI |
 | 17 | **Background job/scheduler abstraction** | Task nền viết tay dễ mất khi restart, không có retry | Khi có tác vụ chạy nền/định kỳ |
 | 18 | **i18n/localization framework** | Chỉ cần nếu hệ thống thật sự đa ngôn ngữ — **yêu cầu đó đã xuất hiện (2026-08-27: vi + en)** | ⚠️ Không còn "tuỳ yêu cầu". **Hướng A giữ tên nhưng đổi nghĩa 2026-09-03**: BE vẫn không dựng hạ tầng dịch, nhưng KHÔNG còn "chỉ giữ mã lỗi ổn định" — có việc tiên quyết phải làm. File chủ: `be/16-i18n-va-ma-loi.md` |
@@ -134,34 +134,52 @@ mục biến chúng thành dòng mồ côi.
 > Phần **chưa** xong về dữ liệu: production chưa có đường cấp `RolePermission`
 > — xem [13-core-data-migration.md](13-core-data-migration.md) §Seed.
 
-> ### 🚧 #7b — Seed không cấp quyền theo TỪNG VAI được (mở 2026-09-06)
+> ### ✅ #7b — Seed cấp quyền theo TỪNG VAI: ĐÃ CÓ (mở 2026-09-06, đóng 2026-09-09)
 >
-> `CoreSeeder.SeedRolePermissionsAsync` lặp `new[] { Roles.Admin, Roles.User }` và cấp
-> **mọi** key cho **cả hai**. Đó là chủ đích lúc vá lần đầu — comment trong file nói rõ
-> mục tiêu là *giữ nguyên hành vi trước khi vá (mọi user thao tác được)*.
+> **Vấn đề (giữ lại vì nó giải thích vì sao mặc định phải là `[Admin, User]`):**
+> `CoreSeeder.SeedRolePermissionsAsync` từng lặp cứng `new[] { Roles.Admin, Roles.User }`
+> và cấp **mọi** key cho **cả hai**. Đó là chủ đích lúc vá lần đầu — mục tiêu là *giữ
+> nguyên hành vi trước khi vá (mọi user thao tác được)*, một quyết định di trú để việc bật
+> deny-by-default không khoá mất người đang dùng. Hệ quả: một key mới sinh ra là **tự động**
+> cấp cho cả vai `User`, nên một quyền khai riêng để giới hạn ai được ghi sẽ **không giới
+> hạn ai cả** — nó tồn tại trên giấy.
 >
-> **Hệ quả nay đã thành vấn đề thật:** một key mới sinh ra là **tự động** cấp cho cả vai
-> `User`. Nên một quyền được khai riêng để giới hạn ai được ghi sẽ **không giới hạn ai
-> cả** — nó tồn tại trên giấy. Đây đúng là ca của quyền ghi DTI (`dti.manage`), chốt
-> 2026-09-06: *chỉ cấp cho `Admin`, vai `User` phải cấp tay*.
+> **Đã thi công 2026-09-09, đúng hình dạng đã đề xuất** (danh sách vai đi qua seam, mặc
+> định giữ `[Admin, User]` để mọi key hiện có không đổi hành vi):
 >
-> Chỗ chặn nằm ở seam chứ không ở seeder: `ICoreResourceKeySource` chỉ mang `Key` +
-> `DisplayName`, không mang thông tin "vai nào được cấp mặc định". Hình dạng đề xuất —
-> mở rộng `ResourceKeyDefinition` thêm danh sách vai, **mặc định `[Admin, User]`** để
-> mọi key hiện có không đổi hành vi, key mới thì khai tường minh.
+> | Mắt xích | Neo |
+> | --- | --- |
+> | Vai được cấp khi seed, khai trên từng key | `../../../../src/BE/Core/PlatformManager.Core.Application/Permissions/ICoreResourceKeySource.cs:51` (`SeedRoles`) |
+> | Mặc định `[Admin, User]` — đổi nó là đổi quyền của MỌI key cùng lúc | cùng file, `:34` (`DefaultSeedRoles`) |
+> | Seeder lấy vai từ định nghĩa key, không lặp cứng nữa | `../../../../src/BE/Core/PlatformManager.Core.Infrastructure/Persistence/CoreSeeder.cs:93` |
+> | Chặn 3 ca khai sai **trước khi ghi dòng nào** (rỗng · tên vai lạ · khai `SuperAdmin`) | `ICoreResourceKeySource.cs:153` (`GuardSeedRoles`) |
 >
-> Nghiệm thu: sau `--seed`, key DTI có dòng cho `Admin` và **không** có dòng cho `User`.
+> **Còn lại là việc ở HOST, không phải ở Core:** `dti.manage` chưa có trong
+> `AppResourceKeySource.Definitions` — bước 3 thêm nó kèm `SeedRoles = [Roles.Admin]`.
+> Quên `SeedRoles` thì key rơi về mặc định `[Admin, User]` và không gì báo, vì mặc định là
+> một giá trị **hợp lệ**. Chi tiết + nghiệm thu ở `spec/danh-muc-dti/business-rules.md` §6.5.
+>
+> Nghiệm thu (chưa chạy — chờ bước 3): sau `--seed`, key DTI có dòng cho `Admin` và
+> **không** có dòng cho `User`.
 
 **#10 Config/Options fail-fast — nâng từ "chưa cần" lên "nên có sớm":** rule
 cụ thể (`ValidateDataAnnotations().ValidateOnStart()`) thêm ở
 `doc/huong_dan/quy-uoc/be-architecture.md` §"Cấu hình — fail-fast validation".
 
-**#13 Notification, #14 File storage abstraction** — đã quyết định kiến trúc
-(`INotificationSender` seam cho email, `IImportFileStorage` cho file tạm) khi
-thiết kế lại Import CSV/Excel — xem `doc/huong_dan/quy-uoc/be-cqrs-handler.md`
-§"Command chạy lâu → job nền" và `doc/huong_dan/quy-uoc/be-architecture.md`
-§"Notification". Đây là ví dụ cho nguyên tắc ở trên: **quyết định** đã có,
-chỉ **implement** chưa xong — khác hẳn "chưa cần" thật sự.
+**#13 Notification** — đã quyết định kiến trúc (`INotificationSender` seam cho
+email) khi thiết kế lại Import CSV/Excel — xem
+`doc/huong_dan/quy-uoc/be-cqrs-handler.md` §"Command chạy lâu → job nền" và
+`doc/huong_dan/quy-uoc/be-architecture.md` §"Notification". Đây là ví dụ cho
+nguyên tắc ở trên: **quyết định** đã có, chỉ **implement** chưa xong — khác hẳn
+"chưa cần" thật sự.
+
+> 🔄 **LẬT 2026-09-09 — #14 đã rời khỏi đoạn trên.** Bản trước gộp #13 và #14 vào cùng
+> một câu *"quyết định đã có, implement chưa xong"*, và gọi seam file bằng tên cũ
+> `IImportFileStorage` (bản của module DtiWeekly, xoá 2026-08-29). Hai vế đều hết đúng:
+> seam file nay tên `IFileStorage`, sống ở `Core.Application`, và **đã implement**
+> (`src/BE/Core/PlatformManager.Core.Application/Storage/IFileStorage.cs:36`). Gộp hai
+> mục có tiến độ khác nhau vào một câu là cách chắc chắn nhất để một trong hai bị bỏ quên
+> lúc cập nhật — đó chính là điều đã xảy ra ở đây.
 
 **#17 Background job/scheduler — ✅ CÓ THẬT (đối chiếu 2026-08-28, mở từng file
 đếm dòng).** Không còn thuộc nhóm "quyết định xong, implement chưa xong" ở đoạn
@@ -208,14 +226,18 @@ fire-and-forget. Đó là tính năng chưa cần, không phải seam còn thi�
 > thao tác **duy nhất** không truy được người làm. Xem `spec/danh-muc-dti/business-rules.md`
 > §Nhật ký.
 
-> **#14 có file chủ riêng: [14-file-storage.md](14-file-storage.md).** Hôm nay
-> `src/BE` **không còn seam lưu file nào** — bản `IImportFileStorage` duy nhất đi cùng
-> module DtiWeekly, gỡ 2026-08-29 — nên đây là `📐 ĐÍCH ĐẾN`, không phải việc đang dở.
-> Bảng "có thật hôm nay → sẽ thành" và thứ tự ưu tiên ở §2 file đó.
+> **#14 có file chủ riêng: [14-file-storage.md](14-file-storage.md).** Trạng thái, bảng
+> "có thật hôm nay → sẽ thành" và thứ tự ưu tiên ở §2 file đó — **không chép lại ở đây**
+> (`.claude/CLAUDE.md` §5).
 >
-> **🔄 LẬT 2026-09-06.** Bản trước ghi *"Seam hiện tại mới đủ chạy trên máy dev (đường dẫn
-> ghép cứng, chỉ có nhánh upload)"* — mô tả code đã bị xoá 8 ngày trước ngày viết. Cùng câu
-> sai đó tồn tại song song ở đầu §2 của file chủ và đã sửa cùng lượt này.
+> **🔄 LẬT 2026-09-09.** Bản trước ghi *"Hôm nay `src/BE` **không còn seam lưu file nào**
+> … nên đây là `📐 ĐÍCH ĐẾN`"*. Sai từ 2026-09-09: `IFileStorage` + `LocalFileStorage` +
+> `StorageOptions` đã là code chạy thật.
+>
+> **Đây là lần LẬT THỨ HAI của cùng một đoạn, và cả hai lần cùng một cơ chế:** đoạn này
+> chép lại *trạng thái* từ file chủ thay vì chỉ trỏ tới nó, nên nó lệch mỗi khi file chủ
+> đổi (lần trước, 2026-09-06: nó tả code đã bị xoá 8 ngày trước ngày viết). Bản sửa này
+> bỏ hẳn phần chép — đó là cách duy nhất để không có lần thứ ba.
 
 > Đây cũng chính là 3 mục dễ rơi vào bẫy "viết đúng nhưng quên nối vào chỗ
 > chạy thật" nhất (đăng ký DI, gắn middleware/pipeline) — mỗi khi implement

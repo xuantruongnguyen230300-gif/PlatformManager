@@ -1,0 +1,30 @@
+/* Nguồn: doc/Design/Frontend/PlatformManager/Components/TrendChart.md § Anatomy.
+
+   `.chart-wrap` KHÔNG tự vẽ mặt: không nền, không viền, không bo góc, không đổ bóng. Mặt trắng
+   sau lưng nó là `.card` của trang, và hàng `.title` phía trên cũng thuộc card. */
+
+:host {
+  display: block;
+}
+
+.chart-wrap {
+  /* Giữ nguyên như bản dựng đã duyệt, KỂ CẢ phần chưa có tác dụng: `flex: 1` chỉ có nghĩa khi thẻ
+     cha là flex container, mà `:host` ở trên là `display: block`. Đây là khiếm khuyết đã được ghi
+     nhận (TrendChart.md § Normalize on redesign #6, defect A2) — sửa nó là một quyết định thiết
+     kế, thuộc doc/Design/, không phải một dòng dọn dẹp ở đây. */
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 220px;
+  width: 100%;
+}
+
+/* 220px cố định ở MỌI breakpoint — chiều cao không co giãn theo màn hình (§ Normalize #4).
+   Đi kèm `maintainAspectRatio: false` trong chartOptions; thiếu cờ đó thì chart.js giữ tỉ lệ khung
+   và bỏ qua đúng chiều cao này. */
+p-chart {
+  display: block;
+  height: 220px;
+  width: 100%;
+}

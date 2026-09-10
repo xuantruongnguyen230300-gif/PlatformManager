@@ -87,20 +87,29 @@ async function configure(): Promise<void> {
 }
 
 /**
- * Xả hai request bảng dịch mà `LanguageService` phát ra lúc khởi tạo.
+ * Xả mọi request bảng dịch mà `LanguageService` phát ra lúc khởi tạo — MỘT request cho mỗi cặp
+ * (nguồn × ngôn ngữ) khai ở `APP_I18N`.
  *
  * **Vì sao cần**: loader i18n khai `useHttpBackend: true` để né chuỗi interceptor lúc chạy
- * thật — nhưng `provideHttpClientTesting()` thay **cả** `HttpBackend`, nên trong test hai request
- * `/i18n/vi.json` và `/i18n/en.json` rơi vào mock và nằm đó. `httpMock.verify()` ở `afterEach`
+ * thật — nhưng `provideHttpClientTesting()` thay **cả** `HttpBackend`, nên trong test các request
+ * `/i18n/vi.json`, `/i18n/en.json`… rơi vào mock và nằm đó. `httpMock.verify()` ở `afterEach`
  * đếm chúng là "open request" rồi báo đỏ ở một chỗ chẳng liên quan gì tới thứ đang kiểm — đúng
  * cách nó đã hỏng thật: 31 test đỏ với thông điệp `found 2: GET /i18n/vi.json, GET /i18n/en.json`.
+ *
+ * 🔄 SỬA 2026-09-09 — điều kiện khớp trước đây là chuỗi khai cứng `req.url.includes('/i18n/')`.
+ * Ngày `APP_I18N.resources` có nguồn thứ hai (`/i18n-app/`, nhóm khoá dự án), chuỗi đó **không**
+ * khớp — `'/i18n-app/vi.json'.includes('/i18n/')` là `false` — và **34 test đỏ ngay**, ở 5 file
+ * chẳng liên quan gì tới i18n. Nay danh sách tiền tố đọc thẳng từ `APP_I18N`, nên nguồn thứ ba
+ * thêm vào ngày mai không làm lại chuyện đó.
  *
  * Trả `{}` chứ không trả bảng dịch thật: `useTranslationsInTest()` đã nạp bảng thật bằng `fetch`
  * (không qua HttpClient) từ trước, nên nội dung ở đây không được dùng tới — việc duy nhất cần làm
  * là đóng request lại.
  */
 function drainI18nRequests(httpMock: HttpTestingController): void {
-  httpMock.match((req) => req.url.includes('/i18n/')).forEach((req) => req.flush({}));
+  httpMock
+    .match((req) => APP_I18N.resources.some((prefix) => req.url.startsWith(prefix)))
+    .forEach((req) => req.flush({}));
 }
 
 /**

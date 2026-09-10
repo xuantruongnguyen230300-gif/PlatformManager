@@ -28,11 +28,13 @@ sai suốt từ đó.
 | Có thật hôm nay (2026-08-29) | Sẽ thành |
 | --- | --- |
 | `Core.Domain`, `Core.Application`, `Core.Infrastructure` | tách thêm `Core.Common` + `Core.Persistence` + `Core.Api` → 6 project |
+| ✅ `ApiControllerBase` **đã ở** `Core.Api` — **Q8, chốt và thi công 2026-09-09** (`src/BE/Core/PlatformManager.Core.Api/ApiControllerBase.cs:32`) | 4 controller Core chuyển sang nốt; xem §`Core.Api` giữ `ApiControllerBase` bên dưới |
 | **Không còn project `Modules.*` nào trong solution** — module nghiệp vụ duy nhất (`Modules.DtiWeekly.*`) đã gỡ 2026-08-29 | `Business.{Domain,Application,Persistence,Infrastructure,Api}` khi module nghiệp vụ đầu tiên được dựng lại |
 | `PlatformManager.Api` (host mỏng) | giữ nguyên |
 | `Tests/` — `PlatformManager.ArchTests`, `PlatformManager.Core.UnitTests`, `PlatformManager.Core.IntegrationTests` | giữ nguyên |
 
-**Chưa tồn tại:** `Core.Common`, `Core.Persistence`, `Core.Api`, mọi `Business.*`.
+**Chưa tồn tại:** `Core.Common`, `Core.Persistence`, mọi `Business.*`.
+**`Core.Api` đã dựng 2026-09-09** (Q8) — hiện chỉ chứa `ApiControllerBase`.
 `PlatformManagerDbContext` và `CoreSeeder` hiện ở `Core.Infrastructure/Persistence/`;
 mọi controller hiện ở `PlatformManager.Api/Controllers/`.
 
@@ -152,7 +154,9 @@ src/BE/
 │   │                                              UserAdminService/UserLookupService (orchestrate
 │   │                                              qua UserManager/SignInManager, không tự viết
 │   │                                              LINQ/DbContext)
-│   └── PlatformManager.Core.Api/               ← AuthController, UsersController,
+│   └── PlatformManager.Core.Api/               ← ApiControllerBase (base class BẮT BUỘC của mọi
+│                                                  controller, kể cả controller nghiệp vụ — Q8)
+│                                                  + AuthController, UsersController,
 │                                                  MetaController, PermissionsController
 ├── Business/                                   ← KHÔNG lồng thêm "DtiWeekly/" — Business LÀ đơn
 │                                                  vị, DTI Weekly chỉ là 1 nhóm tính năng bên trong
@@ -198,7 +202,8 @@ Business.Application     → Core.Application, Core.Domain, Business.Domain
 Business.Persistence     → Core.Persistence (cần type PlatformManagerDbContext dùng chung),
                             Business.Application, Business.Domain
 Business.Infrastructure  → Core.Infrastructure, Business.Application, Business.Domain
-Business.Api             → Business.Application, Business.Domain
+Business.Api             → Core.Api (chỉ để kế thừa ApiControllerBase — Q8, 2026-09-09),
+                            Business.Application, Business.Domain
 
 PlatformManager.Api (host)  → MỌI project (Core.* + Business.*) — nơi DUY NHẤT được thấy cả 2
                                 tầng, kể cả Persistence (cần cho design-time migration factory) và
@@ -222,6 +227,36 @@ code trong file controller (ranh giới ép buộc bởi compiler, không chỉ 
 `PlatformManager.Api` gộp lại bằng `AddControllers().AddApplicationPart(typeof(SomeMarker)
 .Assembly)` cho từng assembly `*.Api` đã đăng ký — cơ chế chuẩn của ASP.NET Core cho đúng bài
 toán "controller đến từ assembly khác", không cần thư viện ngoài.
+
+### 🚧 ĐÃ CHỐT — ĐANG THI CÔNG: `Core.Api` giữ `ApiControllerBase` (Q8, 2026-09-09)
+
+Quyết định người dùng 2026-09-09. Đây là lý do **thứ hai** để `Core.Api` tồn tại, độc lập với
+lý do "controller mỗi tầng chỉ thấy `Application` của tầng đó" ở đoạn trên: nó là chỗ hợp lệ
+**duy nhất** cho base class dùng chung của mọi controller.
+
+| Có thật hôm nay (2026-09-09) | Sẽ thành |
+| --- | --- |
+| ✅ `ApiControllerBase` ở `PlatformManager.Core.Api` — thi công 2026-09-09, `src/BE/Core/PlatformManager.Core.Api/ApiControllerBase.cs:32` | giữ nguyên |
+| Host là project **duy nhất** có controller, nên base class ở đó chưa gây vấn đề gì | `Business.Api` reference `Core.Api` để kế thừa nó |
+| Chưa có cạnh `Business.Api → Core.Api` — `Core.Api` đã có, `Business.Api` thì chưa | cạnh đó **được phép**, khai ở khối "Nguyên tắc phụ thuộc bắt buộc" trên |
+
+**Vì sao KHÔNG để nguyên ở host.** Base class này **bắt buộc bằng máy** — mọi controller phải
+kế thừa nó, canh bởi `EveryController_Inherits_ApiControllerBase`
+(`src/BE/Tests/PlatformManager.ArchTests/ControllerBaseInheritanceTests.cs:55`). Nhưng host
+**phải** reference `Business.Api` để gọi `AddApplicationPart`; nếu `Business.Api` reference
+ngược lại host để lấy base class thì thành vòng tròn tham chiếu, compiler từ chối. Nghĩa là
+để base class ở host không phải "chưa gọn" — nó làm `Business.Api` **không dựng được**.
+
+**Vì sao KHÔNG đặt vào `Core.Application`.** `ApiControllerBase` kế thừa `ControllerBase` và
+mang `[Authorize]`, tức nó **là** ASP.NET Core. `Core.Application` bị cấm chạm
+`Microsoft.AspNetCore` — tiền tố nằm trong `ForbiddenAssemblyPrefixes` của
+`src/BE/Tests/PlatformManager.ArchTests/LayerDependencyTests.cs:32`. Đặt vào đó là làm đỏ một
+gate đang canh đúng thứ nó sinh ra để canh.
+
+**Cạnh `Business.Api → Core.Api` không mở đường nào tới Persistence/Infrastructure** — nó là
+tham chiếu ngang giữa hai project cùng tầng Api. Khi viết rule `📐`
+`Api_MustNotReference_PersistenceOrInfrastructure_Directly` (§ArchTest cần có), giữ đúng phạm
+vi đó: cấm reference `*.Persistence`/`*.Infrastructure`, **không** cấm reference `*.Api` khác.
 
 **Vì sao KHÔNG dùng mô hình N-module (`Modules.<Tên>.*`) nữa**: mô hình đó (đã thử ở v1/v2, xem
 lịch sử) đúng khi có **nhiều domain nghiệp vụ độc lập thật** — nhưng người dùng xác nhận nghiệp vụ
@@ -275,7 +310,7 @@ Hợp đồng ở trên nay là code chạy thật, đúng 4 thành viên đã c
 | Vai | Neo `file:dòng` |
 | --- | --- |
 | Hợp đồng — Core khai, Core không biết tên tầng nào | `src/BE/Core/PlatformManager.Core.Application/Modules/IModuleRegistrar.cs:29` |
-| Core TỰ hiện thực nó | `src/BE/Core/PlatformManager.Core.Infrastructure/Modules/CoreModuleRegistrar.cs:26` — `ModuleName` `:28`, `PersistenceAssembly` `:39`, `ApiAssembly` `:50` |
+| Core TỰ hiện thực nó | `src/BE/Core/PlatformManager.Core.Infrastructure/Modules/CoreModuleRegistrar.cs:26` — `ModuleName` `:28`, `PersistenceAssembly` `:39`, `ApiAssembly` `:62` |
 | Cơ chế gom — đường DI + đường EF | `src/BE/Core/PlatformManager.Core.Infrastructure/Modules/ModuleRegistrationExtensions.cs:33` (`AddModules`), nộp `EfConfigurationAssembly` tại `:69` |
 | Cơ chế gom — đường controller | cùng file, `:84` (`AddModuleApplicationParts`) |
 | Danh sách tầng của dự án — nguồn sự thật DUY NHẤT | `src/BE/PlatformManager.Api/Modules/HostModuleRegistrars.cs:23` |
@@ -298,9 +333,16 @@ project module thật): dịch vụ của nó tới được DI, entity của n�
 luôn soft-delete do cơ chế Core áp**, assembly của nó thành `ApplicationPart`.
 
 **Chưa có, nói rõ để không ai tưởng đã có:** `ApiAssembly` của Core là `null` — 4 controller Core
-vẫn nằm trong project host (`Core.Api` chưa tách, xem bảng "có thật hôm nay → sẽ thành" đầu
-file). Nhánh "tầng có controller riêng" vì thế mới chỉ chạy trên registrar giả của test, chưa có
-tầng sản phẩm nào đi qua nó.
+vẫn nằm trong project host. Nhánh "tầng có controller riêng" vì thế mới chỉ chạy trên registrar
+giả của test, chưa có tầng sản phẩm nào đi qua nó.
+
+> 🔄 **Sửa 2026-09-09 — mệnh đề NGUYÊN NHÂN của đoạn trên đã sai.** Bản trước viết
+> *"(`Core.Api` chưa tách…)"*, mâu thuẫn thẳng với `:31` và `:36-37` của **chính file này**.
+> `Core.Api` **đã dựng 2026-09-09** (Q8); lý do thật khiến `ApiAssembly` vẫn là `null` là
+> **`Core.Api` chưa chứa controller nào** — trong đó mới chỉ có `ApiControllerBase`. Hai vế còn
+> lại của đoạn ("`ApiAssembly` là `null`", "4 controller vẫn ở host") vẫn đúng nguyên. Lý do
+> đầy đủ + điều kiện kích hoạt nay ghi tại chỗ:
+> `src/BE/Core/PlatformManager.Core.Infrastructure/Modules/CoreModuleRegistrar.cs:41`.
 
 **Đây là bản rút gọn của `IBoundedContext` trong `tham-khao-ngoai/vnr-successor/04-p3`** — giữ nguyên
 tính đảo phụ thuộc (Core duyệt được mọi module mà không reference module nào), **bỏ** phần
@@ -351,13 +393,38 @@ Core gọi tên assembly của host, đúng thứ Corebase mang sang dự án 2 
 > |---|---|---|
 > | `Core_MustNotReference_Business` | ✅ **Đã có, TÊN KHÁC** | Thi công dưới tên `Core_MustNotReference_AnyModulesAssembly` (`src/BE/Tests/PlatformManager.ArchTests/CoreModuleBoundaryTests.cs`). Cùng một luật |
 > | `Core_MustNotKnowBusinessName` | ✅ **Đã có** (đối chiếu 2026-09-06) | Thi công dưới tên `CoreSource_MustNotContain_BusinessNameStringLiteral` (`src/BE/Tests/PlatformManager.ArchTests/CoreMustNotKnowBusinessNameTests.cs:80`), kèm 3 test tự-kiểm bộ dò (`:162`, `:192`, `:211`). 🔄 LẬT 2026-09-06 — ô này giữ nhãn `🚧 Đang thi công 2026-09-01` cho tới lượt đối chiếu này, tức 5 ngày sau khi test đã vào code |
-> | `Api_MustNotReference_PersistenceOrInfrastructure_Directly` | 📐 **ĐÍCH ĐẾN** | Không có assembly `*.Api` theo module. Chỉ có host `PlatformManager.Api`, và nó **phải** reference Infrastructure — nó là composition root |
-> | `OnlyHostApi_MustReference_BothUnits` | 📐 **ĐÍCH ĐẾN** | `Business.*` chưa tồn tại. Kiểm: `find src/BE -name "*.csproj" -not -path "*/obj/*"` → 7 project, không project nào là `Business.*` |
+> | `Api_MustNotReference_PersistenceOrInfrastructure_Directly` | ✅ **Đã có** (thi công + đối chiếu 2026-09-09) | `src/BE/Tests/PlatformManager.ArchTests/ApiLayerBoundaryTests.cs:61`, kèm luật thứ hai ở mức văn bản `.csproj` (`:109`). Xem khối 🔄 ngay dưới bảng |
+> | `OnlyHostApi_MustReference_BothUnits` | 📐 **ĐÍCH ĐẾN** | `Business.*` chưa tồn tại. Kiểm: `find src/BE -name "*.csproj" -not -path "*/obj/*" \| grep Business` → **PASS khi không dòng nào ra**, tức chưa có tầng nghiệp vụ để luật này đo |
 > | `Core_Common_MustHaveZeroProjectReference` | 📐 **ĐÍCH ĐẾN** | `Core.Common` chưa là project riêng — hiện chỉ là thư mục `Common/` bên trong từng project |
 >
-> Ba rule `📐` **viết bây giờ sẽ là test rỗng**: chúng quét một tập không có phần tử nào, nên xanh
-> vĩnh viễn mà không đo gì. Đó đúng khuôn lỗi mà bộ test này vừa phải sửa **hai** lần. Viết chúng
-> **cùng lượt** dựng `Business.*` đầu tiên, và khi đó nhớ kèm khẳng định *"tập quét được khác rỗng"*.
+> Hai rule `📐` còn lại **viết bây giờ sẽ là test rỗng**: chúng quét một tập không có phần tử nào,
+> nên xanh vĩnh viễn mà không đo gì. Đó đúng khuôn lỗi mà bộ test này vừa phải sửa **hai** lần. Viết
+> chúng **cùng lượt** dựng `Business.*` đầu tiên, và khi đó nhớ kèm khẳng định *"tập quét được khác
+> rỗng"*.
+>
+> 🔄 **LẬT 2026-09-09 — `Api_MustNotReference_PersistenceOrInfrastructure_Directly` không còn rỗng.**
+> Lý do hoãn cũ (*"không có assembly `*.Api` theo module, chỉ có host và host thì PHẢI reference
+> Infrastructure"*) hết đúng khi `Core.Api` được dựng (Q8, cùng ngày): đó là một assembly `*.Api`
+> **không phải host**, nên tập quét có phần tử thật. Trước đó ranh giới của `Core.Api` chỉ được canh
+> bằng một khối chú thích trong `src/BE/Core/PlatformManager.Core.Api/PlatformManager.Core.Api.csproj:18`
+> — chú thích không làm test nào đỏ.
+>
+> Ba điều đã giữ đúng khi viết:
+>
+> - **Phạm vi** — mọi assembly `*.Api` **trừ** host `PlatformManager.Api` (host là composition root,
+>   nó bắt buộc thấy Infrastructure). Tập quét dẫn xuất từ `ProductAssemblies.All`, không liệt kê tay.
+> - **Không cấm cạnh `*.Api → *.Api`** — `Business.Api → Core.Api` là cạnh hợp lệ đã khai ở
+>   §"Nguyên tắc phụ thuộc bắt buộc" (kế thừa `ApiControllerBase`). Chỉ hai đoạn tên
+>   `.Persistence`/`.Infrastructure` bị cấm.
+> - **Khẳng định tập quét khác rỗng** — `ApiLayerBoundaryTests.cs:68` (mức assembly) và `:121` + `:148`
+>   (mức `.csproj`). Không có nó thì luật này chính là thứ nó sinh ra để chống.
+>
+> **Vì sao có luật THỨ HAI ở mức `.csproj`.** `GetReferencedAssemblies()` chỉ thấy assembly thật sự
+> có code chạm tới (giới hạn đã đo 2026-08-28, ghi ở `LayerDependencyTests.cs:22`). Canary 2026-09-09
+> chứng minh hệ quả: thêm `<ProjectReference>` tới `Core.Infrastructure` vào `Core.Api.csproj` mà chưa
+> gọi gì ⇒ **chỉ luật `.csproj` đỏ**, luật assembly vẫn xanh; thêm tiếp một lời gọi thật ⇒ **cả hai
+> đỏ**. Bước "thêm reference cho tiện" là bước ĐẦU TIÊN của mọi ca phá ranh giới, nên nó phải bị bắt
+> ngay ở đó.
 >
 > **Bổ sung 2026-09-08 — một rule THỨ SÁU, không có trong danh sách gốc.**
 > `Registrar_MustBeWiredIntoHost`: mọi lớp hiện thực `IModuleRegistrar` trong cây `src/BE` (trừ

@@ -5,9 +5,12 @@ import { TranslateService, TranslationObject, provideTranslateService } from '@n
 import { firstValueFrom } from 'rxjs';
 import { APP_I18N } from './app.config';
 import { routes } from './app.routes';
+import { CORE_I18N } from './core/i18n/core-i18n';
+import { CORE_ONLY_RESOURCES, useTranslationsInTest } from './core/i18n/i18n.testing';
 
 /**
- * Bảng dịch của DỰ ÁN NÀY (`src/FE/public/i18n/*.json`) đối chiếu với `APP_I18N` khai ở
+ * Bảng dịch của DỰ ÁN NÀY — MỌI nguồn khai ở `APP_I18N.resources` (`src/FE/public/i18n/*.json`
+ * và `src/FE/public/i18n-app/*.json`) — đối chiếu với `APP_I18N` khai ở
  * `app.config.ts`. Đặt cạnh `app.config.spec.ts` chứ không trong `core/i18n/` vì thứ nó kiểm là
  * DỮ LIỆU của sản phẩm, không phải cơ chế của nền tảng — `core/` là tầng đáy, không được biết dự
  * án có bao nhiêu ngôn ngữ.
@@ -32,14 +35,46 @@ import { routes } from './app.routes';
  * Đọc thẳng file thật mà trình duyệt sẽ tải lúc chạy — `public/` được `angular.json` khai là
  * assets cho cả target `build` lẫn `test`, nên đường dẫn ở đây CHÍNH LÀ đường dẫn khi deploy.
  * Đọc qua `import` một object TS sẽ kiểm một bản sao, không kiểm thứ được phục vụ.
+ *
+ * `prefix` là một phần tử của `APP_I18N.resources` — mỗi nguồn cho ra `<tiền tố><mã>.json`. Danh
+ * sách nguồn KHÔNG viết cứng trong file này: nguồn thứ ba thêm vào ngày mai cũng bị kiểm mà không
+ * ai phải nhớ cập nhật spec.
  */
-async function loadBundle(code: string): Promise<TranslationObject> {
-  const url = `/i18n/${code}.json`;
+async function loadBundle(prefix: string, code: string): Promise<TranslationObject> {
+  const url = `${prefix}${code}.json`;
   const response = await fetch(url);
   expect(response.ok)
-    .withContext(`không đọc được ${url} — file bảng dịch phải nằm ở src/FE/public/i18n/`)
+    .withContext(`không đọc được ${url} — file bảng dịch phải nằm ở src/FE/public${prefix}`)
     .toBeTrue();
   return (await response.json()) as TranslationObject;
+}
+
+/**
+ * Ghép mọi nguồn theo ĐÚNG thứ tự `APP_I18N.resources` — cùng phép ghép mà
+ * `provideTranslateMultiHttpLoader` làm lúc chạy (nguồn sau ghi đè khoá trùng của nguồn trước).
+ * Dùng cho phép kiểm hỏi *"người dùng thật sự tra ra cái gì"*; phép kiểm parity thì soi TỪNG nguồn
+ * một, vì một khoá thiếu ở nguồn dự án mà được nguồn Core che lấp vẫn là một khoá thiếu.
+ */
+async function loadMergedBundle(code: string): Promise<TranslationObject> {
+  let merged: TranslationObject = {};
+  for (const prefix of APP_I18N.resources) {
+    merged = mergeDeep(merged, await loadBundle(prefix, code));
+  }
+  return merged;
+}
+
+function mergeDeep(base: TranslationObject, extra: TranslationObject): TranslationObject {
+  const out: TranslationObject = { ...base };
+  for (const [key, value] of Object.entries(extra)) {
+    const existing = out[key];
+    out[key] =
+      isPlainObject(existing) && isPlainObject(value) ? mergeDeep(existing, value) : value;
+  }
+  return out;
+}
+
+function isPlainObject(value: unknown): value is TranslationObject {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
 /** Trải phẳng cây khoá thành `a.b.c`. Chỉ đi vào object thuần — mảng và chuỗi là LÁ. */
@@ -76,29 +111,97 @@ function leafStrings(node: unknown, prefix = ''): [string, string][] {
   );
 }
 
+/**
+ * Khoá nào ĐƯỢC PHÉP khai trùng ở hai nguồn. Rỗng là đúng hôm nay — mỗi tên thêm vào đây là một
+ * quyết định có chữ ký, xem phép kiểm ngay dưới.
+ */
+const DELIBERATE_OVERRIDES: readonly string[] = [];
+
 describe('public/i18n — bảng dịch của dự án', () => {
+  /** `<tiền tố>` → (`<mã ngôn ngữ>` → bảng dịch của RIÊNG nguồn đó). */
+  const sources = new Map<string, Map<string, TranslationObject>>();
+  /** `<mã ngôn ngữ>` → bảng dịch ĐÃ GHÉP mọi nguồn, tức thứ người dùng thật sự tra vào. */
   const bundles = new Map<string, TranslationObject>();
 
   beforeAll(async () => {
+    for (const prefix of APP_I18N.resources) {
+      const perCode = new Map<string, TranslationObject>();
+      for (const language of APP_I18N.languages) {
+        perCode.set(language.code, await loadBundle(prefix, language.code));
+      }
+      sources.set(prefix, perCode);
+    }
     for (const language of APP_I18N.languages) {
-      bundles.set(language.code, await loadBundle(language.code));
+      bundles.set(language.code, await loadMergedBundle(language.code));
     }
   });
 
-  it('🛑 mọi ngôn ngữ khai ở APP_I18N đều có file bảng dịch', () => {
-    // Danh sách lấy từ `APP_I18N` chứ không viết cứng ở đây, nên đây là một ca đỏ THẬT: thêm `ja`
-    // vào `APP_I18N.languages` mà quên `public/i18n/ja.json` → `loadBundle` đỏ ngay ở `beforeAll`.
-    expect(bundles.size).toBe(APP_I18N.languages.length);
+  it('🛑 MỌI nguồn trong APP_I18N.resources đều có đủ file cho MỌI ngôn ngữ', () => {
+    // Cả hai danh sách lấy từ `APP_I18N` chứ không viết cứng ở đây, nên đây là ca đỏ THẬT theo cả
+    // hai chiều: thêm `ja` vào `languages` mà quên `<mọi tiền tố>ja.json`, HOẶC thêm một tiền tố
+    // thứ ba mà quên file nào — `loadBundle` đỏ ngay ở `beforeAll`.
+    expect(sources.size).toBe(APP_I18N.resources.length);
+    for (const [prefix, perCode] of sources) {
+      expect(perCode.size)
+        .withContext(`nguồn ${prefix} thiếu file bảng dịch cho một ngôn ngữ đã khai`)
+        .toBe(APP_I18N.languages.length);
+    }
+  });
+
+  /**
+   * Ranh giới Core ↔ dự án tách bằng FILE, không bằng tiền tố khoá
+   * (doc/huong_dan/wiki-core/fe/08-i18n.md §Khoá nằm ở file nào). Cái giá của lựa chọn đó là một
+   * lỗi im lặng MỚI: hai nguồn có thể khai TRÙNG một khoá, và nguồn sau lặng lẽ ghi đè nguồn trước.
+   *
+   * Cơ chế ghi đè là CÓ CHỦ ĐÍCH — nó là lối để sản phẩm thứ hai đổi một câu của nền tảng mà không
+   * phải mở file dịch của nền tảng ra sửa. Nhưng ghi đè NGOÀI Ý MUỐN thì không gì báo: câu Core
+   * đổi nghĩa ở đúng một sản phẩm, và người sửa file Core không hiểu vì sao thay đổi của mình biến
+   * mất.
+   */
+  it('🛑 nguồn dự án KHÔNG âm thầm ghi đè khoá của Core', () => {
+    for (const language of APP_I18N.languages) {
+      const owner = new Map<string, string>();
+      const clashes: string[] = [];
+
+      for (const [prefix, perCode] of sources) {
+        for (const key of flatten(perCode.get(language.code))) {
+          const first = owner.get(key);
+          if (first !== undefined && !DELIBERATE_OVERRIDES.includes(key)) {
+            clashes.push(`${key} (${first} ⇄ ${prefix})`);
+          }
+          owner.set(key, first ?? prefix);
+        }
+      }
+
+      expect(clashes)
+        .withContext(
+          `${language.code}: các khoá trên khai ở HAI nguồn — nguồn sau ghi đè nguồn trước. Cố ý ` +
+            `thì thêm khoá vào DELIBERATE_OVERRIDES kèm lý do; không cố ý thì đổi tên khoá ở ` +
+            `nguồn dự án.`,
+        )
+        .toEqual([]);
+    }
+  });
+
+  it('ca đối chứng — phép kiểm trùng khoá PHÁT HIỆN được một khoá khai ở hai nguồn', () => {
+    // Không có `it` này thì phép kiểm trên xanh kể cả khi vòng lặp không bao giờ chạy tới `fail`.
+    const core = flatten({ shared: { action: { cancel: 'Huỷ' } } });
+    const app = flatten({ shared: { action: { cancel: 'Bỏ' } } });
+
+    expect(app.filter((key) => core.includes(key))).toEqual(['shared.action.cancel']);
   });
 
   it('🛑 không khoá nào viết PHẲNG với dấu chấm trong tên (bẫy ngx-translate)', () => {
-    for (const [code, bundle] of bundles) {
-      expect(dottedKeyNames(bundle))
-        .withContext(
-          `${code}.json — dấu chấm là ký tự PHÂN CẤP của ngx-translate. Khoá có dấu chấm trong ` +
-            `TÊN sẽ không bao giờ tra trúng, và thư viện trả về chính chuỗi khoá thay vì báo lỗi.`,
-        )
-        .toEqual([]);
+    for (const [prefix, perCode] of sources) {
+      for (const [code, bundle] of perCode) {
+        expect(dottedKeyNames(bundle))
+          .withContext(
+            `${prefix}${code}.json — dấu chấm là ký tự PHÂN CẤP của ngx-translate. Khoá có dấu ` +
+              `chấm trong TÊN sẽ không bao giờ tra trúng, và thư viện trả về chính chuỗi khoá ` +
+              `thay vì báo lỗi.`,
+          )
+          .toEqual([]);
+      }
     }
   });
 
@@ -113,21 +216,28 @@ describe('public/i18n — bảng dịch của dự án', () => {
     ]);
   });
 
-  it('🛑 mọi ngôn ngữ có ĐÚNG cùng một tập khoá', () => {
-    const [reference, ...others] = [...bundles.entries()];
-    const referenceKeys = flatten(reference[1]).sort();
+  /**
+   * Parity soi TỪNG NGUỒN, không soi bảng đã ghép. Ghép rồi mới so là phép kiểm MÙ đúng ở chỗ nguy
+   * hiểm nhất: một khoá có ở `i18n/vi.json` mà thiếu ở `i18n-app/vi.json` vẫn hiện ra đủ trong bảng
+   * ghép, nên bản ghép của hai ngôn ngữ có thể khớp nhau hoàn hảo trong khi từng file thì lệch.
+   */
+  it('🛑 trong TỪNG nguồn, mọi ngôn ngữ có ĐÚNG cùng một tập khoá', () => {
+    for (const [prefix, perCode] of sources) {
+      const [reference, ...others] = [...perCode.entries()];
+      const referenceKeys = flatten(reference[1]).sort();
 
-    for (const [code, bundle] of others) {
-      const keys = flatten(bundle).sort();
-      expect(keys.filter((key) => !referenceKeys.includes(key)))
-        .withContext(`${code}.json có khoá mà ${reference[0]}.json không có`)
-        .toEqual([]);
-      expect(referenceKeys.filter((key) => !keys.includes(key)))
-        .withContext(
-          `${code}.json THIẾU khoá so với ${reference[0]}.json — người dùng ngôn ngữ này sẽ đọc ` +
-            `câu của ngôn ngữ khác`,
-        )
-        .toEqual([]);
+      for (const [code, bundle] of others) {
+        const keys = flatten(bundle).sort();
+        expect(keys.filter((key) => !referenceKeys.includes(key)))
+          .withContext(`${prefix}${code}.json có khoá mà ${prefix}${reference[0]}.json không có`)
+          .toEqual([]);
+        expect(referenceKeys.filter((key) => !keys.includes(key)))
+          .withContext(
+            `${prefix}${code}.json THIẾU khoá so với ${prefix}${reference[0]}.json — người dùng ` +
+              `ngôn ngữ này sẽ đọc câu của ngôn ngữ khác`,
+          )
+          .toEqual([]);
+      }
     }
   });
 
@@ -136,20 +246,22 @@ describe('public/i18n — bảng dịch của dự án', () => {
     expect(flatten({ a: { b: 'x' } })).not.toEqual(['a.b', 'a.c']);
   });
 
-  it('🛑 mỗi câu có cùng tập tham số {{...}} ở mọi ngôn ngữ', () => {
-    const [reference, ...others] = [...bundles.entries()];
-    const referenceParams = new Map(
-      leafStrings(reference[1]).map(([key, text]) => [key, paramsOf(text)]),
-    );
+  it('🛑 mỗi câu có cùng tập tham số {{...}} ở mọi ngôn ngữ, trong TỪNG nguồn', () => {
+    for (const [prefix, perCode] of sources) {
+      const [reference, ...others] = [...perCode.entries()];
+      const referenceParams = new Map(
+        leafStrings(reference[1]).map(([key, text]) => [key, paramsOf(text)]),
+      );
 
-    for (const [code, bundle] of others) {
-      for (const [key, text] of leafStrings(bundle)) {
-        expect(paramsOf(text))
-          .withContext(
-            `${code}.json → ${key}: tham số khác với ${reference[0]}.json — câu này sẽ mất giá ` +
-              `trị BE gửi kèm`,
-          )
-          .toEqual(referenceParams.get(key) ?? []);
+      for (const [code, bundle] of others) {
+        for (const [key, text] of leafStrings(bundle)) {
+          expect(paramsOf(text))
+            .withContext(
+              `${prefix}${code}.json → ${key}: tham số khác với ${prefix}${reference[0]}.json — ` +
+                `câu này sẽ mất giá trị BE gửi kèm`,
+            )
+            .toEqual(referenceParams.get(key) ?? []);
+        }
       }
     }
   });
@@ -168,7 +280,7 @@ describe('public/i18n — bảng dịch của dự án', () => {
    * Đây là phép kiểm nối HAI nguồn đó lại: bảng route THẬT (nạp `loadChildren`) đối chiếu bảng dịch
    * THẬT. Nó cũng phủ luôn route thứ 7 thêm vào ngày mai.
    */
-  it('🛑 mọi khoá `title` của route đều có mặt trong CẢ HAI bảng dịch', async () => {
+  it('🛑 mọi khoá `title` của route đều có mặt trong bảng dịch của MỌI ngôn ngữ', async () => {
     const titleKeys = await routeTitleKeys();
 
     expect(titleKeys.length).toBeGreaterThan(0);
@@ -240,7 +352,7 @@ describe('public/i18n — tra khoá qua chính TranslateService (bẫy dấu ch�
   });
 
   it('🛑 AUTH.INVALID_CREDENTIALS tra ra CÂU, không phải chuỗi khoá', async () => {
-    translate.setTranslation('vi', await loadBundle('vi'));
+    translate.setTranslation('vi', await loadMergedBundle('vi'));
     await firstValueFrom(translate.use('vi'));
 
     const text = translate.instant('AUTH.INVALID_CREDENTIALS');
@@ -291,7 +403,7 @@ describe('public/i18n — tra khoá qua chính TranslateService (bẫy dấu ch�
   });
 
   it('tham số {{UserName}} được thay bằng giá trị BE gửi kèm (messageParams)', async () => {
-    translate.setTranslation('vi', await loadBundle('vi'));
+    translate.setTranslation('vi', await loadMergedBundle('vi'));
     await firstValueFrom(translate.use('vi'));
 
     // `messageParams` của envelope là từ điển khoá-TÊN (doc/huong_dan/wiki-core/be/
@@ -311,7 +423,7 @@ describe('public/i18n — tra khoá qua chính TranslateService (bẫy dấu ch�
     // Bảng dịch FE giữ `{{Reasons}}` sau khi BE bỏ tham số KHÔNG gây lỗi nào — ngx-translate thay
     // chỗ giữ không có giá trị bằng chuỗi rỗng, nên người dùng đọc "Đổi mật khẩu thất bại: " với
     // một dấu hai chấm cụt. Không lỗi biên dịch, không test nào khác đỏ. Đó là lý do có `it` này.
-    translate.setTranslation('vi', await loadBundle('vi'));
+    translate.setTranslation('vi', await loadMergedBundle('vi'));
     await firstValueFrom(translate.use('vi'));
 
     for (const key of ['AUTH.CHANGE_PASSWORD_FAILED', 'USER.CREATE_FAILED', 'USER.UPDATE_FAILED']) {
@@ -319,5 +431,91 @@ describe('public/i18n — tra khoá qua chính TranslateService (bẫy dấu ch�
         .withContext(`${key} không được còn chỗ giữ nào — BE không gửi tham số cho mã này nữa`)
         .not.toContain('{{');
     }
+  });
+});
+
+/**
+ * `useTranslationsInTest()` — bậc thang phân giải NGUỒN bảng dịch, kiểm ở tầng dự án.
+ *
+ * Helper nằm ở `core/i18n/i18n.testing.ts` và cố ý KHÔNG biết tên nhóm khoá nào của dự án; nó lấy
+ * danh sách nguồn từ `CORE_I18N` mà TestBed cấp. Vì vậy phép kiểm phải đứng ở đây — `src/app/` là
+ * chỗ duy nhất được phép biết `APP_I18N`.
+ *
+ * 🛑 Vì sao phép kiểm này tồn tại: tới 2026-09-09 helper còn khai CỨNG `fetch('/i18n/<mã>.json')`,
+ * tức chỉ nạp được nhóm CoreBase. Mọi spec màn NGHIỆP VỤ dùng nó rồi assert lên câu tiếng Việt sẽ
+ * đỏ — và cách sửa dễ nhất, đã xảy ra thật, là chép một loader riêng vào từng spec module. Hai
+ * helper cùng vai thì người sau dùng cái mù (`.claude/CLAUDE.md` §5). Cặp `it` dưới đây khoá cả
+ * hai chiều: nạp đủ nguồn thì tra TRÚNG, và chỉ nhóm Core thì tra TRẬT.
+ *
+ * Khoá dùng để đo được TÍNH ra từ chính các file bảng dịch (khoá chỉ có ở nguồn CUỐI, không có ở
+ * nguồn ĐẦU), không viết cứng — đổi tên khoá hay thêm nguồn thứ ba đều không phải sửa spec này.
+ */
+describe('useTranslationsInTest — nạp ĐỦ mọi nguồn của APP_I18N, không riêng nhóm Core', () => {
+  /** Một khoá chỉ có ở nguồn dự án. Không có khoá nào như vậy = spec dưới vô nghĩa, nên nó ĐỎ. */
+  let projectOnlyKey: string;
+
+  beforeAll(async () => {
+    const prefixes = APP_I18N.resources;
+    expect(prefixes.length)
+      .withContext('cần ít nhất HAI nguồn thì "khoá riêng của dự án" mới có nghĩa')
+      .toBeGreaterThan(1);
+
+    const coreKeys = flatten(await loadBundle(prefixes[0], APP_I18N.defaultCode));
+    const appKeys = flatten(await loadBundle(prefixes[prefixes.length - 1], APP_I18N.defaultCode));
+    const onlyInApp = appKeys.filter((key) => !coreKeys.includes(key));
+
+    expect(onlyInApp.length)
+      .withContext(`${prefixes[prefixes.length - 1]} không có khoá nào riêng — không đo được gì`)
+      .toBeGreaterThan(0);
+    projectOnlyKey = onlyInApp[0];
+  });
+
+  it('🛑 có CORE_I18N trong TestBed ⇒ khoá của nhóm DỰ ÁN tra ra CÂU', async () => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        provideTranslateService(),
+        { provide: CORE_I18N, useValue: APP_I18N },
+      ],
+    });
+
+    const translate = await useTranslationsInTest(APP_I18N.defaultCode);
+
+    expect(translate.instant(projectOnlyKey) as string)
+      .withContext(
+        `helper nạp thiếu nguồn thì ngx-translate trả lại chính "${projectOnlyKey}" — spec màn ` +
+          `nghiệp vụ sẽ xanh vì MÙ nếu nó chỉ assert "khác rỗng"`,
+      )
+      .not.toBe(projectOnlyKey);
+  });
+
+  it('🛑 ca đối chứng — KHÔNG có CORE_I18N ⇒ lùi về nhóm Core, đúng khoá đó tra TRẬT', async () => {
+    // Không có `it` này thì `it` trên vẫn xanh kể cả khi helper nạp bừa mọi thứ vì một lý do khác.
+    // Nó cũng khoá luôn nghĩa của `CORE_ONLY_RESOURCES`: nấc lùi là nhóm CoreBase MỘT MÌNH.
+    TestBed.configureTestingModule({
+      providers: [provideZonelessChangeDetection(), provideTranslateService()],
+    });
+
+    const translate = await useTranslationsInTest(APP_I18N.defaultCode);
+
+    expect(CORE_ONLY_RESOURCES).toEqual([APP_I18N.resources[0]]);
+    expect(translate.instant(projectOnlyKey) as string).toBe(projectOnlyKey);
+  });
+
+  it('options.resources được truyền thẳng thì thắng CORE_I18N — nấc 1 của bậc thang', async () => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        provideTranslateService(),
+        { provide: CORE_I18N, useValue: APP_I18N },
+      ],
+    });
+
+    const translate = await useTranslationsInTest(APP_I18N.defaultCode, {
+      codes: [APP_I18N.defaultCode],
+      resources: CORE_ONLY_RESOURCES,
+    });
+
+    expect(translate.instant(projectOnlyKey) as string).toBe(projectOnlyKey);
   });
 });

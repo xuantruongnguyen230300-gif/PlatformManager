@@ -328,8 +328,9 @@ cookie tồn tại.
 `Tests/PlatformManager.Core.IntegrationTests/Csrf/CsrfSeamTests.cs`): token phát hành lúc
 ANONYMOUS không dùng lại được cho request ghi SAU khi đã đăng nhập** — `IAntiforgery` của
 ASP.NET Core còn gắn request-token với danh tính (`ClaimsPrincipal`) tại thời điểm phát hành; đổi
-danh tính (login) rồi dùng token cũ sẽ bị từ chối `403` với thông điệp "meant for a different
-claims-based user". **Cookie `XSRF-TOKEN` KHÔNG tự đổi giá trị theo thời gian hay theo sự kiện
+danh tính rồi dùng token cũ sẽ bị từ chối `403` với thông điệp "meant for a different
+claims-based user". **Ràng buộc này đối xứng: nó áp cho CẢ HAI chiều đổi danh tính** — anonymous →
+user (login) *và* user → anonymous (logout). **Cookie `XSRF-TOKEN` KHÔNG tự đổi giá trị theo thời gian hay theo sự kiện
 login** — nó chỉ đổi khi có ai đó gọi lại `GET /api/antiforgery/token` (endpoint duy nhất set
 cookie này, không có cơ chế tự động nào khác). Với Angular `withXsrfConfiguration()`, việc đọc lại
 cookie ở MỖI request là tự động đúng — **miễn là FE tự gọi lại `GET /api/antiforgery/token` ngay
@@ -368,8 +369,21 @@ Nhánh này nay **có** `businessCode`: `AUTH.CSRF_REJECTED`. FE phân nhánh th
    token lúc anonymous không dùng được cho request ghi sau khi đã đăng nhập (xem cạm bẫy ở trên).
    Thiếu bước này: mọi request ghi ĐẦU TIÊN sau login (đổi mật khẩu, tạo/sửa user...) sẽ 403 dù
    người dùng thao tác hoàn toàn bình thường.
-4. `withCredentials: true` (đã bật sẵn cho cookie phiên) cũng áp dụng cho cookie CSRF — không
+4. **Gọi LẠI `GET /api/antiforgery/token` ngay sau khi `POST /api/auth/logout` kết thúc** —
+   đối xứng với bước 3, vì logout cũng là một lần đổi danh tính (user → anonymous). Thiếu bước
+   này: cookie `XSRF-TOKEN` vẫn giữ token gắn với người dùng vừa thoát, và **`POST /api/auth/login`
+   lần kế tiếp bị 403 `AUTH.CSRF_REJECTED`** — trừ khi người dùng tình cờ tải lại trang, vì lúc đó
+   bước 2 mới chạy lại. Gọi lại ở nhánh chạy trong MỌI trường hợp (kể cả logout lỗi hoặc bị huỷ),
+   không chỉ nhánh thành công.
+5. `withCredentials: true` (đã bật sẵn cho cookie phiên) cũng áp dụng cho cookie CSRF — không
    cần cấu hình thêm.
+
+> **Bổ sung 2026-09-08 — bug đã xảy ra thật trên trình duyệt.** Bản trước của mục này chỉ có bước
+> 3 (mồi lại sau login), và FE cài đúng y như vậy. Hệ quả: đăng xuất rồi đăng nhập lại **trong
+> cùng một lần tải trang** luôn hỏng với đúng thông điệp CSRF ở trên. Nguyên nhân sâu xa là câu
+> chữ của chính cạm bẫy phía trên — nó viết *"đổi danh tính (login)"*, đóng khung vấn đề vào một
+> chiều, trong khi ràng buộc của `IAntiforgery` không hề chỉ có một chiều. Người đọc cài đúng thứ
+> được viết ra, và thứ được viết ra thiếu một nửa. Đã sửa cả hai chỗ cùng lúc.
 
 BE tham chiếu: `src/BE/PlatformManager.Api/Program.cs` (`AddAntiforgery`, endpoint
 `/api/antiforgery/token`, middleware validate trước `MapControllers()`),

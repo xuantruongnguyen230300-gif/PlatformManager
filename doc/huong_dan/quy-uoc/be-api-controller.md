@@ -378,8 +378,8 @@ public abstract class ApiControllerBase : ControllerBase
 }
 ```
 
-Lớp cơ sở chỉ mang **`[Authorize]`** (đối chiếu source 2026-08-29,
-[`ApiControllerBase.cs:19`](../../../src/BE/PlatformManager.Api/Common/ApiControllerBase.cs)).
+Lớp cơ sở chỉ mang **`[Authorize]`** (đối chiếu source 2026-09-09,
+[`ApiControllerBase.cs:31`](../../../src/BE/Core/PlatformManager.Core.Api/ApiControllerBase.cs)).
 `[ApiController]` và `[Route(...)]` khai ở **từng controller cụ thể** — route
 viết tường minh (`[Route("api/admin/permissions")]`), không dùng token
 `[controller]`, để đổi tên class không làm đổi URL công khai.

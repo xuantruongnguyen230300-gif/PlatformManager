@@ -11,13 +11,22 @@ namespace PlatformManager.Api.Permissions;
 /// và docstring của nó ra chỉ thị cho module nghiệp vụ khai key vào trong Core. Cả tập key lẫn
 /// nhãn đều là thứ riêng của một dự án, nên để chúng trong Core nghĩa là muốn tái dùng CoreBase
 /// thì phải mổ vào Core. Cơ chế thì vẫn ở Core và host không đụng tới được: kiểm quyền
-/// deny-by-default, ma trận, luật "PUT phải phủ đủ danh mục", seed cấp đủ danh mục cho Admin +
-/// User — xem <see cref="ICoreResourceKeySource"/>.</para>
+/// deny-by-default, ma trận, luật "PUT phải phủ đủ danh mục", và CƠ CHẾ seed (idempotent,
+/// SuperAdmin không cần dòng nào, mặc định <see cref="ResourceKeyDefinition.DefaultSeedRoles"/>)
+/// — xem <see cref="ICoreResourceKeySource"/>.</para>
+///
+/// <para><b>Sửa 2026-09-09:</b> dòng trên trước đây ghi <i>"seed cấp đủ danh mục cho Admin +
+/// User"</i> là phần Core giữ. Hết đúng từ lượt mở rộng cùng ngày: VAI được cấp khi seed nay là
+/// DỮ LIỆU của host (<see cref="ResourceKeyDefinition.SeedRoles"/>), Core chỉ giữ cơ chế và giá
+/// trị MẶC ĐỊNH. Cùng câu sai đó tồn tại song song ở docstring của
+/// <see cref="ICoreResourceKeySource"/> và đã sửa cùng lượt.</para>
 ///
 /// <para><b>Thêm key mới:</b> thêm một <c>const</c> ở đây, thêm một dòng vào
 /// <see cref="AppResourceKeySource.Definitions"/>, rồi gắn <c>[RequirePermission(...)]</c> lên
 /// action. Thiếu bước thứ hai thì key không hiện trên màn hình phân quyền và không role nào cấp
-/// được — endpoint sẽ 403 cho tất cả trừ SuperAdmin.</para>
+/// được — endpoint sẽ 403 cho tất cả trừ SuperAdmin. Key nào KHÔNG được cấp sẵn cho mọi người
+/// đăng nhập thì thu hẹp ngay tại dòng đó:
+/// <c>new(Key, "Nhãn") { SeedRoles = [Roles.Admin] }</c>.</para>
 /// </summary>
 public static class AppResourceKeys
 {

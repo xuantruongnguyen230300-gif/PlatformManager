@@ -26,8 +26,10 @@ namespace PlatformManager.Core.Infrastructure.Persistence;
 /// này giữ đúng phần cơ chế — xem <see cref="SeedMenuAsync"/>.</para>
 ///
 /// <para><b>DANH MỤC permission-key cũng KHÔNG nằm ở đây</b> (tách 2026-09-03): host khai qua
-/// <see cref="ICoreResourceKeySource"/>. Phần cơ chế ở lại: cấp ĐỦ danh mục cho Admin + User,
-/// idempotent, và SuperAdmin không cần dòng nào — xem <see cref="SeedRolePermissionsAsync"/>.</para>
+/// <see cref="ICoreResourceKeySource"/> — kể cả VAI được cấp khi seed (mở rộng 2026-09-09,
+/// <see cref="ResourceKeyDefinition.SeedRoles"/>). Phần cơ chế ở lại: mặc định Admin + User khi
+/// host không khai gì, idempotent, và SuperAdmin không cần dòng nào — xem
+/// <see cref="SeedRolePermissionsAsync"/>.</para>
 ///
 /// <para><b>EMAIL và TÊN HIỂN THỊ của 2 tài khoản bootstrap cũng KHÔNG nằm ở đây</b> (tách
 /// 2026-09-02): host khai qua <see cref="ICoreBootstrapAccountSource"/>. Lớp này vẫn giữ trọn
@@ -69,25 +71,50 @@ public sealed class CoreSeeder(
     /// <summary>
     /// `RequirePermissionFilter` là deny-by-default — bảng `RolePermissions` rỗng nghĩa là MỌI
     /// role (trừ SuperAdmin bypass) bị 403 ở MỌI endpoint ngay khi
-    /// [RequirePermission] gắn lên controller. Cấp đủ danh mục key do host khai
-    /// (<see cref="ICoreResourceKeySource"/>, tách 2026-09-03) cho
-    /// Admin + User để GIỮ NGUYÊN hành vi trước khi vá (mọi user thao tác được) — xem
+    /// [RequirePermission] gắn lên controller. Cấp key do host khai
+    /// (<see cref="ICoreResourceKeySource"/>, tách 2026-09-03) cho ĐÚNG những vai host khai ở
+    /// <see cref="ResourceKeyDefinition.SeedRoles"/>; key không khai gì thì dùng mặc định
+    /// <see cref="ResourceKeyDefinition.DefaultSeedRoles"/> (Admin + User) để GIỮ NGUYÊN hành vi
+    /// trước khi vá (mọi user thao tác được) — xem
     /// doc/contracts/permissions.md §"Rủi ro rollout" + doc/huong_dan/wiki-core/be/
     /// 13-core-data-migration.md. SuperAdmin KHÔNG cần dòng nào ở đây (break-glass ở
     /// RequirePermissionFilter). Chạy qua lệnh `--seed`, KHÔNG chạy lúc app khởi động — và lệnh
     /// đó là ĐƯỜNG CHÍNH cho production, nó gọi thẳng method này nên phủ luôn bảng RolePermissions.
     /// scripts/seed-role-permissions.sql chỉ còn dành cho ca chỉ có quyền truy cập DB mà không chạy
     /// được binary (quyết định 2026-08-30, xem 13-core-data-migration.md).
+    ///
+    /// <para><b>Mở rộng 2026-09-09 — vai lấy từ định nghĩa key, không lặp cứng nữa.</b> Trước đó
+    /// method này lặp <c>new[] { Roles.Admin, Roles.User }</c> và cấp MỌI key cho CẢ HAI, nên không
+    /// có cách nào khai một key chỉ dành cho vai quản trị mà không để Core biết tên key nghiệp vụ
+    /// đó. Danh sách vai giờ là DỮ LIỆU đi qua seam; phần ở lại đây là cơ chế: thứ tự vai theo
+    /// <c>Roles.All</c> (ổn định qua mọi lần seed, không phụ thuộc thứ tự host khai key), tính
+    /// idempotent, và SuperAdmin không có dòng nào.</para>
     /// </summary>
     private async Task SeedRolePermissionsAsync(CancellationToken ct)
     {
-        foreach (var roleName in new[] { Roles.Admin, Roles.User })
+        // Catalog() kiểm luôn tính hợp lệ của SeedRoles (rỗng, tên vai lạ, khai SuperAdmin) và ném
+        // nếu host khai sai — trước khi ghi dòng nào.
+        var catalog = resourceKeySource.Catalog();
+
+        // Lặp theo Roles.All chứ không theo thứ tự host khai: một lần tra RoleManager cho mỗi vai,
+        // và thứ tự ghi không đổi giữa hai lần seed dù danh mục key có sắp xếp lại.
+        foreach (var roleName in Roles.All)
         {
+            var resourceKeys = catalog
+                .Where(definition => definition.SeedRoles.Contains(roleName, StringComparer.Ordinal))
+                .Select(definition => definition.Key)
+                .ToList();
+
+            // Bình thường luôn xảy ra với SuperAdmin (Catalog() cấm khai vai đó) — không tra
+            // RoleManager cho một vai chắc chắn không có key nào.
+            if (resourceKeys.Count == 0)
+                continue;
+
             var role = await roleManager.FindByNameAsync(roleName);
             if (role is null)
-                continue; // Roles.* là hằng số, SeedRolesAsync đã chạy trước — nhánh phòng thủ thuần // SeedRolesAsync chạy trước nên bình thường không xảy ra — phòng thủ nếu thứ tự đổi
+                continue; // Roles.* là hằng số, SeedRolesAsync đã chạy trước — nhánh phòng thủ thuần
 
-            foreach (var resourceKey in resourceKeySource.Keys())
+            foreach (var resourceKey in resourceKeys)
             {
                 var exists = await db.RolePermissions
                     .AnyAsync(x => x.RoleId == role.Id && x.ResourceKey == resourceKey, ct);

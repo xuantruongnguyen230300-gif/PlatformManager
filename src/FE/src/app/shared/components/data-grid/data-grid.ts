@@ -10,6 +10,33 @@ export interface IDataGridPageChange {
 }
 
 /**
+ * Hai mép được ghim khi lưới cuộn ngang.
+ *
+ * Hợp đồng: `doc/Design/Frontend/PlatformManager/Components/DataTable.md`
+ * § Frozen edge columns, khối 🆕 CHỐT 2026-09-09.
+ *
+ * ## Vì sao là hai cờ, không phải danh sách cột
+ *
+ * Khối chốt để ngỏ KIỂU của input, kèm lý do: *"Designing a column API from a single example is
+ * the mistake the 2026-09-06 block refused to make; fix the signature when the DTI grid is built,
+ * against a real column list."* Danh sách cột thật đã có
+ * (`doc/Design/Frontend/PlatformManager/Screens/02-danh-muc-dti.md` § Layout Blueprint) và nó ghim
+ * ĐÚNG hai cột: cột `Mã` ở mép trái, cột `Hành động` ở mép phải. Lưới đó còn đổi giữa 13 và 14 cột
+ * tuỳ chế độ kỳ, trong khi *"the two frozen edges are the same columns either way"* — nên một API
+ * theo CHỈ SỐ cột sẽ buộc màn hình tự tính lại chỉ số mỗi lần số cột đổi, đúng loại phép tính lệch
+ * một đơn vị mà `onLazyLoad` bên dưới tồn tại để dập.
+ *
+ * Hai cờ mô tả thẳng cái hợp đồng nói: mép trái = cột ĐẦU, mép phải = cột CUỐI. Cần ghim nhiều
+ * hơn một cột mỗi mép thì đổi kiểu ở đây, khi có màn hình thật đòi nó.
+ */
+export interface IDataGridFrozenColumns {
+  /** Ghim cột ĐẦU vào mép trái — cột định danh dòng. */
+  readonly left?: boolean;
+  /** Ghim cột CUỐI vào mép phải — cột hành động (`alignFrozen="right"` của PrimeNG). */
+  readonly right?: boolean;
+}
+
+/**
  * Lưới bản ghi dùng chung — sở hữu KHUNG, không sở hữu CỘT.
  *
  * Ranh giới và lý do đầy đủ:
@@ -84,6 +111,32 @@ export class DataGrid {
   readonly bodyTemplate = input.required<TemplateRef<{ $implicit: unknown }>>();
   /** Thay câu rỗng mặc định. Để trống thì dùng `shared.grid.empty`. */
   readonly emptyTemplate = input<TemplateRef<unknown> | undefined>(undefined);
+
+  /**
+   * Ghim cột mép trái/mép phải chống lại cuộn ngang. Để trống = không ghim gì (hành vi của mọi
+   * lưới đang chạy hôm nay — lưới Người dùng có 5 cột vừa khung và **không được** bắt đầu ghim).
+   *
+   * Ghim đòi `[scrollable]="true"`; template dưới đây khai cứng `true` nên điều kiện đó luôn đủ.
+   *
+   * ## 🛑 Vì sao KHÔNG dùng directive `pFrozenColumn` — lệch có chủ đích so với hợp đồng
+   *
+   * `DataTable.md` § Frozen edge columns mô tả cơ chế là *"the component applies `pFrozenColumn`
+   * … internally"*. Cơ chế đó KHÔNG hiện thực hoá được dưới hợp đồng `TemplateRef` mà chính file
+   * đó chốt ngày 2026-09-06: `<th>`/`<td>` nằm trong template do MÀN HÌNH khai, nên Angular gắn
+   * directive theo `imports` của màn hình chứ không theo `imports` của component này. Đưa
+   * `pFrozenColumn` vào đây không chạm được tới ô nào, mà viết ở màn hình thì kéo `TableModule`
+   * ra khỏi `data-grid` — đúng ranh giới mà khối chốt sinh ra để giữ.
+   *
+   * Phần hợp đồng có thể quan sát được thì giữ nguyên và đó mới là phần quan trọng: màn hình xin
+   * ghim bằng `[frozenColumns]`, **không bao giờ** viết directive. Cơ chế bên trong là việc của
+   * component, đúng như khối chốt tự nói: *"The screen says which columns are pinned and to which
+   * edge; the component says how a pin is expressed."*
+   *
+   * Cách hiện thực thật: `data-grid.scss` đặt `position: sticky` cho ô đầu/ô cuối. Nó làm đúng
+   * việc `FrozenColumn` làm (đặt `position: sticky` + `left`/`right`), nhưng không phải đo bề rộng
+   * anh em bằng JavaScript sau mỗi lần vẽ vì mỗi mép chỉ có MỘT cột nên độ lệch luôn là 0.
+   */
+  readonly frozenColumns = input<IDataGridFrozenColumns | undefined>(undefined);
 
   readonly pageChange = output<IDataGridPageChange>();
 

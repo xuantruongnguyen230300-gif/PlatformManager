@@ -4,6 +4,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Npgsql;
+using PlatformManager.Core.Application.Permissions;
+using PlatformManager.Core.Application.Storage;
 using PlatformManager.Core.Infrastructure.Persistence;
 using Xunit;
 
@@ -16,13 +18,14 @@ namespace PlatformManager.Core.IntegrationTests.Production;
 ///
 /// <para><b>Vì sao tồn tại:</b> mọi test còn lại chạy ở <c>Development</c>, nên mỗi nhánh
 /// <c>if (app.Environment.IsDevelopment())</c> / <c>IsProduction()</c> trong <c>Program.cs</c> chỉ
-/// từng chạy theo MỘT chiều. Bốn lỗi dưới đây vì thế nằm ngoài tầm bộ test theo đúng cấu tạo của
+/// từng chạy theo MỘT chiều. Các lỗi dưới đây vì thế nằm ngoài tầm bộ test theo đúng cấu tạo của
 /// nó — không phải vì viết thiếu test: Swagger lộ ra Internet, host phục vụ thật ghi dữ liệu seed
-/// lên DB thật, allowlist CORS rỗng chặn sạch người dùng trong khi deploy vẫn báo thành công, và
-/// <c>KnownProxies</c> khai sai khiến ai cũng giả được <c>X-Forwarded-*</c>.</para>
+/// lên DB thật, allowlist CORS rỗng chặn sạch người dùng trong khi deploy vẫn báo thành công,
+/// <c>KnownProxies</c> khai sai khiến ai cũng giả được <c>X-Forwarded-*</c>, và kho file mặc định
+/// nằm trong thư mục app nên mọi file người dùng tải lên biến mất ở lần deploy kế tiếp.</para>
 ///
 /// <para><b>KHÔNG chạy cả bộ test ở hai môi trường</b> — phần lớn test không quan tâm tới môi
-/// trường, gấp đôi thời gian chạy để mua thêm rất ít. Bốn bất biến, một class.</para>
+/// trường, gấp đôi thời gian chạy để mua thêm rất ít. Mỗi bất biến một mục trong class này.</para>
 ///
 /// <para><b>Cách ly môi trường:</b> không có biến môi trường nào bị ghi đè — xem
 /// <see cref="ProductionHostFactory"/> §"Vì sao KHÔNG đặt biến môi trường". Class vẫn nằm trong
@@ -179,6 +182,65 @@ public sealed class ProductionHostTests
         }
     }
 
+    // ── Bất biến 5 — thiếu Storage:RootPath ⇒ host KHÔNG boot được ────────────
+
+    /// <summary>
+    /// Cùng khuôn với bất biến 3, cho một cấu hình mà hậu quả lộ ra CÒN MUỘN HƠN CORS: không phải
+    /// ở request đầu tiên, mà ở lần deploy THỨ HAI.
+    ///
+    /// <para>Mặc định <c>{ContentRootPath}/App_Data</c> chạy đúng trên máy dev và chạy đúng cả ở
+    /// lần chạy production đầu tiên — nên không có gì báo. Nó chỉ hỏng khi thư mục app bị thay
+    /// (container redeploy: toàn bộ file người dùng đã tải lên biến mất cùng image layer cũ), khi
+    /// có instance thứ hai (instance A ghi, job chạy ở B, B không thấy file), hoặc khi thư mục app
+    /// được gắn read-only. Xem doc/huong_dan/wiki-core/be/14-file-storage.md §4.</para>
+    ///
+    /// <para>Khẳng định gồm HAI phần, phần thứ hai mới đáng giá: ném LÚC KHỞI ĐỘNG, và thông điệp
+    /// nêu ĐÍCH DANH biến môi trường cần đặt.</para>
+    /// </summary>
+    [Fact(DisplayName = "Thiếu Storage:RootPath ở Production ⇒ host KHÔNG boot, lỗi nêu đích danh biến môi trường")]
+    public void MissingStorageRootPath_PreventsHostStartup_InProduction()
+    {
+        var factory = new ProductionHostFactory(configureStorage: false);
+
+        try
+        {
+            var exception = Assert.ThrowsAny<Exception>(() => factory.CreateClient());
+
+            var validationException = Flatten(exception).OfType<OptionsValidationException>().FirstOrDefault();
+            Assert.NotNull(validationException);
+
+            var failures = string.Join(" | ", validationException.Failures);
+
+            // Tên BIẾN MÔI TRƯỜNG (dấu __), không phải tên khoá cấu hình (dấu :).
+            Assert.Contains("Storage__RootPath", failures, StringComparison.Ordinal);
+
+            // Và phải nói ra VÌ SAO, không chỉ "thiếu cấu hình": người vận hành thấy mặc định
+            // App_Data "vẫn chạy" trên máy họ sẽ coi đây là một đòi hỏi hình thức và đặt đại một
+            // đường dẫn bên trong thư mục app — đúng thứ luật này sinh ra để chặn.
+            Assert.Contains("volume", failures, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            factory.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// Chiều ngược của bất biến 5 — đối chứng bắt buộc: host Production CÓ khai
+    /// <c>Storage:RootPath</c> thì boot được, và <see cref="IFileStorage"/> phân giải được từ DI.
+    /// Thiếu ca này thì một lỗi làm host Production không bao giờ boot cũng khiến test trên xanh.
+    /// </summary>
+    [Fact(DisplayName = "Có Storage:RootPath ⇒ host Production boot được và IFileStorage phân giải được")]
+    public void WithStorageRootPath_HostStarts_AndFileStorageResolves()
+    {
+        using var factory = new ProductionHostFactory();
+        factory.CreateClient();
+
+        using var scope = factory.Services.CreateScope();
+
+        Assert.NotNull(scope.ServiceProvider.GetRequiredService<IFileStorage>());
+    }
+
     // ── Bất biến 4 — X-Forwarded-* chỉ được tin từ KnownProxies ───────────────
 
     /// <summary>
@@ -247,6 +309,89 @@ public sealed class ProductionHostTests
             connection);
 
         return (long)(await command.ExecuteScalarAsync())!;
+    }
+
+    // ── Bất biến 6 — danh mục permission-key khai SAI ⇒ host KHÔNG boot được ────────────
+
+    /// <summary>
+    /// Danh mục key khai sai ở host phải chặn KHỞI ĐỘNG, không phải chờ tới lúc ai đó mở màn hình.
+    ///
+    /// <para><b>Vì sao bất biến này tồn tại (thêm 2026-09-09).</b> Toàn bộ phép kiểm danh mục nằm
+    /// trong <c>ResourceKeySourceExtensions.Catalog()</c>, mà <c>Catalog()</c> chỉ chạy khi có
+    /// người DÙNG danh mục — ma trận <c>GET</c>, validator của <c>PUT</c>, seeder. Trước lượt này
+    /// một host khai <c>SeedRoles = []</c> vẫn boot bình thường, phục vụ mọi request bình thường,
+    /// rồi trả <b>500</b> đúng lúc người vận hành mở màn Phân quyền — cách xa nguyên nhân thật
+    /// (một dòng cấu hình sai từ lúc deploy) cả về thời gian lẫn về chỗ nhìn.</para>
+    ///
+    /// <para>Bất biến 5 ngay trên đo cùng tính chất cho <c>IOptions&lt;T&gt;</c>; đây là bản cho
+    /// DỮ LIỆU đi qua seam. Cùng một hậu quả thì phải hỏng cùng một lúc.</para>
+    ///
+    /// <para>Khẳng định gồm HAI phần, phần thứ hai mới đáng giá: ném LÚC KHỞI ĐỘNG, và thông điệp
+    /// nêu ĐÍCH DANH key sai — người đọc log không phải đi dò cả danh mục.</para>
+    /// </summary>
+    [Fact(DisplayName = "Danh mục permission-key khai SAI ⇒ host KHÔNG boot, lỗi nêu đích danh key")]
+    public void InvalidResourceKeyCatalog_PreventsHostStartup()
+    {
+        var factory = new ProductionHostFactory(resourceKeySource: new BrokenResourceKeySource());
+
+        try
+        {
+            var exception = Assert.ThrowsAny<Exception>(() => factory.CreateClient());
+
+            var failure = Flatten(exception)
+                .OfType<InvalidOperationException>()
+                .FirstOrDefault(e => e.Message.Contains(BrokenResourceKeySource.BrokenKey, StringComparison.Ordinal));
+
+            Assert.NotNull(failure);
+
+            // Nêu tên trường phải sửa, không chỉ "cấu hình sai".
+            Assert.Contains(nameof(ResourceKeyDefinition.SeedRoles), failure.Message, StringComparison.Ordinal);
+        }
+        finally
+        {
+            factory.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// Chiều ngược của bất biến 6 — đối chứng bắt buộc: danh mục HỢP LỆ thì host vẫn boot. Thiếu ca
+    /// này thì một lỗi làm host Production không bao giờ boot cũng khiến test trên xanh.
+    ///
+    /// <para>Dùng một danh mục GIẢ (không phải danh mục thật của host) để đối chứng chạy trên đúng
+    /// đường mà ca hỏng đi qua — nếu dùng host mặc định thì hai ca khác nhau ở HAI biến, và ca đối
+    /// chứng không còn chứng minh được điều gì về đường thay seam.</para>
+    /// </summary>
+    [Fact(DisplayName = "Danh mục permission-key HỢP LỆ ⇒ host Production vẫn boot")]
+    public void ValidResourceKeyCatalog_AllowsHostStartup()
+    {
+        using var factory = new ProductionHostFactory(resourceKeySource: new ValidResourceKeySource());
+
+        factory.CreateClient();
+
+        using var scope = factory.Services.CreateScope();
+        var source = scope.ServiceProvider.GetRequiredService<ICoreResourceKeySource>();
+
+        Assert.Equal([ValidResourceKeySource.Key], source.Keys());
+    }
+
+    /// <summary>Danh mục khai <c>SeedRoles</c> RỖNG — một trong ba ca sai mà <c>Catalog()</c> chặn.
+    /// Chọn ca này vì nó là ca im lặng nhất: seed vẫn thoát 0, chỉ có mọi endpoint mang key đó trả
+    /// 403 cho tất cả trừ SuperAdmin.</summary>
+    private sealed class BrokenResourceKeySource : ICoreResourceKeySource
+    {
+        public const string BrokenKey = "test.broken";
+
+        public IReadOnlyCollection<ResourceKeyDefinition> GetResourceKeys() =>
+            [new(BrokenKey, "Danh mục sai — chỉ dùng trong test") { SeedRoles = [] }];
+    }
+
+    /// <summary>Danh mục hợp lệ tối thiểu cho ca đối chứng.</summary>
+    private sealed class ValidResourceKeySource : ICoreResourceKeySource
+    {
+        public const string Key = "test.valid";
+
+        public IReadOnlyCollection<ResourceKeyDefinition> GetResourceKeys() =>
+            [new(Key, "Danh mục hợp lệ — chỉ dùng trong test")];
     }
 
     /// <summary>Trải phẳng chuỗi <c>InnerException</c> — host khởi động qua nhiều lớp bọc, ngoại lệ

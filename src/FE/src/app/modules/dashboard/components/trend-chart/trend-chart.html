@@ -1,0 +1,40 @@
+<!-- `.chart-wrap` → HOẶC vùng vẽ, HOẶC một câu trạng thái rỗng. Không có gì khác.
+     Mặt card, tiêu đề và padding thuộc về `.card` của TRANG cha (TrendChart.md § Anatomy). -->
+<div class="chart-wrap">
+  @if (hasData()) {
+    <p-chart
+      type="line"
+      [data]="chartData()"
+      [options]="chartOptions()"
+      [ariaLabel]="summary() || ('dashboard.grid.trendAriaLabelFallback' | translate)"
+    />
+
+    <!-- Lớp bù thứ hai cho trợ năng: `<canvas>` KHÔNG có cấu trúc DOM nào để trình đọc màn hình
+         bám vào, nên một `aria-label` mô tả xu hướng vẫn không cho ai đọc được TỪNG điểm. Bảng
+         này ẩn về mặt thị giác nhưng còn trong cây trợ năng — KHÔNG dùng `display:none` hay `@if`,
+         cả hai gỡ luôn khỏi cây (wiki-core/fe/12-charting.md §Accessibility, lớp 2). -->
+    <table class="sr-only">
+      <caption>
+        {{ summary() || ('dashboard.grid.trendAriaLabelFallback' | translate) }}
+      </caption>
+      <tbody>
+        <tr>
+          <th scope="row">{{ 'dashboard.grid.trendPeriodHeader' | translate }}</th>
+          @for (row of rows(); track row.Label) {
+            <td>{{ row.Label }}</td>
+          }
+        </tr>
+        <tr>
+          <th scope="row">{{ 'dashboard.grid.trendValueHeader' | translate }}</th>
+          @for (row of rows(); track row.Label) {
+            <td>{{ row.Text }}</td>
+          }
+        </tr>
+      </tbody>
+    </table>
+  } @else {
+    <!-- Không kỳ nào có số liệu ⇒ một câu, KHÔNG vẽ ra một cặp trục trống: trục trống trông như
+         biểu đồ hỏng, còn câu này nói đúng chuyện gì đang xảy ra. -->
+    <p class="muted">{{ 'dashboard.grid.trendEmpty' | translate }}</p>
+  }
+</div>

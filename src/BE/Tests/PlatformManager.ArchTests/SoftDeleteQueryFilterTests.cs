@@ -58,6 +58,14 @@ public class SoftDeleteQueryFilterTests
     /// <see cref="BaseEntity"/> phải có mặt trong model (khuôn giống
     /// <see cref="EntityEncapsulationTests"/>). Thêm module mới thì thêm assembly Domain của nó
     /// ở ĐÂY; phía model không phải sửa gì — nó tự lấy theo DI thật.
+    ///
+    /// <para>🛑 <b>DANH SÁCH LIỆT KÊ TAY — thiếu một assembly domain thì cả 3 luật soft-delete
+    /// XANH MÀ KHÔNG ĐO GÌ</b> cho entity của tầng bị bỏ sót. <b>Khi dựng
+    /// <c>PlatformManager.Business.Domain</c> (bước 3): thêm assembly của nó vào đây.</b> Đây là
+    /// chỗ nguy hiểm nhất trong 5 danh sách liệt kê tay của bộ ArchTest: bỏ sót ⇒ entity nghiệp vụ
+    /// có thể thiếu query filter soft-delete, nghĩa là bản ghi đã xoá vẫn TRẢ VỀ cho người dùng —
+    /// một lỗi dữ liệu, không phải lỗi kiểu dáng. <c>Core.Api</c> (2026-09-09) không nằm ở đây:
+    /// nó không chứa entity nào.</para>
     /// </summary>
     private static readonly Assembly[] DomainAssemblies =
     [

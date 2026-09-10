@@ -1,0 +1,8 @@
+// Chỉ chứa BỐ CỤC riêng của trang. Mọi bề mặt/nút/badge dùng class toàn cục ở src/styles.scss —
+// không khai lại ở đây, và không có màu literal nào (cổng G1 + G11).
+//
+// Khoảng cách giữa hàng tiêu đề và phần thân. Dải KPI + biểu đồ + bảng tổng hợp của màn thật sẽ
+// vào đây ở lượt sau (spec/dashboard-dti/ui-spec.md).
+:host {
+  display: block;
+}

@@ -65,7 +65,8 @@ src/BE/
 │   │                                              entity Core, Interceptors, CoreSeeder
 │   ├── PlatformManager.Core.Infrastructure/    ← IdentityService/UserAdminService/
 │   │                                              UserLookupService (phần không phải EF)
-│   └── PlatformManager.Core.Api/               ← AuthController, UsersController,
+│   └── PlatformManager.Core.Api/               ← ApiControllerBase (base class BẮT BUỘC của mọi
+│                                                  controller) + AuthController, UsersController,
 │                                                  MetaController, PermissionsController
 ├── Business/                                   ← 1 khối duy nhất, KHÔNG lồng thêm tên domain
 │   ├── PlatformManager.Business.Domain/           ← MỌI entity nghiệp vụ (Criteria, ...)
@@ -89,7 +90,8 @@ src/BE/
 ✅ Business.Application     → Core.Application, Core.Domain, Business.Domain
 ✅ Business.Persistence     → Core.Persistence, Business.Application, Business.Domain
 ✅ Business.Infrastructure  → Core.Infrastructure, Business.Application, Business.Domain
-✅ Business.Api             → Business.Application, Business.Domain
+✅ Business.Api             → Core.Api, Business.Application, Business.Domain
+                              (Core.Api vì ApiControllerBase sống ở đó — xem §Q8 ngay dưới)
 ✅ Api (host)            → mọi project Core.* + Business.* — nơi DUY NHẤT thấy cả 2 tầng
 
 ❌ Core.*                → Business.* (Core không được biết về nghiệp vụ)
@@ -100,6 +102,29 @@ src/BE/
 ❌ *.Application         → IConfiguration trực tiếp — dùng IOptions<T>
                            (ĐÚNG 1 ngoại lệ đã khai đích danh, đọc ngay dưới khối này)
 ```
+
+### 🚧 ĐÃ CHỐT — ĐANG THI CÔNG (Q8, 2026-09-09) — `PlatformManager.Core.Api` giữ `ApiControllerBase`
+
+Quyết định người dùng 2026-09-09: dựng project **`PlatformManager.Core.Api`** (đã có trong layout
+đích ở khối cây trên), và `ApiControllerBase` chuyển về đó. Hệ quả lên chiều phụ thuộc: thêm
+**`Business.Api → Core.Api`** và **`PlatformManager.Api → Core.Api`**; không cạnh nào khác đổi.
+
+| Có thật hôm nay (2026-09-09) | Sẽ thành |
+| --- | --- |
+| ✅ `ApiControllerBase` **đã ở** `PlatformManager.Core.Api` — thi công 2026-09-09, `src/BE/Core/PlatformManager.Core.Api/ApiControllerBase.cs:32` | 4 controller Core cũng chuyển sang; host chỉ còn composition root |
+| ✅ `Core.Api` **là project** trong `Core/`, khai ở `src/BE/PlatformManager.slnx` — thi công 2026-09-09 | `Business.Api` reference nó |
+| `Business.Api` chưa tồn tại nên chưa ai cần base class từ ngoài host | reference `Core.Api` để kế thừa `ApiControllerBase` |
+
+📖 Vì sao là `Core.Api` chứ không phải host hay `Core.Application` (vòng tròn tham chiếu ·
+gate cấm `Microsoft.AspNetCore`): [`../../kien-truc-core-module.md`](../../kien-truc-core-module.md)
+§`Core.Api` giữ `ApiControllerBase` — file chủ của quyết định, không lặp lại ở đây.
+
+**Cạnh mới KHÔNG nới luật `*.Api ⇏ *.Persistence/*.Infrastructure`.** `Business.Api → Core.Api`
+là tham chiếu tới một project **cùng tầng Api**, để lấy base class dùng chung — nó không mở
+đường nào tới Persistence/Infrastructure. Khi viết
+`Api_MustNotReference_PersistenceOrInfrastructure_Directly` (rule `📐` ở
+[`../../kien-truc-core-module.md`](../../kien-truc-core-module.md) §ArchTest cần có), đừng viết
+thành "`*.Api` không reference project nào khác".
 
 ### Ngoại lệ DUY NHẤT của luật `*.Application ⇏ IConfiguration` — khai 2026-09-08
 
@@ -322,22 +347,32 @@ allowlist rỗng lộ ra ngay lời gọi API đầu tiên chứ không âm th�
 ## `PlatformManager.Api` — host mỏng, composition root duy nhất
 
 > 📐 **Mục này mô tả ĐÍCH ĐẾN, cùng phạm vi với banner ở §"Project layout".** Hiện trạng
-> 2026-09-06: `Core.Api` và `Business.Api` **chưa tồn tại**, nên bốn controller đang sống
-> **trong chính host** (`src/BE/PlatformManager.Api/Controllers/`) và `Program.cs` không gọi
-> `AddApplicationPart` ở đâu cả. `AddCoreModule` thì có thật, nhưng chữ ký là
-> `AddCoreModule(builder.Configuration, requireBootstrapOptions: isSeedRun)`
-> (`Program.cs:126`) — tham số thứ hai quyết định luật fail-fast của `BootstrapOptions`, đừng
-> bỏ khi chép. `AddBusinessModule` chưa có gì để đăng ký.
+> 2026-09-09: `Core.Api` **đã tồn tại** và `ApiControllerBase` đã chuyển vào đó (Q8, xem §trên,
+> `src/BE/Core/PlatformManager.Core.Api/ApiControllerBase.cs:32`). `Business.Api` thì **chưa**, và
+> bốn controller Core vẫn sống **trong chính host** (`src/BE/PlatformManager.Api/Controllers/`).
+> `AddApplicationPart` thì đã có đường đi qua seam registrar, chỉ chưa có assembly nào để gộp:
+> `ApiAssembly` của Core hiện là `null`.
 >
 > *(Thêm 2026-09-06: trước đây cả mục này không mang nhãn nào, nên câu "KHÔNG tự có controller
 > riêng" đọc như một luật đang bị vi phạm — trong khi thực ra nó là đích chưa tới.)*
 
-`Program.cs` đăng ký 2 tầng qua 2 extension method riêng, mỗi extension
-method tự gộp controller assembly `*.Api` của mình:
+`Program.cs` **không** gọi từng tầng bằng một extension method riêng. Nó gom mọi
+`IModuleRegistrar` rồi đăng ký một lượt qua `AddModules` — đường DI + cấu hình EF ở
+`src/BE/PlatformManager.Api/Program.cs:144`, đường `ApplicationPart` ở `:107`:
+
 ```csharp
-services.AddCoreModule(configuration);      // DI + AddApplicationPart cho Core.Api
-services.AddBusinessModule(configuration);  // DI + AddApplicationPart cho Business.Api
+builder.Services.AddModules(builder.Configuration, moduleRegistrars);
 ```
+
+> **🔄 SỬA 2026-09-09 — đoạn mẫu cũ dạy một đường không tồn tại.** Bản trước viết
+> `services.AddCoreModule(configuration); services.AddBusinessModule(configuration);` như thể
+> đó là cách host đăng ký hai tầng. Đo lại: `Program.cs` **không gọi `AddCoreModule` lần nào**
+> — lời gọi duy nhất nằm trong
+> `src/BE/Core/PlatformManager.Core.Infrastructure/Modules/CoreModuleRegistrar.cs:31`, tức Core
+> đi **chung** đường registrar với tầng nghiệp vụ chứ không có lối riêng (§`IModuleRegistrar`
+> của [`../../kien-truc-core-module.md`](../../kien-truc-core-module.md)). `AddBusinessModule`
+> thì chưa bao giờ tồn tại. Cùng lượt gỡ neo `Program.cs:126` mà bản trước gán cho lời gọi
+> `AddCoreModule(...)`: dòng đó là một dòng cấu hình `JsonNamingPolicy`, không liên quan.
 `PlatformManagerDbContext` (định nghĩa trong `Core.Persistence`) không được
 hardcode reference tới `Business.*` — `Api` (host) truyền danh sách
 `Assembly` (`*.Persistence` của từng tầng đã đăng ký) vào lúc cấu hình

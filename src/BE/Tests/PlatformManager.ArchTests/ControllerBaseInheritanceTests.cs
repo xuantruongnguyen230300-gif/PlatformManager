@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using PlatformManager.Api.Common;
+using PlatformManager.Core.Api;
 using Xunit;
 
 namespace PlatformManager.ArchTests;
@@ -73,7 +73,7 @@ public class ControllerBaseInheritanceTests
             string.Join(", ", rogue) + ". Hệ quả: (a) mất [Authorize] mặc định ⇒ mọi action của nó " +
             "PUBLIC mà không có lỗi biên dịch nào — đúng sự cố AuthController.Logout đã xảy ra; " +
             "(b) mất HandleResult ⇒ controller tự map status code, envelope trả về lệch chuẩn. " +
-            "Cách sửa: đổi `: ControllerBase` thành `: ApiControllerBase` (using PlatformManager.Api.Common) " +
+            "Cách sửa: đổi `: ControllerBase` thành `: ApiControllerBase` (using PlatformManager.Core.Api) " +
             "và trả kết quả qua HandleResult(await mediator.Send(...)). Xem " +
             "doc/huong_dan/quy-uoc/be-api-controller.md §Dispatcher.");
     }

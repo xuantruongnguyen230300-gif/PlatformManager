@@ -239,10 +239,19 @@
       "newVersion": "Đã có phiên bản mới, tải lại để tiếp tục.",
       "skipToContent": "Bỏ qua điều hướng, tới nội dung chính"
     },
+    "deltaIndicator": {
+      "score": "{{Value}}",
+      "pointUp": "↑ {{Value}} đ.%",
+      "pointDown": "↓ {{Value}} đ.%",
+      "pointFlat": "{{Value}} đ.%"
+    },
     "field": {
       "email": "Email",
       "role": "Vai trò",
       "userName": "Tên đăng nhập"
+    },
+    "format": {
+      "absentValue": "—"
     },
     "grid": {
       "empty": "Không có dữ liệu."

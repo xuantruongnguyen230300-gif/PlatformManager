@@ -187,9 +187,15 @@ done < <(grep -rnE 'Dto\b' "$APP" --include='*.ts' 2>/dev/null \
 # CHỌN của sidebar: thấy ở mọi màn hình, và dòng ngay dưới nó đã dùng
 # `var(--brand)` ⇒ là SÓT chứ không phải chủ đích.
 #
-# Phạm vi hẹp hơn G1 có chủ đích: chỉ `core/` + `shared/` + `platform/` — ba tầng
-# NẰM TRONG CoreBase (doc/kien-truc-core-module.md). Màu trần ở đó đi theo nền
-# tảng sang sản phẩm thứ hai và không đổi theo bảng màu của nó.
+# 🔄 MỞ RỘNG 2026-09-09 — thêm `modules/`. Phạm vi cũ (`core/` + `shared/` +
+# `platform/`) chọn theo lý lẽ "ba tầng NẰM TRONG CoreBase, màu trần ở đó đi theo
+# nền tảng sang sản phẩm thứ hai". Lý lẽ đó đúng cho việc VÌ SAO ba tầng ấy phải
+# sạch, nhưng nó không phải lý do để `modules/` được bẩn: một `rgba()` trần trong
+# SCSS của module nghiệp vụ vẫn là một quyết định màu nằm ngoài
+# `doc/Design/.../Tokens/`, vẫn lệch khi đổi theme, và vẫn là đúng thứ G1 mù.
+# Bằng chứng phạm vi cũ là một LỖ THẬT chứ không phải lựa chọn: G1 ngay bên trên
+# quét `find "$APP"` toàn bộ cây, G12 cũng vậy — chỉ mình G11 dừng ở ba thư mục,
+# và thư mục thứ tư ra đời hôm nay.
 #
 # `src/FE/src/styles.scss` KHÔNG bị quét, cùng lý do G1 không quét: đó là nơi
 # token được KHAI, nên literal ở đó là ĐỊNH NGHĨA chứ không phải bản sao. Đây
@@ -202,8 +208,21 @@ done < <(grep -rnE 'Dto\b' "$APP" --include='*.ts' 2>/dev/null \
 #
 # Miễn trừ DUY NHẤT là theo CÚ PHÁP: `rgb(var(--x) / a)` — dạng đọc token ra rồi
 # pha alpha. Nó không mang giá trị màu nào nên không có gì để lệch khi đổi theme.
-section "G11 Không màu literal rgb()/rgba() trong SCSS của core/ shared/ platform/"
+section "G11 Không màu literal rgb()/rgba() trong SCSS của core/ shared/ platform/ modules/"
 n=0
+# Mỗi thư mục quét phải TỒN TẠI. `grep ... 2>/dev/null` ở cuối khối nuốt luôn
+# "No such file or directory", nên một thư mục bị đổi tên sẽ làm G11 lặng lẽ
+# ngừng quét đúng chỗ đó rồi in OK — đúng cơ chế hỏng mà bài học 2026-09-08 mô tả
+# (một mục "xanh" vì nó KHÔNG CHẠY). Thiếu thư mục ở đây là FAIL, không phải OK.
+G11_DIRS=()
+for d in core shared platform modules; do
+  if [ -d "$APP/$d" ]; then
+    G11_DIRS+=("$APP/$d")
+  else
+    bad "không có thư mục $APP/$d — G11 không quét được tầng này (đổi tên? xoá?)"
+    n=$((n+1))
+  fi
+done
 while IFS= read -r hit; do
   [ -z "$hit" ] && continue
   # Gỡ dạng ĐƯỢC PHÉP ra khỏi dòng rồi mới hỏi lại. Làm hai bước như vậy để một
@@ -213,7 +232,7 @@ while IFS= read -r hit; do
   case "$stripped" in
     *"rgb("*|*"rgba("*) bad "$hit"; n=$((n+1)) ;;
   esac
-done < <(grep -rnE 'rgba?\(' "$APP/core" "$APP/shared" "$APP/platform" --include='*.scss' 2>/dev/null)
+done < <(grep -rnE 'rgba?\(' "${G11_DIRS[@]}" --include='*.scss' 2>/dev/null)
 [ "$n" -eq 0 ] && ok "không có rgb()/rgba() trần — màu đến từ token"
 
 # ---------------------------------------------------------------- G12

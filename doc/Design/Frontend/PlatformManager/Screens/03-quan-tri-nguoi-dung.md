@@ -4,7 +4,7 @@ scope: du-an
 verified: 2026-09-06
 project: "PlatformManager"
 status: "current"
-updated: "2026-09-06"
+updated: "2026-09-10"
 flow: "User Administration"
 screens: ["User Administration"]
 source_routes: ["/quan-tri/nguoi-dung"]
@@ -342,8 +342,10 @@ Every remaining row is an **on-demand** state/viewport variant under `doc/Design
    > `#screen-dti`. Vùng đó **không** được vá lẻ: toàn bộ hai màn DTI trong prototype gốc là
    > bản trước đợt thiết kế lại 2026-09-04→06, nên chúng bị thay **cả khối** chứ không phải
    > sửa từng chi tiết. Thiết kế DTI đã duyệt nằm ở `Screens/01-dashboard.md`,
-   > `Screens/02-danh-muc-dti.md` và bản dựng để duyệt ở `Prototype/index.html` (thư mục gốc
-   > repo). Vá chip trong một màn đã bị thay là làm cho nó **trông như** đã cập nhật.
+   > `Screens/02-danh-muc-dti.md` và bản dựng để duyệt ở
+   > `doc/Design/Frontend/PlatformManager/Prototypes/index.html` (trỏ lại 2026-09-10 — trước đó
+   > câu này trỏ một bản nằm NGOÀI repo). Vá chip trong một màn đã bị thay là làm cho
+   > nó **trông như** đã cập nhật.
 
    *(🔄 SỬA 2026-09-06, hai lần. Lần đầu: khối lệnh này viết sai tên thư mục ở dạng số ít —
    thư mục thật là `Prototypes/`; dạng số ít trỏ vào khu prototype cấp trên đã xoá 2026-08-23

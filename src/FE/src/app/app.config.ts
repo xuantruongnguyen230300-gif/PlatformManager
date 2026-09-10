@@ -84,9 +84,10 @@ export const APP_PALETTE: ICorePalette = {
  * `<html lang>`, nối nhãn PrimeNG); "sản phẩm này chạy vi + en" là DỮ LIỆU, nên nó nằm ở đây —
  * cùng khuôn với `APP_CORE_ROUTES` / `APP_BRANDING` phía trên. Xem core/i18n/core-i18n.ts.
  *
- * 🛑 `code` của mỗi ngôn ngữ PHẢI có file `src/FE/public/i18n/<code>.json` tương ứng. Sai tên là
- * lỗi LÚC CHẠY, không phải lúc biên dịch — `failOnError: true` ở `provideCoreI18n` biến nó thành
- * một lần khởi động hỏng ồn ào thay vì một giao diện hiện toàn khoá.
+ * 🛑 `code` của mỗi ngôn ngữ PHẢI có một file trong MỌI tiền tố khai ở `resources` bên dưới —
+ * `src/FE/public/i18n/<code>.json` VÀ `src/FE/public/i18n-app/<code>.json`. Sai tên là lỗi LÚC
+ * CHẠY, không phải lúc biên dịch — `failOnError: true` ở `provideCoreI18n` biến nó thành một lần
+ * khởi động hỏng ồn ào thay vì một giao diện hiện toàn khoá.
  *
  * `localeData` chỉ khai cho `vi`: `en-US` là locale Angular gói sẵn, đăng ký lại là thừa. Thiếu
  * dòng `localeVi` thì `DatePipe`/`DecimalPipe` ném `NG0701` lúc chạy, và chỉ ném ở nhánh tiếng
@@ -108,10 +109,23 @@ export const APP_I18N: ICoreI18n = {
   // Tiếng Việt là ngôn ngữ NGUỒN (chuỗi gốc do người viết code nghĩ ra là tiếng Việt), nên nó vừa
   // là mặc định vừa là ngôn ngữ dự phòng khi một khoá thiếu bản dịch `en`.
   defaultCode: 'vi',
-  // Đúng MỘT nguồn hôm nay: khoá Core. Nhóm khoá dự án còn rỗng vì `platform/` chưa có màn nghiệp
-  // vụ nào (doc/huong_dan/wiki-core/fe/08-i18n.md §Khuôn khoá dịch §5). Thêm nhóm đó về sau là
-  // thêm một tiền tố vào mảng này, KHÔNG phải sửa file dịch của nền tảng.
-  resources: ['/i18n/'],
+  // HAI nguồn, nạp và ghép theo đúng thứ tự này (doc/huong_dan/wiki-core/fe/08-i18n.md §Khuôn
+  // CoreBase ý 2 — "File bản dịch tách làm hai nhóm ngay từ file đầu tiên"):
+  //
+  //   `/i18n/`     → khoá của CoreBase. Đi theo nền tảng sang sản phẩm thứ hai NGUYÊN VẸN.
+  //   `/i18n-app/` → khoá của DỰ ÁN NÀY. Sản phẩm thứ hai vứt bỏ thư mục này và thay bằng của nó.
+  //
+  // Ranh giới tách bằng FILE chứ không bằng tiền tố khoá (§Khoá nằm ở file nào): khoá của màn
+  // nghiệp vụ KHÔNG mang thêm đoạn `app.`, nếu không khuôn `<màn>.<nhóm>.<tên>` có hai dạng.
+  //
+  // 🛑 Thứ tự KHÔNG tuỳ tiện: nguồn sau ghi đè khoá trùng của nguồn trước (`ICoreI18n.resources`).
+  // Dự án đứng sau Core, nên một sản phẩm cần đổi câu của nền tảng thì khai lại đúng khoá đó ở
+  // `/i18n-app/` — không phải mở file dịch của nền tảng ra sửa. Đảo thứ tự là mất luôn lối đó.
+  //
+  // 🛑 Mỗi tiền tố PHẢI có đủ file cho MỌI `code` ở `languages` (`<tiền tố><mã>.json`).
+  // `failOnError: true` biến một file thiếu thành một lần khởi động hỏng ồn ào; `app-i18n.spec.ts`
+  // bắt nó sớm hơn, ở `ng test`.
+  resources: ['/i18n/', '/i18n-app/'],
 };
 
 export const appConfig: ApplicationConfig = {

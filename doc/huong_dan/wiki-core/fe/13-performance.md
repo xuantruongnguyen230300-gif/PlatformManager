@@ -37,19 +37,32 @@ zoneless là xong.
 
 ## 2. `@defer` cho khối nặng/dưới màn hình đầu
 
-> 📐 **ĐÍCH ĐẾN — CHƯA THI CÔNG (đối chiếu 2026-09-06).** `@defer` hiện **không xuất hiện ở
-> bất kỳ template nào**. Đếm bằng lệnh, đừng tin con số ở đây:
+> 🚧 **KỸ THUẬT SẴN SÀNG, CHƯA TEMPLATE NÀO DÙNG (đối chiếu 2026-09-10).** Đo bằng lệnh, đừng
+> tin con số trong văn xuôi:
 >
 > ```bash
-> grep -rn "@defer" src/FE/src        # PASS-khi-chưa-thi-công: 0 dòng
+> grep -rn "@defer" src/FE/src --include=*.html
+> grep -rn "app-trend-chart" src/FE/src --include=*.html | grep -v spec
 > ```
 >
-> 🔄 LẬT 2026-09-06 — ví dụ cũ ở đây tả một thứ **không còn tồn tại**: nó dựng
-> `<app-trend-chart>` và lấy lý do là "tách chunk `p-chart`/Chart.js". `TrendChart` thuộc
-> module `DtiWeekly` đã gỡ 2026-08-29, còn `chart.js` đã gỡ khỏi `package.json` ngày
-> 2026-09-04 (lý do ghi tại chỗ, khối `//dependencies` trong `src/FE/package.json`). Hai khối
-> "áp dụng cho" cũ — *history list (dashboard)*, *import dialog (danh-muc-dti)* — cũng không
-> còn màn hình nào. Giữ lại KỸ THUẬT, thay ví dụ bằng một khối trung lập.
+> **Tiêu chí PASS — hai lệnh phải CÙNG rỗng hoặc CÙNG có dòng.** `spec/dashboard-dti/ui-spec.md`
+> §3.4 bắt buộc bọc biểu đồ trong `@defer (on viewport)`, nên ngay khi trang dashboard lắp
+> `<app-trend-chart>` vào mà `@defer` vẫn 0 dòng thì đó là một yêu cầu bị bỏ sót — không phải
+> trạng thái bình thường.
+>
+> 🔄 **SỬA 2026-09-10 — tiêu chí cũ tự lật ngược thành bẫy.** Nó viết
+> `# PASS-khi-chưa-thi-công: 0 dòng`, tức neo chữ "PASS" vào **sự vắng mặt**. Ngày có người bọc
+> `@defer` đúng như spec đòi, lệnh in ra dòng và người chạy đọc được một chữ FAIL cho một việc
+> vừa làm ĐÚNG — kết cục thường thấy là gỡ `@defer` đi cho "xanh". Tiêu chí mới đo **quan hệ**
+> giữa hai thứ phải đi cùng nhau, nên nó đúng ở cả hai phía của mốc thi công.
+>
+> 🔄 **LẬT 2026-09-10 — hai vế của ghi chú 2026-09-06 nay đều sai.** Nó viết *"`TrendChart`
+> thuộc module `DtiWeekly` đã gỡ 2026-08-29, còn `chart.js` đã gỡ khỏi `package.json` ngày
+> 2026-09-04"*. Cả hai đã quay lại: component ở
+> `src/FE/src/app/modules/dashboard/components/trend-chart/`, gói ở `src/FE/package.json:68`.
+> Điều **vẫn đúng** và là lý do khối ví dụ bên dưới giữ nguyên hình dạng trung lập: ví dụ neo
+> vào một component cụ thể sẽ chết mỗi lần component đó bị gỡ hay đổi chỗ — đã chết hai lần ở
+> đúng mục này.
 
 ```html
 @defer (on viewport) {

@@ -2,7 +2,7 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
-using PlatformManager.Api.Common;
+using PlatformManager.Core.Api;
 using PlatformManager.Core.Application.Auth;
 
 namespace PlatformManager.Api.Controllers;

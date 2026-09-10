@@ -4,7 +4,7 @@ scope: du-an
 verified: khong-ap-dung
 project: "PlatformManager"
 status: "target — not built"
-updated: "2026-09-08"
+updated: "2026-09-10"
 flow: "DTI Dashboard"
 screens: ["DTI Dashboard"]
 source_routes: ["/trang-chu"]
@@ -95,15 +95,24 @@ directly — no dialog, no preview. Every write lives on the DTI catalogue
 > **Shell:** the app shell — skip link + `Sidebar` + `Topbar` + `main` + `Toast`
 > (`src/FE/src/app/app.html:16-39`), rendered because this route will not set
 > `data.noShell`. `../DESIGN.md` → Layout describes this shell.
-> **Sources:** `Prototype/index.html` § `#screen-dashboard` — the prototype the
-> product owner approved point by point on 2026-09-04 and 2026-09-05, and the
-> **only** source for this screen's layout and copy;
-> `doc/Design/Frontend/PlatformManager/Prototypes/index.html` for the component
-> CSS it reuses; `spec/DTI_CanGiuoc_2026-08-11.csv` for every figure;
+> **Sources:** `doc/Design/Frontend/PlatformManager/Prototypes/index.html`
+> § `#screen-dashboard` — the prototype the product owner approved point by point on
+> 2026-09-04 and 2026-09-05, the **only** source for this screen's layout and copy,
+> and the same file that declares the component CSS it reuses. **Repointed
+> 2026-09-10**: this line used to name the prototype twice, once by a path that lived
+> **outside** the repo, so no second reader could open the half that mattered
+> (`doc/Design/Frontend/PlatformManager/Prototypes/README.md` § In-repo master).
+> **Every figure on this screen is read off that prototype.** They were computed from
+> the BA's August 2026 spreadsheet, which is deliberately outside this repo (root `.gitignore`), so it is named here and not cited as a path. The in-repo sample
+> `spec/danh-muc-dti/dti-mau-an-danh-62-dong.csv` is a **different** 62-row dataset — it backs shape claims in this
+> folder, never these figures.
 > `src/FE/src/styles.scss` and `src/FE/src/app/shared/components/{sidebar,topbar,toast}/`
 > for the live Core layer this screen composes;
-> `Prototype/mau-xuat-bao-cao_Tuan-33-2026.xlsx` and
-> `Prototype/mau-xuat-bao-cao_Thang-8-2026.xlsx` for the export layout.
+> `doc/Design/Frontend/PlatformManager/Prototypes/mau-xuat-bao-cao_Tuan-33-2026.xlsx` and
+> `doc/Design/Frontend/PlatformManager/Prototypes/mau-xuat-bao-cao_Thang-8-2026.xlsx` for the export layout — anonymised
+> copies built 2026-09-10 by rewriting **only** the data rows of the originals, so the
+> sheet name, the identification block, the column widths, the header fill and the
+> `TỔNG CỘNG` row are the originals'.
 > API contract → `doc/contracts/dashboard.md`; business rules →
 > `spec/dashboard-dti/business-rules.md` (both being rewritten in parallel on
 > 2026-09-05 — if either disagrees with this file, that is a conflict to raise,
@@ -196,7 +205,7 @@ the app"* and instructed hardcoding. It was already false when written — the i
 2026-09-05 — and following it would have failed G12.
 
 Source for every DTI row is
-`Prototype/index.html` § `#screen-dashboard`; the region is named instead of a line
+`doc/Design/Frontend/PlatformManager/Prototypes/index.html` § `#screen-dashboard`; the region is named instead of a line
 number, because line numbers in a 5500-line prototype renumber silently.
 
 | Element | Verbatim copy | Localization key | Source region |
@@ -350,7 +359,10 @@ syncing (§ Normalize on redesign).
   settles that import leaves `Tiến độ %` **blank** for the user to fill in, and
   decision Q11 has the group bars and the trend line drawn from `Tiến độ %`. So
   right after an import the catalogue is full and this screen is still largely
-  empty: six progress bars at 0 and a trend line with nothing to plot. **The product
+  empty: six **empty** progress bars — no fill and no figure, because a group's
+  progress is *absent* rather than `0` (`spec/dashboard-dti/business-rules.md` §1.1,
+  and [`../Components/ProgressBar.md`](../Components/ProgressBar.md) § Variants →
+  `Awaiting data`) — and a trend line with nothing to plot. **The product
   owner has accepted this behaviour; it is not a defect and must not be "fixed" by
   silently deriving a progress figure.**
 
@@ -358,7 +370,7 @@ syncing (§ Normalize on redesign).
   "nothing has been imported" and "62 criteria exist but nobody has recorded
   progress" call for different sentences and lead to different next actions. The
   detail table is fully populated in this state — every score column has values —
-  which is what makes an all-zero group panel above it look broken unless the copy
+  which is what makes an empty group panel above it look broken unless the copy
   explains it.
 
   The figures the approved prototype draws (74,3% · 51,8% · … · 82,1%) are
@@ -373,9 +385,9 @@ syncing (§ Normalize on redesign).
 
   > `Đã có 62 chỉ tiêu, nhưng chưa chỉ tiêu nào có Tiến độ %. Thanh tiến độ theo nhóm và biểu đồ sẽ hiện ngay khi có số liệu. Nhập Tiến độ % tại Danh mục DTI.`
 
-  The count is composed from the response, not hardcoded — `62` is the figure in
-  `spec/DTI_CanGiuoc_2026-08-11.csv` and it is what the approved prototype shows
-  everywhere else on this screen. `Danh mục DTI` is the route out, the same inline `a`
+  The count is composed from the response, not hardcoded — `62` is the row count of
+  the in-repo sample dataset `spec/danh-muc-dti/dti-mau-an-danh-62-dong.csv` (measured 2026-09-10) and it is what the approved
+  prototype shows everywhere else on this screen. `Danh mục DTI` is the route out, the same inline `a`
   child as in the state above, and settled the same way by decision T11.
 
   **What each KPI tile reads in this state — settled by decision T12, 2026-09-06.**
@@ -396,11 +408,16 @@ syncing (§ Normalize on redesign).
   import landed, so the screen reads as *"the data is in, the progress is not"* rather
   than as a failed import with a full table underneath it by coincidence. T12 also
   settles the tension the prototype contained: tile 1's sub-caption
-  `Bình quân gia quyền theo điểm (thật: 787,84/960)` describes the **populated** state,
-  not this one.
+  `Bình quân Tiến độ %, gia quyền theo Điểm tối đa` describes the **populated** state,
+  not this one. That caption was itself corrected on **2026-09-09** — the earlier
+  wording, `Bình quân gia quyền theo điểm (thật: 787,84/960)`, named a ratio of scores
+  rather than the quantity the tile computes, and the parenthetical was a prototype
+  provenance annotation that does not ship;
+  [`../Components/KpiTile.md`](../Components/KpiTile.md) § The five tiles holds the
+  decision.
 
   ⚠️ **Both banner strings are written by this spec on 2026-09-05, not read off the
-  prototype.** `Prototype/index.html` § `#screen-dashboard` draws neither state — Q32
+  prototype.** `doc/Design/Frontend/PlatformManager/Prototypes/index.html` § `#screen-dashboard` draws neither state — Q32
   and the first-run copy both postdate its approval.
 - **error:** a failed aggregate request surfaces through the app's global HTTP
   error handling as a `Toast` in the shell. This screen authors no in-page error
@@ -491,7 +508,7 @@ Prerequisites, once the screen is built:
 
 **One divergence from the prototype is left, and it is not the four this section
 used to list.** An earlier revision named Q22, T1, T2 and T5. Re-measured against
-`Prototype/index.html` § `#screen-dashboard` on 2026-09-05, after the prototype's own
+`doc/Design/Frontend/PlatformManager/Prototypes/index.html` § `#screen-dashboard` on 2026-09-05, after the prototype's own
 sync pass: the Q22 items **have since been applied** — the filter panel holds two
 conditions and the sort select two options, each change carrying a
 `SỬA 2026-09-05 (Q22)` comment — so that pair was a true divergence at the time it was
@@ -502,7 +519,7 @@ catalogue screen only.
 
 | Still divergent | The spec says | Decision | Check |
 | --- | --- | --- | --- |
-| The date-range dash written both ways — `10/08–16/08` in the period value box and the period selects, `10/08 – 16/08` in the history rows and the chart axis | the spaced form everywhere | T5 | `grep -c '[0-9]/[0-9][0-9]–[0-9]' Prototype/index.html` — PASS = 0; every hit today is in this screen's region |
+| The date-range dash written both ways — `10/08–16/08` in the period value box and the period selects, `10/08 – 16/08` in the history rows and the chart axis | the spaced form everywhere | T5 | `grep -c '[0-9]/[0-9][0-9]–[0-9]' doc/Design/Frontend/PlatformManager/Prototypes/index.html` — PASS = 0, and it is not 0 today. ⚠️ **Not every hit is in this screen's region** — at least one sits in a comment up in the CSS layer, so use the section-scoped form instead of the whole-file count: `awk '/id="screen-dashboard"/,/id="screen-nguoi-dung"/' doc/Design/Frontend/PlatformManager/Prototypes/index.html \| grep -c '[0-9]/[0-9][0-9]–[0-9]'`. Corrected 2026-09-10; the previous cell claimed every hit was in-region |
 
 Three things this spec describes are **not in the prototype at all**, and they are
 additions rather than drift: the two first-run banners (Q32 and its first-run twin)

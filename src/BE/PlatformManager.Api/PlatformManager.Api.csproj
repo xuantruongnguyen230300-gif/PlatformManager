@@ -40,6 +40,11 @@
     <ProjectReference Include="..\Core\PlatformManager.Core.Domain\PlatformManager.Core.Domain.csproj" />
     <ProjectReference Include="..\Core\PlatformManager.Core.Application\PlatformManager.Core.Application.csproj" />
     <ProjectReference Include="..\Core\PlatformManager.Core.Infrastructure\PlatformManager.Core.Infrastructure.csproj" />
+    <!-- Core.Api (thêm 2026-09-09, Q8): host reference để (a) ApiControllerBase — base class BẮT
+         BUỘC của mọi controller — nạp được vào 4 controller còn nằm ở đây, và (b) sau này gọi
+         AddApplicationPart(typeof(ApiControllerBase).Assembly) khi controller Core dời sang.
+         Xem doc/kien-truc-core-module.md §"Core.Api giữ ApiControllerBase". -->
+    <ProjectReference Include="..\Core\PlatformManager.Core.Api\PlatformManager.Core.Api.csproj" />
   </ItemGroup>
 
 </Project>

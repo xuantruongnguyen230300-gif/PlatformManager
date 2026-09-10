@@ -142,7 +142,7 @@ data: [ { id: guid, code: string, name: string, displayOrder: int } ]
 
 - Sắp xếp theo `displayOrder` tăng dần — BE sắp, FE không sắp lại.
 - Chỉ trả nhóm chưa xoá mềm.
-- Dữ liệu gốc: 6 nhóm của `spec/DTI_CanGiuoc_2026-08-11.csv`, seed sẵn. Danh sách 6 nhóm
+- Dữ liệu gốc: 6 nhóm của `spec/danh-muc-dti/dti-mau-an-danh-62-dong.csv`, seed sẵn. Danh sách 6 nhóm
   và số chỉ tiêu/điểm từng nhóm: `spec/danh-muc-dti/business-rules.md` §Danh mục nhóm.
 - FE tải một lần lúc khởi tạo màn, dùng cho cả dropdown lọc lẫn dropdown trong dialog.
 
@@ -401,6 +401,27 @@ CriteriaRowDto:
 > `"Tất cả (mới nhất trong năm)"`, tức chính ngữ nghĩa mới; và một lưới mà số dòng phụ
 > thuộc số lần ai đó bấm sửa thì không phân trang ổn định được.
 
+### Mã lỗi của DM-2 — vá 2026-09-09
+
+Bản trước khai *"`status` giá trị lạ → 400"* mà **không nêu `businessCode` nào**, tức FE không
+có gì để bind và BE không có descriptor nào để khai. Đóng lỗ đó:
+
+| Ca | Mã | HTTP |
+| --- | --- | --- |
+| `status` không thuộc 4 giá trị §1 | **`CRITERIA.STATUS_INVALID`** | 400 |
+| `period` sai khuôn (`"all"` / `"YYYY-Www"` / `"YYYY-MM"`) | `CRITERIA.ASSESSMENT_PERIOD_INVALID` | 400 |
+| `page` < 1 hoặc `pageSize` ngoài `1..200` | `ValidationError` + `fields` — **không** phải mã của catalog DTI | 400 |
+
+- **`CRITERIA.STATUS_INVALID` là mã MỚI**, phải khai trong `CriteriaErrors.cs` như mọi mã
+  khác (§2). Nó dùng chung cho **mọi** endpoint nhận tham số `status`, không chỉ DM-2.
+- `period` sai khuôn ở đường **đọc** dùng **lại đúng mã** của đường ghi
+  (`…ASSESSMENT_PERIOD_INVALID`), không sinh mã thứ hai: cùng một chuỗi sai khuôn thì cùng một
+  câu chữ, và FE chỉ phải dịch một lần. Hai mã kỳ còn lại (`…NOT_WEEKLY`, `…OUT_OF_YEAR`)
+  **không** áp cho đường đọc — đọc một kỳ tháng hay một năm cũ là hợp lệ (Q37 + T15 chỉ chạm
+  đường ghi).
+- **Không âm thầm bỏ lọc.** Trả 200 với bộ lọc bị lờ đi là ca hỏng tệ nhất của lưới: người
+  dùng thấy dữ liệu không khớp bộ lọc đang hiện và không có gì báo cho họ biết.
+
 ---
 
 ## CONTRACT DM-3 — Tạo chỉ tiêu
@@ -638,16 +659,20 @@ version:         string?   // token đọc ở DM-2
 - Response: `IApiResult<{ jobId: guid }>` — object bọc, **không** trả `Guid` trần, để thêm
   trường sau (vd `estimatedRows`) không phá shape.
 
-> ### 🔴 ĐIỀU KIỆN TIÊN QUYẾT của card này — hạng mục Core, chốt Q35 (2026-09-06)
+> ### 🔴 ĐIỀU KIỆN TIÊN QUYẾT của card này — chốt Q35 (2026-09-06, cách làm chốt 2026-09-09)
 >
 > **Không bật đường import lên môi trường thật khi nhật ký còn ghi `"system"`.** Job nền không
 > có `HttpContext` nên `AuditInterceptor` ghi `UpdatedBy = "system"` cho cả 62 dòng — tức thao
 > tác **rủi ro nhất** của hệ thống (nạp đè một kỳ đã báo cáo) lại là thao tác **không có tên
 > người**. Người dùng chốt: phải ghi **đúng tài khoản đã bấm nút nạp file**.
 >
-> Ba bước, hiện trạng đã đo, và điều **không** phải sửa (`AuditInterceptor`) — cùng ranh giới
-> Core: `spec/danh-muc-dti/business-rules.md` §5.6. Đây là **thay đổi Core**, đi qua
-> `core-reviewer`; card này chỉ ghi ràng buộc thứ tự.
+> Ba bước, hiện trạng đã đo, và điều **không** phải sửa (`AuditInterceptor`):
+> `spec/danh-muc-dti/business-rules.md` §5.6. Card này chỉ ghi ràng buộc thứ tự.
+>
+> **🔄 Sửa 2026-09-09 — đây KHÔNG còn là "thay đổi Core".** Cách làm đã chốt (Hangfire client
+> filter + một bản cài `ICurrentUser` thứ hai, cả hai đặt trong `PlatformManager.Api`) đụng
+> **0 dòng** trong `Core.*`, và `IBackgroundJobScheduler` **không** mở rộng chữ ký. Ràng buộc
+> thứ tự thì **giữ nguyên**: vẫn không bật đường import khi nhật ký còn ghi `"system"`.
 
 > **`period` là trường mới 2026-09-05 (Q20).** Bản trước ghi *"`AssessmentDate` = ngày hệ
 > thống lúc import"*, tức nạp một file của tuần 33 vào tháng 9 sẽ ghi dữ liệu đó vào tuần
@@ -655,7 +680,7 @@ version:         string?   // token đọc ở DM-2
 > ghi cho cả ba đường**, không phải ba luật.
 
 > ⚠️ **HTTP status là 200, KHÔNG phải 202.** `ApiControllerBase.HandleResult<T>` map mọi
-> response thành công về 200 — `src/BE/PlatformManager.Api/Common/ApiControllerBase.cs:25`
+> response thành công về 200 — `src/BE/Core/PlatformManager.Core.Api/ApiControllerBase.cs:37`
 > — và `ErrorCode` không có member nào mang giá trị 202
 > (`src/BE/Core/PlatformManager.Core.Application/Common/Results/ErrorCode.cs:11`). "Đã bắt
 > đầu chứ chưa xong" thể hiện ở tầng dữ liệu (`jobId` cần poll tiếp), không ở HTTP status.
@@ -675,6 +700,19 @@ version:         string?   // token đọc ở DM-2
   `IMPORT.PERIOD_REQUIRED` (400) · `IMPORT.PERIOD_INVALID` (400) ·
   **`IMPORT.PERIOD_NOT_WEEKLY`** (400, mới 2026-09-06 — Q37) ·
   **`IMPORT.PERIOD_OUT_OF_YEAR`** (400, mới 2026-09-06 — T15)
+
+> **Ngưỡng của `IMPORT.FILE_TOO_LARGE` = 10 MB — chốt Q12b (2026-09-09).** Kiểm **trước** khi
+> đọc byte nội dung nào và trước khi ghi file tạm. Tham chiếu chọn con số: file BA gửi có
+> **62 dòng ≈ 19 KB**, nên 10 MB rộng hơn ca dùng thật khoảng hai bậc độ lớn — vẫn nhận được
+> file `.xlsx` nặng định dạng, mà chặn được ca kéo nhầm file video vào ô upload.
+>
+> Trần là **cấu hình**, không phải hằng số trong code; nó thuộc Core, mã lỗi thuộc catalog
+> DTI. Đầy đủ + lưu ý phải khớp trần thân request của Kestrel/reverse proxy:
+> [`../huong_dan/wiki-core/be/15-import-export.md`](../huong_dan/wiki-core/be/15-import-export.md)
+> §2.
+>
+> ⚠️ Trần này áp cho **dung lượng**, độc lập với trần **số dòng** (§1 của file trên). Một file
+> 200 KB có 500.000 dòng vẫn phải bị chặn — bởi trần số dòng, không phải bởi mã này.
 
 ### Bước 2 — poll trạng thái
 
@@ -738,7 +776,60 @@ errorMessage: string?           // chỉ có khi status = "Failed" — dev-facin
   (§3 của file i18n) — FE ghi log/hiện cho quản trị, **không** dùng làm câu cho người dùng
   cuối. Lỗi hạ tầng thì không có mã nghiệp vụ để dịch, và đó là chủ đích.
 - Ánh xạ 11 cột, quy tắc tạo mới / báo lỗi từng dòng, quy tắc khớp `Phụ trách`:
-  `spec/danh-muc-dti/business-rules.md` §Import. Card này không lặp lại.
+  `spec/danh-muc-dti/business-rules.md` §6.3. Card này không lặp lại **luật**, nhưng **phải**
+  khai đủ **mã** — xem ngay dưới.
+
+#### `errors[].code` — bộ mã ĐẦY ĐỦ cho lỗi dòng, khai 2026-09-09
+
+`spec/danh-muc-dti/business-rules.md` §6.3 khai **sáu** tình huống lỗi dòng; bản trước của card
+chỉ nêu **hai** mã, và cả hai chỉ xuất hiện làm ví dụ trong đoạn văn chứ không thành danh sách.
+Hệ quả: bốn ca còn lại không có tên để BE khai và FE dịch — chúng sẽ được đặt tên tuỳ hứng lúc
+code, hoặc tệ hơn, gộp chung vào một mã "lỗi dòng" không dịch nổi thành câu hữu ích.
+
+| Tình huống ở §6.3 | `code` | `messageParams` (khoá là TÊN) |
+| --- | --- | --- |
+| `Nhóm` không khớp `CriteriaGroup.Name` nào | `IMPORT.ROW_GROUP_NOT_FOUND` | `Code`, `GroupName` |
+| `Tự đánh giá` > `Điểm tối đa` | `IMPORT.ROW_SELF_SCORE_EXCEEDS_MAX` | `Code`, `SelfScore`, `MaxScore` |
+| **`Thẩm định` > `Điểm tối đa`** | **`IMPORT.ROW_VERIFIED_SCORE_EXCEEDS_MAX`** | `Code`, `VerifiedScore`, `MaxScore` |
+| **`Trạng thái` ngoài 4 giá trị §1** | **`IMPORT.ROW_STATUS_INVALID`** | `Code`, `Status` |
+| **`Mã` rỗng** | **`IMPORT.ROW_CODE_MISSING`** | — (chỉ có `rowNumber`) |
+| **`Mã` trùng trong CÙNG file** | **`IMPORT.ROW_CODE_DUPLICATED_IN_FILE`** | `Code`, `FirstRowNumber` |
+
+Bốn mã in đậm là **mã mới**, khai trong `ImportErrors.cs` như mọi mã khác (§2).
+
+- **Tiền tố `IMPORT.ROW_` là bắt buộc và có nghĩa**: nó phân biệt lỗi **một dòng** (job vẫn
+  `Succeeded`, lỗi nằm trong `result.errors`) với lỗi **cả request** (400 ngay ở bước 1). Hai
+  nhóm đi hai đường khác nhau tới FE, nên trộn tên là trộn hai luồng xử lý.
+- **`SELF_SCORE` và `VERIFIED_SCORE` phải là HAI mã, không gộp làm một.** Câu người dùng đọc
+  phải nói đúng ô nào trong file cần sửa — một mã chung buộc FE dựng câu mơ hồ kiểu "một cột
+  điểm vượt trần", và người dùng mở file ra không biết nhìn cột nào. Một dòng sai **cả hai**
+  cột thì báo **hai** phần tử `errors[]` cùng `rowNumber`, không phải một.
+- **`IMPORT.ROW_CODE_DUPLICATED_IN_FILE` báo ở dòng THỨ HAI** (§6.3), và `FirstRowNumber` trỏ
+  về dòng đầu tiên mang mã đó — không có tham số này thì người dùng phải tự dò cả file để tìm
+  cái còn lại.
+- **`IMPORT.ROW_CODE_MISSING` cố ý KHÔNG có tham số `Code`** — chính `Code` là thứ đang thiếu.
+  `rowNumber` là toàn bộ thông tin định vị có được.
+- `Phụ trách` không khớp ai **KHÔNG sinh mã nào** — theo §6.3 đó không phải lỗi, `OwnerId` để
+  trống và dòng vẫn nạp bình thường.
+- Allowlist `messageParams` áp y như envelope: chỉ đưa ra giá trị **đã có sẵn trong file người
+  dùng tự gửi lên** (mã, tên nhóm, điểm, trạng thái) — không đưa ra gì khác.
+#### Mã lỗi của chính endpoint poll — vá 2026-09-09
+
+Bản trước **không khai mã nào cho `GET /api/import/{jobId}`**, kể cả ca hiển nhiên nhất là
+`jobId` không tồn tại. Một endpoint mà FE phải gọi lặp lại thì đó đúng là ca phải khai:
+
+| Ca | Mã | HTTP |
+| --- | --- | --- |
+| `jobId` không có trong `ImportJobs` (sai id, hoặc job đã bị dọn theo retention) | **`IMPORT.JOB_NOT_FOUND`** | 404 |
+| `jobId` không phải GUID hợp lệ | `ValidationError` — binder, **không** phải mã catalog | 400 |
+
+- **`IMPORT.JOB_NOT_FOUND` là mã MỚI**, khai trong `ImportErrors.cs` (§2).
+- **Không phân biệt "sai id" với "job đã bị dọn"** — cùng một mã. Trả hai mã khác nhau nghĩa
+  là tiết lộ *"id này từng tồn tại"* cho người gọi bất kỳ, mà thông tin đó không giúp gì cho
+  người dùng: cả hai ca đều kết thúc bằng "nạp lại file".
+- **404 phải làm FE DỪNG poll.** Không có mã này thì FE không có tín hiệu dừng nào và sẽ poll
+  vô hạn một job không bao giờ tồn tại — đúng kiểu hỏng chỉ lộ ra ở tab để mở qua đêm.
+
 - **Cột `Chênh lệch` trong file: ĐỌC VÀO RỒI VỨT.** Nó là trường tính (§1), nên đường import
   không đọc, không đối chiếu, không báo lỗi khi lệch, và **không đòi nó phải có mặt**. Sau
   Q25 điều này còn quan trọng hơn: cột đó trong file gốc của BA tính theo chiều **cũ**, tức
@@ -780,6 +871,30 @@ errorMessage: string?           // chỉ có khi status = "Failed" — dev-facin
 - Đặc tả đầy đủ ở [`dashboard.md`](dashboard.md) CONTRACT DB-3 — **không mô tả lại ở đây**.
 - Owner FE: một service dùng chung ở `shared/`, không đặt trong `modules/danh-muc-dti/`
   (≥2 feature dùng — 📖 [`../huong_dan/quy-uoc/fe-architecture.md`](../huong_dan/quy-uoc/fe-architecture.md)).
+
+---
+
+## Ô `Phụ trách` — KHÔNG có endpoint riêng (Q12a, chốt 2026-09-09)
+
+Dropdown chọn người phụ trách trong dialog DM-3/DM-4 **tái dùng `GET /api/users`**. Không thêm
+route mới, không thêm DTO mới. 📖 Shape, phân trang, trần `pageSize` và tham số `searchText`:
+[`users.md`](users.md) §`GET /api/users`.
+
+Ba điểm thuộc hợp đồng, phần còn lại đọc ở file kia:
+
+- Gọi kèm **`searchText`** (gõ tới đâu lọc tới đó) + **`pageSize`**, không tải hết danh sách.
+  Trần `pageSize` là **200**, BE enforce — vượt trần là `400 ValidationError`, không phải
+  âm thầm cắt.
+- **Quyền khớp sẵn, không phải nới gì.** `UsersController` chặn
+  `[Authorize(Roles = SuperAdmin,Admin)]` (`src/BE/PlatformManager.Api/Controllers/UsersController.cs:14`),
+  mà Q36 chốt key ghi DTI **chỉ cấp cho `Admin`**. Nghĩa là mọi tài khoản mở được dialog ghi
+  thì cũng gọi được `GET /api/users`. Không cần endpoint "lookup người dùng" nhẹ hơn cho màn
+  này, và **không** được nới quyền của `UsersController` để phục vụ nó.
+- Người thiếu quyền ghi không mở được dialog (Q39), nên ca "gọi `/api/users` rồi nhận 403"
+  không phát sinh từ luồng UI bình thường.
+
+⚠️ Đây là đường **chọn** người phụ trách trên UI. Đường **khớp tên** khi import là việc khác
+hẳn, không đi qua endpoint này: `spec/danh-muc-dti/business-rules.md` §6.3.
 
 ---
 
@@ -909,14 +1024,22 @@ không có ca "ghi vào kỳ tháng" để mà báo sai đơn vị) và **Q35** 
 đăng nhập). Cả cụm DTI nay **không còn mục nghiệp vụ nào để ngỏ**:
 `spec/danh-muc-dti/business-rules.md` §8.
 
-⚠️ **Nhưng "hết mục cần chốt" KHÔNG có nghĩa là làm được ngay.** **Ba** hạng mục **Core** là
-điều kiện tiên quyết, và cả ba đều đi qua `core-reviewer`:
+⚠️ **Nhưng "hết mục cần chốt" KHÔNG có nghĩa là làm được ngay.** Vẫn còn hạng mục nền tảng là
+điều kiện tiên quyết — bảng dưới đây, cột cuối nói rõ cái nào **chạm Core** (đi qua
+`core-reviewer`) và cái nào không:
 
-| Hạng mục Core | Chặn cái gì | Đặc tả |
-| --- | --- | --- |
-| Danh tính trong job nền (Q35) | **DM-7 — toàn bộ đường import** | `spec/danh-muc-dti/business-rules.md` §5.6 |
-| Seed permission-key theo vai (Q36) | quyền ghi đúng như đã chốt; nếu bỏ qua thì vai `User` được cấp sẵn, ngược Q36 | `spec/danh-muc-dti/business-rules.md` §6.5 |
-| **Seam `IImportFileReader`** (thêm 2026-09-06) | **DM-7 — toàn bộ đường import.** Chưa tồn tại ở `src/BE`, xem DM-7 §Hạ tầng | [`../huong_dan/wiki-core/be/15-import-export.md`](../huong_dan/wiki-core/be/15-import-export.md) §2 |
+| Hạng mục | Chặn cái gì | Đặc tả | Chạm Core? |
+| --- | --- | --- | --- |
+| Danh tính trong job nền (Q35) | **DM-7 — toàn bộ đường import** | `spec/danh-muc-dti/business-rules.md` §5.6 | **Không** — cả ba bước ở host (chốt 2026-09-09) |
+| Seed permission-key theo vai (Q36) | quyền ghi đúng như đã chốt; nếu bỏ qua thì vai `User` được cấp sẵn, ngược Q36 | `spec/danh-muc-dti/business-rules.md` §6.5 | **Có** |
+| **Seam `IImportFileReader`** (thêm 2026-09-06) | **DM-7 — toàn bộ đường import.** Chưa tồn tại ở `src/BE`, xem DM-7 §Hạ tầng | [`../huong_dan/wiki-core/be/15-import-export.md`](../huong_dan/wiki-core/be/15-import-export.md) §2 | **Có** |
+| `IUserLookupService` bỏ nhánh tự tạo `AppUser` (thêm 2026-09-09) | quy tắc khớp `Phụ trách` khi import — hôm nay Core làm **ngược** luật đã chốt | `spec/danh-muc-dti/business-rules.md` §6.3 | **Có** |
+| **`Core.Api` + `ApiControllerBase`** (Q8, thêm 2026-09-09) | mọi controller DTI — `Business.Api` không dựng được khi base class còn ở host | [`../kien-truc-core-module.md`](../kien-truc-core-module.md) §`Core.Api` giữ `ApiControllerBase` | **Có** |
+
+> **🔄 Sửa 2026-09-09.** Bản trước mở đầu bằng *"**Ba** hạng mục **Core**… cả ba đều đi qua
+> `core-reviewer`"*. Cả hai vế đều đã hết hạn: Q35 thôi là hạng mục Core (đi đường host), và
+> danh sách dài thêm hai dòng. Đây đúng khuôn `.claude/CLAUDE.md` §6 cảnh báo — một con số
+> chép vào văn xuôi thì lần sửa sau không ai nhớ cập nhật.
 
 ---
 

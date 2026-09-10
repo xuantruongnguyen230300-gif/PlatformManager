@@ -1,0 +1,54 @@
+/* Nguồn: doc/Design/Frontend/PlatformManager/Components/KpiTile.md § Anatomy — mọi giá trị dưới
+   đây chép từ bản dựng đã duyệt (Prototype § `app-kpi-tile`), không phát minh thêm.
+
+   Mặt card (nền, viền, bo góc, đổ bóng, padding) KHÔNG khai ở đây: `.kpi` là BIẾN THỂ của `.card`
+   ở styles.scss §2. Khai lại là có hai định nghĩa card. */
+
+/* `display: contents` — lý do đầy đủ ở JSDoc của class trong kpi-tile.ts. */
+:host {
+  display: contents;
+}
+
+.kpi {
+  .label {
+    font-size: var(--fs-xs);
+    color: var(--muted);
+  }
+
+  /* 21px / 850 là literal NGOÀI thang token (--fs-lg dừng ở 15px, app không khai token độ đậm
+     nào). Ghi nhận đúng như bản duyệt: ../Tokens/typography.md giữ danh sách này, và 850 là độ
+     đậm TỔNG HỢP — không face nào được nạp ở 850 nên trình duyệt vẽ ra như 800. */
+  .value {
+    font-size: 21px;
+    font-weight: 850;
+    margin-top: var(--sp-1);
+
+    &.good {
+      color: var(--good);
+    }
+
+    &.warn {
+      color: var(--warn);
+    }
+
+    &.bad {
+      color: var(--bad);
+    }
+  }
+
+  /* `min-height` dự trữ chỗ cho DÒNG THỨ HAI của chú thích. Bỏ nó đi thì một ô có caption dài
+     hai dòng sẽ đẩy chân card của mình thấp hơn bốn ô còn lại, và cả dải KPI mất đường chân. */
+  .sub {
+    font-size: var(--fs-xs);
+    color: var(--muted);
+    margin-top: var(--sp-1);
+    line-height: 1.4;
+    min-height: 30px;
+  }
+}
+
+@media (max-width: 560px) {
+  .kpi .value {
+    font-size: 18px;
+  }
+}

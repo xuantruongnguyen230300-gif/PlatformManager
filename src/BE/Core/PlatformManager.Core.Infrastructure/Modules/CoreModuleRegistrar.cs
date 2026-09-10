@@ -39,10 +39,22 @@ public sealed class CoreModuleRegistrar(bool requireBootstrapOptions = false) : 
     public Assembly PersistenceAssembly => typeof(PlatformManagerDbContext).Assembly;
 
     /// <summary>
-    /// <c>null</c> — Core CHƯA có project <c>*.Api</c> riêng (xem bảng "có thật hôm nay → sẽ
-    /// thành" ở doc/kien-truc-core-module.md): 4 controller Core hiện nằm trong project host, mà
-    /// MVC vốn đã tự quét assembly của host nên không có gì để nạp thêm. Khi <c>Core.Api</c>
-    /// được tách ra thì đổi dòng này thành assembly đó — KHÔNG phải sửa host.
+    /// <c>null</c> — <b>không phải</b> vì Core thiếu project <c>*.Api</c>: <c>Core.Api</c> đã dựng
+    /// 2026-09-09 (Q8). Lý do thật là nó CHƯA CHỨA CONTROLLER NÀO — hôm nay trong đó chỉ có
+    /// <c>ApiControllerBase</c>, còn 4 controller Core vẫn nằm ở project host, nơi MVC vốn đã tự
+    /// quét. Nộp một assembly không có controller làm <c>ApplicationPart</c> chẳng thêm được gì
+    /// vào bảng route; nó chỉ làm seam trông như đã hoàn tất trong khi việc dời controller chưa làm.
+    ///
+    /// <para><b>Sửa 2026-09-09 — điều kiện kích hoạt.</b> Câu trước ở đây dặn <i>"khi Core.Api
+    /// được tách ra thì đổi dòng này"</i>. Điều kiện đó ĐÃ XẢY RA mà làm theo lúc này lại sai, nên
+    /// nó được thay bằng một điều kiện không đọc nhầm được: <b>trả về assembly <c>Core.Api</c>
+    /// CÙNG LƯỢT dời 4 controller Core sang đó, không sớm hơn.</b> Đổi trước lượt đó thì host mất
+    /// chỗ quét controller mà registrar chưa mang lại được cái nào.</para>
+    ///
+    /// <para>⚠️ Lượt đó còn phải giải một việc chưa có lời giải ở đây: registrar này sống trong
+    /// <c>Core.Infrastructure</c>, mà <c>Infrastructure → Api</c> là cạnh ngược chiều phân lớp.
+    /// Nên "đổi dòng này" KHÔNG phải một sửa đổi một dòng — nó kéo theo quyết định registrar (hoặc
+    /// một kiểu mốc của <c>Core.Api</c>) đặt ở đâu. Ghi ra để lượt sau không tưởng là việc nhỏ.</para>
     ///
     /// <para>Nhánh <c>null</c> vì thế không phải nhánh giả định: nó chạy thật mỗi lần khởi
     /// động, nên hành vi "bỏ qua registrar không có controller" được kiểm chứng liên tục.</para>

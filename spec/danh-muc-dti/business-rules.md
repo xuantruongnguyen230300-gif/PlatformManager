@@ -1,508 +1,1063 @@
-# Business Rules — Danh mục DTI (Chỉ tiêu + Đánh giá theo tuần)
+---
+kind: luat
+scope: du-an
+verified: chua-doi-chieu
+---
 
-> Màn hình mới **"Danh mục > DTI"** (nested dưới menu cha "Danh mục" trong
-> sidebar — xem `spec/sidebar-menu/ui-spec.md`), phát sinh từ quyết định
-> kiến trúc UI mới (người dùng chốt):
+# Luật nghiệp vụ — Danh mục DTI
+
+> ## 📐 ĐÍCH ĐẾN — CHƯA THI CÔNG (viết 2026-09-05)
 >
-> 1. **Dashboard đổi thành read-only** — bỏ toàn bộ khả năng nhập liệu trực
->    tiếp (không còn `input.progressInput`/`input.noteInput`/nút "Lưu dữ
->    liệu"/`.fab`). Dashboard chỉ còn hiển thị KPI, tiến độ nhóm, biểu đồ,
->    bảng 62 chỉ tiêu (đọc), lịch sử — xem
->    `spec/dashboard-dti-weekly/business-rules.md` mục 0 (đã cập nhật).
-> 2. Toàn bộ nhập liệu chuyển vào màn hình này, dạng **2 tab**:
->    - **Tab "Chỉ tiêu"** — CRUD danh mục tĩnh (`Criteria`, có FK tới
->      `CriteriaGroup`).
->    - **Tab "Đánh giá theo tuần"** — chính là chức năng nhập
->      `ProgressPercent`/`Note` theo kỳ đã bỏ khỏi Dashboard, chuyển nguyên
->      xuống đây. **Cập nhật mới**: cơ chế nhập liệu CHÍNH của tab này giờ
->      là **Import file Excel/CSV** theo mẫu `doc/ERD/example_db_ver1.csv`
->      (không còn là JSON backup như `dashboard.html` gốc); nhập tay từng
->      dòng vẫn giữ làm cách bổ sung/điều chỉnh sau import — xem mục 2.
+> Không có dòng code nào của tính năng này tồn tại (đối chiếu lại 2026-09-08). Module BE
+> `DtiWeekly` và màn FE `danh-muc-dti` gỡ 2026-08-29; thư mục chứa rác build của nó
+> (`src/BE/Modules/`) **đã xoá 2026-09-08** — `doc/kien-truc-core-module.md:42`. Mọi câu dưới
+> đây là **luật phải hiện thực**, không phải mô tả hệ thống đang chạy.
 >
-> Lưu ý: 2 tab thao tác trên 2 nhóm entity có **chu kỳ thay đổi khác nhau**
-> (`Criteria` gần như tĩnh, `CriteriaAssessment` biến thiên theo tuần) —
-> gộp chung 1 màn hình là quyết định UX có chủ đích của người dùng (thuận
-> tiện thao tác), không phải nhầm lẫn mô hình dữ liệu. Data model (ERD) giữ
-> nguyên như `doc/ERD/ERD.md` và `doc/ERD/PlatformManager.dbml` — tài liệu
-> này **không** định nghĩa entity mới, chỉ bổ sung rule CRUD cho `Criteria`
-> (trước đây `Criteria` chỉ được seed tĩnh từ CSV mẫu, chưa từng có CRUD)
-> và xác nhận tab "Đánh giá theo tuần" tái dùng nguyên rule đã có ở
-> `spec/dashboard-dti-weekly/business-rules.md`.
+> **Đích đến kiến trúc: `PlatformManager.Business.*`** — entity vào
+> `Business.Domain`, feature vào `Business.Application/Criteria/`, EF Configuration vào
+> `Business.Persistence`, controller vào `Business.Api`. **KHÔNG** dựng lại
+> `Modules.DtiWeekly.*`. Ranh giới + thứ tự phụ thuộc: `doc/kien-truc-core-module.md`.
 
-## 1. Tab "Chỉ tiêu" — CRUD `Criteria`
+**File này giữ gì:** mô hình dữ liệu, công thức, quy tắc kỳ, quy tắc ghi, quy tắc import,
+**quyền ghi** (§6.5) và **dấu vết ai sửa kỳ nào** (§5.6).
+**File này KHÔNG giữ gì:** route/shape/mã lỗi (→ `doc/contracts/danh-muc-dti.md`), layout
+màn hình (→ `spec/danh-muc-dti/ui-spec.md`), công thức tổng hợp của Dashboard
+(→ `spec/dashboard-dti/business-rules.md`), luật import/export chung của Core
+(→ `doc/huong_dan/wiki-core/be/15-import-export.md`).
 
-### 1.1. Create
+---
 
-| Field | Rule | Ghi chú |
+## 1. Mô hình dữ liệu
+
+Đây là **file chủ** của mô hình dữ liệu DTI. `spec/dashboard-dti/business-rules.md` đọc
+sang đây, không mô tả lại.
+
+Ba entity, không hơn. Schema `business` (khai **tường minh** trong `ToTable()` — entity
+không khai schema sẽ rơi vào `core`, xem `doc/cau-truc-database.md` §1.1).
+
+### 1.1 `CriteriaGroup` — nhóm chỉ tiêu
+
+| Trường | Kiểu | Ghi chú |
 | --- | --- | --- |
-| `Code` | Required, unique (trong tập **chưa xoá mềm**), maxlength 20 | Khớp `doc/ERD/PlatformManager.dbml` (`varchar(20)`) + `src/BE/.claude/rules/entity-domain.md` |
-| `Name` | Required, không giới hạn ngắn (`text`) | Có chỉ tiêu dài nhiều dòng (vd mã `4.22.1` trong CSV mẫu) |
-| `GroupId` | Required, FK phải tồn tại và **chưa bị xoá mềm** (`CriteriaGroup.IsDeleted = false`) | Không cho gán vào một nhóm đã xoá |
-| `MaxScore` | Required, `> 0` | Khớp `DomainException("CRITERIA_MAX_SCORE_INVALID", ...)` đã định nghĩa sẵn ở `entity-domain.md` |
+| `Id` | `Guid` | từ `BaseEntity` — UUID v7, sinh ở ứng dụng (`EntityId.New()`), **không** `DEFAULT gen_random_uuid()` |
+| `Code` | `string(20)` | unique trong tập chưa xoá mềm |
+| `Name` | `string(200)` | tên hiển thị, khớp cột `Nhóm` của file import |
+| `DisplayOrder` | `int` | thứ tự hiển thị; BE sắp, FE không sắp lại |
 
-**Lưu ý ràng buộc unique ở tầng DB:** vì `Criteria` dùng soft-delete
-(`IsDeleted` từ `BaseEntity`), một unique index thuần trên cột `Code` sẽ
-chặn cả việc tạo mới với `Code` trùng một bản ghi **đã xoá mềm** — có thể
-không đúng ý nghiệp vụ (người dùng có thể muốn tái dùng `Code` sau khi xoá
-một chỉ tiêu). Đề xuất: dùng unique **filtered/partial index**
-(`WHERE "IsDeleted" = false`, PostgreSQL hỗ trợ tốt) thay vì unique index
-thường trên `Code`; đồng thời check uniqueness ở handler phải query qua
-repository (đã tự lọc `IsDeleted` theo EF global query filter — xem
-`entity-domain.md`), không check trần trên toàn bộ bảng kể cả bản ghi đã
-xoá.
+Thừa kế `BaseEntity` (`src/BE/Core/PlatformManager.Core.Domain/Common/BaseEntity.cs`):
+`CreatedBy`/`UpdatedBy`/`CreatedAt`/`UpdatedAt`/`IsDeleted`.
 
-**✅ Đã chốt (người dùng xác nhận)**: unique `Code` chỉ áp dụng trong tập
-**chưa xoá mềm** — cho phép tái dùng `Code` sau khi một `Criteria` đã bị
-xoá (mềm hoặc cứng). Dùng đúng cách tiếp cận filtered index nêu trên.
+### 1.2 `Criteria` — chỉ tiêu
 
-### 1.2. Update
+| Trường | Kiểu | Ghi chú |
+| --- | --- | --- |
+| `Id` | `Guid` | |
+| `Code` | `string(20)` | unique trong tập chưa xoá mềm — xem §2 |
+| `Name` | `string` | bắt buộc, không giới hạn cứng độ dài |
+| `GroupId` | `Guid` | FK → `CriteriaGroup` |
+| `MaxScore` | `decimal(10,2)` | **> 0**. Dữ liệu thật chỉ có 3 giá trị (10 · 20 · 30) nhưng **không** ràng buộc thành enum — BA có thể thêm mức khác |
 
-Áp dụng rule field giống Create. Điểm cần quyết định riêng: **`Code` có
-cho đổi sau khi tạo không?**
+### 1.3 `CriteriaAssessment` — một lần đánh giá của một chỉ tiêu
 
-**Đề xuất: CHO PHÉP đổi tự do** (áp cùng rule unique như Create). Lý do:
+| Trường | Kiểu | Ghi chú |
+| --- | --- | --- |
+| `Id` | `Guid` | |
+| `CriteriaId` | `Guid` | FK → `Criteria` |
+| **`AssessmentDate`** | `date` | **ngày nghiệp vụ của lần đánh giá** — kỳ (tuần/tháng/năm) suy ra từ đây. Giá trị do **kỳ đích của lời ghi** quyết định, không phải "hôm nay" — luật neo ngày ở §5.3 (đổi 2026-09-05 theo Q20) |
+| `SelfScore` | `decimal(10,2)?` | Tự đánh giá |
+| `VerifiedScore` | `decimal(10,2)?` | Thẩm định |
+| `ProgressPercent` | `int?` | 0..100 |
+| `Status` | `string(40)?` | đúng 1 trong 4 giá trị §4 |
+| `OwnerId` | `Guid?` | FK **xuyên schema** → `core."AspNetUsers".Id` |
+| `Deadline` | `date?` | Hạn xử lý |
+| `Note` | `text?` | Minh chứng/Ghi chú — **MỘT ô text** |
+| `Version` | `uint` | token optimistic concurrency |
 
-- Theo `doc/ERD/PlatformManager.dbml`, FK duy nhất tham chiếu tới `Criteria`
-  (`CriteriaAssessments.CriteriaId`) trỏ vào **`Id` (uuid, surrogate key)**,
-  không trỏ vào `Code`. Đổi `Code` **không** phá vỡ bất kỳ ràng buộc tham
-  chiếu nào ở tầng DB — khác trường hợp `Code` được dùng làm business key
-  cho FK (khi đó đổi `Code` cần cascade), ở đây `Code` chỉ là dữ liệu hiển
-  thị thuần tuý.
-- Không có bằng chứng nào (CSV mẫu, `dashboard.html`) cho thấy `Code` được
-  dùng làm khoá tra cứu từ hệ thống bên ngoài (vd tích hợp API khác định
-  danh theo `Code`) — nếu có, đây sẽ là lý do chính đáng để hạn chế đổi,
-  nhưng hiện tại chưa xác nhận được điều đó.
+**`Chênh lệch` KHÔNG có cột.** Nó là trường tính (§3.1). Lưu một trường suy ra được là tạo
+chỗ cho nó lệch khỏi hai trường sinh ra nó.
 
-**Cảnh báo cần lưu ý khi implement (hệ quả, không phải lý do cấm đổi):** vì
-các kỳ đánh giá lịch sử (`CriteriaAssessment`) tham chiếu `CriteriaId` chứ
-**không** lưu snapshot `Code`/`Name` tại thời điểm đánh giá, đổi `Code`/
-`Name` của một `Criteria` sẽ khiến **toàn bộ báo cáo lịch sử** (kể cả các
-kỳ đã "chốt" từ nhiều tuần trước) hiển thị `Code`/`Name` MỚI, không giữ
-nguyên như lúc đánh giá gốc. Đây là hành vi hợp lý cho hầu hết trường hợp
-thực tế (sửa lỗi chính tả mã/tên) nhưng nếu nghiệp vụ cần "đóng băng" tên/
-mã hiển thị trên báo cáo lịch sử, cần thiết kế snapshot riêng — **không làm
-ở v1**, ghi nhận đây là giới hạn đã biết, không phải thiếu sót.
+#### Ba quyết định của entity này — đọc trước khi sửa
 
-### 1.3. Delete — soft-delete có điều kiện, KHÔNG hard-delete tuỳ tiện
+**a. `Note` là một ô text, không phải danh sách minh chứng.** Thực thể `CriteriaEvidence`
+của thiết kế cũ **bị bỏ hẳn** (Q5). Một dòng dữ liệu thật minh hoạ vì sao BA muốn thế:
 
-Đây là điểm quan trọng nhất của CRUD `Criteria`, vì `Criteria` là cha của
-`CriteriaAssessment` (dữ liệu lịch sử đánh giá nhiều kỳ).
+```
+*2121/TNH-TH - 04/03/2026: V/v thông tin số liệu phục vụ đánh giá mức độ
+chuyển đổi số DTI các địa phương năm 2025
+và đề xuất lịch tham vấn.
+```
 
-**Rule:**
+Đó là **một** minh chứng trải trên nhiều dòng, không phải nhiều minh chứng — tách theo dấu
+xuống dòng sẽ cắt nát nó. 29/62 dòng của file BA gửi có nội dung ở cột này.
 
-1. Nếu `Criteria` **chưa từng có `CriteriaAssessment`** nào tham chiếu tới
-   (kể cả `CriteriaAssessment` đã bị soft-delete) → cho phép **hard-delete**
-   thật (xoá cứng khỏi DB). An toàn vì không có dữ liệu lịch sử nào phụ
-   thuộc vào bản ghi này.
-2. Nếu `Criteria` **đã có ≥1 `CriteriaAssessment`** tham chiếu (đã từng
-   được đánh giá ở bất kỳ kỳ nào) → **CHỈ cho soft-delete**
-   (`IsDeleted = true` qua `BaseEntity`), **không** cho hard-delete. Lý do:
-   xoá cứng sẽ làm mất khả năng hiển thị lại lịch sử đánh giá các kỳ trước
-   (Dashboard đọc lại `Criteria.Name`/`Code`/`MaxScore` khi hiển thị lịch
-   sử/biểu đồ xu hướng, kể cả cho các chỉ tiêu đã ngừng theo dõi).
-3. Sau khi soft-delete, `Criteria` đó:
-   - **Không** xuất hiện trong danh sách chọn ở tab "Đánh giá theo tuần"
-     khi tạo/sửa kỳ **hiện tại hoặc tương lai** — EF global query filter
-     `IsDeleted = false` tự loại trừ theo đúng convention
-     `entity-domain.md`, không cần thêm `.Where()` thủ công.
-   - **Vẫn** phải hiển thị đầy đủ khi xem **lịch sử các kỳ đã lưu trước
-     đó** có chứa `CriteriaAssessment` của nó — các query phục vụ
-     Dashboard/lịch sử phải **chủ động** dùng `IgnoreQueryFilters()` (hoặc
-     tương đương) cho `Criteria` khi join từ `CriteriaAssessment` lịch sử;
-     nếu không, lịch sử cũ sẽ "mất" hàng dữ liệu chỉ vì chỉ tiêu gốc đã bị
-     xoá mềm sau đó.
-   - **Không** tính vào mẫu số `Σ MaxScore` của công thức "Tiến độ chung"
-     (`spec/dashboard-dti-weekly/business-rules.md` mục 3.3/3.4) — **kể cả
-     cho các kỳ lịch sử**, theo quyết định tạm chốt ở mục 5 câu hỏi #1
-     (mẫu số dùng danh mục `Criteria` **hiện tại** cho **mọi** kỳ, không
-     snapshot theo từng kỳ) — nhắc lại: đây là **quyết định mặc định, có
-     thể xem lại sau**, không phải đã giải thích đầy đủ và chốt cứng.
-4. **Không có** hành động "khôi phục" (un-delete) trong phạm vi yêu cầu
-   này — nếu cần, đây là tính năng bổ sung sau, không thiết kế rule ở đây.
-5. `CriteriaGroup` áp dụng cùng nguyên tắc "soft-delete có điều kiện" nếu
-   scope CRUD sau này mở rộng sang cả nhóm: một nhóm đang có `Criteria` con
-   chưa xoá mềm thì không nên cho xoá (kể cả soft-delete) cho tới khi nhóm
-   đó rỗng. **[SUY LUẬN]** — nhiệm vụ hiện tại chỉ yêu cầu CRUD `Criteria`
-   (Mã/Tên/Nhóm/Điểm tối đa), chưa yêu cầu CRUD `CriteriaGroup`; ghi nhận
-   rule này để nhất quán nếu sau này mở rộng, không phải rule cần implement
-   ngay.
+**b. `AssessmentDate` là cột RIÊNG, không dùng lại `CreatedAt`.**
 
-## 2. Tab "Đánh giá theo tuần" — Import là cơ chế nhập liệu CHÍNH, nhập tay là bổ sung
+> ⚠️ Mô hình cũ suy kỳ từ **phần ngày của `CreatedAt`**, và phải dựng một hàm SQL
+> `IMMUTABLE` viết tay (`business.criteria_assessment_date_utc`, còn ở
+> `doc/cau-truc-database.sql`) chỉ để index được biểu thức đó — Postgres từ chối
+> `CAST("CreatedAt" AS date)` trong index với lỗi `42P17`.
+>
+> Ba lý do đổi:
+> 1. `CreatedAt` là **trường audit**, do `AuditInterceptor` ghi từ bên ngoài entity
+>    (`BaseEntity.cs` — setter public cho đúng 5 field audit). Dùng nó làm khoá nghiệp vụ
+>    nghĩa là một thay đổi ở tầng audit sẽ lặng lẽ đổi kỳ của dữ liệu.
+> 2. **Không nhập bù được.** Với mô hình cũ, ghi dữ liệu cho tuần trước là bất khả — kỳ
+>    luôn là "hôm nay". Q12 yêu cầu kỳ ghi rõ từ ngày đến ngày, tức kỳ là dữ liệu nghiệp vụ
+>    chứ không phải dấu vết hệ thống.
+> 3. Cột `date` thật thì index được bằng EF Core, **không cần** hàm SQL viết tay nào.
+>
+> **Hệ quả cần xử lý khi thi công:** DDL của
+> `UX_CriteriaAssessments_CriteriaId_CreatedAt_Day` và hàm
+> `business.criteria_assessment_date_utc` ở `doc/cau-truc-database.sql` mô tả mô hình cũ.
+> Chúng thuộc một module đã gỡ và file `doc/cau-truc-database-business.md` đã mang banner
+> lịch sử. Lượt thi công đầu tiên phải cập nhật **file chủ schema**, không vá bên lề.
 
-> **Cập nhật (làm rõ nghiệp vụ mới nhất)**: người dùng xác nhận nút
-> "Import" (trước đây đọc file JSON backup của `dashboard.html`) sẽ đổi
-> thành đọc file **Excel/CSV theo đúng mẫu** `doc/ERD/example_db_ver1.csv`
-> và trở thành **cách nhập liệu chính** cho tab này — không còn là tính
-> năng phụ/khôi phục như bản Dashboard cũ. Nút "Lưu dữ liệu"/nhập tay từng
-> dòng **vẫn giữ**, dùng để bổ sung/điều chỉnh sau khi đã import (2 đường
-> nhập liệu song song, không loại trừ nhau).
+**c. `Version` phải là `uint` + `.IsRowVersion()`, KHÔNG `byte[]`.** Trên PostgreSQL,
+`.IsRowVersion()` với `byte[]` tạo một cột `bytea` **không ai cập nhật** ⇒ check concurrency
+vô hiệu **im lặng**. Với `uint`, Npgsql bind thẳng vào cột hệ thống `xmin`, không tạo cột
+mới. Luật đầy đủ: `doc/huong_dan/quy-uoc/be-entity-domain.md` §RowVersion.
 
-### 2.1. `CriteriaAssessment.CreatedAt` khi Import — [ĐÃ ĐỔI, 2026-08-12] không còn `AssessmentPeriod`/`PeriodDate`
+Hai luồng ghi độc lập đụng cùng bản ghi (import hàng loạt · sửa tay) là lý do trường này tồn
+tại — không có nó, người ghi sau âm thầm nuốt thay đổi của người ghi trước.
 
-> **Cập nhật quan trọng**: theo quyết định người dùng *"bỏ tạo kỳ mới, vì
-> kỳ được xác định theo ngày tạo createdDate chứ không có tách kỳ riêng"*
-> (xem `doc/ERD/ERD.md` mục "Quyết định đã CHỐT" #4 và mục "Kỳ (tuần/tháng/
-> năm) — khái niệm ngầm định"), bảng `AssessmentPeriod` và nút "Tạo kỳ mới
-> từ kỳ gần nhất" **đã bị bỏ hoàn toàn**. Mục này viết lại toàn bộ rule
-> Import cho khớp model mới — không còn khái niệm "chọn/tạo kỳ" ở bất kỳ
-> bước nào của luồng Import.
+### 1.4 Ràng buộc ở tầng DB
 
-**[SUY LUẬN — chưa có mẫu file Excel thật để xác nhận cấu trúc cột, chỉ có
-`example_db_ver1.csv` vốn không có cột ngày]:**
+| Ràng buộc | Dạng |
+| --- | --- |
+| `Criteria.Code` unique | unique **partial** `WHERE "IsDeleted" = false` — xoá mềm một mã rồi tạo lại đúng mã đó phải thành công |
+| `CriteriaGroup.Code` unique | như trên |
+| **1 đánh giá / 1 chỉ tiêu / 1 ngày** | unique **partial** trên `("CriteriaId", "AssessmentDate") WHERE "IsDeleted" = false` |
+| Tra cứu theo kỳ | index `("CriteriaId", "AssessmentDate")` |
 
-1. **Ưu tiên #1**: nếu file import có sẵn 1 cột ghi rõ ngày của kỳ báo cáo
-   (vd "Ngày báo cáo"/"Kỳ") → dùng giá trị đó làm `CreatedAt` (phần ngày)
-   của các `CriteriaAssessment` được ghi trong lượt import đó.
-2. **Fallback (mặc định hiện tại)**: nếu file **không có** cột ngày riêng
-   — đúng thực trạng của `doc/ERD/example_db_ver1.csv` (rà lại toàn bộ cột:
-   Mã, Chỉ tiêu, Nhóm, Điểm tối đa, Tự đánh giá, Thẩm định, Chênh lệch,
-   Trạng thái, Phụ trách, Hạn xử lý, Minh chứng/Ghi chú — **không có cột
-   ngày nào**) → dùng **ngày hệ thống ghi nhận tại thời điểm import**
-   (server-side, lấy phần ngày, bỏ giờ) — tức đúng ngày mà thao tác import
-   thực sự xảy ra, không có gì để "chọn" cả.
-3. Vì mẫu hiện có luôn rơi vào nhánh #2, đây thực chất là hành vi mặc định
-   áp dụng ngay — nhưng **cần xác nhận lại khi có mẫu Excel chính thức**
-   (có thể khác cấu trúc CSV mẫu ban đầu, ví dụ có thêm cột ngày).
-4. **Không còn date picker nào cho luồng Import** (đã đúng từ thiết kế
-   trước, nay càng đúng hơn vì không còn "kỳ" nào để chọn) — mục 2.3 (nhập
-   tay) cũng **không còn** chọn ngày, xem giải thích cập nhật ở đó.
-5. **Cơ chế ghi mỗi dòng file** (thay cho "upsert theo `PeriodDate`" cũ):
-   với mỗi dòng CSV (ứng với 1 `CriteriaId`), áp đúng rule **"upsert-trong-
-   ngày + copy-forward"** đã mô tả ở `doc/ERD/ERD.md` mục "Kỳ (tuần/tháng/
-   năm)" — nếu `CriteriaId` đó **đã có** 1 `CriteriaAssessment` với
-   `CreatedAt` cùng ngày import (import 2 lần cùng ngày, hoặc vừa được sửa
-   tay hôm nay trước khi import) → **UPDATE** ghi đè record đó (không tạo
-   record thứ 2 cùng ngày); nếu **chưa có** → tạo record mới (copy-forward
-   baseline từ record gần nhất trước đó cho các field mà **chính dòng CSV
-   này không cung cấp** — thực tế Import luôn cung cấp đủ 7 field nên hiếm
-   khi cần copy-forward, trừ `ProgressPercent`/`Note` nếu dòng CSV không có
-   giá trị tương ứng, xem mục 2.2).
+> Ràng buộc "1 đánh giá / 1 chỉ tiêu / 1 ngày" là **nền móng của toàn bộ mô hình kỳ**. Mất
+> nó, dữ liệu trùng lọt vào **im lặng** và mọi phép tổng hợp của Dashboard đếm hai lần.
 
-### 2.2. Mapping cột file Import → entity
+> ⚠️ **Ràng buộc trên KHÔNG đủ để bảo đảm "1 bản ghi / 1 chỉ tiêu / 1 kỳ".** Một tuần có 7
+> ngày, nên hai lời ghi vào cùng tuần ở hai ngày khác nhau vẫn tạo được hai dòng — DB không
+> chặn nổi vì `period` không phải một cột, nó là thứ **suy ra** từ `AssessmentDate`. Việc gộp
+> về một bản ghi/kỳ do **handler** làm (§5.3), và luật đọc §5.2 (lấy bản ghi có
+> `AssessmentDate` lớn nhất trong kỳ) là thứ giữ cho kết quả vẫn xác định ngay cả khi có hai
+> dòng lọt vào. Đừng ghi vào tài liệu rằng DB bảo đảm điều đó — nó không.
 
-| Cột file (theo `example_db_ver1.csv`) | Map vào | Field | Ghi chú |
+FK **xuyên schema** chỉ đi một chiều: `business.CriteriaAssessments.OwnerId → core.AspNetUsers.Id`.
+Không có FK nào đi ngược `core → business` — khớp luật "Core không được biết về Business".
+
+---
+
+## 2. Mã chỉ tiêu (`Code`)
+
+| Luật | Giá trị |
+| --- | --- |
+| Bắt buộc | có |
+| Độ dài | ≤ **20** ký tự |
+| Unique | trong tập **chưa xoá mềm** |
+| So khớp | **ordinal**, phân biệt hoa/thường; cắt khoảng trắng đầu/cuối trước khi so |
+| Định dạng | các đoạn số cách nhau bởi dấu chấm, **KHÔNG giới hạn 2 cấp** |
+
+⚠️ **Đây là chỗ bản trước suýt làm sai.** Dữ liệu thật của BA có **11 mã ba cấp**:
+`4.22.1` … `4.22.11`. Một regex kiểu `^\d+\.\d+$` sẽ từ chối đúng 11 chỉ tiêu hợp lệ. Mã dài
+nhất hiện có là 7 ký tự, nên trần 20 vẫn dư — nhưng **số cấp** thì đừng giả định.
+
+Sắp xếp mặc định của lưới là **theo mã, thứ tự tự nhiên**: `4.2` đứng trước `4.10`, và
+`4.22.2` trước `4.22.11`. So sánh chuỗi thuần cho kết quả ngược — phải tách từng đoạn số rồi
+so theo số.
+
+---
+
+## 3. Công thức
+
+### 3.1 `Chênh lệch` (`diff`) — ĐỔI CHIỀU 2026-09-05 (Q25)
+
+```
+diff = verifiedScore − selfScore      (Thẩm định − Tự đánh giá)
+```
+
+- Trường **TÍNH**, không nhập tay, không lưu (Q2). Client gửi lên thì bỏ qua, không báo lỗi.
+- Một trong hai vế vắng ⇒ `diff` vắng.
+- So sánh với 0 dùng **epsilon `0.001`**, không so `== 0` — hai `decimal` sinh ra từ phép trừ
+  luôn có ca sát 0.
+- Không lấy trị tuyệt đối, không đảo dấu ở tầng hiển thị. Dấu **chính là** thông tin.
+
+**Dấu mang nghĩa nghiệp vụ, và đó là lý do đổi chiều:**
+
+| Dấu | Nghĩa | Tô màu |
+| --- | --- | --- |
+| `diff > ε` | thẩm định chấm **cao hơn** tự chấm — có lợi | xanh (`.delta.up`) |
+| `abs(diff) ≤ ε` | hai bên khớp | xám (`.delta.flat`) |
+| `diff < −ε` | thẩm định **cắt bớt** điểm tự chấm — cần xử lý | đỏ (`.delta.down`) |
+
+Hai ca kiểm trên dữ liệu thật của BA (**file BA gửi tháng 8/2026**, đối chiếu 2026-09-05):
+
+| Chỉ tiêu | Tự đánh giá | Thẩm định | `diff` mới | Màu |
+| --- | ---: | ---: | ---: | --- |
+| `1.1` | 7,04 | 10 | **+2,96** | xanh |
+| `1.4` | 5 | 0 | **−5,00** | đỏ |
+
+> **Vì sao bản trước sai:** với công thức cũ `selfScore − verifiedScore`, chỉ tiêu `1.4` — tự
+> chấm 5 điểm, thẩm định cho **0**, tức bị bác trắng — hiện ra `+5,00` và **tô xanh**. Con số
+> đúng về phép trừ, sai hoàn toàn về thứ người đọc rút ra từ màu sắc. Đổi chiều là để dấu và
+> màu nói cùng một câu với nghiệp vụ. Ánh xạ dấu → lớp CSS giữ **một chỗ**:
+> `spec/dashboard-dti/business-rules.md` §2.
+
+> ### ⚠️⚠️ Số trong phần mềm sẽ NGƯỢC DẤU với cột `Chênh lệch` trong file BA gửi
+>
+> **file BA gửi tháng 8/2026** tính cột `Chênh lệch` theo chiều **cũ**: dòng `1.1`
+> ghi `-2.96` (`= 7,04 − 10`), dòng `1.4` ghi `5.00` (`= 5 − 0`). Phần mềm sẽ hiện `+2,96` và
+> `−5,00` cho đúng hai dòng đó.
+>
+> **Điều này KHÔNG làm hỏng import.** `Chênh lệch` là trường **tính**: đường import **bỏ qua**
+> cột đó hoàn toàn, không đọc, không đối chiếu, không báo lỗi khi lệch (§6.2 cột 7). Hệ thống
+> tự tính lại từ hai cột điểm — mà hai cột điểm thì giống hệt nhau ở cả hai chiều.
+>
+> Nơi khác biệt **lộ ra** là mắt người: ai mở file gốc của BA cạnh file `.xlsx` do hệ thống
+> xuất ra sẽ thấy cột `Chênh lệch` lệch dấu ở đúng 27 dòng. Vì vậy tiêu đề cột trong file xuất
+> ghi rõ công thức — `Chênh lệch (Thẩm định − Tự đánh giá)`, xem
+> `spec/dashboard-dti/business-rules.md` §4.3.
+
+### 3.2 `Tiến độ %` (`progressPercent`)
+
+- Kiểu `int`, miền hợp lệ **0..100**. Ngoài miền ⇒ kẹp về biên, **không** báo lỗi khi sửa
+  inline (bảo vệ chiều sâu: FE kẹp trước, BE kẹp lại).
+- **Nhập tay** khi sửa inline hoặc qua dialog. Không tự tính lại từ điểm.
+- Khởi tạo khi import: **để TRỐNG** (Q24) — xem §6.4. Không phải `0`, không suy từ điểm.
+- Đây là trường mà thanh tiến độ theo nhóm và biểu đồ đường trên Dashboard vẽ theo (Q11);
+  3 cột điểm chỉ đọc ở bảng chi tiết.
+
+### 3.3 Làm tròn và định dạng
+
+| Đại lượng | Lưu | Hiển thị |
+| --- | --- | --- |
+| `MaxScore`, `SelfScore`, `VerifiedScore`, `diff` | `decimal(10,2)` — **không** làm tròn khi lưu | 2 chữ số thập phân, dấu **phẩy** thập phân (`7,04`) |
+| `ProgressPercent` | `int` | `70%` |
+| % tổng hợp | tính trên `decimal` | 1 chữ số thập phân (`82,1%`) |
+
+Làm tròn **chỉ ở tầng hiển thị**. Làm tròn khi lưu là mất dữ liệu không lấy lại được, và
+tổng của 62 số đã làm tròn không bằng tổng thật.
+
+---
+
+## 4. Trạng thái — 4 giá trị, người dùng CHỌN TAY
+
+| Giá trị (lưu nguyên văn) | Ý nghĩa | Số dòng trong file BA gửi |
+| --- | --- | ---: |
+| `Chưa thực hiện` | chưa bắt đầu | 1 |
+| `Đang thực hiện` | đang làm | 13 |
+| `Cần bổ sung minh chứng` | có số liệu nhưng thiếu minh chứng | 22 |
+| `Hoàn thành` | xong | 26 |
+
+**Bốn luật cứng:**
+
+1. **Hệ thống KHÔNG tự tính, KHÔNG tự đổi trạng thái.** Đây là điểm khác hẳn thiết kế cũ,
+   nơi trạng thái là nhãn runtime suy từ số liệu (`Hoàn thành`/`Đang thực hiện`/`Không tăng`/
+   `Chưa có dữ liệu`). Bộ cũ **bỏ hẳn**; đừng port lại bất kỳ nhánh nào tính nó.
+2. **Không phụ thuộc điểm.** Một chỉ tiêu có `verifiedScore = maxScore` vẫn có thể mang
+   trạng thái `Cần bổ sung minh chứng`, và dữ liệu thật có đúng những dòng như vậy.
+   Không viết luật kiểu "đủ điểm thì tự chuyển Hoàn thành".
+3. **Giá trị ngoài 4 giá trị trên bị TỪ CHỐI**, không âm thầm bỏ qua và không tự map gần
+   đúng. Ghi tay ⇒ `400`; nhập từ file ⇒ lỗi **dòng đó** (§6.3).
+4. **So khớp**: cắt khoảng trắng đầu/cuối, so **không phân biệt hoa/thường**, **có** phân
+   biệt dấu tiếng Việt. `"đang thực hiện"` khớp; `"Dang thuc hien"` **không** khớp — bỏ dấu
+   làm `Chưa thực hiện` và `Chua thuc hien` cùng khớp, mà đó là hai chuỗi người dùng gõ với
+   ý định khác nhau.
+
+Trạng thái hiển thị bằng `Badge` có màu ở **cả hai** màn (Q10). Ánh xạ màu là việc của FE:
+`spec/dashboard-dti/business-rules.md` §Trạng thái giữ bảng ánh xạ duy nhất.
+
+---
+
+## 5. Quy tắc kỳ và quy tắc ghi
+
+### 5.1 Kỳ suy từ `AssessmentDate`
+
+| `period` | Nghĩa | Khoảng ngày |
+| --- | --- | --- |
+| `"YYYY-Www"` | tuần **ISO-8601** | thứ Hai → Chủ nhật |
+| `"YYYY-MM"` | tháng dương lịch | ngày 1 → ngày cuối tháng |
+| `"all"` | cả năm `year` | 01/01 → 31/12 |
+
+Tuần ISO 2026, tính bằng lịch (không gõ tay): W28 `06/07–12/07` · W29 `13/07–19/07` ·
+W30 `20/07–26/07` · W31 `27/07–02/08` · W32 `03/08–09/08` · W33 `10/08–16/08` ·
+W34 `17/08–23/08` · W35 `24/08–30/08`.
+
+**Mọi chỗ hiển thị kỳ phải ghi rõ từ ngày đến ngày** (Q12) — nhãn kỳ, option chọn kỳ, dòng
+lịch sử, trục X biểu đồ chế độ tuần. **Định dạng nhãn kỳ** có **một** file chủ:
+`spec/dashboard-dti/business-rules.md` §Nhãn kỳ. Chuỗi copy verbatim của từng màn thì thuộc
+screen spec (`doc/Design/Frontend/PlatformManager/Screens/`).
+
+#### CHỈ NHẬP THEO TUẦN — tháng và năm là tổng hợp TỰ TÍNH, chỉ đọc (chốt Q37, 2026-09-06)
+
+**Tuần ISO là đơn vị kỳ duy nhất mà dữ liệu được GHI vào.** Tháng và năm không phải một đơn
+vị nhập liệu song song — chúng là kết quả **gộp** các kỳ-tuần khi đọc
+(`spec/dashboard-dti/business-rules.md` §1.2; khối nhận dạng của file xuất theo tháng liệt kê
+`Gồm các tuần`, §4.2 của cùng file).
+
+| Kỳ người dùng chọn | Đọc | Ghi |
+| --- | --- | --- |
+| `"YYYY-Www"` — một tuần | ✔ | ✔ kể cả tuần **đã qua**, kể cả năm trước (Q20) |
+| `"all"` | ✔ bản ghi mới nhất trong năm | ✔ — rơi vào **tuần hiện tại** (Q26) |
+| `"YYYY-MM"` — một tháng | ✔ | ✘ **chỉ đọc** |
+| năm (`mode=year` của Dashboard) | ✔ | ✘ **chỉ đọc** |
+
+> **Vì sao cấm ghi theo tháng — đây là lỗi đo được, không phải sở thích.** Mô hình lưu một
+> bản ghi theo `AssessmentDate` (một **ngày**), nên ghi cho "tháng 8/2026" buộc phải neo vào
+> một ngày cụ thể trong tháng. Neo vào ngày cuối là 31/08/2026, mà **tuần ISO chứa 31/08/2026
+> là tuần 36 (31/08 – 06/09)** — nửa nằm sang tháng 9. Cột `Kỳ của số liệu` (Q31) khi đó báo
+> "tuần 36" cho số liệu người dùng nhập là "tháng 8", và Dashboard `mode=week` xếp nó vào
+> tuần 36. Không có ngày neo nào trong một tháng bất kỳ mà tuần ISO của nó nằm gọn trong
+> tháng đó — nên đây là lỗi **không vá được bằng cách chọn ngày neo khéo hơn**.
+>
+> Hai lối ra đã cân nhắc: (a) lưu kỳ đích thành một cột riêng, chấp nhận hai nguồn sự thật
+> (ngày và kỳ) có thể lệch nhau; (b) chỉ cho ghi theo tuần. Người dùng chọn **(b)** ngày
+> 2026-09-06. Muốn sửa số của tháng 8 thì chọn **một tuần cụ thể** trong tháng đó.
+
+**"Kỳ hiện tại" = tuần ISO chứa ngày hệ thống hôm nay.** Đây là định nghĩa dùng cho Q26
+(§5.3) — không phải tháng hiện tại, không phải "bản ghi mới nhất".
+
+> **Điều Q37 KHÔNG chạm tới:** đường **đọc** giữ nguyên hoàn toàn — lọc lưới theo tháng vẫn
+> chạy, Dashboard `mode=month`/`mode=year` vẫn chạy, và **export `mode=month` vẫn chạy**
+> (`spec/dashboard-dti/business-rules.md` §4.1). Xuất một tháng là **tổng hợp**, không phải
+> nhập liệu; gỡ nó đi là hiểu nhầm phạm vi của quyết định này.
+
+> ⚠️ **Tuần ISO không nằm gọn trong một tháng, và cũng không nằm gọn trong một năm.**
+> W31/2026 = `27/07–02/08` vắt qua hai tháng. Tuần cuối/đầu năm còn vắt qua hai năm —
+> "tuần ISO thứ 1 của 2027" có thể bắt đầu từ tháng 12/2026. Mọi phép quy đổi phải dùng
+> lịch ISO thật, **không** tự tính bằng `ngày / 7`.
+>
+> Ranh giới kiến trúc: *"tuần ISO thứ 33 của 2026 là từ ngày nào tới ngày nào"* là logic
+> **thời gian thuần** — đặt ở Core được. *"lọc bản ghi đánh giá theo `AssessmentDate` trong
+> khoảng đó"* là **nghiệp vụ** — thuộc `Business.*`. Đưa cái sau lên Core là hỏng ranh giới
+> (`doc/huong_dan/wiki-core/be/15-import-export.md` §1).
+
+### 5.2 Đọc — giá trị nào đại diện cho một kỳ
+
+- `period` là tuần/tháng cụ thể ⇒ bản ghi có `AssessmentDate` **lớn nhất nằm trong** khoảng
+  ngày của kỳ. Không có bản ghi nào trong kỳ ⇒ chỉ tiêu vẫn hiện một dòng, mọi trường đánh
+  giá vắng mặt.
+- `period = "all"` ⇒ bản ghi có `AssessmentDate` **lớn nhất trong năm** `year`.
+- **Không carry-forward.** Kỳ trước có dữ liệu, kỳ này không, thì kỳ này hiện **rỗng** chứ
+  không kéo số cũ sang. Kéo sang sẽ tạo ra một tuần "có tiến độ" mà thật ra không ai làm gì.
+
+#### Kỳ của TỪNG DÒNG — thêm 2026-09-05 (Q31)
+
+Ở chế độ `period = "all"`, mỗi dòng của lưới có thể đến từ **một kỳ khác nhau**: chỉ tiêu này
+lấy bản ghi của tuần 12, chỉ tiêu kia của tuần 33. Người đọc không có cách nào biết điều đó
+nếu lưới không nói ra — nên API trả **kỳ của chính bản ghi đang đại diện cho dòng đó**, và
+màn hình hiện nó ở cột `Kỳ của số liệu`.
+
+| Đại lượng | Giá trị |
+| --- | --- |
+| Kỳ của dòng | tuần ISO chứa `AssessmentDate` của bản ghi được §5.2 chọn ra ⇒ chuỗi `"YYYY-Www"` |
+| Không có bản ghi nào trong phạm vi đang xem | **vắng mặt** (dòng vẫn hiện, các ô đánh giá trống) |
+
+**Giá trị này LUÔN là một tuần, không bao giờ là tháng** — hệ quả trực tiếp của Q37: dữ liệu
+chỉ vào hệ thống qua đường ghi theo tuần, nên mọi bản ghi đều thuộc đúng một tuần ISO. Ca
+"dòng báo sai đơn vị" từng là mục Cần chốt của file này; Q37 đóng nó ở gốc.
+
+Hai luật hiển thị đi kèm (chỗ hiện, lúc nào hiện) thuộc màn hình —
+`spec/danh-muc-dti/ui-spec.md`. Luật ở đây chỉ nói **giá trị là gì**.
+
+> **Q38 (2026-09-06) — cột này hiện KHOẢNG NGÀY, bỏ số tuần:** `10/08–16/08`, không phải
+> `Tuần 33 (10/08 – 16/08)`. Đây là **ngoại lệ có chủ đích** so với Q12, đăng ký ở
+> `spec/dashboard-dti/business-rules.md` §6.2 — không phải chỗ quên áp luật. API **không đổi**:
+> vẫn trả cả `assessmentPeriod` lẫn `assessmentPeriodLabel`; cột hẹp chọn hiển thị gì là việc
+> của màn hình.
+
+### 5.3 Ghi — upsert theo KỲ ĐÍCH, copy-forward các trường không gửi
+
+> **Viết lại 2026-09-05 theo Q20 + Q26.** Bản trước ghi mọi thứ vào `AssessmentDate` = *hôm
+> nay* và coi kỳ đã qua là chỉ đọc. Cả hai đã bị lật: kỳ là **dữ liệu của lời ghi**, do người
+> dùng chọn.
+
+Cả ba đường ghi — dialog (DM-4), sửa inline (DM-6), import (DM-7) — dùng **một** luật, không
+phải ba. Luật đó có đúng hai bước.
+
+#### Bước 1 — xác định KỲ ĐÍCH
+
+| `period` client gửi | Kỳ đích |
+| --- | --- |
+| `"YYYY-Www"` | đúng tuần ISO đó — kể cả tuần **đã qua**, kể cả năm trước (Q20) |
+| **`"all"`** | **kỳ hiện tại** = tuần ISO chứa hôm nay (§5.1) — **chỉ khi `year` đang xem là năm hiện tại** (T15) |
+| `"YYYY-MM"` | **TỪ CHỐI** — `400 CRITERIA.ASSESSMENT_PERIOD_NOT_WEEKLY` (Q37) |
+| `"all"` + `year` ≠ năm hiện tại | **TỪ CHỐI** — `400 CRITERIA.ASSESSMENT_PERIOD_OUT_OF_YEAR` (T15) |
+| vắng mặt | `400 CRITERIA.ASSESSMENT_PERIOD_REQUIRED` — server **không** chọn hộ, xem ghi chú dưới |
+| sai khuôn (`"2026-W99"`, `"tuần 33"`…) | `400 CRITERIA.ASSESSMENT_PERIOD_INVALID` |
+
+> ### T15 (2026-09-06) — `"all"` không được nhảy năm
+>
+> Ca đo được: người dùng đặt `Năm = 2025`, để `Kỳ trong năm = Tất cả`, rồi sửa một ô. Theo
+> Q26 thì `"all"` ghi được, và lời ghi rơi vào **tuần hiện tại của 2026** — một năm người dùng
+> **không hề đang xem**. Bộ chọn kỳ nói "ghi được", còn lệnh ghi thì đi chỗ khác.
+>
+> **Chốt: xử lý y như ca chọn tháng của Q37 — chỉ đọc.** Ở tầng dữ liệu: lời ghi mang
+> `period = "all"` **bắt buộc** kèm `year` (năm người dùng đang xem); `year` ≠ năm hiện tại ⇒
+> `400 CRITERIA.ASSESSMENT_PERIOD_OUT_OF_YEAR`.
+>
+> **Vì sao server cần `year` gửi kèm:** `"all"` tự nó không mang năm nào cả. Server quy nó về
+> tuần hiện tại và **không có cách nào biết** người dùng đang nhìn năm nào — trừ khi client
+> nói ra. Không có `year` thì lớp chặn thứ hai không tồn tại, chỉ còn FE ẩn nút, mà ẩn nút là
+> trải nghiệm chứ không phải luật. `year` **không** cần cho ca `"YYYY-Www"`: năm đã nằm sẵn
+> trong chính chuỗi tuần.
+>
+> ⚠️ **T15 KHÔNG lật Q20.** Chọn `Năm = 2025` rồi chọn **`Tuần 33/2025`** thì vẫn ghi được —
+> kỳ đích là đúng tuần người dùng đang nhìn. Điều T15 chặn là **lối tắt `"all"`**, thứ giải
+> nghĩa thành một kỳ không có trên màn hình. Đọc T15 thành "cấm ghi vào năm cũ" là hiểu
+> ngược: cấm như vậy sẽ xoá sạch mục đích của Q20 (nhập bù cho kỳ đã qua).
+
+> **Ba mã lỗi rời nhau, cố ý.** `NOT_WEEKLY` tách khỏi `INVALID` vì hai ca có **hai cách xử lý
+> khác nhau ở FE**: chuỗi sai khuôn là bug của client (log rồi báo lỗi chung), còn "kỳ tháng"
+> là tình huống người dùng gặp thật và cần câu dẫn đường *"chọn một tuần trong tháng để sửa"*.
+> Gộp chúng làm câu hướng dẫn đó không dựng được.
+>
+> Trong luồng bình thường FE **không bao giờ** kích hoạt `NOT_WEEKLY`: chọn tháng thì
+> `isEditable = false` nên không có control nào để bấm (§5.4). Mã này là **lưới chặn phía
+> server**, đúng khuôn "FE ẩn là trải nghiệm, BE từ chối mới là luật".
+
+> **`"all"` là ca mới của Q26, và nó KHÔNG chặn, KHÔNG hỏi lại.** Ở chế độ
+> `Kỳ trong năm = Tất cả`, màn hình đang hiện "bản ghi mới nhất trong năm" của từng chỉ tiêu —
+> tức không có kỳ nào đang được chọn. Người dùng vẫn sửa được, và lời sửa **rơi vào kỳ hiện
+> tại**. Đây là quyết định của người dùng ngày 2026-09-05; bản trước từ chối ca này bằng
+> `CRITERIA.ASSESSMENT_PERIOD_INVALID`.
+>
+> Người dùng biết lời ghi vừa rơi vào đâu nhờ cột `Kỳ của số liệu` (Q31): sau khi lưu, ô của
+> dòng đó đổi sang kỳ hiện tại. Đó là **phản hồi**, không phải trang trí — nó phân biệt "vừa
+> tạo số cho tuần này" với "vừa ghi đè số của một tuần cũ".
+>
+> ⚠️ Ca cần để mắt: nếu dòng đang hiện số của tuần 12 và người dùng sửa ở chế độ `Tất cả`, số
+> cũ của tuần 12 **vẫn còn nguyên** — lời sửa tạo/cập nhật bản ghi của tuần hiện tại chứ không
+> đụng tới tuần 12. Lưới sẽ hiện giá trị mới vì "mới nhất trong năm" nay là bản ghi vừa ghi.
+>
+> **`period` vắng mặt vẫn là lỗi**, không rơi về `"all"`. `"all"` là một lựa chọn người dùng
+> thấy trên màn hình và chủ động để nguyên; `period` thiếu là một client quên gửi. Đối xử hai
+> ca đó như nhau nghĩa là mọi bug quên-gửi-tham-số đều âm thầm ghi vào tuần này.
+
+#### Một nguyên tắc, ba quyết định — đọc cái này thay vì nhớ ba luật rời
+
+> ### 🎯 **Lời ghi không bao giờ được rơi vào một kỳ mà người dùng KHÔNG nhìn thấy trên màn hình.**
+
+Ba quyết định của hai vòng chốt là **ba lỗ hổng của cùng nguyên tắc đó**, bịt theo ba chiều
+khác nhau:
+
+| Chiều | Lỗ hổng | Bịt bằng |
+| --- | --- | --- |
+| *"kỳ nào vừa nhận số?"* | ở chế độ `Tất cả`, người dùng không biết lời ghi rơi vào tuần nào | **Q26** — cột `Kỳ của số liệu` đổi ngay sau khi lưu, nói thẳng kỳ đích |
+| **đơn vị** kỳ | ghi cho "tháng 8" thì bản ghi nằm ở tuần 36, vắt sang tháng 9 | **Q37** — bỏ hẳn đơn vị tháng khỏi đường ghi |
+| **năm** | `Tất cả` + năm 2025 ⇒ ghi vào tuần hiện tại của 2026 | **T15** — `"all"` chỉ hợp lệ khi đang xem năm hiện tại |
+
+Ai thêm một lối ghi mới về sau thì đối chiếu với **nguyên tắc**, đừng đối chiếu với ba luật —
+ba luật là hệ quả, và một lối vào thứ tư sẽ có lỗ hổng thứ tư mà chúng không phủ.
+
+#### Bước 2 — ghi vào bản ghi nào của kỳ đích
+
+1. Kỳ đích **đã có** bản ghi ⇒ **cập nhật đúng bản ghi mà §5.2 đọc ra cho kỳ đó** (bản có
+   `AssessmentDate` lớn nhất trong kỳ). `AssessmentDate` của nó **giữ nguyên**.
+2. Kỳ đích **chưa có** bản ghi ⇒ **tạo mới**, `AssessmentDate` theo luật neo dưới đây, và
+   **sao chép** giá trị các trường **không** nằm trong request từ bản ghi gần nhất trước đó
+   (copy-forward). Không có bản ghi trước ⇒ các trường đó để trống.
+
+**Luật neo ngày** — kỳ đích luôn là **một tuần** (Q37), nên luật gọn lại còn một dòng:
+
+```
+AssessmentDate = hôm nay                     nếu hôm nay nằm TRONG tuần đích
+               = Chủ nhật của tuần đích      nếu không
+```
+
+Hệ quả đọc thẳng ra được: ghi cho tuần hiện tại ⇒ neo vào hôm nay (đúng hành vi cũ, không đổi
+gì cho đường dùng hàng ngày). Ghi bù cho tuần 30 ⇒ neo vào Chủ nhật của tuần 30. Không bao giờ
+sinh ra một ngày **nằm ngoài** tuần đích, và không bao giờ sinh ra ngày ở tương lai trừ khi
+chính tuần đích ở tương lai.
+
+*Nhánh "ngày cuối của một kỳ THÁNG" từng có ở bản 2026-09-05 đã biến mất cùng Q37 — không còn
+kỳ đích nào là tháng.*
+
+> **Vì sao là "upsert theo KỲ" chứ không còn là "upsert theo NGÀY":** khi kỳ do người dùng
+> chọn, hai lần sửa cùng một kỳ phải chồng lên nhau — nếu không, sửa tuần 30 vào thứ Hai rồi
+> sửa lại vào thứ Tư sẽ để lại hai bản ghi khác ngày trong cùng tuần 30, và luật đọc §5.2 âm
+> thầm chọn một cái. Ràng buộc DB (§1.4) vẫn là mức ngày; nó là **lưới an toàn**, không phải
+> thứ cưỡng chế luật này.
+
+> **Vì sao copy-forward:** không có nó, người sửa mỗi `Tiến độ %` sẽ tạo một bản ghi mới mà
+> `SelfScore`/`VerifiedScore`/`Status` đều trống — và dashboard của tuần đó lập tức báo tụt
+> về 0. Đây là lỗi "dữ liệu đúng theo từng lời ghi nhưng sai theo cái người ta đọc".
+
+**Ranh giới giữa hai đường ghi** (Q9), không được nới:
+
+| Đường | Trường được ghi |
+| --- | --- |
+| Dialog "Sửa chỉ tiêu" | 4 trường danh mục + **6** trường đánh giá: `SelfScore` · `VerifiedScore` · `Status` · `OwnerId` · `Deadline` · `Note` |
+| Sửa **inline** trong lưới | đúng **2** trường: `ProgressPercent` · `Note` |
+
+### 5.4 `canWrite` và `isEditable` — HAI cờ, hai câu hỏi khác nhau
+
+> **Viết lại lần thứ ba, 2026-09-06 theo Q37 + Q39.** Lịch sử của trường `isEditable`: bản
+> DRAFT = "kỳ đang xem có phải trạng thái Live không"; Q20 + Q26 rút hết nội dung đó đi
+> (không còn kỳ nào chỉ đọc vì lý do *thời gian*); Q37 lại đưa **một** điều kiện về kỳ quay
+> trở lại — nhưng là điều kiện khác hẳn: **đơn vị** của kỳ, không phải **tuổi** của kỳ.
+
+```
+canWrite   = người gọi được phép GHI dữ liệu DTI
+isEditable = canWrite
+             VÀ  đơn vị kỳ đang chọn là TUẦN (hoặc "all")        ← Q37
+             VÀ  năm đang lọc cho phép kỳ đích nằm trong nó      ← T15
+```
+
+**Ba điều kiện, không phải hai** (Q27 + Q39 · Q37 · T15):
+
+| # | Điều kiện | Sai thì người dùng phải làm gì |
+| ---: | --- | --- |
+| 1 | Người gọi **có quyền ghi** DTI | đi xin cấp quyền — không tự làm được |
+| 2 | Đơn vị kỳ là **tuần** hoặc `Tất cả` | **chọn một tuần** trong tháng đang xem |
+| 3 | Kỳ đích **nằm trong năm đang lọc** — thực tế chỉ chặn ca `Tất cả` + năm ≠ năm hiện tại | **chọn một tuần cụ thể** của năm đó, hoặc đổi năm về năm hiện tại |
+
+| Trường | Trả lời câu hỏi | FE dùng để |
+| --- | --- | --- |
+| `canWrite` | *"Người này có quyền sửa dữ liệu DTI không?"* | Hiện/**ẩn** `+ Thêm chỉ tiêu`, `Import CSV/Excel`, `Sửa`, `Xoá` |
+| `isEditable` | *"Ở bộ lọc đang đặt, có sửa được ngay bây giờ không?"* | Bật/**tắt** sửa inline và nút Lưu |
+| `editBlockedBy` | *"Vì sao không sửa được, và người dùng đổi cái gì thì sửa được?"* | Chọn lời nhắc, và trỏ đúng ô lọc đang chặn |
+
+**Cả ba đều ở CẤP MÀN** (cạnh `items` của response lưới), **không** lặp ở dòng nào — cả ba
+điều kiện đều thuộc về request, không thuộc về dòng.
+
+`canWrite = true` khi mang role `SuperAdmin` (break-glass, đi qua mọi `[RequirePermission]` —
+`src/BE/Core/PlatformManager.Core.Infrastructure/Permissions/RequirePermissionFilter.cs:43`)
+**hoặc** có ít nhất một role được cấp key ghi DTI (§6.5).
+
+> ### `canWrite` phải ở CẤP MÀN — lỗ hổng ở giao của Q39 và T9
+>
+> Ca T9: chưa import lần nào, lưới có **0 dòng**. Nếu quyền chỉ sống trong từng dòng thì lúc
+> đó không có dòng nào để đọc — trong khi đúng hai nút `+ Thêm chỉ tiêu` và `Import CSV/Excel`
+> vẫn phải quyết ẩn hay hiện, và đó lại là lúc nút Import **quan trọng nhất** (việc duy nhất
+> làm được trên màn rỗng). Một cờ chỉ tồn tại khi đã có dữ liệu thì vắng mặt đúng lúc cần nhất.
+>
+> **Một nguồn sự thật, không hai.** `canWrite` là nguồn; `isEditable` và `editBlockedBy`
+> **suy ra từ nó** trong **cùng một** lần đánh giá của request:
+>
+> ```
+> isEditable = true   ⟺   canWrite = true  VÀ  editBlockedBy = []
+> canWrite   = false  ⇒   editBlockedBy = ["NO_WRITE_PERMISSION"]  (đúng một phần tử)
+> canWrite   = true   ⇒   editBlockedBy ⊆ ["PERIOD_NOT_WEEKLY", "PERIOD_OUT_OF_YEAR"]
+> ```
+>
+> Lưới rỗng vẫn có **đủ cả ba** — đó chính là lý do chúng ở cấp màn.
+>
+> FE **không** được suy quyền từ `items.length` (lưới rỗng không nói gì về quyền) cũng **không**
+> từ `roles` của `GET /api/auth/me` — payload đó không mang permission-key, và ánh xạ role → key
+> là dữ liệu chạy sửa được ở màn Phân quyền. Chi tiết + vì sao không nhét quyền vào `/me`:
+> `doc/contracts/danh-muc-dti.md` DM-2 mục 3.
+
+#### Vì sao PHẢI là hai cờ chứ không phải một
+
+Sau Q37 và Q39, `isEditable = false` có **hai nguyên nhân khác nhau**, và mỗi nguyên nhân có
+một cách sửa khác nhau:
+
+| Nguyên nhân | Người dùng phải làm gì | Màn hình phải nói gì |
+| --- | --- | --- |
+| Không có quyền ghi (Q39) | xin cấp quyền — **không tự làm được** | ẩn hẳn mọi nút ghi |
+| Đang chọn một kỳ THÁNG (Q37) | **chọn một tuần** trong tháng đó | giữ nguyên nút, báo "đang xem tổng hợp" |
+
+Một cờ duy nhất buộc FE phải **đoán** nguyên nhân bằng cách tự đọc lại `period` mình vừa gửi.
+Suy luận đó đúng hôm nay và sai vào ngày có nguyên nhân thứ ba — đúng khuôn hỏng đã xảy ra
+với chính trường này hai lần trong hai ngày. Hai cờ tường minh rẻ hơn một cờ cộng một quy tắc
+suy luận nằm trong đầu người viết FE.
+
+#### Q39 — không có quyền thì vào được màn, nhưng CHỈ ĐỌC
+
+Người thiếu quyền **vẫn vào được** `/danh-muc/dti`: không chặn ở route, không ẩn mục menu.
+Họ xem, lọc, và xuất báo cáo bình thường; chỉ mất các đường ghi.
+
+> **Vì sao không chặn hẳn màn:** Dashboard đã hiện **đủ 62 chỉ tiêu** cho mọi người đăng nhập
+> (Q21). Chặn màn Danh mục vì thế không giấu được dữ liệu nào — nó chỉ làm người dùng gặp một
+> màn 403 khó hiểu cho thứ họ đã đọc được ở trang chủ. Khác biệt thật giữa hai loại người dùng
+> là **có nút sửa hay không**, nên hợp đồng chỉ cần diễn đạt đúng khác biệt đó.
+
+#### Vì sao lý do phải là một MẢNG MÃ, không phải một `bool`
+
+Ba điều kiện trượt cho ra **hai kiểu hiển thị** và **ba lời nhắc**:
+
+| Điều kiện trượt | Hiển thị | Lời nhắc |
+| --- | --- | --- |
+| Không có quyền ghi (Q39) | **ẩn** nút — "không phải của bạn" | không có dải băng; đổi bộ lọc không cứu được |
+| Kỳ là tháng (Q37) | **disabled** — "không phải lúc này" | bảo đổi ô `Kỳ trong năm` |
+| Năm ≠ năm hiện tại khi kỳ = `Tất cả` (T15) | **disabled** | bảo đổi ô `Năm đánh giá` |
+
+Một `bool` trần gộp cả ba, nên dải băng chỉ nói được câu chung *"chọn lại bộ lọc"* — bắt người
+dùng thử từng ô để đoán ô nào đang chặn mình. Và **hai ô có thể cùng lúc trượt**
+(`Năm = 2025` **và** `Kỳ = Tháng 8`): nhắc một ô thì họ sửa xong vẫn thấy bảng chỉ đọc, không
+hiểu vì sao.
+
+Vì vậy `editBlockedBy` liệt kê **mọi** điều kiện đang trượt (khi có quyền), theo **thứ tự cố
+định** ở bảng trên. Riêng ca thiếu quyền trả **đúng một** phần tử: hai mã kia là lời mời "đổi
+bộ lọc đi rồi sửa được", nói câu đó với người không có quyền là dắt họ đi một vòng vô ích.
+
+**FE KHÔNG tự suy lại ba điều kiện** từ bộ lọc nó đang giữ — suy lại là dựng nguồn sự thật thứ
+hai, và nó sẽ lệch ngay lần có điều kiện thứ tư. Server tính, FE đọc mã rồi tra bảng dịch
+(đúng khuôn `doc/huong_dan/wiki-core/be/16-i18n-va-ma-loi.md` §3). Hai mã lọc **trùng tên** với
+hai mã lỗi tương ứng của đường ghi, bỏ tiền tố `CRITERIA.ASSESSMENT_` — một bộ từ vựng, không
+hai. Shape đầy đủ + bất biến: `doc/contracts/danh-muc-dti.md` DM-2 mục 3.
+
+#### Hai lớp chặn, không phải một
+
+1. FE ẩn/tắt control theo `canWrite` và `isEditable`.
+2. **BE từ chối**, mỗi điều kiện một mã riêng:
+
+| Điều kiện hỏng | BE trả |
+| --- | --- |
+| 1 — không có quyền | `403` qua `[RequirePermission]` (do filter, không phải mã của catalog DTI) |
+| 2 — kỳ đích là tháng | `400 CRITERIA.ASSESSMENT_PERIOD_NOT_WEEKLY` |
+| 3 — `"all"` khi đang xem năm khác | `400 CRITERIA.ASSESSMENT_PERIOD_OUT_OF_YEAR` |
+
+Lớp thứ hai là lớp thật. Lớp thứ nhất chỉ là trải nghiệm — một client tự chế bỏ qua được lớp
+một mà không bỏ qua được lớp hai. Cả ba mã (và mọi mã khác của cụm) phải khai trong catalog
+`CriteriaErrors.cs` / `ImportErrors.cs`; `ArchTests` nhận diện file catalog bằng đuôi
+`Errors.cs` và khai thiếu là test **đỏ** (`doc/contracts/danh-muc-dti.md` §2).
+
+> **Hệ quả về shape (đổi 2026-09-06):** `isEditable` **đã rời khỏi `CriteriaRowDto`**. Cả ba
+> điều kiện đều ở cấp request nên giá trị giống hệt ở mọi dòng — giữ một bản sao mỗi dòng chỉ
+> tạo chỗ cho chúng lệch nhau, và **không dùng được ở ca lưới rỗng**, đúng lúc dải băng cần
+> nói lý do nhất. Response của DM-4/DM-6 vì thế không mang `isEditable` nữa; lời ghi vừa thành
+> công thì quyền và bộ lọc không đổi, FE giữ nguyên khối quyền của lần tải lưới gần nhất.
+
+> `CRITERIA.ASSESSMENT_READONLY_PERIOD` **đã gỡ khỏi hợp đồng** (Q20) và **không quay lại**
+> cùng Q37 — Q37 chặn theo **đơn vị kỳ**, dùng mã riêng `ASSESSMENT_PERIOD_NOT_WEEKLY` ở tầng
+> validate đầu vào, không phải một xung đột trạng thái `409`.
+
+### 5.5 Xoá chỉ tiêu
+
+| Điều kiện | Hành vi |
+| --- | --- |
+| Chưa **từng** có bản ghi đánh giá nào (mọi năm) | **xoá cứng** — `hardDeleted: true` |
+| Đã có ít nhất một bản ghi | **xoá mềm** — `hardDeleted: false`; lịch sử giữ nguyên |
+
+BE quyết định, FE chỉ đọc kết quả. Chỉ tiêu đã xoá mềm **biến khỏi mọi lưới và mọi phép tổng
+hợp**, kể cả khi xem lại kỳ cũ mà lúc đó nó còn sống — nếu không, tổng số chỉ tiêu của một
+kỳ sẽ đổi tuỳ thời điểm người ta mở màn hình lên xem.
+
+### 5.6 Dấu vết "ai sửa kỳ nào" — 4 trường audit của `BaseEntity`, KHÔNG bảng lịch sử
+
+**Chốt Q28 (2026-09-05).** Khi kỳ đã qua ghi được (Q20), câu hỏi *"số của tuần 30 bị ai sửa,
+lúc nào"* trở thành câu hỏi thật. Câu trả lời **không** phải một bảng lịch sử mới — nó là bốn
+trường audit mà `CriteriaAssessment` đã thừa kế sẵn từ `BaseEntity`.
+
+| Trường | Ghi cái gì | Ai ghi |
+| --- | --- | --- |
+| `CreatedBy` · `CreatedAt` | người tạo bản ghi đánh giá của kỳ đó + thời điểm | `AuditInterceptor` |
+| `UpdatedBy` · `UpdatedAt` | **người sửa cuối cùng** + thời điểm | `AuditInterceptor` |
+
+Cơ chế **đã chạy thật**, không phải thứ phải xây (đối chiếu source 2026-09-05):
+
+- 4 trường khai ở `src/BE/Core/PlatformManager.Core.Domain/Common/BaseEntity.cs:24` (setter
+  `public` là chủ đích, để interceptor ghi được từ ngoài entity).
+- `src/BE/Core/PlatformManager.Core.Infrastructure/Persistence/Interceptors/AuditInterceptor.cs:37`
+  duyệt **mọi** `BaseEntity` đang `SaveChanges`, nhánh `Modified` ghi `UpdatedBy`/`UpdatedAt`
+  ở `:51`. Entity mới thừa kế `BaseEntity` là **tự động** có, không phải đăng ký gì thêm.
+- Giá trị `UpdatedBy` là `ICurrentUser.UserName` — **tên đăng nhập dạng chuỗi**, không phải
+  `Guid` (`AuditInterceptor.cs:34`). Đổi tên đăng nhập về sau sẽ không đổi dấu vết đã ghi.
+
+#### Ba giới hạn — đã được người dùng CHẤP NHẬN, không phải thiếu sót
+
+| Không trả lời được | Vì |
+| --- | --- |
+| "Đã sửa **mấy lần**?" | mỗi lần ghi đè `UpdatedBy`/`UpdatedAt` của lần trước |
+| "Giá trị **cũ** là bao nhiêu?" | không lưu ở đâu cả |
+| "Ai là người sửa **thứ hai từ cuối**?" | chỉ nhớ người cuối |
+
+Đây là **đánh đổi có ý thức**: một bảng lịch sử thay đổi giải quyết cả ba, nhưng kéo theo
+bảng mới, chính sách lưu giữ (`10-data-retention.md`), màn hình tra cứu, và một quyết định về
+dung lượng — trong khi câu hỏi thực tế cần trả lời là *"ai vừa động vào số này"*. Nếu về sau
+cần đủ ba, đó là một lượt riêng, và **không** phá thứ đang có.
+
+#### 🔴 ĐIỀU KIỆN TIÊN QUYẾT — nhật ký của import phải mang ĐÚNG người đăng nhập (Q35)
+
+**Chốt Q35 (2026-09-06): `UpdatedBy` của một lần import phải là tài khoản đã bấm nút nạp
+file, không phải `"system"`. Đây là ĐIỀU KIỆN TIÊN QUYẾT của DM-7** — không bật đường import
+lên môi trường thật khi hạng mục này chưa xong.
+
+**Hiện trạng đã đo (đối chiếu source 2026-09-06):** import chạy trong **job nền** (Hangfire),
+ở đó **không có `HttpContext`**, nên `HttpContextCurrentUser.IsAuthenticated` trả `false`
+(`src/BE/PlatformManager.Api/Common/HttpContextCurrentUser.cs:15` — `User` lấy từ
+`IHttpContextAccessor.HttpContext?`; đây là **bản cài đặt DUY NHẤT** của seam, đăng ký ở
+`src/BE/PlatformManager.Api/Program.cs:132` — sửa 2026-09-09, bản trước ghi `:118` là một
+dòng cấu hình `ApiBehaviorOptions`), và `AuditInterceptor` rơi vào nhánh
+`userName ?? "system"`
+(`src/BE/Core/PlatformManager.Core.Infrastructure/Persistence/Interceptors/AuditInterceptor.cs:43`
+và `:49`). Nghĩa là thao tác **rủi ro nhất** — nạp đè 62 dòng lên một kỳ đã chốt số liệu —
+lại là thao tác **không có tên người**.
+
+**Tầng nghiệp vụ không tự vá được**, và đó là lý do việc này thuộc **host** chứ không thuộc
+`Business.*`: interceptor ghi đè `UpdatedBy` **vô điều kiện** ở cả hai nhánh
+`Added`/`Modified`, nên một handler trong `Business.*` có gán tay giá trị trước
+`SaveChangesAsync` thì cũng bị ghi đè lại.
+
+##### Cách làm — ĐI ĐƯỜNG HOST, **0 dòng sửa trong `Core.*`** (chốt 2026-09-09)
+
+| # | Việc | Ở đâu |
+| ---: | --- | --- |
+| 1 | **Hangfire client filter** đọc `ICurrentUser.UserName` lúc enqueue — thời điểm còn nằm trong HTTP request, nên seam còn trả đúng người — rồi stash vào **job parameter** | `PlatformManager.Api` (host) |
+| 2 | **Bản cài `ICurrentUser` thứ HAI** cho job nền: đọc danh tính đã stash thay vì đọc `HttpContext`. Đặt **cạnh** `src/BE/PlatformManager.Api/Common/HttpContextCurrentUser.cs` | `PlatformManager.Api` (host) |
+| 3 | `Program.cs` **chọn bản cài theo ngữ cảnh** — đường đăng ký hôm nay là `builder.Services.AddScoped<ICurrentUser, HttpContextCurrentUser>()` (`src/BE/PlatformManager.Api/Program.cs:132`); worker Hangfire phải phân giải ra bản cài thứ hai | `PlatformManager.Api` (host) |
+
+**`AuditInterceptor` KHÔNG phải sửa.** Nó đã làm đúng việc của nó: hỏi `ICurrentUser`. Vấn đề
+nằm ở chỗ trong worker, seam đó trả về "không ai". Sửa interceptor để nó nhận danh tính từ
+ngoài là đi vòng qua seam và tạo đường thứ hai ghi trường audit — đúng thứ mà việc gom tất cả
+vào một interceptor sinh ra để tránh.
+
+**`IBackgroundJobScheduler` KHÔNG mở rộng.** Chữ ký hôm nay
+(`src/BE/Core/PlatformManager.Core.Application/Common/Interfaces/IBackgroundJobScheduler.cs:29`)
+giữ **nguyên**, không thêm tham số danh tính, không thêm overload.
+
+> ### 🔄 LẬT 2026-09-09 — bản trước của mục này ghi *"`IBackgroundJobScheduler` **PHẢI** mở
+> rộng"* và xếp cả ba bước vào Core
+>
+> Đường đã chốt là **client filter**, và nó tốt hơn ở đúng chỗ quan trọng nhất: filter chạy
+> cho **mọi** job đi qua Hangfire, kể cả job viết sau này và job không ai nhớ tới. Mở rộng
+> chữ ký thì mỗi nơi enqueue phải **nhớ truyền** danh tính, và nơi nào quên sẽ lặng lẽ ghi
+> `"system"` trở lại — tức bug này quay về, một điểm gọi một lần, không có gì canh.
+>
+> Nguyên tắc bên dưới **không đổi** và chính nó chọn ra đường mới: danh tính là **ngữ cảnh
+> chạy**, không phải tham số nghiệp vụ của từng job. Filter đặt nó vào đúng tầng ngữ cảnh
+> (hạ tầng job), trong khi mở rộng chữ ký lại kéo nó vào hợp đồng mà mỗi nơi gọi phải khai.
+>
+> Hệ quả thứ hai, đáng giá không kém: **`Core.*` không phải sửa dòng nào.** Cả ba bước nằm
+> trong `PlatformManager.Api` — nơi vốn đã là chỗ hợp lệ duy nhất biết tới `HttpContext` và
+> tới Hangfire cùng lúc. Việc này vì thế **không** còn là "hạng mục Core"; xem lại nhãn ở
+> `doc/contracts/danh-muc-dti.md` §4, đã sửa cùng ngày.
+
+##### Ranh giới và điều kiện nghiệm thu
+
+- **Không sửa `Core.*`** ⇒ lượt thi công **không** bắt buộc đi qua `core-reviewer` vì lý do
+  Q35 (vẫn đi nếu lượt đó chạm core vì việc khác). Cũng vì vậy **không** có luật mới nào phải
+  chuyển sang `doc/huong_dan/wiki-core/be/` khi làm xong — mục này ở lại đây.
+- ⚠️ **Nhưng bản cài `ICurrentUser` thứ hai vẫn là hạ tầng dùng chung của host.** Nó phục vụ
+  mọi job nền tương lai, không riêng import. Đừng đặt nó trong thư mục của feature import,
+  và đừng để tên nó nhắc tới DTI.
+- Nghiệm thu: chạy một lần import bằng tài khoản A, đọc `UpdatedBy` của bản ghi đánh giá vừa
+  ghi — phải là tên đăng nhập của **A**, không phải `"system"`. Ca âm cũng phải kiểm: một job
+  nền **không** do người dùng kích hoạt (nếu có) vẫn ghi `"system"` chứ không ném lỗi.
+- Ca âm thứ hai, riêng cho đường filter: một job enqueue **ngoài** HTTP request (vd từ
+  `SeedCommand` hoặc một recurring job) không được làm filter ném lỗi — không có ai để chụp
+  thì stash rỗng, và bản cài thứ hai trả `null` để `AuditInterceptor` rơi về `"system"` như cũ.
+
+#### Hệ quả của Q20 lên báo cáo đã xuất
+
+Kỳ đã qua ghi được nghĩa là **một file `.xlsx` đã tải về hôm nay có thể mâu thuẫn với số của
+chính kỳ đó vào tháng sau**. Đây là hệ quả trực tiếp của quyết định, không phải lỗi.
+
+Thứ giữ cho nó vô hại đã nằm sẵn trong bố cục file đã duyệt: dòng `Ngày xuất` ở khối nhận
+dạng kỳ (`spec/dashboard-dti/business-rules.md` §4.2, dòng 8) cho người cầm file biết mình
+đang giữ ảnh chụp lúc nào. Đừng bỏ dòng đó đi cho gọn.
+
+---
+
+## 6. Import
+
+Luật chung của Core (seam `IImportFileReader`, thư viện CsvHelper + NPOI, NPOI **chỉ** ở
+`Core.Infrastructure`, nhận diện định dạng bằng **magic byte**, ba lỗi phải sửa khi bê code
+cũ): `doc/huong_dan/wiki-core/be/15-import-export.md` §2. **Không lặp lại ở đây.** Mục này
+chỉ giữ phần riêng của DTI.
+
+### 6.1 Định dạng và cách đọc
+
+- Nhận `.csv`, `.xlsx`, `.xls` (Q6).
+- Excel: đọc **sheet đầu tiên**, dòng 1 = header. Không hỗ trợ nhiều sheet, không hỗ trợ ô
+  gộp (merged cell) ở bản đầu.
+- CSV: tự nhận BOM. File BA gửi **có** BOM UTF-8.
+- Chạy **nền** qua Hangfire, FE poll trạng thái. Hạ tầng có sẵn ở Core, không dựng mới.
+
+### 6.2 Ánh xạ 11 cột
+
+Khớp header theo **tên cột**, không theo vị trí. So khớp: cắt khoảng trắng, không phân biệt
+hoa/thường, **có** phân biệt dấu.
+
+| # | Cột trong file | Trường | Bắt buộc |
+| ---: | --- | --- | --- |
+| 1 | `Mã` | `Criteria.Code` | ✔ |
+| 2 | `Chỉ tiêu` | `Criteria.Name` | ✔ (khi tạo mới) |
+| 3 | `Nhóm` | tra `CriteriaGroup.Name` → `Criteria.GroupId` | ✔ |
+| 4 | `Điểm tối đa` | `Criteria.MaxScore` | ✔ (khi tạo mới) |
+| 5 | `Tự đánh giá` | `CriteriaAssessment.SelfScore` | |
+| 6 | `Thẩm định` | `CriteriaAssessment.VerifiedScore` | |
+| 7 | `Chênh lệch` | **BỎ QUA** — trường tính (§3.1) | |
+| 8 | `Trạng thái` | `CriteriaAssessment.Status` | |
+| 9 | `Phụ trách` | tra `AppUser.FullName` → `OwnerId` | |
+| 10 | `Hạn xử lý` | `CriteriaAssessment.Deadline` | |
+| 11 | `Minh chứng/Ghi chú` | `CriteriaAssessment.Note` | |
+
+**Cột 7 đọc vào rồi vứt, không đối chiếu.** Nếu đối chiếu và báo lỗi khi lệch, một file
+người dùng sửa tay ở cột 5 mà quên sửa cột 7 sẽ bị từ chối — trong khi cột 7 vốn không phải
+dữ liệu.
+
+> ⚠️ **Sau Q25 thì luật "bỏ qua" này còn quan trọng hơn trước.** Cột `Chênh lệch` trong file
+> BA gửi tính theo chiều **cũ** (`Tự đánh giá − Thẩm định`), tức **ngược dấu** với thứ hệ
+> thống tính ra (§3.1). Một đường import có đối chiếu cột này sẽ từ chối **27/62 dòng của
+> chính file gốc** — và câu lỗi sẽ trông như dữ liệu của BA sai, trong khi nó đúng theo quy
+> ước của họ. Đọc vào rồi vứt là cách duy nhất để hai quy ước cùng tồn tại được.
+
+⚠️ **Ô công thức trong `.xlsx`/`.xls`:** NPOI trả **chuỗi công thức** chứ không phải kết quả
+nếu đọc thẳng `cell.ToString()` — ô `=B2*100` sẽ vào DB thành chữ `"B2*100"`. Phải đọc
+`CachedFormulaResultType` rồi lấy theo đúng kiểu. Đây là **lỗi im lặng**: không crash, không
+log, chỉ có dữ liệu rác nằm chờ (`15-import-export.md` §2b).
+
+⚠️ **Ngày:** giữ kiểu ngày thật qua seam, **không** ép về chuỗi `dd/MM/yyyy` rồi parse ngược
+— vừa mất thông tin vừa dính locale (`15-import-export.md` §2c). Cột `Hạn xử lý` **rỗng toàn
+bộ** trong file BA gửi, nên đường này sẽ không có ai thử cho tới khi có file thật khác.
+
+### 6.3 Luật từng dòng
+
+| Tình huống | Xử lý |
+| --- | --- |
+| `Mã` chưa có trong hệ thống | **tạo `Criteria` mới**, đếm vào `criteriaCreatedCount` |
+| `Mã` đã có | cập nhật đánh giá; **không** đổi `Name`/`MaxScore`/`GroupId` của chỉ tiêu đã có |
+| `Nhóm` không khớp `CriteriaGroup.Name` nào | **lỗi dòng đó** — KHÔNG tự tạo nhóm mới |
+| `Trạng thái` ngoài 4 giá trị §4 | **lỗi dòng đó** |
+| `Tự đánh giá` hoặc `Thẩm định` > `Điểm tối đa` | **lỗi dòng đó** |
+| `Phụ trách` không khớp `AppUser.FullName` nào | **KHÔNG lỗi** — `OwnerId` để trống |
+| `Mã` rỗng | lỗi dòng đó |
+| `Mã` xuất hiện hai lần trong cùng file | lỗi dòng **thứ hai** |
+
+**Vì sao "nhóm lạ" là lỗi còn "phụ trách lạ" thì không:** nhóm là **danh mục đóng** do BA
+quản (6 nhóm), sai nhóm nghĩa là sai chính tả hoặc thừa khoảng trắng — tự tạo nhóm thứ 7 làm
+mọi phép tổng hợp theo nhóm sai ngay và không ai thấy. Còn `Phụ trách` là **tham chiếu mềm**
+sang danh sách người dùng của Core: người phụ trách chưa có tài khoản là chuyện bình thường,
+chặn cả dòng vì lý do đó là chặn dữ liệu đúng. Trong file BA gửi, cột này **rỗng toàn bộ**.
+
+`Phụ trách` khớp theo **tên đầy đủ**, cắt khoảng trắng, không phân biệt hoa/thường, **có**
+phân biệt dấu. Khớp nhiều hơn một người ⇒ để trống (không đoán).
+
+##### 🚧 ĐÃ CHỐT — ĐANG THI CÔNG: `IUserLookupService` của Core phải SỬA theo luật trên (2026-09-09)
+
+Luật ở bảng trên là luật đúng, và **Core hôm nay làm ngược nó**. Đây là một ràng buộc mà DTI
+đặt lên Core, nên ghi ở đây; việc sửa thuộc lượt code Core.
+
+| Có thật hôm nay (đối chiếu source 2026-09-09) | Sẽ thành |
+| --- | --- |
+| Không ai khớp ⇒ **tự tạo `AppUser` mới** (UserName/mật khẩu tự sinh vô danh, `MustChangePassword = true`) — khai trong docstring `src/BE/Core/PlatformManager.Core.Application/Users/IUserLookupService.cs:14` | Không ai khớp ⇒ trả **`null`**, `OwnerId` để trống. **Bỏ hẳn nhánh tự tạo** |
+| Chữ ký `ResolveOrCreateByFullNameAsync` mang chữ `Create` trong tên (`IUserLookupService.cs:19`) | Đổi tên cho khớp hành vi mới — không còn `Create` |
+| Kiểu trả `(Guid? OwnerId, bool WasCreated)` — cờ `WasCreated` chỉ có nghĩa khi còn nhánh tạo | Bỏ cờ, còn `Guid?` |
+| Docstring `:7` trỏ *"`spec/danh-muc-dti/business-rules.md` mục 2.2 câu #16"* | Trỏ **§6.3 của file này**. Mục `2.2` **không tồn tại** trong file — §2 là "Mã chỉ tiêu", không có mục con nào |
+
+**Vì sao bỏ nhánh tự tạo.** Một tài khoản sinh ra từ một ô văn bản trong file Excel là tài
+khoản **không ai chủ động cấp**: nó không đi qua màn Quản trị người dùng, không có email, và
+tồn tại chỉ vì ai đó gõ đúng một cái tên vào cột `Phụ trách`. Người phụ trách chưa có tài
+khoản là chuyện bình thường (§ ngay trên), nên câu trả lời đúng là **để trống**, không phải
+tạo ra một danh tính rồi để đó. `null` cũng làm hành vi của cả ba nhánh nhất quán: không
+khớp ai và khớp nhiều người đều cho ra cùng một kết quả — `OwnerId` trống, dòng vẫn nạp.
+
+**Điều KHÔNG đổi:** nhánh khớp đúng một người vẫn trả `Id` đó, và nhánh khớp ≥2 người vẫn trả
+`null`. Hai nhánh này đã đúng.
+
+⚠️ Không sửa file `.cs` từ tài liệu — mục này là **đầu vào** cho lượt code, không phải bằng
+chứng rằng nó đã xong. Docstring sai ở `:7` cũng để lượt đó sửa cùng lúc.
+
+**Một dòng lỗi không làm hỏng cả file.** Job vẫn `Succeeded`; lỗi từng dòng nằm trong
+`result.errors` kèm `rowNumber` (số dòng **trong file người dùng gửi**, dòng 1 = header) để
+người dùng mở file ra sửa đúng chỗ.
+
+### 6.4 `AssessmentDate` và `Tiến độ %` khi import
+
+- **`AssessmentDate` theo KỲ ĐÍCH của file, không theo ngày chạy job.** Người dùng chọn kỳ
+  trước khi nạp (`period` của DM-7); áp **nguyên** luật hai bước ở §5.3, kể cả luật neo ngày
+  và ca `"all"` ⇒ tuần hiện tại. **Một luật ghi cho cả ba đường** — không có luật riêng cho
+  import.
+
+  Hệ quả của Q37: kỳ đích của một file import **chỉ được là một TUẦN** (hoặc `"all"`). Nạp
+  một file cho "tháng 8" là không hợp lệ ⇒ `400 IMPORT.PERIOD_NOT_WEEKLY`. Muốn nạp số liệu
+  cả tháng thì nạp theo từng tuần — và đó cũng đúng cách BA đang làm việc, file mẫu của họ là
+  file **một kỳ**.
+
+  > Bản trước ghi *"`AssessmentDate` = ngày hệ thống lúc job chạy"*, nghĩa là nạp một file
+  > của tuần 33 vào tháng 9 sẽ đổ dữ liệu đó vào tuần 36. Bỏ theo Q20.
+
+  Chạy import hai lần cho **cùng một kỳ** thì lần sau **ghi đè** lần trước (bước 2 mục 1 của
+  §5.3), không tạo bản ghi thứ hai.
+
+- **`ProgressPercent` để TRỐNG — chốt Q24 (2026-09-05).** Không phải `0`, không suy từ điểm.
+  File BA gửi **không có** cột `Tiến độ %`, và đây là trường **nhập tay** (§3.2) — điền hộ
+  một giá trị khởi tạo nghĩa là bịa ra số liệu mà không ai ký tên.
+
+  > **Hệ quả bắt buộc phải biết, và người dùng đã chấp nhận:** thanh tiến độ theo nhóm và
+  > biểu đồ đường của Dashboard vẽ theo **chính** trường này (Q11). Nên **ngay sau mỗi lần
+  > import, Dashboard trống** — không phải 0%, mà là "chưa có dữ liệu" — cho tới khi có người
+  > nhập tay. Đây là **trạng thái bình thường**, phải hiển thị tử tế chứ không phải lỗi cần
+  > vá: `spec/dashboard-dti/business-rules.md` §1.1 (loại khỏi mẫu tính, không tính là 0) và
+  > `doc/contracts/dashboard.md` §0 (các trường tổng hợp **vắng mặt**, không bằng `0`).
+  >
+  > Vì vậy các con số 74,3% · 51,8% … trong prototype là ảnh chụp **sau khi người dùng đã
+  > nhập**, không phải ảnh chụp ngay sau import. Đừng dùng chúng làm kỳ vọng cho ca import.
+
+  > **Phương án đã BỎ:** `progressPercent = round(selfScore / maxScore × 100)`. Nó làm
+  > Dashboard đẹp ngay sau import, nhưng biến `Tiến độ %` thành nửa-trường-tính
+  > nửa-trường-nhập: người sau nhìn công thức đó sẽ tính lại nó ở một chỗ khác và **ghi đè con
+  > số người dùng đã gõ tay**. Một trường chỉ được có một chủ.
+
+### 6.5 Quyền ghi — MỘT key cho toàn bộ DTI (chốt Q27, 2026-09-05)
+
+Câu hỏi "ai được ghi dữ liệu DTI" **không còn để ngỏ**. Trả lời: **đúng một permission-key**,
+phủ **mọi** đường ghi của cả nghiệp vụ — tạo/sửa/xoá chỉ tiêu, lưu đánh giá qua dialog, sửa
+inline, **và import**.
+
+| | Chốt |
+| --- | --- |
+| Số lượng key | **một** |
+| Phạm vi kỳ | **mọi kỳ**, kể cả kỳ đã qua và năm trước |
+| Tách "sửa kỳ hiện tại" / "sửa kỳ cũ" | **không** |
+| Khái niệm "chốt kỳ" / khoá kỳ | **không tồn tại** |
+| Quyền **xem** | không cần key — chỉ cần đăng nhập (Q21, `doc/contracts/dashboard.md` §0) |
+
+**Tên key: `dti.manage`.** Nhãn hiển thị trên màn phân quyền: `Nhập & sửa dữ liệu DTI`.
+
+Quy ước đặt tên không phải do file này nghĩ ra — nó đọc từ hai nguồn:
+
+- `doc/huong_dan/quy-uoc/be-api-controller.md:550` — *"action luôn khai tường minh trong
+  `key` (vd `import.manage` **dùng chung cho mọi thao tác ghi** của Import: tải file lên, huỷ
+  job, xoá job)"*. Khuôn là `{tài nguyên}.{hành động}`, chữ thường, và **một key `.manage`
+  phủ hết đường ghi của một tài nguyên** — đúng hình dạng Q27 yêu cầu. Cùng mục, dòng 571:
+  quyền áp cho endpoint **ghi** trước, endpoint chỉ đọc giữ `[Authorize]` trần — khớp Q21.
+- `doc/contracts/permissions.md:216` — hai key `criteria.manage` / `criteria-groups.manage`
+  của module DtiWeekly cũ đã bị gỡ 2026-08-29. Chúng là **hai**; Q27 chốt **một**, nên không
+  khôi phục cặp đó. Chọn `dti.manage` thay vì `criteria.manage` vì phạm vi rộng hơn
+  `/api/criteria`: nó phủ cả đường import. Đặt tên hẹp là mời người sau khai thêm một key thứ
+  hai cho import — đúng thứ Q27 cấm.
+
+#### KHÔNG dùng lại `import.manage`
+
+Key đó còn trong `AppResourceKeys`
+(`src/BE/PlatformManager.Api/Permissions/AppResourceKeySource.cs:33`) nhưng docstring ngay
+trên nó khai rõ đó là **di sản** của module đã gỡ, giữ lại chỉ vì bảng `RolePermissions` đã
+seed có dòng mang key này. Dùng lại một key vì nó "trông đúng tên" sẽ trộn quyền của một năng
+lực Core dùng chung với quyền của một nghiệp vụ — và khi sản phẩm thứ hai dùng lại CoreBase,
+hai thứ đó phải tách rời được.
+
+#### Ba việc phải làm khi thi công, thiếu bước nào cũng hỏng im lặng
+
+1. Thêm một `const` vào `AppResourceKeys` **và** một dòng vào
+   `AppResourceKeySource.Definitions` (ở host, **không** sửa vào Core —
+   `src/BE/PlatformManager.Api/Permissions/AppResourceKeySource.cs:17` mô tả đúng ba bước
+   này). Thiếu bước thứ hai: key không hiện trên màn phân quyền, không role nào cấp được,
+   endpoint 403 cho tất cả trừ SuperAdmin.
+2. Gắn `[RequirePermission(...)]` lên **mọi** action ghi của DM-3…DM-7. Endpoint đọc (DM-1,
+   DM-2, DM-8) giữ `[Authorize]` trần.
+3. Kiểm ma trận sau khi seed — xem cảnh báo dưới.
+
+#### Seed chỉ cấp cho `Admin` — NGOẠI LỆ có chủ đích so với luật seed hiện tại (Q36)
+
+**Chốt Q36 (2026-09-06): lần seed đầu cấp `dti.manage` cho `Admin` và CHỈ `Admin`.** Vai
+`User` **không** được cấp sẵn; ai cần thì SuperAdmin cấp tay ở màn Phân quyền.
+
+> ### 🔴 Đây là ngoại lệ, KHÔNG phải hành vi mặc định. Đọc trước khi "dọn cho nhất quán".
+>
+> Luật seed **mặc định** vẫn làm ngược lại, và điều đó **cố ý**: key nào không khai gì thì
+> được cấp cho `Admin` + `User`
+> (`src/BE/Core/PlatformManager.Core.Application/Permissions/ICoreResourceKeySource.cs:34`).
+> Mục tiêu ghi ngay tại chỗ là *"GIỮ NGUYÊN hành vi trước khi vá (mọi user thao tác được)"* —
+> một quyết định di trú, để việc bật deny-by-default không khoá mất người đang dùng hệ thống.
+>
+> **Vì sao DTI được miễn:** lý lẽ "giữ nguyên hành vi cũ" không áp cho một key **mới toanh**.
+> Không có ai đang ghi dữ liệu DTI để mà giữ nguyên hành vi cho họ — module đã gỡ 2026-08-29.
+> Cấp sẵn cho `User` ở đây không phải "không làm hỏng cái đang chạy", nó là **mở quyền ghi
+> cho toàn bộ người đăng nhập ngay ở lần seed đầu**, trên một tập dữ liệu mà một lần nạp đè
+> file có thể ghi lại 62 dòng của một kỳ đã báo cáo.
+>
+> ✅ **Hệ quả kỹ thuật: Q36 NAY CÀI ĐƯỢC bằng dữ liệu ở host** (thi công 2026-09-09). Seam đã
+> mở rộng đúng hình dạng mà chính khối này đề xuất: `ResourceKeyDefinition` có thêm
+> `SeedRoles` (`ICoreResourceKeySource.cs:51`), mặc định `[Admin, User]` (`:34`) nên mọi key
+> hiện có **không đổi hành vi**, còn host thu hẹp bằng cú pháp khởi tạo đối tượng. Seeder lấy
+> vai từ định nghĩa key thay vì lặp cứng
+> (`src/BE/Core/PlatformManager.Core.Infrastructure/Persistence/CoreSeeder.cs:93`).
+>
+> Hai lối còn lại vẫn là lối sai, ghi lại để lượt sau không quay về: hard-code danh sách trừ
+> trong Core làm Core biết tên một nghiệp vụ (`CoreMustNotKnowBusinessNameTests` canh đúng
+> điều đó), còn bỏ seed hẳn thì `Admin` cũng không có quyền và trái Q36.
+>
+> Ba ca khai sai bị chặn ngay lúc `Catalog()` chạy, **trước khi ghi dòng nào**
+> (`ICoreResourceKeySource.cs:153`): `SeedRoles` rỗng, tên vai lạ, và khai `SuperAdmin`. Cả ba
+> đều hỏng im lặng nếu để lọt — seed vẫn thoát 0, chỉ có ma trận quyền khác thứ người khai định
+> làm.
+>
+> 🔴 **Việc CÒN LẠI của Q36 là ở host, không phải ở Core:** `dti.manage` chưa có trong
+> `AppResourceKeySource.Definitions` (`src/BE/PlatformManager.Api/Permissions/AppResourceKeySource.cs:60`
+> — hôm nay chỉ có `import.manage`). Bước 3 thêm dòng
+> `new(AppResourceKeys.DtiManage, "Nhập & sửa dữ liệu DTI") { SeedRoles = [Roles.Admin] }`.
+> **Seam có sẵn không tự làm việc đó** — quên `SeedRoles` thì key rơi về mặc định `[Admin, User]`
+> và Q36 bị vi phạm mà không có gì báo, vì mặc định là một giá trị hợp lệ.
+>
+> **Nghiệm thu bắt buộc, đừng bỏ:** sau khi seed, mở màn Phân quyền (hoặc
+> `GET /api/admin/permissions/resources`) và xác nhận dòng `dti.manage` có `Admin` **và
+> KHÔNG có `User`**. Đây là bước kiểm một **ngoại lệ** — nó là thứ dễ bị một lần refactor
+> "cho nhất quán" âm thầm xoá, và triệu chứng lúc hỏng là không có triệu chứng nào.
+>
+> Tin tốt đi kèm: `IPermissionChecker` **không cache**
+> (`src/BE/Core/PlatformManager.Core.Application/Permissions/IPermissionChecker.cs:15`), nên
+> cấp tay hay thu hồi đều có hiệu lực ngay ở request kế tiếp.
+
+---
+
+## 7. Số liệu tham chiếu — đo từ **file BA gửi tháng 8/2026**
+
+> **Xuất xứ nêu bằng TÊN, không bằng đường dẫn — có chủ đích (2026-09-10).** File đó cố ý
+> không có trong repo (dữ liệu điểm thật của một địa phương), nên viết nó thành một đường dẫn
+> là tạo một neo mà người thứ hai không mở được. Bộ mẫu ẩn danh
+> `spec/danh-muc-dti/dti-mau-an-danh-62-dong.csv` **KHÔNG** thay thế được ở đây: nó giữ hình
+> dạng (62 bản ghi · 11 cột · 6 nhóm) nhưng là **dataset khác**, và cột `Chênh lệch` của nó
+> tính theo chiều **ngược lại** — trỏ sang nó là biến đoạn này thành câu tự bác bỏ.
+
+Đây là **dữ liệu nghiệp vụ**, không phải số đếm cấu trúc repo — chép ra đây là hợp lệ, và
+dùng làm mốc kiểm khi import file gốc lần đầu.
+
+> ⚠️ **File gốc KHÔNG có trong repo, có chủ đích** (`.gitignore:15`): nó mang điểm tự đánh giá
+> và điểm thẩm định thật của một địa phương, đưa vào git là đưa dữ liệu tổ chức thật vào lịch
+> sử repo — xoá sau không gỡ được. Các con số dưới đây đo trên máy có file đó; người không có
+> file **không kiểm lại được**, và đó là giới hạn đã biết của mục này.
+>
+> **Test thì KHÔNG dùng file gốc** (sửa 2026-09-09, finding F7). Trước đó
+> `CsvImportFileReaderTests` neo thẳng vào nó, nên trên một clone sạch hai test đỏ vì
+> `DirectoryNotFoundException` — cổng BE hỏng vì một lý do không liên quan tới code. Nay chúng
+> đọc `spec/danh-muc-dti/dti-mau-an-danh-62-dong.csv`: **ẩn danh, có trong repo**, giữ nguyên
+> mọi tính chất cấu trúc mà hai test đo (62 bản ghi · 11 cột · BOM UTF-8 · ô xuống dòng trong
+> nháy kép · hai cột `Phụ trách`/`Hạn xử lý` rỗng toàn bộ). Điểm số và câu chữ minh chứng thì
+> là số liệu dựng — chúng không tham gia phép đo nào ở đó.
+
+- **62 chỉ tiêu · 6 nhóm · tổng `Điểm tối đa` 960**
+- Tổng `Tự đánh giá` **787,84** (= **82,1%**) · tổng `Thẩm định` **606,27** (= **63,2%**)
+- 27 chỉ tiêu có `Chênh lệch ≠ 0` · 31 chỉ tiêu có `Thẩm định = Điểm tối đa`
+- `Phụ trách` và `Hạn xử lý`: **rỗng toàn bộ 62 dòng**. `Minh chứng/Ghi chú`: 29/62 dòng có nội dung
+- `Điểm tối đa` chỉ nhận 3 giá trị: 10 · 20 · 30
+- Không dòng nào có `Tự đánh giá > Điểm tối đa` — luật §6.3 chưa bị kích hoạt bởi file này
+
+| # | Nhóm | Chỉ tiêu | Điểm tối đa | Tự đánh giá | Thẩm định | Tiến độ |
+| ---: | --- | ---: | ---: | ---: | ---: | ---: |
+| 1 | Hạ tầng và Nền tảng số | 7 | 80 | 59,47 | 50,00 | 74,3% |
+| 2 | Nhân lực số | 5 | 100 | 51,85 | 35,38 | 51,8% |
+| 3 | An toàn thông tin, an ninh mạng | 6 | 100 | 100,00 | 94,52 | 100,0% |
+| 4 | Hoạt động chính quyền số | 32 | 520 | 442,43 | 320,94 | 85,1% |
+| 5 | Hoạt động Kinh tế số | 4 | 80 | 80,00 | 80,00 | 100,0% |
+| 6 | Hoạt động Xã hội số | 8 | 80 | 54,09 | 25,43 | 67,6% |
+
+Phân bố `Trạng thái`: `Hoàn thành` 26 · `Cần bổ sung minh chứng` 22 · `Đang thực hiện` 13 ·
+`Chưa thực hiện` 1.
+
+---
+
+## 8. Cần chốt — HẾT MỤC (đóng nốt 2026-09-06)
+
+Không còn câu hỏi nghiệp vụ nào để ngỏ cho cụm DTI. Bảng dưới giữ lại các mục đã đóng, kèm
+đáp án, để người từng đọc bản trước không đi tìm ở chỗ khác.
+
+| Mục cũ | Đóng bằng | Đáp án | Nay ghi ở |
 | --- | --- | --- | --- |
-| Mã | `Criteria` | `Code` | Khoá để match `Criteria` đã có trong danh mục (theo `Code`, trong tập chưa xoá mềm) |
-| Chỉ tiêu | `Criteria` | `Name` | Chỉ dùng khi **tạo `Criteria` mới** — nếu `Code` đã tồn tại, **không** ghi đè `Name` hiện có qua import **[SUY LUẬN]** (tránh import vô tình sửa danh mục ngoài ý muốn — sửa `Name` nên đi qua CRUD tường minh ở tab "Chỉ tiêu") |
-| Nhóm | `Criteria` | `GroupId` | Resolve theo tên nhóm khớp `CriteriaGroup.Name` — **✅ Đã chốt (2026-08-12 vòng 3)**: nếu không khớp nhóm nào đã có → **tự động tạo `CriteriaGroup` mới** (cùng tinh thần "hứng đủ dữ liệu, không mất data" đã áp dụng cho `Criteria` ở câu #5), map `Name` ← tên nhóm trong file, `Code` tự sinh (số nguyên lớn nhất trong các `Code` hiện có + 1, vì file không có cột mã nhóm riêng), `DisplayOrder` nối vào cuối. Đây là **thay đổi quyết định** so với bản trước (từng suy luận "báo lỗi, không tự tạo") — xem mục 5 câu hỏi #10 |
-| Điểm tối đa | `Criteria` | `MaxScore` | Tương tự `Name` — chỉ áp dụng khi tạo `Criteria` mới |
-| Tự đánh giá | `CriteriaAssessment` (kỳ import) | `SelfScore` | **✅ Đã chốt: ghi đè theo đúng nội dung file** — xem quyết định ở dưới (không còn tách biệt "field tĩnh") |
-| Thẩm định | `CriteriaAssessment` (kỳ import) | `VerifiedScore` | Tương tự — ghi đè theo file |
-| Chênh lệch | — | *(không lưu cột riêng)* | Chỉ dùng **cross-check**: nếu khác `Tự đánh giá - Thẩm định` tính lại → cảnh báo dòng đó, không chặn import **[SUY LUẬN]** |
-| Trạng thái | `CriteriaAssessment` (kỳ import) | `Status` | Ghi đè theo file — tương tự |
-| Phụ trách | `CriteriaAssessment` (kỳ import) | `OwnerId` | Cột là **text tên người**, field DB là FK `AppUser.Id` — ghi đè theo file. **✅ Đã chốt (2026-08-12 vòng 3)**: resolve theo `AppUser.FullName` khớp chính xác (trim); **chưa từng có** `AppUser` nào tên này → **tự động tạo mới**; **đã có nhưng trùng tên ≥2 user** (ambiguous, không rõ chọn ai) → giữ `OwnerId = null`, KHÔNG tự đoán/tự tạo thêm bản trùng. Xem mục 5 câu hỏi #8 |
-| Hạn xử lý | `CriteriaAssessment` (kỳ import) | `Deadline` | Ghi đè theo file |
-| Minh chứng/Ghi chú | `CriteriaEvidence` (gắn vào `CriteriaAssessment` kỳ import) | `Content` (tách theo dòng bắt đầu `"*"`, đúng rule đã có ở `doc/ERD/ERD.md` mục 5) | **Không** map vào `CriteriaAssessment.Note` — đó là "Ghi chú tuần" tự do, khái niệm khác; mẫu file hiện không có cột riêng cho "Ghi chú tuần" nên field này để trống sau import, chỉ điền được qua nhập tay (mục 2.3) |
-| *(không có trong mẫu — "Tiến độ %")* | `CriteriaAssessment` (kỳ import) | `ProgressPercent` | Mẫu CSV **không có cột % tiến độ tuần** — đề xuất tính theo đúng công thức seed đã có ở `doc/ERD/ERD.md` (`ProgressPercent = SelfScore / MaxScore × 100`, kẹp `[0,100]`) **[SUY LUẬN]**; nếu mẫu Excel thật có cột riêng, ưu tiên đọc trực tiếp thay vì suy ra |
+| Ghi vào một kỳ **THÁNG** thì dòng báo kỳ nào (lệch đơn vị: neo `Tháng 8` vào 31/08 ⇒ tuần ISO **36**) | **Q37** (2026-09-06) | **Chỉ nhập theo TUẦN.** Tháng/năm là tổng hợp tự tính, chọn chúng thì chỉ đọc. Không dựng cột `PeriodKey`, không có hai nguồn sự thật | §5.1 · §5.3 · §5.4 |
+| Import ghi `UpdatedBy = "system"` | **Q35** (2026-09-06) | Phải ghi **đúng người đăng nhập**. Hạng mục **Core**, **điều kiện tiên quyết** của DM-7, ba bước | §5.6 |
+| Seed cấp key DTI cho vai nào | **Q36** (2026-09-06) | **Chỉ `Admin`** — ngoại lệ so với luật seed hiện tại | §6.5 |
+| `Tiến độ %` khi import | Q24 | để trống | §6.4 |
+| Quyền ghi của màn | Q27 | một key `dti.manage`, mọi kỳ | §6.5 |
+| Người không có quyền thấy gì | **Q39** (2026-09-06) | vào được màn, **chỉ đọc**; không chặn route, không ẩn menu | §5.4 |
+| `Tất cả` + năm cũ thì lời ghi đi đâu | **T15** (2026-09-06) | **chỉ đọc** — `"all"` chỉ hợp lệ khi đang xem năm hiện tại; đường ghi nhận thêm `year` để chặn được ở server | §5.3 · §5.4 |
+| Lưới rỗng thì FE biết ẩn nút bằng gì | lỗ hổng Q39 × T9, vá 2026-09-06 | cả khối quyền (`canWrite` · `isEditable` · `editBlockedBy`) ở **cấp màn**, không phải cấp dòng | §5.4 · `doc/contracts/danh-muc-dti.md` DM-2 mục 3 |
+| `isEditable = false` thì màn hình nhắc gì | vá 2026-09-06 | `editBlockedBy` mang **mảng mã lý do** — đủ 3 ca, diễn đạt được hai điều kiện cùng trượt | §5.4 |
+| Tên thư mục `spec/` | — | `spec/danh-muc-dti/` + `spec/dashboard-dti/`, xong 2026-09-05 | `doc/contracts/danh-muc-dti.md` §4 |
 
-**✅ Đã chốt (người dùng xác nhận) — Import GHI ĐÈ TOÀN BỘ, không bảo vệ
-riêng field nào:**
+**Hai hạng mục CORE là điều kiện tiên quyết, không phải việc để sau** — cả hai đều phải xong
+**trước** khi bật đường ghi lên môi trường thật, và cả hai đi qua `core-reviewer`:
 
-Khi import lại **đúng 1 ngày đã có dữ liệu** (trùng phần ngày của
-`CreatedAt` — **[ĐÃ ĐỔI, 2026-08-12]** trước đây gọi là "trùng
-`PeriodDate`"), toàn bộ dữ liệu dòng đó trong `CriteriaAssessment` được
-**ghi đè theo đúng nội dung file** — bao gồm cả `SelfScore`/`VerifiedScore`/
-`Status`/`OwnerId`/`Deadline` (không giữ nguyên giá trị cũ, không tách biệt
-"field tĩnh" nữa cho luồng này). Nói cách khác: **1 file import trong 1
-ngày = 1 snapshot đầy đủ cho đúng ngày đó**; import lại cùng ngày = ghi đè
-hoàn toàn snapshot đó (UPDATE record đã có, giữ nguyên `CreatedAt` gốc).
-Import vào ngày khác thì tạo bản ghi mới (copy-forward baseline rồi ghi đè
-theo file, xem mục 2.1 #5), **không** so sánh/kiểm tra trùng với ngày khác.
-
-**Quan hệ với quyết định cũ (`spec/dashboard-dti-weekly/business-rules.md`
-mục 5 — "`SelfScore`/`VerifiedScore`/`Status` tĩnh, chỉ từ quy trình thẩm
-định riêng, không sửa qua luồng tuần"): KHÔNG còn mâu thuẫn, vì quyết định
-mới này chỉ ghi đè quyết định cũ cho riêng luồng Import.** Quyết định cũ
-**vẫn đúng nguyên vẹn** cho luồng nhập tay/"Lưu dữ liệu" ở mục 2.3 — UI
-nhập tay tiếp tục **không có** control nào cho 5 field này (đúng như
-`dashboard.html` gốc), nên nhập tay chỉ có thể sửa `ProgressPercent`/
-`Note`, không đụng được `SelfScore`/`VerifiedScore`/`Status`/`OwnerId`/
-`Deadline`. Chỉ luồng Import mới có khả năng (và nay đã chốt: sẽ) ghi đè 5
-field đó.
-
-**Quy tắc "Code lạ" — `Criteria` chưa có trong danh mục khi import:**
-
-**✅ Đã chốt (người dùng xác nhận) — TỰ ĐỘNG TẠO `Criteria` mới**, không
-báo lỗi/bỏ qua. Người dùng nhấn mạnh ưu tiên "đảm bảo hứng được toàn bộ các
-field trong file CSV" — không đánh đổi mất dữ liệu để lấy an toàn quy
-trình. Rule cụ thể: khi gặp `Code` chưa có trong danh mục (trong tập chưa
-xoá mềm), tự động tạo `Criteria` mới ngay trong cùng lượt import, map:
-- `Code` ← cột "Mã"
-- `Name` ← cột "Chỉ tiêu"
-- `GroupId` ← resolve theo tên nhóm ở cột "Nhóm" khớp `CriteriaGroup.Name`
-  đã seed sẵn
-- `MaxScore` ← cột "Điểm tối đa"
-
-...rồi tiếp tục ghi `CriteriaAssessment` cho `Criteria` vừa tạo như bình
-thường (không phải 2 bước tách rời — tạo `Criteria` và ghi
-`CriteriaAssessment` xảy ra trong cùng 1 giao dịch import).
-
-**Câu hỏi mới phát sinh từ chính quyết định này**: nếu tên nhóm ở cột
-"Nhóm" trong file **cũng không khớp** bất kỳ `CriteriaGroup.Name` nào đã
-seed (nhóm lạ, không chỉ mã lạ) → xử lý sao? Vì mục 5 câu hỏi #3 đã chốt
-"KHÔNG CRUD `CriteriaGroup` ở màn này", nhiều khả năng **không** nên tự
-tạo `CriteriaGroup` mới ngầm theo cùng tinh thần "hứng đủ dữ liệu" ở trên
-(rủi ro tạo nhóm rác do lỗi chính tả) — nhưng đây là suy luận, **chưa được
-người dùng xác nhận trực tiếp** cho đúng trường hợp "nhóm lạ" (khác với
-"mã lạ" đã được xác nhận) — xem câu hỏi mở #10.
-
-### 2.3. Nhập tay / điều chỉnh sau import — vẫn giữ, không thay thế Import
-
-Nút "Lưu dữ liệu"/sửa trực tiếp từng ô (`ProgressPercent`/`Note`) **vẫn giữ
-nguyên** ở tab "Đánh giá theo tuần", dùng để bổ sung/điều chỉnh sau khi đã
-import — không bắt buộc bỏ nhập tay. Validate (ép kẹp `[0,100]`) **giữ
-nguyên y hệt** như đã tài liệu hoá ở `spec/dashboard-dti-weekly/business-rules.md`
-mục 2.4/3.
-
-**[ĐÃ ĐỔI, 2026-08-12] Không còn chọn `PeriodDate`/"kỳ đang sửa" qua date
-picker.** Đây là hệ quả trực tiếp của việc bỏ `AssessmentPeriod`: nhập tay
-**luôn** ghi vào **hôm nay** — bấm sửa 1 ô của 1 chỉ tiêu áp đúng rule
-"upsert-trong-ngày + copy-forward" ở mục 2.1 #5 (nếu chỉ tiêu đó **đã có**
-record hôm nay → cập nhật field đang sửa vào chính record đó; nếu **chưa
-có** → copy-forward toàn bộ 7 field từ record gần nhất trước đó làm baseline,
-rồi áp giá trị vừa sửa lên trên, tạo record mới với `CreatedAt = hôm nay`).
-Người dùng **không còn khả năng** "chỉnh sửa vào một ngày quá khứ cụ thể"
-qua UI này nữa (khác hành vi cũ, nơi date picker cho chọn ngày tuỳ ý) — nếu
-cần sửa lại dữ liệu của một ngày đã qua, cách duy nhất là Import lại đúng
-ngày đó qua file có cột ngày (mục 2.1 #1); **không có UI** cho việc sửa trực
-tiếp một ngày quá khứ ở v1 — ghi nhận là giới hạn đã biết, không phải thiếu
-sót.
-
-Điểm không đổi từ trước: danh sách chỉ tiêu hiển thị để nhập ở tab này phải
-lấy từ tập `Criteria` **active** (`IsDeleted = false`) tại thời điểm thao
-tác — xem mục 1.3 rule #3.
-
-### 2.4. [MỚI, 2026-08-12 vòng 2] Bộ lọc Năm/"Tất cả"/Tuần/Tháng — grid chuyển READ-ONLY khi xem quá khứ
-
-> ✅ **Quyết định chính thức** (đề xuất bởi `backend-expert`, xác nhận cần
-> thiết bởi `main` — không phải suy luận bỏ ngỏ). Ghi rõ ở đây theo đúng yêu
-> cầu formalize thành rule chính thức.
-
-**Bối cảnh**: theo quyết định người dùng (2026-08-12 vòng 2, xem
-`doc/ERD/ERD.md` mục "Kỳ (tuần/tháng/năm)"), cả Danh mục DTI lẫn Dashboard
-đều bắt buộc có 1 bộ lọc **Năm** làm phạm vi nền tảng (mặc định = năm hiện
-tại), với "Tất cả" = toàn bộ dữ liệu trong năm đó (chưa thu hẹp thêm theo
-tuần/tháng). Điều này có nghĩa **grid ở màn Danh mục DTI giờ có khả năng
-hiển thị dữ liệu LỊCH SỬ** (khi người dùng đổi sang năm khác, hoặc thu hẹp
-về 1 tuần/tháng cụ thể) — trong khi rule ghi dữ liệu (mục 2.1 #5, mục 2.3 ở
-trên) **luôn và chỉ** tác động vào bản ghi của **hôm nay**, bất kể đang xem
-gì. Nếu cứ để control sửa (✓/✗, "+Thêm chỉ tiêu", "Sửa", "Xoá", "Import
-CSV") hoạt động bình thường trong khi grid đang hiển thị dữ liệu quá khứ,
-người dùng sẽ hiểu lầm là đang sửa đúng bản ghi lịch sử đang nhìn thấy,
-trong khi thực chất thao tác lưu sẽ tạo/ghi đè bản ghi **hôm nay** — vi phạm
-ngầm tính bất biến của snapshot lịch sử.
-
-**Rule chính thức:**
-
-1. **Trạng thái "Live" (cho phép sửa)** = grid đang ở đúng **"Tất cả" của
-   NĂM HIỆN TẠI** (năm chứa ngày hôm nay), **chưa** thu hẹp thêm theo tuần/
-   tháng nào. Đây là trạng thái mặc định khi mở trang.
-2. **Trạng thái "Lịch sử" (READ-ONLY)** = bất kỳ trạng thái nào khác trạng
-   thái Live ở trên — cụ thể:
-   - Đã chọn 1 **năm khác** năm hiện tại (kể cả nếu chọn lại đúng "Tất cả"
-     của năm đó).
-   - Đang ở năm hiện tại nhưng đã **thu hẹp về 1 tuần/tháng cụ thể** (kể cả
-     nếu tuần/tháng đó là tuần/tháng chứa hôm nay) — cố tình đơn giản hoá
-     theo hướng "hễ đã thu hẹp là xem lịch sử", tránh phải phân biệt thêm
-     trường hợp đặc biệt "tuần hiện tại" (dễ gây rối UX hơn là lợi ích mang
-     lại).
-3. **Khi ở trạng thái READ-ONLY, TOÀN BỘ hành động ghi trên trang bị khoá**,
-   không chỉ riêng ✓/✗ sửa inline:
-   - Ẩn/khoá 2 icon ✓/✗ sửa Tiến độ %/Ghi chú (chỉ hiển thị text tĩnh, giống
-     hành vi Dashboard read-only đã có).
-   - Ẩn/khoá "+ Thêm chỉ tiêu", "Sửa", "Xoá" (CRUD `Criteria`) — **mặc dù**
-     bản thân `Criteria` không có lịch sử theo ngày (chỉ có soft-delete),
-     việc cho sửa danh mục "sống" trong khi mắt đang nhìn dữ liệu "đóng
-     băng" của quá khứ dễ gây hiểu lầm nghiêm trọng hơn lợi ích tiện dụng —
-     đây là lựa chọn ưu tiên **nhất quán UX**, không phải giới hạn kỹ thuật
-     tầng dữ liệu.
-   - Ẩn/khoá nút "Import CSV" — vì Import cũng luôn ghi vào hôm nay (mục
-     2.1 #5), cùng lý do như trên.
-4. **Thông báo rõ cho người dùng** khi ở chế độ READ-ONLY (vd banner "Đang
-   xem dữ liệu lịch sử — quay lại 'Tất cả' của năm hiện tại để chỉnh sửa")
-   — chi tiết UI cụ thể do `frontend-expert` thiết kế, rule này chỉ quy định
-   **điều kiện kích hoạt** và **phạm vi bị khoá**.
-
-**Không áp dụng cho Dashboard** — Dashboard vốn đã 100% read-only từ trước
-(không có action ghi nào), nên rule này không có gì thay đổi thêm ở đó.
-
-**[ĐÃ ĐỔI NGUỒN, 2026-08-12]** Trước đây đơn vị lưu trữ là **tuần** qua
-bảng `AssessmentPeriod` (1 record = 1 tuần tường minh). Bảng đó **đã bị
-bỏ** — nay "kỳ-tuần" **không còn là 1 record cụ thể nào**, mà là **kết quả
-group-by** các `CriteriaAssessment.CreatedAt` theo tuần ISO (xem
-`doc/ERD/ERD.md` mục "Kỳ (tuần/tháng/năm)"). "Tháng" (và tiềm năng "năm"
-sau này) vẫn đúng tinh thần cũ — **chỉ là lớp group-by rộng hơn khi truy
-vấn/báo cáo**, không phải bảng/cột riêng nào — chỉ khác nguồn group-by đổi
-từ `AssessmentPeriod.PeriodDate` sang `CriteriaAssessment.CreatedAt`.
-
-**✅ Đã chốt (người dùng xác nhận) — công thức tổng hợp N kỳ-tuần trong 1
-tháng = TRUNG BÌNH CỘNG (không phải lấy kỳ gần cuối tháng), công thức KHÔNG
-đổi bởi việc bỏ `AssessmentPeriod`:**
-
-```
-TiếnĐộTháng(Criteria x, tháng M) = trung bình( ProgressPercent(x, kỳ-tuần k) )
-                                     với mọi kỳ-tuần k có ít nhất 1 CriteriaAssessment.CreatedAt của x thuộc tháng M
-```
-
-**✅ Đã chốt (2026-08-12 vòng 2) — KHÔNG carry-forward.** Chỉ những kỳ-tuần
-**thực sự có** record cho chính chỉ tiêu `x` mới được đưa vào phép trung
-bình — kỳ-tuần nào chỉ tiêu `x` không có record thì **loại hẳn khỏi phép
-tính** (không tính là 0%, không tự điền giá trị từ tuần trước). Nếu 1 chỉ
-tiêu **không có kỳ-tuần nào** có dữ liệu trong cả tháng M → `TiếnĐộTháng(x,
-M) = "chưa có dữ liệu"` ("—"), không suy ra 0%. Đây là cùng nguyên tắc với
-cách tính "Tiến độ chung" cấp tuần đã viết lại ở
-`spec/dashboard-dti-weekly/business-rules.md` mục 3.3 — **2 công thức (tuần
-và tháng) nay xử lý dữ liệu thiếu THỐNG NHẤT** (khác bản trước khi carry-
-forward còn là đề xuất mở, từng lo ngại 2 công thức lệch nhau).
-
-Áp dụng ở **cả 2 cấp**:
-1. **Theo từng `Criteria`**: trung bình cộng `ProgressPercent` của chính
-   chỉ tiêu đó qua các kỳ-tuần thuộc tháng M.
-2. **Tổng hợp toàn danh mục** (KPI "Tiến độ chung tháng"): trung bình cộng
-   giá trị **"Tiến độ chung"** (đã tính theo công thức bình quân gia quyền
-   `Σ MaxScore` ở `spec/dashboard-dti-weekly/business-rules.md` mục 3.3)
-   của từng kỳ-tuần thuộc tháng M — nghĩa là tính "Tiến độ chung" cho mỗi
-   kỳ-tuần trước (như đã có), rồi lấy trung bình cộng các kết quả đó theo
-   tháng (không phải gộp thẳng toàn bộ `CriteriaAssessment` của cả tháng
-   vào 1 công thức bình quân gia quyền lớn — 2 cách tính này cho kết quả
-   khác nhau khi số kỳ-tuần không đều giữa các chỉ tiêu, và trung bình của
-   trung bình theo từng kỳ mới đúng tinh thần "trung bình cộng các kỳ-tuần
-   trong tháng" đã chốt).
-
-**So sánh giữa các tháng** = hiệu 2 số trung bình tháng liên tiếp
-(`TiếnĐộTháng(M) - TiếnĐộTháng(M-1)`), dùng cùng logic delta + ngưỡng
-epsilon `0.001` đã có ở `spec/dashboard-dti-weekly/business-rules.md`
-mục 3.2 (tăng/giảm/không đổi).
-
-- **✅ Đã chốt (2026-08-12 vòng 2) — mở rộng "theo năm" ("Tất cả" của 1
-  năm)**: cùng công thức, cùng nguyên tắc loại trừ dữ liệu thiếu — trung
-  bình cộng các kỳ-tuần **có dữ liệu** trong năm đó (`TiếnĐộNăm(x, năm Y) =
-  trung bình( ProgressPercent(x, kỳ-tuần k) )` với mọi kỳ-tuần k thuộc năm Y
-  **có** record cho `x`). Đây chính là công thức dùng khi Dashboard/Danh
-  mục DTI ở trạng thái **"Tất cả"** của 1 năm (xem `doc/ERD/ERD.md` mục "Kỳ
-  (tuần/tháng/năm)" — không còn "chưa thiết kế chi tiết" như bản trước, nay
-  đã là rule chính thức vì "Tất cả" đã chốt nghĩa = phạm vi năm).
-- **Tháng/Năm không có dữ liệu** (không có kỳ-tuần nào rơi vào đó): hiển
-  thị "chưa có dữ liệu", **không** suy ra bằng 0% hay nội suy từ kỳ liền
-  kề.
-
-## 4. Permission — CRUD `Criteria`
-
-Chưa đủ thông tin nghiệp vụ để chốt role cụ thể — giống placeholder đã ghi
-ở `spec/dashboard-dti-weekly/business-rules.md` mục 6, không tự bịa role.
-Câu hỏi cụ thể: xem mục 5.
-
-## 5. Câu hỏi còn mở — cần người dùng quyết định, KHÔNG tự chốt
-
-### Đã chốt/tạm chốt (người dùng quyết định)
-
-1. **[TẠM CHỐT MẶC ĐỊNH — không phải đã hỏi & xác nhận tường minh]**
-   Công thức "Tiến độ chung"/"Tiến độ theo nhóm" khi danh mục `Criteria`
-   không còn tĩnh: áp dụng theo đề xuất ban đầu — mẫu số `Σ MaxScore` dùng
-   **danh mục `Criteria` HIỆN TẠI cho MỌI kỳ** (kể cả kỳ lịch sử), đơn giản
-   hơn snapshot-theo-kỳ. Người dùng xác nhận dùng tạm phương án này vì
-   *"chưa hình dung rõ câu hỏi kỹ thuật này"* — ghi rõ đây là **quyết định
-   mặc định, có thể xem lại sau** khi có nhu cầu rõ ràng hơn, không phải đã
-   được giải thích đầy đủ và chốt cứng vĩnh viễn.
-2. **✅ Đã chốt**: unique `Code` chỉ áp dụng trong tập **chưa xoá mềm** —
-   cho phép tái dùng `Code` sau khi xoá. Xem mục 1.1.
-3. **✅ Đã chốt**: `CriteriaGroup` **KHÔNG** cần CRUD ở màn "Danh mục > DTI"
-   — "Nhóm" chỉ là dropdown chọn 1 trong 6 `CriteriaGroup` đã seed sẵn từ
-   CSV, không phải mục tiêu CRUD của nhiệm vụ này.
-4. **✅ Đã chốt**: Import **ghi đè toàn bộ** `CriteriaAssessment` của
-   **ngày** trùng phần ngày của `CreatedAt` (trước đây gọi "trùng
-   `PeriodDate`" — nay đã bỏ `AssessmentPeriod`, xem mục 2.1) theo đúng nội
-   dung file (kể cả `SelfScore`/`VerifiedScore`/`Status`/`OwnerId`/
-   `Deadline`), không bảo vệ riêng field nào — "1 file import trong 1 ngày =
-   1 snapshot đầy đủ cho đúng ngày đó". Quyết định cũ ("5 field tĩnh, chỉ từ
-   quy trình thẩm định riêng") vẫn đúng cho luồng nhập tay (mục 2.3, UI
-   không có control cho 5 field này), chỉ đổi cho riêng luồng Import. Xem
-   mục 2.2.
-5. **✅ Đã chốt**: gặp `Code` lạ khi import (chưa có trong danh mục) →
-   **tự động tạo `Criteria` mới** (map `Name`/`GroupId` resolve theo tên
-   nhóm trong file/`MaxScore` từ file), rồi ghi `CriteriaAssessment` bình
-   thường trong cùng giao dịch import — ưu tiên không mất dữ liệu, không
-   báo lỗi/bỏ qua. Xem mục 2.2. **Phát sinh câu hỏi mới từ chính quyết định
-   này** — xem câu hỏi mở #10.
-6. **✅ Đã chốt**: công thức tổng hợp theo tháng = **TRUNG BÌNH CỘNG** các
-   kỳ-tuần thuộc tháng đó (không phải lấy kỳ gần cuối tháng), áp dụng cho
-   cả cấp từng `Criteria` và cấp tổng hợp toàn danh mục. So sánh giữa các
-   tháng = hiệu 2 số trung bình liên tiếp, cùng ngưỡng epsilon đã có. Xem
-   mục 3.
-
-### Còn mở (chưa chốt)
-
-7. **Permission CRUD `Criteria`**: role nào được Create/Update/Delete —
-   đặc biệt: role nào được xoá (kể cả soft-delete) một `Criteria` đã có
-   lịch sử đánh giá? Chưa có role Identity nào được chốt (xem
-   `doc/ERD/ERD.md` mục "Câu hỏi còn mở",
-   `spec/dashboard-dti-weekly/business-rules.md` mục 6) — placeholder,
-   không tự bịa role.
-8. **✅ Đã chốt (2026-08-12 vòng 3)** — xem mục "Đã chốt (2026-08-12, vòng 3)"
-   bên dưới.
-9. **Mẫu file Import thật (Excel) có cột ngày riêng cho kỳ báo cáo không?**
-   `doc/ERD/example_db_ver1.csv` hiện tại **không có** cột ngày — mục 2.1
-   tạm mặc định dùng ngày hệ thống lúc import làm phần ngày của `CreatedAt`.
-   Cần xác nhận lại khi có mẫu Excel chính thức (có thể khác cấu trúc CSV
-   mẫu ban đầu).
-10. **✅ Đã chốt (2026-08-12 vòng 3)** — xem mục "Đã chốt (2026-08-12, vòng 3)"
-    bên dưới.
-
-### ✅ Đã chốt (2026-08-12, vòng 3) — Import tự tạo dữ liệu nền còn thiếu (Nhóm, Người phụ trách)
-
-> **Quyết định người dùng (nguyên văn)**: *"nếu CriteriaGroup chưa tồn tại
-> thì hãy tạo mới cho dòng đó vào CriteriaGroup"*, mở rộng thành nguyên tắc
-> chung: *"khi import thì thông tin các bảng liên quan nếu chưa có sẽ được
-> thêm mới đúng theo thông tin được import"*. Đây là **thay đổi quyết định**
-> so với suy luận trước đó ở câu hỏi #10 (từng nghiêng về báo lỗi để tránh
-> tạo nhóm rác do lỗi chính tả) — người dùng chấp nhận đánh đổi đó để ưu
-> tiên tuyệt đối "không mất dữ liệu khi import", cùng tinh thần đã chốt cho
-> `Criteria` ở câu #5.
-
-15. **Nhóm lạ (câu hỏi #10 cũ)**: khi tạo `Criteria` mới mà tên ở cột "Nhóm"
-    không khớp `CriteriaGroup.Name` nào đã có → **tự động tạo `CriteriaGroup`
-    mới** trong cùng giao dịch import (không còn báo lỗi/bỏ qua dòng đó).
-    `Code` của nhóm mới tự sinh (số nguyên lớn nhất trong các `Code` hiện có
-    + 1) vì file CSV không có cột mã nhóm riêng; `DisplayOrder` nối vào cuối
-    danh sách nhóm hiện có. **Rủi ro đã biết, được người dùng chấp nhận**:
-    tên nhóm gõ sai chính tả giữa các lần import sẽ tạo nhóm trùng/gần trùng
-    thay vì báo lỗi rõ ràng — không có cơ chế fuzzy-match, chỉ so khớp chính
-    xác (trim, không phân biệt hoa/thường). Xem mục 2.2.
-16. **Phụ trách không khớp `AppUser` nào (câu hỏi #8 cũ)**: resolve theo
-    `AppUser.FullName` khớp chính xác — **chưa từng có** user nào tên này
-    → **tự động tạo `AppUser` mới** (chỉ có `FullName`, không có field auth
-    nào khác — entity `AppUser` ở bản này **không phải** ASP.NET Core
-    Identity thật, xem comment tại `Entities/AppUser.cs`); **đã có nhưng
-    trùng tên ≥2 user** (ambiguous) → **giữ nguyên hành vi cũ**, để
-    `OwnerId = null`, không tự đoán chọn user nào (khác trường hợp "chưa
-    có" — trường hợp này dữ liệu đã tồn tại, chỉ là không rõ ý người nhập).
-    Xem mục 2.2.
-    **Lưu ý khi nâng cấp lên ASP.NET Core Identity thật** (theo hướng đã
-    chốt ở `doc/ERD/ERD.md` mục "Quyết định đã CHỐT" #3, chưa triển khai ở
-    bản này): quyết định tự-tạo-user-từ-text-tên ở đây **chỉ phù hợp cho
-    bản demo** hiện tại (không có password/email/login) — khi `AppUser`
-    chuyển sang `IdentityUser<Guid>` thật, cần xem lại rule này (không thể
-    tự tạo tài khoản đăng nhập hợp lệ chỉ từ 1 cột tên trong CSV, cần
-    email tối thiểu + quy trình cấp mật khẩu/kích hoạt riêng).
-
-### ✅ Đã chốt (2026-08-12, vòng 2) — 4 câu hỏi phát sinh từ việc bỏ `AssessmentPeriod` NAY ĐÃ CÓ QUYẾT ĐỊNH
-
-> Không còn là câu hỏi mở — người dùng đã chốt cả 4 điểm. Chi tiết đầy đủ:
-> `doc/ERD/ERD.md` mục "Câu hỏi còn mở" phần "Đã chốt (2026-08-12, vòng 2)".
-> Tóm tắt phần ảnh hưởng trực tiếp tới màn "Danh mục DTI":
-
-11. **Quy ước chia "tuần" = tuần ISO (thứ Hai–Chủ Nhật)** — đã xác nhận
-    đúng đề xuất mặc định.
-12. **Carry-forward: KHÔNG** — trái ngược đề xuất mặc định ban đầu của
-    `backend-expert` (từng đề xuất CÓ). Kỳ/tuần/tháng/năm không có thao tác
-    cho 1 chỉ tiêu → hiển thị "—", loại khỏi công thức trung bình (xem mục
-    3 đã viết lại). Grid "Danh mục DTI" ở trạng thái Live (xem #13) hiển thị
-    đúng những gì có, không tự bơm giá trị cũ vào ô trống.
-13. **Định nghĩa "Tất cả" = toàn bộ dữ liệu trong 1 NĂM được chọn** (khác cả
-    2 đề xuất cũ: không phải "trạng thái hiện hành", không phải "toàn bộ
-    lịch sử vô hạn") — Danh mục DTI cần bộ lọc **Năm** (mặc định năm hiện
-    tại), "Tất cả" = chưa lọc thêm tuần/tháng trong năm đó. Hệ quả: grid có
-    thể hiển thị **nhiều dòng/1 chỉ tiêu** trong năm (xem mục 2.4 — rule
-    READ-ONLY mới) — khác hẳn giả định "1 dòng/chỉ tiêu" trước đây.
-14. **`CriteriaEvidence` KHÔNG copy-forward** — xác nhận đúng đề xuất tạm
-    trước đó.
+| Hạng mục | Chặn cái gì | Ghi ở |
+| --- | --- | --- |
+| Danh tính trong job nền (Q35) | **DM-7 — import** | §5.6 |
+| Seed theo vai cho từng key (Q36) | quyền ghi đúng như đã chốt | §6.5 |

@@ -167,6 +167,30 @@ Thẩm định · Chênh lệch · Trạng thái · Minh chứng/Ghi chú**.
    thành", cách gộp tháng/năm từ các kỳ tuần) nằm ở `spec/dashboard-dti/business-rules.md`
    §Công thức. **BE tính, FE chỉ hiển thị** — FE tính lại là tạo nguồn sự thật thứ hai.
 
+### Mã lỗi của DB-1 — vá 2026-09-09
+
+Bản trước khai *"`status` giá trị lạ -> 400"* trong khối query param mà **không nêu mã nào**,
+và cả card không có mục lỗi. Đóng lỗ đó:
+
+| Ca | Mã | HTTP |
+| --- | --- | --- |
+| `status` không thuộc 4 giá trị | **`DASHBOARD.STATUS_INVALID`** | 400 |
+| `mode` không thuộc `"week"` / `"month"` / `"year"` (kể cả sai hoa/thường) | **`DASHBOARD.MODE_INVALID`** | 400 |
+| `date` / `year` sai kiểu | `ValidationError` + `fields` — binder, **không** phải mã catalog | 400 |
+
+- Cả hai mã in đậm là **mã mới**, khai trong `DashboardErrors.cs` ở `Business.Application`
+  cùng chỗ với `DASHBOARD.EXPORT_MODE_UNSUPPORTED` — khuôn và lý do cưỡng chế bằng máy: xem
+  DB-4 §"Catalog mã lỗi".
+- **`DASHBOARD.MODE_INVALID` ≠ `DASHBOARD.EXPORT_MODE_UNSUPPORTED`.** Cái đầu nghĩa là *"giá
+  trị này không phải một `mode`"*; cái sau nghĩa là *"`year` là `mode` hợp lệ, nhưng endpoint
+  export không phục vụ nó"* (DB-4). Gộp làm một thì câu chữ FE hiện cho người dùng sai ở đúng
+  ca hay gặp: bấm Xuất khi đang xem `Tất cả`.
+- **`status` lạ KHÔNG được âm thầm bỏ lọc.** Bảng chi tiết trả về đủ dòng trong khi ô lọc vẫn
+  hiện một trạng thái là ca hỏng người dùng không có cách nào phát hiện.
+- `mode` là tham số **bắt buộc**; vắng mặt cũng ra `DASHBOARD.MODE_INVALID`, không cần mã
+  `..._REQUIRED` riêng — cả hai ca đều kết thúc bằng "gửi lại một `mode` hợp lệ", và FE không
+  bao giờ để trống nó.
+
 ---
 
 ## CONTRACT DB-2 — GỠ 2026-09-05
@@ -217,6 +241,25 @@ monthsInYear: [ { value: string, date: date, overallProgress: number? } ]
 > cho mốc đầu kỳ, và tuần ISO thì kết thúc sau đúng 6 ngày. Không thêm trường vào card
 > `AGREED` khi dữ liệu đã đủ — thêm là phá một hợp đồng đã chốt để lấy thứ tính được.
 
+### Mã lỗi của DB-3 — khai tường minh 2026-09-09: **KHÔNG có mã nghiệp vụ nào**
+
+Đây là câu trả lời, không phải mục còn thiếu. Card này trước đây im lặng về lỗi, và im lặng
+không phân biệt được *"không có mã"* với *"quên khai"* — người thi công gặp im lặng sẽ tự bịa
+một mã, hoặc tự thêm một ràng buộc không ai chốt.
+
+| Ca | Kết quả |
+| --- | --- |
+| `year` không phải số nguyên | `400 ValidationError` + `fields.Year` — của binder, không phải catalog |
+| `year` là một năm **không có dữ liệu** | **`200`** — `weeksInYear`/`monthsInYear` là mảng **rỗng**, `years` vẫn luôn kèm năm hiện tại. Không phải lỗi |
+| Không gửi `year` | `200` — mặc định năm hiện tại |
+
+**Năm rỗng không phải lỗi** là điểm dễ làm sai nhất ở đây: endpoint này nuôi hai ô lọc của
+**hai** màn, và trả 404/400 cho một năm chưa nhập số liệu sẽ khoá cứng ô `Năm` của người dùng
+ngay lần đầu họ mở một năm mới — đúng lúc chưa thể có dữ liệu.
+
+`DASHBOARD.STATUS_INVALID` và `DASHBOARD.MODE_INVALID` (DB-1) **không** áp cho DB-3: endpoint
+này không nhận `mode` lẫn `status`.
+
 ---
 
 ## CONTRACT DB-4 — "Xuất báo cáo": tải thẳng file `.xlsx`
@@ -265,7 +308,7 @@ status:  string?
 
 > **Vì sao được phép không bọc envelope, trong khi luật nói "mọi response đi qua
 > `IApiResult<T>`":** `HandleResult<T>` serialize `T` thành JSON
-> (`src/BE/PlatformManager.Api/Common/ApiControllerBase.cs:26`) — nhồi vài trăm KB bytes vào
+> (`src/BE/Core/PlatformManager.Core.Api/ApiControllerBase.cs:38`) — nhồi vài trăm KB bytes vào
 > `data` dưới dạng base64 làm file phình ~33% và buộc FE phải giải mã trong bộ nhớ trước khi
 > đưa cho người dùng lưu. Đây là ngoại lệ **có phạm vi hẹp và kiểm được**: chỉ áp cho nhánh
 > thành công của endpoint tải file; nhánh lỗi vẫn đi đúng đường chung. Luật gốc:
@@ -314,6 +357,12 @@ dây:
 62 chỉ tiêu nằm **rất xa** ngưỡng cần job nền. Đi đường đồng bộ: không chạm đĩa, không tạo
 `ExportJob`, không cần retention. Ngưỡng chuyển sang job nền là **cấu hình**, không phải
 hằng số rải trong code (`15-import-export.md` §3).
+
+> 📖 **Q9 (2026-09-09) — endpoint này ghi NPOI trực tiếp ở `Business.Infrastructure`, KHÔNG
+> qua seam `ITabularWriter`.** Seam đó hoãn tới khi có người tiêu thụ thứ hai; lý do (bố cục
+> file ở đây không diễn đạt được bằng "cột + dòng") và ràng buộc vẫn còn hiệu lực:
+> [`../huong_dan/wiki-core/be/15-import-export.md`](../huong_dan/wiki-core/be/15-import-export.md)
+> §7. Hợp đồng của DB-4 **không đổi** vì việc này.
 
 ### Tôn trọng bộ lọc đang áp — ĐÃ CHỐT (Q23, 2026-09-05)
 

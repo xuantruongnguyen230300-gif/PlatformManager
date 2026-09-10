@@ -33,3 +33,69 @@
   padding: var(--sp-6) var(--sp-4);
   text-align: center;
 }
+
+/* ===== Ghim cột mép trái / mép phải (input `frozenColumns`) =====
+   Hợp đồng: doc/Design/Frontend/PlatformManager/Components/DataTable.md § Frozen edge columns.
+   Vì sao ở đây chứ không phải directive `pFrozenColumn`: JSDoc của input `frozenColumns` trong
+   data-grid.ts — ô <th>/<td> nằm trong template do MÀN HÌNH khai, nên directive khai ở component
+   này không chạm tới chúng.
+
+   `::ng-deep` là bắt buộc, không phải cẩu thả: cùng lý do trên, các ô mang thuộc tính phạm vi của
+   component GỌI chứ không của component này. Cả ba khối đều neo dưới `.tablewrap.frozen-*` — thẻ
+   đó do chính template này vẽ nên vẫn mang thuộc tính phạm vi của data-grid, tức selector không
+   rò ra ngoài lưới đang bật ghim.
+
+   `:not(:only-child)` loại đúng một thứ: dòng "không có dữ liệu" chỉ có MỘT ô, vừa là ô đầu vừa
+   là ô cuối. Ghim nó lại thì câu rỗng dính vào mép trái trong khi phần còn lại của dòng trôi qua.
+
+   Mỗi mép ĐÚNG một cột (xem `IDataGridFrozenColumns`), nên độ lệch luôn bằng 0 và không phải cộng
+   bề rộng anh em bằng JavaScript như `FrozenColumn` của PrimeNG. */
+.tablewrap.frozen-left ::ng-deep {
+  /* `th` toàn cục đã `position: sticky; top: 0; z-index: 4` (styles.scss §7). Ô góc phải đứng yên
+     theo CẢ HAI trục nên `left` cộng thêm vào `top` sẵn có, và z-index phải vượt các `th` khác. */
+  thead th:first-child:not(:only-child) {
+    left: 0;
+    z-index: 5;
+  }
+
+  tbody td:first-child:not(:only-child) {
+    position: sticky;
+    left: 0;
+    z-index: 3;
+  }
+}
+
+.tablewrap.frozen-right ::ng-deep {
+  thead th:last-child:not(:only-child) {
+    right: 0;
+    z-index: 5;
+  }
+
+  tbody td:last-child:not(:only-child) {
+    position: sticky;
+    right: 0;
+    z-index: 3;
+  }
+}
+
+/* Ô được ghim RỜI khỏi luồng thường nên phải tự đục — không có nền riêng thì các ô cuộn qua hiện
+   xuyên qua nó. `<td>` toàn cục không khai `background` (nền do `<tr>` vẽ), nên ba dòng dưới đây
+   chép lại đúng ba trạng thái nền dòng của styles.scss §7 — cùng TOKEN, không phải giá trị mới.
+
+   ⚠️ Đây là chỗ khớp nối duy nhất giữa file này và styles.scss §7: đổi nền sọc/hover ở đó mà quên
+   ở đây thì hai mép của một dòng lệch màu so với phần giữa. `DataTable.md` § Known risks ý 7 đã
+   ghi nhận đúng rủi ro này (ở đó là do PrimeNG sở hữu nền ô ghim). Khác biệt có chủ đích so với
+   mô tả trong hợp đồng: hợp đồng chấp nhận ô ghim MẤT sọc chẵn, ba dòng dưới giữ lại sọc và hover
+   — không có lý do gì để một cột trông khác phần còn lại của chính dòng nó. */
+.tablewrap.frozen-left ::ng-deep tbody td:first-child:not(:only-child),
+.tablewrap.frozen-right ::ng-deep tbody td:last-child:not(:only-child) {
+  background: var(--card);
+}
+.tablewrap.frozen-left ::ng-deep tbody tr:nth-child(even) td:first-child:not(:only-child),
+.tablewrap.frozen-right ::ng-deep tbody tr:nth-child(even) td:last-child:not(:only-child) {
+  background: var(--surface-table-header);
+}
+.tablewrap.frozen-left ::ng-deep tbody tr:hover td:first-child:not(:only-child),
+.tablewrap.frozen-right ::ng-deep tbody tr:hover td:last-child:not(:only-child) {
+  background: var(--bg);
+}

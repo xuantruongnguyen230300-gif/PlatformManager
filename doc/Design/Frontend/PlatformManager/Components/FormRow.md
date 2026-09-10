@@ -230,7 +230,7 @@ vẹn khi lưu — đó chính là điều `.role-preserved` nói cho người d
 >
 > Bên đúng là bên nói **đã ship**, và bằng chứng thì có ở năm nơi: `user-form-dialog.html:144`,
 > `user-form-dialog.scss:25-27`, `user-form-dialog.ts:167`, `user-form-dialog.spec.ts:95`,
-> `vi.json:178`. Lệnh `grep` mà khối cũ dùng làm bằng chứng **hôm nay trả về kết quả** — nó đúng vào
+> `src/FE/public/i18n/vi.json:178`. Lệnh `grep` mà khối cũ dùng làm bằng chứng **hôm nay trả về kết quả** — nó đúng vào
 > ngày 2026-09-06, rồi code về, và không ai quay lại chạy lại nó.
 >
 > Bài học giữ lại vì nó là bài học chung, không riêng gì mục này: **một lệnh `grep` chép vào tài liệu

@@ -411,7 +411,7 @@ dụng — chỉ thêm phức tạp không cần thiết.
 >
 > | Bằng chứng (đối chiếu source 2026-09-05) | Hệ quả của đoạn mẫu cũ |
 > | --- | --- |
-> | [`ApiControllerBase.cs:25`](../../../src/BE/PlatformManager.Api/Common/ApiControllerBase.cs) — `result.Code == ErrorCode.Success ? 200 : (int)result.Code` | Không có đường nào sinh ra 202. Muốn 202 thì controller phải tự đặt status, tức tạo nguồn sự thật thứ hai cho mapping `ErrorCode → HTTP` — đúng thứ §Dispatcher của [`be-api-controller.md`](be-api-controller.md) cấm |
+> | [`ApiControllerBase.cs:37`](../../../src/BE/Core/PlatformManager.Core.Api/ApiControllerBase.cs) — `result.Code == ErrorCode.Success ? 200 : (int)result.Code` | Không có đường nào sinh ra 202. Muốn 202 thì controller phải tự đặt status, tức tạo nguồn sự thật thứ hai cho mapping `ErrorCode → HTTP` — đúng thứ §Dispatcher của [`be-api-controller.md`](be-api-controller.md) cấm |
 > | [`ErrorCode.cs:11`](../../../src/BE/Core/PlatformManager.Core.Application/Common/Results/ErrorCode.cs) — enum không có member nào mang giá trị 202 | `HandleResult` không biểu diễn được trạng thái này |
 > | `Accepted(new { jobId })` trả một object **trần** | Response rời BE **ngoài** `IApiResult<T>` — phá lời hứa "mọi response đi qua envelope" của [`../../contracts/auth.md`](../../contracts/auth.md), đúng lỗ hổng mà `ApiStatusCodeEnvelopeMiddleware` vừa bịt cho 404/405 |
 >

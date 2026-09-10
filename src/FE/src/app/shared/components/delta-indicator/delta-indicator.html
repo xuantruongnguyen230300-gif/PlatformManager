@@ -1,0 +1,9 @@
+<!-- MỘT thẻ span duy nhất, một nhánh hiển thị duy nhất: mũi tên/đơn vị/dấu gạch đều là nội dung
+     của câu đã dịch (xem TEXT_KEYS trong delta-indicator.ts), nên không có chỗ nào ghép chuỗi. -->
+<span
+  class="delta"
+  [class.up]="direction() === 'up'"
+  [class.down]="direction() === 'down'"
+  [class.flat]="direction() === 'flat'"
+  >{{ textKey() | translate: textParams() }}</span
+>

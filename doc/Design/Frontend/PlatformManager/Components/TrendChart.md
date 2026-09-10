@@ -1,38 +1,51 @@
 ---
 kind: luat
 scope: du-an
-verified: khong-ap-dung
+verified: 2026-09-10
 project: "PlatformManager"
-status: "target — not built"
-updated: "2026-09-05"
+status: "built 2026-09-09 in src/FE — no call site on any page yet"
+updated: "2026-09-10"
 component: "TrendChart"
 sources:
+  - "src/FE/src/app/modules/dashboard/components/trend-chart/trend-chart.ts"
+  - "src/FE/src/app/modules/dashboard/components/trend-chart/trend-chart.html"
+  - "src/FE/src/app/modules/dashboard/components/trend-chart/trend-chart.scss"
+  - "src/FE/package.json"
   - "doc/Design/Frontend/PlatformManager/Prototypes/index.html"
 ---
 
 # TrendChart
 
-> 📐 **ĐÍCH ĐẾN — CHƯA THI CÔNG.** No chart component exists in `src/FE`:
+> ✅ **CÓ THẬT — dựng 2026-09-09, đối chiếu 2026-09-10.** `app-trend-chart` exists at
+> `src/FE/src/app/modules/dashboard/components/trend-chart/`, in the feature module
+> rather than in `shared/` (`doc/huong_dan/quy-uoc/fe-architecture.md` § Bên trong
+> `shared/`), and it is rendered by PrimeNG's `p-chart` over `chart.js` — exactly the
+> pairing decision Q17 settled on 2026-09-05.
+>
+> | What | Where it shipped |
+> | --- | --- |
+> | `p-chart type="line"`, or the `.muted` empty sentence | `src/FE/src/app/modules/dashboard/components/trend-chart/trend-chart.html:3-39` |
+> | y pinned `[0,100]`, step 25, `%` ticks, `tension: 0`, no legend | `src/FE/src/app/modules/dashboard/components/trend-chart/trend-chart.ts:189-219` |
+> | `.chart-wrap` flex-centred at `min-height: 220px`; plot `220px` × `100%` | `src/FE/src/app/modules/dashboard/components/trend-chart/trend-chart.scss:10-30` |
+> | Colours read from `:root` at runtime, passed to the library as literals | `src/FE/src/app/modules/dashboard/components/trend-chart/trend-chart.ts:150-164`, `:244-247` — see § How the palette actually reaches the canvas |
+> | `chart.js` back in the manifest | `src/FE/package.json:68` |
 >
 > ```bash
-> grep -rni 'chart' src/FE/src        # PASS for the claim above = zero hits
+> grep -rn 'app-trend-chart' src/FE/src --include='*.ts'   # PASS = at least one hit
+> grep -n '"chart.js"' src/FE/package.json                 # PASS = one dependency line
 > ```
 >
-> **The two decisions that used to block this file are now answered** (decision
-> Q17, 2026-09-05 — the product owner asked for the chart back, rendered by
-> PrimeNG's `p-chart` as before):
+> 🛑 **Built is not composed.** No page renders it, so the `@defer` boundary and the
+> `.chart-skeleton` placeholder — both the **host page's** job, not this
+> component's (§ Anatomy) — do not exist yet. The Dashboard page is still a stub
+> (`src/FE/src/app/modules/dashboard/pages/dashboard/dashboard.page.html:1-10`) and
+> `DASHBOARD_ROUTES` is deliberately left out of `app.routes.ts`
+> (`src/FE/src/app/modules/dashboard/dashboard.routes.ts:8-13`).
 >
-> | Was open | Now |
-> | --- | --- |
-> | Which renderer | **`p-chart` over `chart.js`**, the same pairing as the pre-2026-08-29 build |
-> | Whether the four `chart-*` token roles return | **Yes.** Declared again in [`../Tokens/colors.md`](../Tokens/colors.md) § Chart Palette and in `Tokens/tokens.json`, with the full flip history kept in that section |
->
-> **One prerequisite remains, and it is not a decision — it is work in `src/`.**
-> `chart.js` was dropped from `src/FE/package.json` on 2026-09-04 (recorded in that
-> file's own `//dependencies` block) because this component was its only consumer.
-> It has to be re-added before the chart can be built. The design area may not edit
-> `src/` (`doc/Design/CLAUDE.md` § Scope), so that is a hand-off, tracked in
-> § Handoff below rather than as an open question.
+> **Two claims in the banner this replaces are now closed.** It set
+> `grep -rni 'chart' src/FE/src` at **zero hits**, which has inverted; and it listed
+> one prerequisite in `src/`, re-adding `chart.js`, which landed 2026-09-09 —
+> § Handoff records the closure.
 
 **Description:** The app's only chart — a single-series line plotting overall DTI
 progress across the saved periods, mounted inside a `Card` and lazy-loaded so its
@@ -44,7 +57,7 @@ approved prototype puts it back on the rebuilt Dashboard.
 
 > **Citation policy.** Style values cite
 > `doc/Design/Frontend/PlatformManager/Prototypes/index.html` by **selector name**;
-> geometry and axis copy cite `Prototype/index.html` § `#screen-dashboard`.
+> geometry and axis copy cite `doc/Design/Frontend/PlatformManager/Prototypes/index.html` § `#screen-dashboard`.
 
 ## Anatomy
 
@@ -80,6 +93,36 @@ The four `chart-*` names are **roles, not CSS custom properties** — see
 [`../Tokens/colors.md`](../Tokens/colors.md) § Chart Palette, which is their master
 and which records what each resolves to. Do not restate the resolution here.
 
+#### How the palette actually reaches the canvas
+
+Recorded 2026-09-10 against the component built on 2026-09-09, because the shipped
+mechanism is **not** the one the table above suggests: a `<canvas>` never sees a
+`var(--x)`. The component resolves the base custom properties once through
+`getComputedStyle` on the document element and hands the chart library plain
+strings. The 12% area fill is composed **in TypeScript** from the resolved series
+colour; it is not declared as a colour anywhere.
+
+| Step | Where it shipped |
+| --- | --- |
+| Read `--brand`, `--muted`, `--line`, `--card` off `:root` | `src/FE/src/app/modules/dashboard/components/trend-chart/trend-chart.ts:244-247` |
+| Map them onto the four roles, once per instance | `src/FE/src/app/modules/dashboard/components/trend-chart/trend-chart.ts:150-164` |
+| Compose the 12% fill from the resolved series colour | `src/FE/src/app/modules/dashboard/components/trend-chart/trend-chart.ts:40`, `src/FE/src/app/modules/dashboard/components/trend-chart/trend-chart.ts:56-74` |
+| Pass literal strings to the library | `src/FE/src/app/modules/dashboard/components/trend-chart/trend-chart.ts:166-187` |
+
+**The colours are sampled, not bound.** The `computed` that reads them depends on no
+signal — deliberately, so it runs once and does not force a layout on every draw.
+Change a token at runtime after the chart has painted and the canvas keeps the old
+colours until the component is re-created. That is a property of the mechanism, not
+a defect to fix here.
+
+Outside a browser `readToken` returns an empty string and the library falls back to
+its own defaults; the case is unreachable, because `p-chart` only builds a canvas in
+a browser.
+
+Whether the four roles belong in the stylesheet is settled and is **not** this
+file's to settle: `../Tokens/colors.md` § Chart Palette owns the decision and
+carries the command that checks it. Run it there.
+
 The y axis is pinned to `[0, 100]` with a `%` tick suffix — `100%` / `75%` / `50%`
 / `25%` / `0%` — so two periods are always visually comparable and a run of high
 values does not silently rescale the axis.
@@ -89,8 +132,12 @@ slot on the x axis and breaks the line rather than being dropped: a gap in the
 data must read as a gap, not as a straight run between its two neighbours.
 
 ⚠️ **The `.proto-*` selectors above are prototype scaffolding**, a static SVG
-standing in for a real chart renderer. Their geometry is the approved *design*;
-their implementation is not a shipped decision. See § Cần chốt.
+standing in for a real chart renderer. Their geometry is the approved *design*, and
+that half still holds. The other half no longer does: the renderer stopped being an
+open question when `p-chart` over `chart.js` shipped on 2026-09-09. Read this table
+as *what the chart must look like*, and `src/FE/src/app/modules/dashboard/components/trend-chart/trend-chart.ts` as *how it is
+produced* — the two are anchored to each other in § How the palette actually
+reaches the canvas.
 
 ### The x axis changed on 2026-09-05
 
@@ -158,7 +205,7 @@ radius 4. The 12% fill opacity is **not** in this list — it is carried by
 ## Reference markup
 
 ```html
-<!-- Prototype/index.html § #screen-dashboard — the host card and the defer boundary -->
+<!-- doc/Design/Frontend/PlatformManager/Prototypes/index.html § #screen-dashboard — the host card and the defer boundary -->
 <div class="card">
   <div class="title">
     <h2>Biểu đồ tiến độ hàng tuần</h2>
@@ -186,12 +233,15 @@ Sources: `doc/Design/Frontend/PlatformManager/Prototypes/index.html`
 prototype-only block § `.proto-chart`, § `.proto-chart-grid line`,
 § `.proto-chart-axis-y text`, § `.proto-chart-axis-x text`, § `.proto-chart-area`,
 § `.proto-chart-line`, § `.proto-chart-point circle`),
-`Prototype/index.html` § `#screen-dashboard` → `app-trend-chart` (the approved
+`doc/Design/Frontend/PlatformManager/Prototypes/index.html` § `#screen-dashboard` → `app-trend-chart` (the approved
 geometry, the six date-range x labels and the accessible label),
-`src/FE/package.json` § `//dependencies` (the 2026-09-04 note recording that the
-chart library was dropped — the removal decision Q17 reverses),
+`src/FE/package.json:49-55` (the `//dependencies` note, which now records **both**
+moves — dropped 2026-09-04, put back 2026-09-09 — and the check to run before anyone
+removes it a third time; the dependency itself is `src/FE/package.json:68`),
 [`../Tokens/colors.md`](../Tokens/colors.md) § Chart Palette (master of the four
-`chart-*` roles and of the flip history).
+`chart-*` roles and of the flip history), and the shipped component itself:
+`src/FE/src/app/modules/dashboard/components/trend-chart/trend-chart.ts`, `src/FE/src/app/modules/dashboard/components/trend-chart/trend-chart.html`, `src/FE/src/app/modules/dashboard/components/trend-chart/trend-chart.scss`
+(built 2026-09-09, read 2026-09-10).
 
 ## Do / Don't
 
@@ -208,27 +258,37 @@ chart library was dropped — the removal decision Q17 reverses),
 ## Normalize on redesign
 
 1. **Hover is whatever the renderer supplies.** No tooltip surface, text colour, radius or padding is specified, so the chart's one interactive affordance will render in a third-party palette that no token controls and that changes on library upgrade.
-2. **No keyboard access and no data-table alternative.** An accessible name on the plot is not access — a sighted keyboard user still cannot reach a data point. Providing the series as a visually-hidden `<table>` closes this and item 1 at once, since a table needs no tooltip.
+2. **No keyboard access.** *(Half of this item closed 2026-09-09, checked 2026-09-10.)* It used to read *"no keyboard access and no data-table alternative"*, and proposed a visually-hidden `<table>` as the fix for both. The table shipped — `src/FE/src/app/modules/dashboard/components/trend-chart/trend-chart.html:16-34` renders the series as an `sr-only` two-row table with a caption, kept in the accessibility tree rather than hidden with `display: none`. What did **not** change is the keyboard half: an `sr-only` table is still not a tab stop, so a sighted keyboard user cannot reach a data point, and item 1 above is therefore still open too.
 3. **The 220px height is three unlinked literals** — the plot, `.chart-wrap`'s `min-height` and the host page's `.chart-skeleton`. Two live in a different file from the third, so changing the chart height means editing all three or the placeholder stops matching the chart.
 4. **Sizing is fixed, not fluid.** A hard 220px means the chart is the same height on a 390px phone and a 1600px desktop while every card around it reflows. There is no responsive height step.
 5. **The x axis uses two vocabularies** — date ranges in week mode, month abbreviations in month mode (§ Anatomy). Defensible on space grounds, but a reader switching modes gets no cue that the axis changed kind.
-6. **`flex: 1` sits on the child, not the host.** Defect **A2** — `doc/Design/Frontend/PlatformManager/Prototypes/index.html` § `app-trend-chart .chart-wrap` declares `flex: 1`, and the host declares no `display: flex`, so the wrapper does not actually stretch to the card's height.
+6. **`flex: 1` sits on the child, not the host.** Defect **A2** — `doc/Design/Frontend/PlatformManager/Prototypes/index.html` § `app-trend-chart .chart-wrap` declares `flex: 1`, and the host declares no `display: flex`, so the wrapper does not actually stretch to the card's height. **It shipped that way on 2026-09-09**, and the shipped stylesheet names the defect in its own comment rather than quietly correcting it: `src/FE/src/app/modules/dashboard/components/trend-chart/trend-chart.scss:6-21` keeps `:host { display: block }` beside `.chart-wrap { flex: 1 }`. Changing it is a design decision, which is why the build left it alone.
 
-## Handoff — one prerequisite outside this folder
+## Handoff — the prerequisite outside this folder is closed
 
-**`chart.js` must be re-added to `src/FE/package.json`** before this component can
-be built. It was removed on 2026-09-04 when this was its only consumer, and
-decision Q17 reversed that on 2026-09-05. The design area may not edit `src/`
-(`doc/Design/CLAUDE.md` § Scope), so this is a hand-off to whoever builds the
-screen, not an open question — the decision is made.
+**`chart.js` is back in `src/FE/package.json`.** It landed 2026-09-09 with the
+component; read 2026-09-10. It had been dropped on 2026-09-04 when this spec's
+component was its only consumer, and decision Q17 reversed that on 2026-09-05. The
+manifest's own `//dependencies` block records both moves and the check to run before
+anyone removes it again (`src/FE/package.json:49-55`); the dependency line is
+`src/FE/package.json:68`.
+
+**What is left is composition, not a prerequisite.** Nothing renders
+`<app-trend-chart>` yet. The `@defer (on viewport)` boundary and the
+`.chart-skeleton` placeholder are the **host page's** job (§ Anatomy), and the
+Dashboard page is still a stub with no route pointing at it — see the banner at the
+top of this file. That work belongs to
+[`../Screens/01-dashboard.md`](../Screens/01-dashboard.md), not here.
 
 ## Cần chốt
 
 <!-- Open questions this spec must not answer on its own. Raised 2026-09-05, emptied the same day. -->
 
 **Nothing is open on this component.** The last item — the month-mode x-axis labels —
-was settled by decision T7 on 2026-09-05. What remains is not a question but a task
-in a folder this one may not edit: § Handoff above.
+was settled by decision T7 on 2026-09-05. The one task that used to sit in a folder
+this file may not edit — re-adding `chart.js` — closed on 2026-09-09; § Handoff
+records it. What remains is composition on the Dashboard page, tracked by that
+screen's spec.
 
 ### Answered elsewhere — do not re-ask
 

@@ -1,0 +1,19 @@
+// Chỉ chứa BỐ CỤC riêng của trang. Mọi bề mặt/nút/badge dùng class toàn cục ở src/styles.scss —
+// không khai lại ở đây, và không có màu literal nào (cổng G1 + G11).
+
+// Nửa sau của chuỗi chiều cao `.page-fill`: thẻ host của trang không được cắt đứt chuỗi flex, nếu
+// không card dừng ở chiều cao nội dung và lưới (sẽ có ở lượt sau) không còn chỗ để cuộn bên trong.
+// styles.scss § .page-fill giải thích đầy đủ vì sao không dùng `calc(100vh - N)`.
+:host {
+  display: contents;
+}
+
+// `.dti-grid-card` là layout page-local, KHÔNG phải một component dùng chung mới —
+// spec/danh-muc-dti/ui-spec.md §3 liệt nó trong danh sách class page-local. Cột flex với
+// `min-height: 0` để vùng lưới co được thay vì đẩy trang dài ra.
+.dti-grid-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  min-height: 0;
+}

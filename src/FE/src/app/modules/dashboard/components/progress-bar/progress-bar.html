@@ -1,0 +1,34 @@
+<!-- Ba ô của lưới, đúng thứ tự: tên · thanh · số. Xem ProgressBar.md § Anatomy. -->
+<div>
+  <b>{{ label() }}</b>
+</div>
+
+<!-- `role="progressbar"` + `aria-*`: canvas trợ năng KHÔNG thấy hai thẻ div trần, nên nếu không
+     khai vai trò ở đây thì người dùng trình đọc màn hình chỉ nghe được ô số bên cạnh
+     (spec/dashboard-dti/ui-spec.md §3.3, wiki-core/fe/15-accessibility.md §4 mục 6).
+     Ca thiếu dữ liệu: KHÔNG có aria-valuenow — thay bằng aria-valuetext nói thẳng "chưa có". -->
+<div
+  class="bar"
+  role="progressbar"
+  [attr.aria-label]="label()"
+  [attr.aria-valuemin]="0"
+  [attr.aria-valuemax]="100"
+  [attr.aria-valuenow]="ariaValueNow()"
+  [attr.aria-valuetext]="hasValue() ? null : ('dashboard.grid.groupAwaitingData' | translate)"
+>
+  <!-- KHÔNG có `.fill` khi thiếu dữ liệu — một `.fill` rộng 0 nói "đã đo, bằng không", là một
+       câu khác hẳn. Xem JSDoc của class. -->
+  @if (hasValue()) {
+    <div class="fill" [style.width.%]="clamped()"></div>
+  }
+</div>
+
+<div class="num">
+  <b>
+    @if (hasValue()) {
+      {{ percentText() }}
+    } @else {
+      {{ 'shared.format.absentValue' | translate }}
+    }
+  </b>
+</div>

@@ -4,7 +4,7 @@ scope: du-an
 verified: 2026-09-06
 project: "PlatformManager"
 status: "draft"
-updated: "2026-09-06"
+updated: "2026-09-10"
 category: "colors"
 live_source: "src/FE/src/styles.scss"
 ---
@@ -135,7 +135,7 @@ Four rows fewer than the previous revision: `tonal-bg-hover`, `bad-bg-hover`, `b
 
 ## Chart Palette
 
-📐 **ĐÍCH ĐẾN — CHƯA THI CÔNG.** Four role names, restored **2026-09-05**, consumed by exactly one component: [`../Components/TrendChart.md`](../Components/TrendChart.md).
+✅ **CÓ THẬT — đối chiếu 2026-09-10.** Four role names, restored **2026-09-05** by decision Q17 and consumed by exactly one component, [`../Components/TrendChart.md`](../Components/TrendChart.md), which was **built 2026-09-09** and resolves all four at runtime (`src/FE/src/app/modules/dashboard/components/trend-chart/trend-chart.ts:150-164`). No page composes that component yet, so the palette is real in code and not yet on a screen.
 
 | Role | Resolves to | Value | Chart element |
 | --- | --- | --- | --- |
@@ -161,7 +161,7 @@ grep -c 'chart' src/FE/src/styles.scss     # PASS = 0
 > | 2026-09-04 | unchanged, but the note under it went stale | `chart.js` was dropped from `src/FE/package.json` the same day, for the same reason |
 > | **2026-09-05** | the four roles again (above) | **decision Q17 — the product owner asked for the chart back**, rendered by `p-chart` as before. This is a product decision reversing a cleanup, not a correction of an error: the 2026-08-29 removal was right about the code as it then stood |
 >
-> The earlier revision of this note also claimed *"`chart.js` remains in `src/FE/package.json` as an **unused dependency**"*. That stopped being true on 2026-08-29+6 days — it was removed 2026-09-04, and the removal is recorded in that file's own `//dependencies` block. Re-adding it is now a prerequisite of building the chart, and it is **not** something this file can do: `src/` is out of scope for the design area (`doc/Design/CLAUDE.md` § Scope). Tracked in [`../Components/TrendChart.md`](../Components/TrendChart.md).
+> The earlier revision of this note also claimed *"`chart.js` remains in `src/FE/package.json` as an **unused dependency**"*. That stopped being true on 2026-08-29+6 days — it was removed 2026-09-04, and the removal is recorded in that file's own `//dependencies` block. Re-adding it was a prerequisite of building the chart, and not something this file could do: `src/` is out of scope for the design area (`doc/Design/CLAUDE.md` § Scope). **That prerequisite closed on 2026-09-09** — `chart.js` is back at `src/FE/package.json:68`, and the manifest note at `src/FE/package.json:49-55` now records the removal, the restore and the check to run before anyone removes it a third time. Tracked in [`../Components/TrendChart.md`](../Components/TrendChart.md) § Handoff.
 >
 > The lesson worth keeping: *a package in `package.json` is not evidence of a shipped chart, and its absence is not evidence that no chart is wanted.* Read the component spec, not the manifest.
 

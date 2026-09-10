@@ -134,8 +134,16 @@ của nó ghi tay ở tầng service — **theo luật trên chỉ một nửa**
 | Cặp cột | Ai ghi | Lúc INSERT |
 |---|---|---|
 | `BaseEntity.CreatedAt`/`UpdatedAt` | `AuditInterceptor` | cả 2, cùng giá trị |
-| `AppUser.DateCreate`/`DateUpdate` | tay, ở service | **chỉ `DateCreate`** — `DateUpdate` để null tới lần sửa đầu (`UserAdminService.cs:151`, `CoreSeeder.cs:234`, `UserLookupService.cs:44`) |
-| `AppUser.CreatedBy`/`UpdatedBy` | tay, ở service | cả 2 (`UserAdminService.cs:156-157`, `CoreSeeder.cs:238-239`) — **trừ** đường tự tạo user lúc tra cứu, không ghi cột nào (`UserLookupService.cs:37-45`) |
+| `AppUser.DateCreate`/`DateUpdate` | tay, ở service | **chỉ `DateCreate`** — `DateUpdate` để null tới lần sửa đầu (`UserAdminService.cs:151`, `CoreSeeder.cs:234`) |
+| `AppUser.CreatedBy`/`UpdatedBy` | tay, ở service | cả 2 (`UserAdminService.cs:156-157`, `CoreSeeder.cs:238-239`) |
+
+> **🔄 SỬA 2026-09-09 — hai ô trên từng nêu `UserLookupService` làm ca thứ ba, nay không còn.**
+> `IUserLookupService` khi đó có nhánh **tự tạo `AppUser`** khi cột `Phụ trách` của file import
+> không khớp ai, và nhánh đó ghi `DateCreate` mà bỏ trống `CreatedBy`/`UpdatedBy` — đúng loại
+> lệch mà mục này sinh ra để ghi lại. Nhánh ấy đã bị **xoá** theo
+> `spec/danh-muc-dti/business-rules.md` §6.3 (không khớp ai ⇒ `OwnerId` để trống, KHÔNG tạo tài
+> khoản). Seam nay chỉ tra cứu, **không ghi cột nào của `AppUser`**, nên nó không còn thuộc bảng
+> này — xem `src/BE/Core/PlatformManager.Core.Infrastructure/Identity/UserLookupService.cs:32`.
 
 Ghi ra sự lệch này chứ không lấp nó, vì đây đúng là chỗ dễ suy diễn nhầm: đọc luật ở trên rồi
 tưởng `AspNetUsers` cũng vậy. Muốn `AppUser` về cùng khuôn thì phải sửa tay ở **từng** điểm tạo

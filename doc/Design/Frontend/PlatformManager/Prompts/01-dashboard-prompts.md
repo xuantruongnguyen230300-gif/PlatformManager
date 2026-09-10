@@ -4,7 +4,7 @@ scope: du-an
 verified: khong-ap-dung
 project: "PlatformManager"
 status: "draft — target, not built"
-updated: "2026-09-08"
+updated: "2026-09-09"
 screen_ref: "01-dashboard"
 tools: ["stitch", "claude-design", "ai-studio", "generic"]
 ---
@@ -159,12 +159,12 @@ LAYOUT — the page:
    so five tiles stay baseline-aligned when one caption wraps. TONE COLOURS THE VALUE ONLY — never
    the label, the caption or the card. The five tiles, in order, with their populated values:
      1. "Tiến độ chung tuần này" — "82,1%" — default tone (#152033) —
-        "Bình quân gia quyền theo điểm (thật: 787,84/960)"
+        "Bình quân Tiến độ %, gia quyền theo Điểm tối đa"
      2. "So với tuần trước" — "↑ 2,3 đ.%" — good tone (#0e7050) — "Tuần 32/2026 (03/08–09/08/2026)"
      3. "Chỉ tiêu tăng" — "18" — good tone (#0e7050) — "Có tiến bộ so với kỳ trước"
      4. "Không tăng" — "27" — warn tone (#965e08) — "Cần chú ý theo dõi"
      5. "Hoàn thành" — "26/62" — default tone (#152033) —
-        "Số chỉ tiêu ở trạng thái Hoàn thành (thật)"
+        "Số chỉ tiêu ở trạng thái Hoàn thành"
    Tiles 3 and 4 keep their tone at every value: "Chỉ tiêu tăng: 0" still renders green. That is
    as-designed, not a bug to fix.
 

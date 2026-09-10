@@ -239,10 +239,19 @@
       "newVersion": "A new version is available — reload to continue.",
       "skipToContent": "Skip navigation, go to the main content"
     },
+    "deltaIndicator": {
+      "score": "{{Value}}",
+      "pointUp": "↑ {{Value}} pp",
+      "pointDown": "↓ {{Value}} pp",
+      "pointFlat": "{{Value}} pp"
+    },
     "field": {
       "email": "Email",
       "role": "Role",
       "userName": "User name"
+    },
+    "format": {
+      "absentValue": "—"
     },
     "grid": {
       "empty": "No data."

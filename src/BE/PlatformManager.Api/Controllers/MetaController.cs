@@ -1,6 +1,6 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using PlatformManager.Api.Common;
+using PlatformManager.Core.Api;
 using PlatformManager.Core.Application.Menu;
 
 namespace PlatformManager.Api.Controllers;

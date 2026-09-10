@@ -140,12 +140,21 @@ public class CoreMustNotKnowBusinessNameTests
             "ĐỪNG nới luật cho xanh — làm thế là xoá đúng thứ luật này sinh ra để giữ.");
     }
 
-    /// <summary>3 project Core phải có mặt trong tập quét (dựng project Core thứ 4 thì thêm vào đây).</summary>
+    /// <summary>
+    /// Mọi project Core phải có mặt trong tập quét — dựng project Core mới thì thêm vào đây.
+    ///
+    /// <para>🛑 <b>DANH SÁCH LIỆT KÊ TAY.</b> Nó là bộ chặn "xanh mà không đo gì" (2/3) của luật
+    /// bên trên, nên bản thân nó mục ruỗng thì chính bộ chặn ngừng chặn: một project Core mới
+    /// không khai ở đây vẫn được QUÉT (tập file lấy theo thư mục <c>Core/</c>), nhưng nếu bộ liệt
+    /// kê file bỗng sót nó thì không còn gì báo động. <c>PlatformManager.Core.Api</c> thêm
+    /// 2026-09-09 cùng project (Q8).</para>
+    /// </summary>
     private static readonly string[] ExpectedCoreProjects =
     [
         "PlatformManager.Core.Domain",
         "PlatformManager.Core.Application",
         "PlatformManager.Core.Infrastructure",
+        "PlatformManager.Core.Api",
     ];
 
     /// <summary>Literal chắc chắn có thật trong Core: <c>modelBuilder.HasDefaultSchema("core")</c>.</summary>

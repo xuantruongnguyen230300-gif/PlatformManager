@@ -24,8 +24,22 @@ namespace PlatformManager.ArchTests;
 internal static class ProductAssemblies
 {
     /// <summary>
-    /// Mọi assembly SẢN PHẨM (không gồm assembly test). Thêm module nghiệp vụ mới thì thêm bộ 3
-    /// assembly của nó vào đây — 4 test trong nhóm này tự phủ module mới.
+    /// Mọi assembly SẢN PHẨM (không gồm assembly test).
+    ///
+    /// <para>🛑 <b>DANH SÁCH LIỆT KÊ TAY — quên cập nhật thì 7 test XANH MÀ KHÔNG ĐO GÌ.</b> Đây
+    /// là tập đầu vào của <see cref="ControllerBaseInheritanceTests"/>,
+    /// <see cref="ErrorCatalogTests"/>, <see cref="InterceptorWiringTests"/>,
+    /// <see cref="MiddlewareWiringTests"/>, <see cref="OptionsValidateOnStartTests"/>,
+    /// <see cref="PipelineBehaviorRegistrationTests"/> và <see cref="ValidatorRegistrationTests"/>.
+    /// Một assembly vắng ở đây không làm test nào đỏ — nó chỉ lặng lẽ rơi khỏi phạm vi kiểm.</para>
+    ///
+    /// <para><b>Khi dựng tầng <c>PlatformManager.Business.*</c> (bước 3 của lộ trình, xem
+    /// doc/kien-truc-core-module.md): thêm ĐỦ cả 5 assembly</b> —
+    /// <c>Business.Domain</c>, <c>Business.Application</c>, <c>Business.Persistence</c>,
+    /// <c>Business.Infrastructure</c>, <c>Business.Api</c>. Riêng <c>Business.Api</c> là mục dễ
+    /// quên nhất và cũng đắt nhất: thiếu nó thì
+    /// <c>EveryController_Inherits_ApiControllerBase</c> không nhìn thấy controller nghiệp vụ
+    /// nào, tức luật fail-closed [Authorize] ngừng canh đúng tập controller mới viết.</para>
     ///
     /// <para><c>PlatformManager.Api</c> có mặt qua <see cref="Api.Common.CorsPolicyOptions"/> —
     /// một kiểu <c>public</c> bất kỳ của assembly đó là đủ để nạp nó. Middleware trong
@@ -37,6 +51,11 @@ internal static class ProductAssemblies
         typeof(Core.Domain.Common.BaseEntity).Assembly,
         typeof(Core.Application.DependencyInjection).Assembly,
         typeof(Core.Infrastructure.DependencyInjection).Assembly,
+        // Thêm 2026-09-09 cùng project PlatformManager.Core.Api (Q8). Nạp qua chính
+        // ApiControllerBase — kiểu public duy nhất của assembly đó hôm nay. Nó ABSTRACT nên
+        // ConcreteControllerTypes() tự loại nó ra: có mặt ở đây KHÔNG biến base class thành một
+        // controller bị đem đi kiểm.
+        typeof(Core.Api.ApiControllerBase).Assembly,
         typeof(Api.Common.CorsPolicyOptions).Assembly,
     ];
 
@@ -142,14 +161,34 @@ internal static class RepoSourceTree
 
     public static string ProgramCsPath => Path.Combine(ApiDirectory, "Program.cs");
 
-    /// <summary>Mọi file <c>.cs</c> sản phẩm (Core + Api), bỏ <c>obj/</c> và <c>bin/</c>.</summary>
+    /// <summary>
+    /// Mọi file <c>.cs</c> sản phẩm (Core + host Api), bỏ <c>obj/</c> và <c>bin/</c>.
+    ///
+    /// <para>🛑 <b>DANH SÁCH LIỆT KÊ TAY — quét theo THƯ MỤC BIẾT TRƯỚC.</b> Đây là phạm vi của
+    /// <see cref="BannedDependencyTests"/>, <see cref="EnvelopeBusinessCodeTests"/>,
+    /// <see cref="ErrorCodeSourceTests"/>, <see cref="InterceptorWiringTests"/> và
+    /// <see cref="OptionsValidateOnStartTests"/>. Code nằm ngoài 2 thư mục này vô hình với cả 5.</para>
+    ///
+    /// <para><b>Khi dựng tầng <c>PlatformManager.Business.*</c> (bước 3): thêm
+    /// <c>.. CSharpFilesUnder(BusinessDirectory)</c> vào đây</b> — nếu không, mọi luật văn bản ở
+    /// trên (mã lỗi phải khai qua <c>ErrorDescriptor</c>, không dựng envelope thủ công, không gọi
+    /// <c>UseInMemoryDatabase</c>…) sẽ KHÔNG áp cho một dòng code nghiệp vụ nào.</para>
+    ///
+    /// <para><c>PlatformManager.Core.Api</c> (thêm 2026-09-09) KHÔNG cần khai riêng: nó nằm dưới
+    /// <see cref="CoreDirectory"/> nên <see cref="CoreSourceFiles"/> đã quét sẵn. Đây là lý do
+    /// project Core mới phải đặt trong <c>Core/</c> — đặt chỗ khác là tự rơi khỏi 5 luật trên.</para>
+    /// </summary>
     public static IReadOnlyList<string> ProductSourceFiles() =>
     [
         .. CoreSourceFiles(),
         .. CSharpFilesUnder(ApiDirectory),
     ];
 
-    /// <summary>Thư mục chứa 3 project <c>PlatformManager.Core.*</c>.</summary>
+    /// <summary>
+    /// Thư mục chứa mọi project <c>PlatformManager.Core.*</c> — đếm bằng lệnh, không chép số ở
+    /// đây. Mọi project Core mới (gần nhất: <c>Core.Api</c>, 2026-09-09) phải nằm dưới thư mục
+    /// này để tự động vào phạm vi <see cref="CoreSourceFiles"/> và <see cref="ProductSourceFiles"/>.
+    /// </summary>
     public static string CoreDirectory => Path.Combine(BackendRoot, "Core");
 
     /// <summary>
