@@ -706,6 +706,13 @@ Nguyên nhân là một dây chuyền hoàn toàn xác định, không phải ca
 | > 0 | **0** | | **ca này (Q32)** |
 | > 0 | > 0 | | trạng thái mặc định §5.1 |
 
+**Hai cột của bảng đọc từ `kpi`, KHÔNG từ `table` — Q69 (chốt 2026-09-10).** Cột *"Số chỉ tiêu
+của kỳ"* là `kpi.totalCriteria`; cột *"Số chỉ tiêu có `Tiến độ %`"* thì FE không đếm, nó suy ra
+từ `kpi.overallProgress` **vắng mặt** (bằng 0 phần tử có số ⇒ không có mẫu để tính bình quân).
+Lý do phải là `kpi` chứ không phải `table`: bộ lọc `search`/`groupId`/`status` **chỉ áp cho
+`table`**, nên một bộ lọc không khớp dòng nào sẽ làm dải băng biến mất trong khi kỳ vẫn đủ chỉ
+tiêu. Ánh xạ đầy đủ sang trường trên dây: `doc/contracts/dashboard.md` §0, khối Q69.
+
 **Hiển thị:**
 
 - **`NoticeBanner`** ở **V0**, biến thể **mặc định** (thông tin) — không

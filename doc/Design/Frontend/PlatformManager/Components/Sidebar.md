@@ -4,7 +4,7 @@ scope: du-an
 verified: 2026-09-06
 project: "PlatformManager"
 status: "draft"
-updated: "2026-09-06"
+updated: "2026-09-11"
 component: "Sidebar"
 sources:
   - "src/FE/src/app/shared/components/sidebar/sidebar.html"
@@ -123,7 +123,7 @@ Every row below is **inherited from `.icon-btn`**, not authored here — `sideba
 
 Shipped menu tree (seeded server-side, verbatim labels + icons, read 2026-08-29): `Trang chủ` (`pi-home`, `/trang-chu`) · `Quản trị hệ thống` (`pi-cog`, group, no route of its own) → `Người dùng` (`pi-user`, `/quan-tri/nguoi-dung`), `Phân quyền` (`pi-shield`, `/quan-tri/phan-quyen`). The `Dashboard` and `Danh mục → DTI` entries an earlier revision of this spec listed are gone with the screens they pointed at.
 
-Sources: `src/FE/src/app/shared/components/sidebar/sidebar.html:4-89` (the comment at `:1-3` records why the `id` exists; the `no-print` class is on `:6` and `:85`), `src/FE/src/app/shared/components/sidebar/sidebar.scss:3-319` (`.sidebar-toggle` reduced to its two local rules at `:58-68`; the removed `@media print` block is recorded in the closing comment at `:321-324`), `src/FE/src/app/shared/components/sidebar/sidebar.ts:48`, `:50-52`, `src/FE/src/app/shared/services/sidebar-state.service.ts`, `src/FE/src/app/app.html:28`, `src/FE/src/app/app.scss:37-48` (the matching `.shell-content` offset), `src/FE/src/app/shared/components/topbar/topbar.html:8` (the `aria-controls="sidebar"` this component is the target of), `src/FE/src/styles.scss` § `.icon-btn` and § `@media print`
+Sources: `src/FE/src/app/shared/components/sidebar/sidebar.html:4-89` (the comment at `:1-3` records why the `id` exists; the `no-print` class is on `:6` and `:85`), `src/FE/src/app/shared/components/sidebar/sidebar.scss:3-319` (`.sidebar-toggle` reduced to its two local rules at `:58-68`; the removed `@media print` block is recorded in the closing comment at `:326-328`), `src/FE/src/app/shared/components/sidebar/sidebar.ts:48`, `:50-52`, `src/FE/src/app/shared/services/sidebar-state.service.ts`, `src/FE/src/app/app.html:28`, `src/FE/src/app/app.scss:37-48` (the matching `.shell-content` offset), `src/FE/src/app/shared/components/topbar/topbar.html:8` (the `aria-controls="sidebar"` this component is the target of), `src/FE/src/styles.scss` § `.icon-btn` and § `@media print`
 
 > 🔄 **SỬA 2026-09-06** — bản trước sai bốn chỗ:
 > 1. Ô thương hiệu ghi là chuỗi khai cứng `PM` / `PlatformManager`; thật ra nó đến từ `CORE_BRANDING` qua `inject()` (tách 2026-09-02).

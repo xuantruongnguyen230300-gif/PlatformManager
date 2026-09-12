@@ -1,30 +1,291 @@
 {
+  "CRITERIA": {
+    "ASSESSMENT_CONFLICT": "Chưa lưu được — chỉ tiêu này vừa được người khác cập nhật. Mở lại để xem số liệu mới nhất rồi sửa lại.",
+    "ASSESSMENT_SELF_SCORE_EXCEEDS_MAX": "Điểm tự đánh giá không được lớn hơn điểm tối đa.",
+    "ASSESSMENT_VERIFIED_SCORE_EXCEEDS_MAX": "Điểm thẩm định không được lớn hơn điểm tối đa.",
+    "CODE_FORMAT_INVALID": "Mã chỉ tiêu chỉ gồm chữ số và dấu chấm ngăn cách, không có đoạn rỗng và không có dấu chấm ở đầu hoặc cuối.",
+    "CODE_SEGMENT_TOO_LONG": "Mỗi đoạn của mã (phần giữa các dấu chấm) chỉ được có tối đa {{MaxSegmentDigits}} chữ số.",
+    "DUPLICATE_CODE": "Mã chỉ tiêu \"{{Code}}\" đã tồn tại trong danh mục.",
+    "GROUP_NOT_FOUND": "Nhóm đã chọn không còn trong danh mục. Chọn lại nhóm rồi lưu.",
+    "NOT_FOUND": "Chỉ tiêu này không còn trong danh mục — có thể người khác vừa xoá.",
+    "OWNER_NOT_FOUND": "Người phụ trách đã chọn không còn trong hệ thống. Chọn lại người phụ trách rồi lưu."
+  },
+  "DASHBOARD": {
+    "EXPORT_MODE_UNSUPPORTED": "Chưa xuất được báo cáo cho chế độ Tất cả (cả năm). Chọn một tuần hoặc một tháng rồi bấm Xuất báo cáo."
+  },
+  "IMPORT": {
+    "FILE_EMPTY": "File không có dòng dữ liệu nào. Kiểm tra lại file rồi chọn lại.",
+    "FILE_MISSING": "Chưa chọn file. Chọn một file CSV hoặc Excel rồi bấm Nhập dữ liệu.",
+    "FILE_TOO_LARGE": "File quá lớn để nhập. Bỏ bớt ảnh nhúng hoặc định dạng trong file, hoặc chia thành nhiều file, rồi chọn lại.",
+    "FILE_TOO_MANY_ROWS": "File có quá nhiều dòng nên hệ thống không nhận. Không dòng nào được nhập — chia nhỏ file rồi nạp lại từng phần.",
+    "FORMAT_UNSUPPORTED": "File này không phải CSV hoặc Excel (.csv, .xlsx, .xls), kể cả khi đuôi tên file đúng. Lưu lại đúng định dạng rồi chọn lại.",
+    "JOB_NOT_FOUND": "Không tìm thấy lượt nhập này — có thể đã quá thời gian lưu. Hãy nạp lại file.",
+    "ROW_CODE_DUPLICATED_IN_FILE": "Mã này đã xuất hiện ở dòng {{FirstRowNumber}} của cùng file.",
+    "ROW_CODE_FORMAT_INVALID": "Mã chỉ tiêu chỉ gồm chữ số và dấu chấm ngăn cách, không có đoạn rỗng và không có dấu chấm ở đầu hoặc cuối.",
+    "ROW_CODE_MISSING": "Chưa có mã chỉ tiêu.",
+    "ROW_CODE_SEGMENT_TOO_LONG": "Mỗi đoạn của mã (phần giữa các dấu chấm) chỉ được có tối đa {{MaxSegmentDigits}} chữ số.",
+    "ROW_CODE_TOO_LONG": "Mã chỉ tiêu dài quá {{MaxLength}} ký tự.",
+    "ROW_DEADLINE_INVALID": "Hạn xử lý không phải một ngày hợp lệ.",
+    "ROW_GROUP_NOT_FOUND": "Không tìm thấy nhóm \"{{GroupName}}\" (sai chính tả hoặc thừa khoảng trắng).",
+    "ROW_MAX_SCORE_INVALID": "Điểm tối đa không phải một số hợp lệ.",
+    "ROW_NAME_MISSING": "Chưa có tên chỉ tiêu.",
+    "ROW_SELF_SCORE_EXCEEDS_MAX": "Điểm tự đánh giá ({{SelfScore}}) vượt quá điểm tối đa ({{MaxScore}}).",
+    "ROW_SELF_SCORE_INVALID": "Điểm tự đánh giá không phải một số hợp lệ.",
+    "ROW_STATUS_INVALID": "Trạng thái \"{{Status}}\" không thuộc 4 giá trị hợp lệ.",
+    "ROW_VERIFIED_SCORE_EXCEEDS_MAX": "Điểm thẩm định ({{VerifiedScore}}) vượt quá điểm tối đa ({{MaxScore}}).",
+    "ROW_VERIFIED_SCORE_INVALID": "Điểm thẩm định không phải một số hợp lệ."
+  },
   "danh-muc-dti": {
     "routeTitle": "Danh mục DTI",
     "title": "Danh mục DTI",
-    "hint": {
-      "underConstruction": "Màn hình này đang được xây dựng. Danh sách chỉ tiêu, bộ lọc và các thao tác nhập liệu sẽ có ở bản cập nhật tới."
+    "count": "{{Count}} chỉ tiêu",
+    "action": {
+      "create": "+ Thêm chỉ tiêu",
+      "delete": "Xoá",
+      "edit": "Sửa",
+      "import": "Import CSV/Excel",
+      "save": "Lưu chỉ tiêu"
+    },
+    "dialog": {
+      "createTitle": "Thêm chỉ tiêu",
+      "deleteMessage": "Xoá chỉ tiêu \"{{Code}} — {{Name}}\"?",
+      "deleteTitle": "Xác nhận",
+      "editTitle": "Sửa chỉ tiêu"
+    },
+    "error": {
+      "codeFormatInvalid": "Mã chỉ tiêu chỉ gồm chữ số và dấu chấm ngăn cách, không có đoạn rỗng và không có dấu chấm ở đầu hoặc cuối.",
+      "codeRequired": "Chưa nhập mã chỉ tiêu.",
+      "codeSegmentTooLong": "Mỗi đoạn của mã (phần giữa các dấu chấm) chỉ được có tối đa 4 chữ số.",
+      "codeTooLong": "Mã chỉ tiêu dài quá 20 ký tự.",
+      "createFailed": "Không thêm được chỉ tiêu. Thử lại hoặc tải lại trang.",
+      "groupRequired": "Chưa chọn nhóm chỉ tiêu.",
+      "loadFailed": "Không tải được danh mục chỉ tiêu. Thử lại hoặc tải lại trang.",
+      "maxScoreInvalid": "Điểm tối đa phải lớn hơn 0.",
+      "nameRequired": "Chưa nhập tên chỉ tiêu.",
+      "updateFailed": "Không lưu được chỉ tiêu. Thử lại hoặc tải lại trang."
+    },
+    "field": {
+      "code": "Mã",
+      "codePlaceholder": "vd 1.1",
+      "deadline": "Hạn xử lý",
+      "group": "Nhóm",
+      "groupPlaceholder": "Chọn nhóm chỉ tiêu",
+      "maxScore": "Điểm tối đa",
+      "maxScorePlaceholder": "vd 10",
+      "name": "Tên chỉ tiêu",
+      "namePlaceholder": "Nhập tên đầy đủ chỉ tiêu...",
+      "note": "Minh chứng/Ghi chú",
+      "notePlaceholder": "Số văn bản - ngày - trích yếu, mỗi minh chứng 1 dòng...",
+      "owner": "Phụ trách",
+      "ownerLoadFailed": "Không tải được danh sách người dùng. Bạn vẫn lưu được các trường còn lại.",
+      "ownerSearchAriaLabel": "Tìm người phụ trách",
+      "ownerSearchPlaceholder": "Tìm người phụ trách...",
+      "ownerUnassigned": "— Chưa phân công —",
+      "selfScore": "Tự đánh giá",
+      "selfScorePlaceholder": "vd 5",
+      "status": "Trạng thái",
+      "verifiedScore": "Thẩm định",
+      "verifiedScorePlaceholder": "vd 5"
+    },
+    "filter": {
+      "allGroups": "Tất cả nhóm",
+      "allPeriods": "Tất cả (mới nhất trong năm)",
+      "allStatuses": "Tất cả trạng thái",
+      "chipGroup": "Nhóm: {{Value}}",
+      "chipPeriod": "Kỳ: {{Value}}",
+      "chipStatus": "Trạng thái: {{Value}}",
+      "chipYear": "Năm: {{Value}}",
+      "group": "Nhóm chỉ tiêu",
+      "period": "Kỳ trong năm",
+      "periodHint": "Xem tổng hợp cả năm (mới nhất mỗi chỉ tiêu) hoặc 1 kỳ cụ thể đã lưu trong năm. Mỗi kỳ ghi rõ từ ngày nào tới ngày nào",
+      "status": "Trạng thái",
+      "year": "Năm đánh giá"
+    },
+    "grid": {
+      "actions": "Hành động",
+      "code": "Mã",
+      "deadline": "Hạn xử lý",
+      "diff": "Chênh lệch",
+      "empty": "Không có chỉ tiêu nào khớp bộ lọc.",
+      "group": "Nhóm",
+      "groupLabel": "{{Code}}. {{Name}}",
+      "maxScore": "Điểm tối đa",
+      "name": "Tên",
+      "note": "Minh chứng/Ghi chú",
+      "owner": "Phụ trách",
+      "period": "Kỳ của số liệu",
+      "progress": "Tiến độ %",
+      "selfScore": "Tự đánh giá",
+      "status": "Trạng thái",
+      "verifiedScore": "Thẩm định"
+    },
+    "import": {
+      "chosenFile": "Đã chọn: {{Name}}",
+      "fileLabel": "Chọn file CSV/Excel",
+      "jobFailed": "Lượt nhập không hoàn tất — hệ thống gặp sự cố khi xử lý file. Kiểm tra lại file rồi nạp lại; nếu vẫn không được, báo cho quản trị hệ thống.",
+      "processing": "Đang xử lý file…",
+      "progressReminder": "Cột Tiến độ % để trống sau khi nhập — bạn tự nhập cho từng chỉ tiêu. Dashboard chỉ có số sau khi có Tiến độ %.",
+      "resultTitle": "Kết quả Import",
+      "rowPrefix": "Dòng {{RowNumber}} — mã \"{{Code}}\": ",
+      "rowPrefixNoCode": "Dòng {{RowNumber}}: ",
+      "startFailed": "Không bắt đầu được lượt nhập. Kiểm tra lại file rồi thử lại.",
+      "submit": "Nhập dữ liệu",
+      "summary": "Tổng {{TotalRows}} dòng — {{SuccessCount}} thành công, {{ErrorCount}} lỗi. Đã tự tạo mới {{CriteriaCreatedCount}} chỉ tiêu.",
+      "targetPeriod": "Nhập cho {{Period}}. Toàn bộ dòng trong file sẽ lưu vào kỳ này.",
+      "title": "Import CSV/Excel"
+    },
+    "inline": {
+      "editNote": "Bấm đúp để sửa Minh chứng/Ghi chú",
+      "editProgress": "Bấm đúp để sửa Tiến độ %",
+      "notePrompt": "— bấm đúp để ghi chú"
+    },
+    "notice": {
+      "emptyCatalogue": "Danh mục chưa có chỉ tiêu nào. Dùng nút \"Import CSV/Excel\" ở trên để nhập danh mục từ file.",
+      "emptyCatalogueReadOnly": "Danh mục chưa có chỉ tiêu nào.",
+      "periodNotWeekly": "Đang xem số liệu tổng hợp của {{Period}} — chỉ đọc. Chọn một tuần cụ thể hoặc \"Tất cả (mới nhất trong năm)\" trong ô \"Kỳ trong năm\" để nhập hoặc sửa số liệu.",
+      "periodNotWeeklyPastYear": "Đang xem số liệu tổng hợp của {{Period}} — chỉ đọc. Chọn một tuần cụ thể trong ô \"Kỳ trong năm\" để nhập hoặc sửa số liệu.",
+      "periodOutOfYear": "Đang xem số liệu năm {{Year}} — chỉ đọc. Chọn một tuần cụ thể trong ô \"Kỳ trong năm\" để nhập hoặc sửa số liệu của tuần đó, hoặc chuyển ô \"Năm đánh giá\" về {{CurrentYear}}.",
+      "readOnlyUnknown": "Bảng đang ở chế độ chỉ đọc với bộ lọc hiện tại.",
+      "targetPeriodCurrent": "Đang nhập cho {{Period}} — tuần hiện tại.",
+      "targetPeriodPast": "Đang nhập cho {{Period}}. Số liệu bạn sửa sẽ lưu vào tuần này, không phải tuần hiện tại."
+    },
+    "period": {
+      "monthFull": "Tháng {{Ordinal}}/{{Year}} ({{From}} – {{To}})",
+      "monthOption": "Tháng {{Ordinal}}: {{From}} – {{To}}",
+      "shortRange": "{{From}} – {{To}}",
+      "weekFull": "Tuần {{Ordinal}}/{{Year}} ({{From}} – {{To}})",
+      "weekOption": "Tuần {{Ordinal}}: {{From}} – {{To}}"
+    },
+    "toast": {
+      "created": "Đã thêm chỉ tiêu.",
+      "deletedHard": "Đã xoá chỉ tiêu khỏi danh mục.",
+      "deletedSoft": "Đã xoá chỉ tiêu. Số liệu các kỳ đã lưu vẫn được giữ lại.",
+      "updated": "Đã lưu chỉ tiêu."
+    },
+    "toolbar": {
+      "searchAriaLabel": "Tìm mã hoặc tên chỉ tiêu",
+      "searchPlaceholder": "Tìm mã hoặc tên chỉ tiêu..."
     }
   },
   "dashboard": {
     "routeTitle": "Tổng quan DTI",
-    "title": "Tổng quan DTI",
     "action": {
+      "export": "Xuất báo cáo",
+      "exportFilteredTitle": "Tải file Excel (.xlsx) — CHỈ các chỉ tiêu đang lọc ({{Shown}}/{{Total}})",
+      "exportTitle": "Tải file Excel (.xlsx) của kỳ đang xem — {{Period}}",
+      "exportYearUnsupported": "Chưa xuất được báo cáo cho chế độ Tất cả (cả năm). Chọn một tuần hoặc một tháng rồi bấm Xuất báo cáo.",
       "viewPeriod": "Xem",
       "viewPeriodAriaLabel": "Xem kỳ {{From}} – {{To}}"
     },
+    "chart": {
+      "caption": "Tiến độ chung",
+      "headingMonth": "Biểu đồ tiến độ hàng tháng",
+      "headingWeek": "Biểu đồ tiến độ hàng tuần",
+      "loading": "Đang tải biểu đồ…",
+      "summary": "Biểu đồ đường tiến độ chung theo các kỳ đã lưu, từ {{From}} đến {{To}}"
+    },
+    "error": {
+      "loadFailed": "Không tải được số liệu tổng quan. Thử lại hoặc tải lại trang."
+    },
+    "filter": {
+      "allGroups": "Tất cả nhóm",
+      "allStatuses": "Tất cả trạng thái",
+      "chipGroup": "Nhóm: {{Value}}",
+      "chipStatus": "Trạng thái: {{Value}}",
+      "group": "Nhóm chỉ tiêu",
+      "searchAriaLabel": "Tìm mã hoặc tên chỉ tiêu",
+      "searchPlaceholder": "Tìm mã hoặc tên chỉ tiêu...",
+      "sortAriaLabel": "Sắp xếp danh sách",
+      "sortByCode": "Theo mã chỉ tiêu",
+      "sortByDiff": "Chênh lệch lớn nhất",
+      "status": "Trạng thái"
+    },
+    "footer": {
+      "lead": "Xem toàn bộ danh mục & nhập/cập nhật dữ liệu tại ",
+      "link": "Danh mục > DTI",
+      "tail": "."
+    },
     "grid": {
+      "code": "Mã",
+      "diff": "Chênh lệch",
+      "group": "Nhóm",
       "groupAwaitingData": "Chưa có dữ liệu",
+      "groupLabel": "{{Code}}. {{Name}}",
       "historyDateRange": "{{From}} – {{To}}",
       "historyFirstPeriod": "Kỳ đầu",
       "historyOverallLead": "Tiến độ chung",
+      "maxScore": "Điểm tối đa",
+      "name": "Chỉ tiêu",
+      "note": "Minh chứng/Ghi chú",
+      "selfScore": "Tự đánh giá",
+      "status": "Trạng thái",
+      "tableEmpty": "Không có chỉ tiêu nào khớp bộ lọc.",
       "trendAriaLabelFallback": "Biểu đồ đường tiến độ chung theo các kỳ đã lưu",
       "trendEmpty": "Chưa có kỳ nào có dữ liệu để vẽ biểu đồ.",
       "trendPeriodHeader": "Kỳ",
-      "trendValueHeader": "Tiến độ chung"
+      "trendValueHeader": "Tiến độ chung",
+      "verifiedScore": "Thẩm định"
     },
-    "hint": {
-      "underConstruction": "Màn hình này đang được xây dựng. Các chỉ số tổng hợp và biểu đồ xu hướng sẽ có ở bản cập nhật tới."
+    "group": {
+      "empty": "Chưa có nhóm chỉ tiêu nào trong kỳ này.",
+      "heading": "Tiến độ theo nhóm"
+    },
+    "history": {
+      "caption": "Không ghi đè dữ liệu tuần cũ",
+      "empty": "Chưa có kỳ nào được lưu trong năm này.",
+      "heading": "Lịch sử các kỳ đã lưu"
+    },
+    "kpi": {
+      "delta": {
+        "month": "So với tháng trước",
+        "week": "So với tuần trước",
+        "year": "So với năm trước"
+      },
+      "done": "Hoàn thành",
+      "doneSub": "Số chỉ tiêu ở trạng thái Hoàn thành",
+      "doneValue": "{{Done}}/{{Total}}",
+      "flat": "Không tăng",
+      "flatSub": "Cần chú ý theo dõi",
+      "overall": {
+        "month": "Tiến độ chung tháng này",
+        "week": "Tiến độ chung tuần này",
+        "year": "Tiến độ chung năm nay"
+      },
+      "overallSub": "Bình quân Tiến độ %, gia quyền theo Điểm tối đa",
+      "up": "Chỉ tiêu tăng",
+      "upSub": "Có tiến bộ so với kỳ trước"
+    },
+    "notice": {
+      "awaitingProgressLead": "Đã có {{Count}} chỉ tiêu, nhưng chưa chỉ tiêu nào có Tiến độ %. Thanh tiến độ theo nhóm và biểu đồ sẽ hiện ngay khi có số liệu. Nhập Tiến độ % tại ",
+      "awaitingProgressTail": ".",
+      "catalogueLink": "Danh mục DTI",
+      "firstRunLead": "Chưa có dữ liệu DTI nào. Vào ",
+      "firstRunTail": " để nhập file hoặc thêm chỉ tiêu đầu tiên."
+    },
+    "period": {
+      "currentMonth": "— Tháng hiện tại —",
+      "currentPeriod": "— Kỳ hiện tại —",
+      "modeGroup": "Chế độ xem theo Tuần hoặc Tháng",
+      "month": "Tháng",
+      "monthFull": "Tháng {{Ordinal}}/{{Year}} ({{From}} – {{To}})",
+      "monthOption": "Tháng {{Ordinal}} · {{From}} – {{ToShort}} · {{Progress}}",
+      "monthOptionNoData": "Tháng {{Ordinal}} · {{From}} – {{ToShort}}",
+      "periodAriaLabel": "Xem tổng hợp cả năm hoặc 1 kỳ cụ thể",
+      "viewing": "Kỳ đang xem:",
+      "week": "Tuần",
+      "weekFull": "Tuần {{Ordinal}}/{{Year}} ({{From}} – {{To}})",
+      "weekOption": "Tuần {{Ordinal}} · {{From}} – {{ToShort}} · {{Progress}}",
+      "weekOptionNoData": "Tuần {{Ordinal}} · {{From}} – {{ToShort}}",
+      "wholeYear": "— Tất cả (tổng hợp theo năm) —",
+      "wholeYearBadge": "Tất cả · {{Year}}",
+      "yearAriaLabel": "Chọn năm"
+    },
+    "state": {
+      "loading": "Đang tải số liệu…"
+    },
+    "table": {
+      "count": "{{Shown}}/{{Total}} chỉ tiêu",
+      "heading": "{{Total}} chỉ tiêu DTI"
     }
   }
 }

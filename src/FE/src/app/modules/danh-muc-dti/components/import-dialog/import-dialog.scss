@@ -1,0 +1,10 @@
+/* Chỉ dòng "đang nhập cho kỳ X" — mọi thứ còn lại (`.title`, `.form-row`, `.muted`, `.form-error`,
+   `.dialog-actions`, `dialog.form-dialog`) là class TOÀN CỤC ở `src/FE/src/styles.scss`, không
+   khai lại ở đây. Chép lại một class dùng chung là cách hai bản sao bắt đầu lệch nhau. */
+
+.import-target {
+  margin: 0 0 var(--sp-3);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text);
+}

@@ -4,7 +4,7 @@ scope: du-an
 verified: khong-ap-dung
 project: "PlatformManager"
 status: "target — not built"
-updated: "2026-09-10"
+updated: "2026-09-11"
 flow: "DTI Catalogue"
 screens: ["DTI Catalogue"]
 source_routes: ["/danh-muc/dti"]
@@ -74,7 +74,7 @@ already say, and it matches the two-level shape of the live Core route
 `/quan-tri/nguoi-dung`.
 
 > **Shell:** the app shell — skip link + `Sidebar` + `Topbar` + `main` + `Toast`
-> (`src/FE/src/app/app.html:16-39`), rendered because this route will not set
+> (`src/FE/src/app/app.html:18-41`), rendered because this route will not set
 > `data.noShell`. `../DESIGN.md` → Layout describes this shell.
 > **Sources:** `doc/Design/Frontend/PlatformManager/Prototypes/index.html`
 > § `#screen-dti` — the prototype the product owner approved point by point on
@@ -106,7 +106,7 @@ already say, and it matches the two-level shape of the live Core route
 
 <!-- Region tree + structural measurements. Compose ONLY component names present in COMPONENTS.md. -->
 
-- **App shell** (`src/FE/src/app/app.html:16-39`) — surrounds the route
+- **App shell** (`src/FE/src/app/app.html:18-41`) — surrounds the route
 - **The page is a list screen**, so it uses the `.page-fill` contract: the grid
   card takes the remaining viewport height rather than the page growing past it
   (`src/FE/src/styles.scss` § `.page-fill`). The card itself is a flex column with
@@ -237,7 +237,7 @@ Source for every row is `doc/Design/Frontend/PlatformManager/Prototypes/index.ht
 | Toolbar action 2 | `+ Thêm chỉ tiêu` | key TBA — the `+` is part of the label | `.toolbar-actions` |
 | Grid headers | `Mã` · `Tên` · `Nhóm` · `Kỳ của số liệu` · `Điểm tối đa` · `Tự đánh giá` · `Thẩm định` · `Chênh lệch` · `Trạng thái` · `Phụ trách` · `Hạn xử lý` · `Tiến độ %` · `Minh chứng/Ghi chú` · `Hành động` | key TBA | `<thead>`; `Kỳ của số liệu` is present only in `Tất cả` mode — decision Q31 |
 | Period cell value | `10/08 – 16/08` · `27/07 – 02/08` · `20/07 – 26/07` · `13/07 – 19/07` — the week's **date range only**, with no week number and no year | — (composed) | `Kỳ của số liệu` column. Decision **Q38** — a deliberate exception to Q12, reasoned in § Layout Blueprint rule 2 and recorded in § Normalize |
-| Aggregate read-only banner (a month selected, **current year**) | `Đang xem số liệu tổng hợp của Tháng 8/2026 (01/08 – 31/08/2026) — chỉ đọc. Chọn một tuần cụ thể hoặc "Tất cả (mới nhất trong năm)" trong ô "Kỳ trong năm" để nhập hoặc sửa số liệu.` **ĐỀ XUẤT — CHỜ DUYỆT (Q60, 2026-09-10)** | — (composed) | Decision **Q60**: in the current year `Tất cả` is writable (case (d)), so the way out names both. Not drawn in the prototype. § States |
+| Aggregate read-only banner (a month selected, **current year**) | `Đang xem số liệu tổng hợp của Tháng 8/2026 (01/08 – 31/08/2026) — chỉ đọc. Chọn một tuần cụ thể hoặc "Tất cả (mới nhất trong năm)" trong ô "Kỳ trong năm" để nhập hoặc sửa số liệu.` **✅ DUYỆT NGUYÊN VĂN 2026-09-11 (Q60)** | — (composed) | Decision **Q60**: in the current year `Tất cả` is writable (case (d)), so the way out names both. Not drawn in the prototype. § States |
 | Aggregate read-only banner (a month selected, **past year**) | `Đang xem số liệu tổng hợp của Tháng 8/2025 (01/08 – 31/08/2025) — chỉ đọc. Chọn một tuần cụ thể trong ô "Kỳ trong năm" để nhập hoặc sửa số liệu.` | — (composed) | **Written by this spec 2026-09-06 for decision Q37; not drawn in the prototype.** 🔄 LẬT 2026-09-10 (Q60): this was the one wording for a month in any year; it is now the past-year wording only, because `Tất cả` of a past year is read-only (T15) and must not be offered. The wording is unchanged — only the composed example period is now a 2025 month. § States |
 | Past-year read-only banner (a past year **with `Tất cả`** — case (a)) | `Đang xem số liệu năm 2025 — chỉ đọc. Chọn một tuần cụ thể trong ô "Kỳ trong năm" để nhập hoặc sửa số liệu của tuần đó, hoặc chuyển ô "Năm đánh giá" về 2026.` | — (composed) | **Written by this spec for decision T15; not drawn in the prototype. Wording approved verbatim, duyệt 2026-09-10 (Q50).** It names both ways out, because after Q41 a specific week of the past year is writable too. Both years are composed from the filter and the clock. The superseded wording is recorded once, in the note below this table. § States |
 | Target-period banner (a past week selected) | `Đang nhập cho Tuần 31/2026 (27/07 – 02/08/2026). Số liệu bạn sửa sẽ lưu vào tuần này, không phải tuần hiện tại.` | — (composed) | **Settled 2026-09-06 for decision Q20; written by this spec, not drawn in the prototype.** Moved here from § Cần chốt on 2026-09-09. § Layout Blueprint → Period banners |
@@ -391,8 +391,7 @@ both left the table.
 - `403` without the write key — Core's HTTP fallback copy, and Q39 hides the controls anyway.
 
 **An import job that ends `Failed`** carries no code, and its `errorMessage` is
-developer-facing and must not be shown (DM-7, step 2). What the user sees — **ĐỀ XUẤT — CHỜ
-DUYỆT (Q56)** — is a toast, while waiting for the result:
+developer-facing and must not be shown (DM-7, step 2). What the user sees — **✅ DUYỆT NGUYÊN VĂN 2026-09-11 (Q56)** — is a toast, while waiting for the result:
 `Lượt nhập không hoàn tất — hệ thống gặp sự cố khi xử lý file. Kiểm tra lại file rồi nạp lại; nếu vẫn không được, báo cho quản trị hệ thống.`
 With no `businessCode` to serve as the key, the key is FE-owned: proposed
 `danh-muc-dti.import.jobFailed`. 🔄 SỬA 2026-09-10: this used to read *"not settled here"*.
@@ -418,7 +417,7 @@ With no `businessCode` to serve as the key, the key is FE-owned: proposed
 
   A `NoticeBanner` (default severity, `pi pi-info-circle`) says so, in one of two wordings chosen by the year, because the way out it names has to be one that works (decision **Q60**, 2026-09-10):
 
-  - **current year** — `Tất cả` is writable here (case (d)), so both ways out are named. **ĐỀ XUẤT — CHỜ DUYỆT (Q60):**
+  - **current year** — `Tất cả` is writable here (case (d)), so both ways out are named. **✅ DUYỆT NGUYÊN VĂN 2026-09-11 (Q60):**
 
     > `Đang xem số liệu tổng hợp của Tháng 8/2026 (01/08 – 31/08/2026) — chỉ đọc. Chọn một tuần cụ thể hoặc "Tất cả (mới nhất trong năm)" trong ô "Kỳ trong năm" để nhập hoặc sửa số liệu.`
 
@@ -485,7 +484,7 @@ With no `businessCode` to serve as the key, the key is FE-owned: proposed
 - **≥981px (desktop default):** the page fills the viewport height; the grid scrolls inside its own region — sized by the `page-fill` ⇄ `grid-host` flex chain with `scrollHeight="flex"`, **not** by `--grid-h` ([`../Components/DataTable.md`](../Components/DataTable.md) § SỬA 2026-09-06) — while the card, toolbar and paginator stay put.
 - **All widths — the grid scrolls horizontally, it does not restack.** Fourteen columns with explicit `min-width` values sum well past a laptop viewport, so horizontal scrolling is the design, not a failure. That is the `Table` / `DataTable` contract and it is why every column declares a minimum rather than a percentage. Since decision Q30 the two edge columns (`Mã`, `Hành động`) stay put while the middle scrolls, at every breakpoint — the pin has no responsive variant.
 - **≤980px (tablet):** the shell's sidebar becomes an off-canvas drawer; the toolbar wraps per the global `.toolbar` responsive rule. The grid is unchanged.
-- **≤560px (mobile):** the global `.form-grid` collapses from two columns to one, so the four paired fields in the `Sửa chỉ tiêu` dialog stack. `main` padding shrinks and the topbar hides the user name. The grid is still unchanged — on a 390px screen the user scrolls sideways through fourteen columns, which is the least comfortable moment in the whole product (§ Normalize on redesign). The frozen edges make this **worse, not better, on a phone**: `Mã` at 70px and `Hành động` at 120px are held permanently, leaving under 200px of scrollport between them. Q30 solves a desktop problem and pays for it here.
+- **≤560px (mobile):** the global `.form-grid` collapses from two columns to one, so the four paired fields in the `Sửa chỉ tiêu` dialog stack. `main` padding shrinks and the topbar hides the user name **together with both account labels**, leaving the change-password and sign-out buttons as bare glyphs (`Components/Topbar.md` § Variants, row *Compact user block*). The grid is still unchanged — on a 390px screen the user scrolls sideways through fourteen columns, which is the least comfortable moment in the whole product (§ Normalize on redesign). The frozen edges make this **worse, not better, on a phone**: `Mã` at 70px and `Hành động` at 120px are held permanently, leaving under 200px of scrollport between them. Q30 solves a desktop problem and pays for it here.
 - **The screen owns no media query of its own.** Every breakpoint effect above comes from the shell or from the global layer — the pre-retirement stylesheet's own `@media` block was empty and was removed during the 2026-08-29 consolidation.
 
 ### Iconography
@@ -503,7 +502,7 @@ globally and authors icons as `<i class="pi pi-*">` elements.
 | Edit a row | — (text button, `.btn.sm`) | `Hành động` column |
 | Delete a row | — (text button, `.btn.sm.danger`) | `Hành động` column |
 | Delete confirmation severity | `pi pi-trash` inside `.dialog-icon.bad` | `ConfirmDialog`, per its own spec |
-| Shell icons (hamburger, collapse, sign out, toast dismiss) | `pi pi-bars` · `pi pi-angle-left` · `pi pi-sign-out` · `pi pi-times` | App shell |
+| Shell icons (hamburger, collapse, change password, sign out, toast dismiss) | `pi pi-bars` · `pi pi-angle-left` · `pi pi-key` · `pi pi-sign-out` · `pi pi-times` | App shell. `pi-key` is the topbar's change-password link, added to the shell 2026-09-11 |
 
 **This screen introduces no new icon.** It deliberately uses **text buttons** for
 its row actions while the Core `Quản trị người dùng` grid uses icon buttons for

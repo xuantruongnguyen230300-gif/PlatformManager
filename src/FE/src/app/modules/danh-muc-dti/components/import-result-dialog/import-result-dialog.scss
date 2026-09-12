@@ -1,0 +1,38 @@
+/* `.import-summary` là khối RIÊNG của hộp thoại này — không có bản dùng chung ở
+   `src/FE/src/styles.scss` (kiểm: `grep -n 'import-summary' src/FE/src/styles.scss` → rỗng).
+   Mọi class khác trên markup (`.title`, `.muted`, `.dialog-actions`, `dialog.form-dialog`) là
+   class toàn cục, không khai lại ở đây.
+
+   🛑 **`.ok` và `.err` của bản dựng KHÔNG được chép vào câu tổng hợp.** Bản dựng tô xanh số dòng
+   thành công và tô đỏ số dòng lỗi bằng hai `<span>` NẰM TRONG câu. Làm vậy buộc phải cắt câu
+   thành nhiều mẩu rồi nối lại — thứ `spec/danh-muc-dti/ui-spec.md` §8 cấm thẳng (trật tự từ của
+   tiếng Việt và tiếng Anh khác nhau) — hoặc phải bơm HTML từ bảng dịch qua `innerHTML`, thứ
+   `doc/huong_dan/wiki-core/fe/14-security.md` cấm. Câu tổng hợp vì vậy là MỘT chuỗi liền, và màu
+   chỉ còn ở danh sách lỗi bên dưới, nơi mỗi lỗi đã là một phần tử riêng. */
+
+.import-summary {
+  margin: var(--sp-3) 0;
+  font-size: var(--fs-sm);
+  line-height: 1.6;
+}
+
+.import-summary p {
+  margin: 0 0 var(--sp-2);
+}
+
+.import-summary ul {
+  margin: 0 0 var(--sp-3);
+  /* Danh sách lỗi có thể dài bằng cả file (62 dòng); cuộn trong khối thay vì kéo dài hộp thoại ra
+     ngoài màn hình, nơi nút `Đóng` không với tới được. */
+  max-height: 240px;
+  overflow-y: auto;
+  padding-left: var(--sp-5);
+}
+
+.import-summary li {
+  margin-bottom: var(--sp-1);
+}
+
+.import-summary li.err {
+  color: var(--bad);
+}

@@ -148,30 +148,96 @@ Key từ BE là **PascalCase** (`MaxScore`, `Roles`) — cố ý khác phần c�
 >   `fields['Roles']` sẽ **trượt, và lỗi biến mất im lặng** — người dùng thấy form từ chối mà
 >   không ô nào đỏ.
 >
-> Bản đang chạy — `groupServerFieldErrors`, `src/FE/src/app/core/http/server-field-errors.ts:35`
-> (đối chiếu 2026-09-10) — làm đúng **ba** việc, không việc nào bỏ được:
+> Bản đang chạy — `groupServerFieldErrors` trong `src/FE/src/app/core/http/server-field-errors.ts`
+> (đối chiếu 2026-09-11) — làm đúng **bốn** việc, không việc nào bỏ được:
 >
 > 1. **Cắt hậu tố chỉ số** `[\d+]` ở cuối khoá.
 > 2. **Dịch từng lỗi** qua callback `translate` — phần tử của `fieldErrors` là `ApiFieldError`
 >    (mã lỗi + tham số), **không** phải câu tiếng Việt dựng sẵn. (Phần tử của `fields` **là** chuỗi
 >    dựng sẵn — đó là trường khác, xem bảng đầu mục.)
 > 3. **Gộp nhiều thông điệp về cùng một ô** thành một chuỗi — mỗi ô chỉ có một chỗ để hiện.
+> 4. **Tách lỗi mức BẢN GHI (`$record`) ra khỏi lỗi theo ô** — thêm 2026-09-11, xem §`$record` ngay dưới.
+>
+> *(Neo CỐ Ý không mang số dòng: nó trỏ vào một **hàm**, và tên hàm đã định vị đủ. Neo cũ
+> `server-field-errors.ts:35` mục ruỗng chỉ sau một lần sửa JSDoc — hàm khi đó đã trôi xuống dòng
+> 84, tức con số làm việc duy nhất của nó là nói sai.)*
 
 ```ts
-// core/http/server-field-errors.ts — giữ PascalCase, cắt chỉ số, dịch, gộp thông điệp
+// core/http/server-field-errors.ts — giữ PascalCase, cắt chỉ số, dịch, gộp, TÁCH `$record`
+export const RECORD_FIELD_KEY = '$record';
+
+export interface IServerFieldErrorView {
+  readonly byField: Record<string, string>;   // KHÔNG bao giờ chứa `$record`
+  readonly record: string | null;             // lỗi không thuộc ô nào, hoặc null
+}
+
 export function groupServerFieldErrors(
   fieldErrors: Record<string, ApiFieldError[]> | null,
   translate: (error: ApiFieldError) => string,
-): Record<string, string> {
-  if (!fieldErrors) return {};
+): IServerFieldErrorView {
+  if (!fieldErrors) return { byField: {}, record: null };
   const grouped: Record<string, string[]> = {};
   for (const [rawKey, errors] of Object.entries(fieldErrors)) {
     const key = rawKey.replace(/\[\d+\]$/, '');          // `Roles[0]` → `Roles`
     grouped[key] = [...(grouped[key] ?? []), ...errors.map(translate)];
   }
-  return Object.fromEntries(Object.entries(grouped).map(([key, messages]) => [key, messages.join(' ')]));
+  const { [RECORD_FIELD_KEY]: recordMessages, ...perField } = grouped;
+  return {
+    byField: Object.fromEntries(Object.entries(perField).map(([k, m]) => [k, m.join(' ')])),
+    record: recordMessages?.length ? recordMessages.join(' ') : null,
+  };
 }
 ```
+
+### 🛑 `$record` — lỗi mức bản ghi, và LUẬT HIỂN THỊ của nó
+
+✅ **CÓ THẬT (đối chiếu 2026-09-11)** — `src/FE/src/app/core/http/server-field-errors.ts`,
+hai nơi tiêu thụ: `user-form-dialog.ts` (`generalError`) và `doi-mat-khau.page.ts` (`errorMessage`).
+
+BE gom lỗi **không thuộc ô nhập nào** về khoá `"$record"` —
+`src/BE/Core/PlatformManager.Core.Application/Common/Results/IdentityFieldErrors.cs:110`
+(`RecordKey`). Vào đó có hai loại: lỗi thật sự mức bản ghi (`ConcurrencyFailure`) **và mọi mã
+Identity chưa có trong `SlotByCode`** — bảng đó là **allowlist**, nên mã Identity ra đời sau mặc
+định rơi vào đây.
+
+**Luật hiển thị — lỗi mức bản ghi hiện ở khối lỗi chung của form, VÔ ĐIỀU KIỆN, và ưu tiên TRÊN
+`message` của envelope:**
+
+1. `record` có giá trị → hiện nó. Kể cả khi đã có lỗi ô khác: đây là chỗ hiển thị **duy nhất** của
+   nó, không ô nào bind tới `$record`.
+2. không có `record` → giữ luật cũ: `message` của envelope chỉ hiện khi **không** có lỗi ô nào, để
+   không lặp lại cùng một thông tin bằng câu mơ hồ hơn ngay cạnh câu cụ thể.
+
+> #### Vì sao luật này tồn tại — lỗ đen kép, đã xảy ra thật 2026-09-11
+>
+> Trước ngày này, `groupServerFieldErrors` đổ `$record` vào chung `Record<string, string>` với lỗi
+> theo ô. Hai hậu quả, và **cả hai cùng cần** mới ra triệu chứng:
+>
+> - không template nào bind `$record` ⇒ câu **không hiện ở đâu cả**;
+> - sự *có mặt* của nó làm `Object.keys(fieldErrors()).length > 0` ⇒ khối lỗi chung bị **ẩn** ⇒
+>   `message` của envelope cũng biến mất.
+>
+> Ca thật: tạo người dùng với mật khẩu `qwerty123456`, bị `AddTop10000PasswordValidator` từ chối
+> với mã `CommonPassword`; mã đó khi ấy không có trong `SlotByCode` nên rơi về `$record`. Người
+> dùng thấy form từ chối, một toast chung chung, và **không một chữ nào** nói vì sao.
+>
+> Sửa một mình cái nào cũng không đủ — đó là lý do luật nằm ở đây chứ không nằm trong JSDoc của
+> từng component: hai component hiện thực nó, nhưng chúng là **hai bản chép**, không phải hai
+> nguồn.
+
+> #### Vì sao trả object hai nhánh thay vì `Record` phẳng
+>
+> Nó biến "quên hiển thị lỗi mức bản ghi" từ lỗi **im lặng** thành lỗi **biên dịch**: nơi gọi buộc
+> phải nhìn thấy `record` khi rã object, thay vì nhận một khoá `$record` mà template của nó không
+> có chỗ nào bind tới.
+>
+> 🛑 Nhánh tên **`byField`**, *không* phải `fields`: `fields` là tên một **trường khác** của
+> envelope (chuỗi trần BE dựng sẵn), trường đang trên đường bị gỡ ở bước 3 của
+> [02-http-envelope.md](02-http-envelope.md) §"Trình tự expand/contract". Đặt lại đúng tên ấy lên
+> chữ ký công khai của tầng đáy là dạy sai tên trường — đúng lý do **tham số** của hàm này đã phải
+> đổi `fields` → `fieldErrors` ngày 2026-09-10. Phép đo: đặt sai thì lệnh nghiệm thu ở
+> `02-http-envelope.md` §"Nghiệm thu bước 2" (*"phải in rỗng"*) chuyển sang luôn in 2 dòng dương
+> tính giả — tức một lệnh mà lượt sau người ta bỏ qua.
 
 > 🔄 **SỬA 2026-09-10 — chữ ký ở mẫu cũ KHÔNG biên dịch được, chép ra là gãy.** Bản trước
 > khai `fields: Record<string, string[]>` và **không có** tham số `translate`. Kiểu phần tử thật
@@ -201,6 +267,11 @@ export function groupServerFieldErrors(
 > `fieldErrors` null).
 >
 > Chữ ký và hành vi **giữ nguyên** trong lượt chuyển này — nếu cần đổi, chốt ở đây trước.
+>
+> 🔄 **ĐÃ ĐỔI 2026-09-11** (kiểu trả về `Record<string, string>` → `IServerFieldErrorView`, thêm
+> việc thứ 4). Khối mẫu và danh sách việc phía trên đã cập nhật theo; luật hiển thị đi kèm ở
+> §`$record` ngay dưới. Ghi ra thay vì sửa lặng lẽ vì đúng câu này là thứ quy định phải chốt ở đây
+> trước — và lượt đó code đi trước doc, `core-reviewer` bắt được (finding F1, 2026-09-11).
 
 ## Message hiển thị
 

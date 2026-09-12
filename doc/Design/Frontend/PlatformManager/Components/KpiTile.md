@@ -42,9 +42,10 @@ sources:
 >
 > The banner this replaces set **PASS = zero hits** for the same two greps. The
 > first criterion has flipped. Its warning still stands: use the two commands above
-> rather than a bare `grep -rn 'kpi'`, which also returns a passing mention of
-> `.kpis` in a comment in
-> `src/FE/src/app/platform/trang-chu/pages/trang-chu/trang-chu.page.scss:10`.
+> rather than a bare `grep -rn 'kpi'`, which also returns passing mentions of
+> `.kpis` inside comments — for example
+> `src/FE/src/app/modules/dashboard/pages/dashboard/dashboard.page.scss:7`, which
+> only lists the page-local class names.
 
 **Description:** Label / value / sub-caption stat tile — a `Card` with the `.kpi`
 modifier and a fixed three-line internal anatomy. It is the unit the dashboard's

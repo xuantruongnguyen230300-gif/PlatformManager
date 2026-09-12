@@ -17,6 +17,7 @@ using PlatformManager.Api.Common;
 using PlatformManager.Api.Modules;
 using PlatformManager.Api.Permissions;
 using PlatformManager.Api.Seeding;
+using PlatformManager.Business.Application.Common;
 using PlatformManager.Core.Application.Bootstrap;
 using PlatformManager.Core.Application.Common.Interfaces;
 using PlatformManager.Core.Application.Auth;
@@ -109,6 +110,16 @@ builder.Services
     {
         options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
         options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+
+        // Assigned<T> — phân biệt "khoá VẮNG MẶT khỏi thân request" với "khoá có mặt mang null"
+        // (Q74, spec/danh-muc-dti/business-rules.md §6.2). Khoá vắng ⇒ copy-forward; khoá mang
+        // null ⇒ xoá trắng có chủ đích. Với trường vốn đã nullable thì null KHÔNG diễn đạt được
+        // cả hai nghĩa, nên các đường ghi của DTI cần kiểu riêng và bộ đọc riêng cho nó.
+        //
+        // Đăng ký MỘT chỗ ở đây thay vì gắn attribute lên từng DTO: gắn từng chỗ nghĩa là mỗi DTO
+        // ghi mới phải NHỚ gắn, và chỗ nào quên sẽ đọc ra Unset cho mọi trường — tức mọi lời ghi
+        // âm thầm thành "không gửi gì cả". Đúng lớp hỏng im lặng mà kiểu đó sinh ra để chặn.
+        options.JsonSerializerOptions.Converters.Add(new AssignedJsonConverterFactory());
     });
 
 // Lỗi model binding (sai kiểu, thiếu field bắt buộc của record vị trí, JSON hỏng) xảy ra TRƯỚC
@@ -122,6 +133,16 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
 // qua đường này. Cấu hình tường minh để 2 đường response (MVC + exception handler) LUÔN cùng
 // 1 casing, tránh lệch shape giữa lỗi bắt bởi handler MediatR (đi qua MVC) và lỗi bắt bởi
 // GlobalExceptionHandler (đi qua middleware toàn cục).
+//
+// 🛑 CỐ Ý KHÔNG thêm AssignedJsonConverterFactory vào đây, dù dòng trên (Mvc.JsonOptions) có —
+// và đây KHÔNG phải bỏ sót (soi lại 2026-09-11 cùng finding F6). Hai lý do, cả hai đều kiểm được:
+//   1. Assigned<T> là kiểu của ĐẦU VÀO. Đường này là đường GHI RA (WriteAsJsonAsync của
+//      GlobalExceptionHandler), mà chính converter đó NÉM ở nhánh Write — thêm vào chỉ tạo một
+//      đường ném không ai đi tới.
+//   2. Host chỉ có đúng một minimal API (GET /api/antiforgery/token, không có thân request), nên
+//      đường Http.Json KHÔNG đọc thân request nào. Không có gì để converter làm ở đây.
+// Thêm "cho nhất quán" là mở lại đúng một cái bẫy: converter ném NotSupportedException khi ghi,
+// nên nó có thể biến một response LỖI thành một lỗi 500 khác hẳn lỗi gốc.
 builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(options =>
 {
     options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
@@ -189,9 +210,16 @@ builder.Services.AddProblemDetails();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Hangfire — hạ tầng job nền. ⚠️ Hôm nay KHÔNG job nghiệp vụ nào dùng nó: đường Import CSV/Excel
-// đã bị gỡ cùng module DtiWeekly 2026-08-29. Giữ lại hạ tầng có chủ đích, xem
-// doc/huong_dan/quy-uoc/be-cqrs-handler.md §"Command chạy lâu → job nền". Dùng CHUNG connection
+// Hangfire — hạ tầng job nền. ✅ CÓ NGƯỜI DÙNG THẬT từ 2026-09-11: đường Import của DM-7 enqueue
+// IImportJobRunner qua seam IBackgroundJobScheduler (Business.Application/Import/StartImportCommand.cs),
+// và worker chạy trọn lượt nạp file.
+//
+// 🛑 ĐỪNG GỠ khối này trong một lượt dọn dẹp. Chú thích cũ ở đây ghi "hôm nay KHÔNG job nghiệp vụ
+// nào dùng nó" — câu đó hết đúng từ 2026-09-11 và finding F8 bắt được. Nó đáng sửa chứ không phải
+// một chi tiết văn bản: nó là LÝ LẼ DUY NHẤT biện hộ cho việc giữ Hangfire, nên ai đọc nó rồi gỡ
+// sẽ làm đường import chết IM LẶNG — bản ghi ImportJobs ở lại "Pending" mãi mãi, FE poll vô hạn,
+// và không có lỗi nào ở đâu cả.
+// Xem doc/huong_dan/quy-uoc/be-cqrs-handler.md §"Command chạy lâu → job nền". Dùng CHUNG connection
 // string "Default" với PlatformManagerDbContext — Hangfire tự tạo schema "hangfire" lúc khởi
 // động lần đầu (KHÔNG đi qua EF Core migration).
 //

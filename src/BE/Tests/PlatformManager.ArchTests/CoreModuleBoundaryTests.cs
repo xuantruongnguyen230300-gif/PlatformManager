@@ -62,10 +62,20 @@ public class CoreModuleBoundaryTests
     /// <c>"PlatformManager.Business."</c>), không phải tên rút gọn — luật so tiền tố thẳng trên
     /// tên assembly, nên khoá phải khớp đúng thứ nó so.
     ///
-    /// <para><b>Khi dựng <c>PlatformManager.Business.*</c> (bước 3): thêm 5 assembly của nó vào
-    /// đây.</b> Với mô hình 1 khối Business đã chốt (v3), luật chéo bên dưới sẽ vẫn không có gì
-    /// để bắt — CHỦ ĐÍCH, vì chỉ có một tầng. Nó chỉ trở lại có hiệu lực nếu sau này tách thành
-    /// nhiều tầng nghiệp vụ độc lập thật; lúc đó khai mỗi tầng một tiền tố riêng.</para>
+    /// <para>🔄 <b>Cập nhật 2026-09-11.</b> Docstring cũ dặn <i>"khi dựng
+    /// <c>PlatformManager.Business.*</c> thì thêm 5 assembly của nó vào đây"</i> và kể hiện trạng
+    /// ngày 2026-08-29. Tầng đó <b>đã dựng</b> (5 project, chạy thật) — nhưng danh sách vẫn để
+    /// RỖNG, và đó là <b>quyết định</b>, không phải việc bị bỏ quên.</para>
+    ///
+    /// <para><b>Vì sao để rỗng:</b> luật chéo bên dưới bắt "tầng nghiệp vụ A tham chiếu tầng nghiệp
+    /// vụ B". Với mô hình MỘT khối <c>Business</c> đã chốt (v3) thì không có B nào — thêm 5 assembly
+    /// vào đây chỉ tạo ra một danh sách một-phần-tử mà luật không có cặp nào để so, tức hiệu lực
+    /// thực tế vẫn bằng 0 nhưng trông như đang canh một thứ gì đó. Đúng kiểu "xanh mà không đo gì"
+    /// mà chính khối 🛑 ở trên cảnh báo.</para>
+    ///
+    /// <para><b>Khi nào phải điền:</b> lúc tách thành NHIỀU tầng nghiệp vụ độc lập thật (vd
+    /// <c>PlatformManager.Hrm.*</c> cạnh <c>PlatformManager.Business.*</c>) — khai mỗi tầng một
+    /// tiền tố riêng, và luật chéo bắt đầu có việc để làm.</para>
     /// </summary>
     private static readonly (string TierAssemblyPrefix, Assembly Assembly)[] BusinessTierAssemblies = [];
 

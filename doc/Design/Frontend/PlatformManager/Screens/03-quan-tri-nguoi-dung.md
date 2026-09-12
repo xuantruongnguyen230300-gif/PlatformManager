@@ -4,7 +4,7 @@ scope: du-an
 verified: 2026-09-06
 project: "PlatformManager"
 status: "current"
-updated: "2026-09-10"
+updated: "2026-09-11"
 flow: "User Administration"
 screens: ["User Administration"]
 source_routes: ["/quan-tri/nguoi-dung"]
@@ -60,10 +60,10 @@ The screen carries four deliberate, security-visible UI decisions, all documente
 - **App shell** (`app.html:18-41`) — the route sets no `noShell` flag, so the full shell renders
   - **`Sidebar`** (`Components/Sidebar.md`; fixed left, `spacing.sidebar-w` / `spacing.sidebar-w-collapsed`, `z-index:35`, fill `colors.card`, right border `colors.line`, carrying `id="sidebar"` and `no-print`) — `sidebar.html:4-9`
   - **Shell content** (`.shell-content`, `margin-left` matching the sidebar width) — `app.scss:37-48`
-    - **`Topbar`** (`Components/Topbar.md`; sticky, `z-index:20`, translucent white with `backdrop-filter: blur(10px)`, bottom border `colors.line`; inner `.topin` capped at `spacing.container-max-width`, padding `spacing.sp-4` `spacing.sp-5`, gap `spacing.sp-3`) — `topbar.html:1-25`
+    - **`Topbar`** (`Components/Topbar.md`; sticky, `z-index:20`, translucent white with `backdrop-filter: blur(10px)`, bottom border `colors.line`; inner `.topin` capped at `spacing.container-max-width`, padding `spacing.sp-4` `spacing.sp-5`, gap `spacing.sp-3`) — `topbar.html:1-53`
       - `Button` (`.btn.sidebar-hamburger`, `pi-bars`, `aria-controls="sidebar"`) — hidden ≥981px
       - `.logo h1` — the route title, delivered by `PageTitleStrategy` rather than read from `data` (`page-title.strategy.ts:70-74`)
-      - `.topbar-user`: the signed-in user's full name + `Button` (`pi-sign-out` + "Đăng xuất")
+      - `.topbar-user`: the signed-in user's full name + **two** account actions — an `<a class="btn">` (`pi-key` + "Đổi mật khẩu", `routerLink` to `/doi-mat-khau`, added 2026-09-11) then `Button` (`pi-sign-out` + "Đăng xuất"). Both labels sit in a `.topbar-action-label` span (`topbar.html:24-49`)
     - **`main`** (capped at `spacing.container-max-width`, centred, padding `spacing.sp-5`) — `app.scss:50-71`
       - `Card` (`.card`, one card holds the whole screen body: fill `colors.card`, border `colors.line`, `colors.shadow`, `rounded.lg`, padding `spacing.sp-5`) — `quan-tri-nguoi-dung.page.html:1`
         - Title row (`.title`, the global card-title row documented in `Components/Card.md` § Anatomy; flex, space-between, gap `spacing.sp-3`, margin-bottom `spacing.sp-4`) — `quan-tri-nguoi-dung.page.html:2-15`
@@ -141,7 +141,8 @@ renders today.
 | --- | --- | --- | --- |
 | Browser tab title | `Người dùng hệ thống · PlatformManager` | **`quan-tri-nguoi-dung.routeTitle`** + injected app name | `quan-tri-nguoi-dung.routes.ts` holds the **key**; `PageTitleStrategy` resolves it and re-resolves on language change (`page-title.strategy.ts:83,91-92`), joining with `TITLE_SEPARATOR` (`:8`). The static `<title>PlatformManager</title>` in `src/FE/src/index.html:5` is only the pre-bootstrap value |
 | Topbar page title | `Người dùng hệ thống` | **`quan-tri-nguoi-dung.routeTitle`** | same signal, no separator and no app name |
-| Topbar logout button | `Đăng xuất` | **`shared.topbar.logout`** | `topbar.html` |
+| Topbar change-password link | `Đổi mật khẩu` | **`shared.action.changePassword`** | `topbar.html`. Also its `title` and `aria-label` — one key, three consumers |
+| Topbar logout button | `Đăng xuất` | **`shared.topbar.logout`** | `topbar.html`. Also its `title` and `aria-label` |
 | Topbar hamburger aria-label | `Mở menu điều hướng` | **`shared.topbar.openMenu`** | `topbar.html` |
 | Sidebar brand mark / text | `PM` / `PlatformManager` | — (injected, `CORE_BRANDING`) | `sidebar.html`. Product identity, not copy — it must **not** be translated |
 | Card heading | `Danh sách người dùng` | **`quan-tri-nguoi-dung.title`** | `quan-tri-nguoi-dung.page.html:3` |
@@ -240,7 +241,7 @@ renders today.
 - **This screen's own SCSS declares zero media queries** — in fact the page has **no stylesheet at all** any more: `quan-tri-nguoi-dung.page.ts` carries no `styleUrl`, because everything the page needs is a global class. `user-grid-table.scss` and `user-form-dialog.scss` contain no `@media` block. Every responsive change below comes from the shell, from `styles.scss` § 6, or from fluid `min()`/`flex` widths.
 - **≥981px (desktop default):** sidebar fixed at `spacing.sidebar-w` (or collapsed), `.shell-content` offset to match, `main` capped at `spacing.container-max-width` with `spacing.sp-5` padding. The topbar hamburger is `display:none`. With the sidebar collapsed, submenus become hover/focus flyouts.
 - **≤`spacing.breakpoint-tablet` (980px):** `.shell-content { margin-left: 0 !important }` — the sidebar leaves the flow and becomes an off-canvas drawer over a backdrop, and the hamburger appears. The card, toolbar and grid are unchanged; they reflow into the full width.
-- **≤`spacing.breakpoint-mobile` (560px):** `main` padding drops to `10px`; the topbar's user-name text is hidden, leaving only "Đăng xuất"; the sidebar drawer widens and its nav items grow for touch. The **toolbar restacks**: the search field goes to `width:100%`, every direct child stretches — **except** the Lọc button and the chip row, which are pinned `flex:none` because they are not input boxes and stretching them looks broken; `.toolbar-actions` loses its `margin-left:auto` and takes the full width; `.toolbar-sep` is hidden; the filter panel narrows to `min(320px, 86vw)`. The form dialog's `.form-grid` collapses to one column.
+- **≤`spacing.breakpoint-mobile` (560px):** `main` padding drops to `10px`; the topbar hides **both** `.topbar-user-name` and every `.topbar-action-label`, so the account area collapses to two bare glyphs (`pi-key`, `pi-sign-out`) named only by their `aria-label` (`topbar.scss:41-54`); the sidebar drawer widens and its nav items grow for touch. The **toolbar restacks**: the search field goes to `width:100%`, every direct child stretches — **except** the Lọc button and the chip row, which are pinned `flex:none` because they are not input boxes and stretching them looks broken; `.toolbar-actions` loses its `margin-left:auto` and takes the full width; `.toolbar-sep` is hidden; the filter panel narrows to `min(320px, 86vw)`. The form dialog's `.form-grid` collapses to one column.
 - **Grid (all viewports):** neither `responsiveLayout` nor `breakpoint` is set on `p-table` (`data-grid.html:7-21`), so **no column-stacking treatment is enabled** — all 5 columns render at every width. The five inline `min-width` values total 690px plus cell padding, so on narrow screens the grid scrolls horizontally inside PrimeNG's own container. Vertically the scroll region is `--grid-h` (`calc(100dvh - 280px)`), a screen-relative height rather than one of the three hardcoded pixel heights the app's tables used to each pick for themselves.
 - **Dialogs (all viewports):** fluid by design, no breakpoint — `spacing.dialog-width-form` for the form, `spacing.dialog-width-confirm` for the lock confirmation. The role checkbox row is a plain flex row and does not wrap to a column on small screens.
 - **Toast (all viewports):** `spacing.toast-stack-max-width`, pinned `spacing.sp-5` from the right and bottom edges at every size.
@@ -270,7 +271,8 @@ Two non-PrimeIcons sources also appear. The first is **PrimeNG's own inline `<sv
 | Paginate (first/prev/next/last) | PrimeNG inline `<svg>`, **not** PrimeIcons — `data-p-icon="angle-double-left"`, `"angle-left"`, `"angle-right"`, `"angle-double-right"` | Paginator below the grid; injected because `[paginator]="true"` (`user-grid-table.html:14`), no `src/FE/` source line |
 | Grid loading | PrimeNG inline `<svg>` spinner, `data-p-icon="spinner"` | Centred in the `.p-datatable-mask` overlay while `[loading]` is true (`data-grid.html:9`), no `src/FE/` source line |
 | Open nav drawer (shell) | `pi pi-bars` | Topbar left, ≤980px only (`topbar.html:12`) |
-| Log out (shell) | `pi pi-sign-out` | Topbar right, before the "Đăng xuất" label (`topbar.html:20`) |
+| Change password (shell) | `pi pi-key` | Topbar right, before the "Đổi mật khẩu" label, on an `<a class="btn">` (`topbar.html:34`) |
+| Log out (shell) | `pi pi-sign-out` | Topbar right, before the "Đăng xuất" label (`topbar.html:47`) |
 | Toast severity (shell) | `pi-check` / `pi-times` / `pi-exclamation-triangle` / `pi-info-circle` on a coloured disc | Leading disc of each toast item, `aria-hidden` (`toast.ts:11-16`) |
 | Dismiss toast (shell) | `pi pi-times` | Right edge of each toast item (`toast.html:19`) |
 
@@ -294,7 +296,7 @@ Every remaining row is an **on-demand** state/viewport variant under `doc/Design
 | `Assets/Screenshots/quan-tri-nguoi-dung/user-list--filtered--desktop-1440.png` | on demand | @ 1440×1000, apply both conditions, close the panel, and capture with the `2` count pill on the Lọc button and both removable chips visible. Confirm the address bar shows `?role=…&isLocked=…`. |
 | `Assets/Screenshots/quan-tri-nguoi-dung/user-list--lock-confirm--desktop-1440.png` | on demand | @ 1440×1000, click the red lock button on a user **other than** the signed-in account and capture the confirm dialog with the full 30-minute sentence readable. |
 | `Assets/Screenshots/quan-tri-nguoi-dung/user-list--tablet-900.png` | on demand | Populated state @ 900×1000 — exercises `max-width:980px`: sidebar off-canvas, hamburger visible, card full width. Capture with the drawer **closed**. |
-| `Assets/Screenshots/quan-tri-nguoi-dung/user-list--mobile-390.png` | on demand | Populated state @ 390×900 — exercises `max-width:560px`: the toolbar restack, full-width search, `main` padding 10px, topbar user-name hidden. Scroll the grid fully left first so the "Người dùng" column is visible. |
+| `Assets/Screenshots/quan-tri-nguoi-dung/user-list--mobile-390.png` | on demand | Populated state @ 390×900 — exercises `max-width:560px`: the toolbar restack, full-width search, `main` padding 10px, topbar user-name **and** both account labels hidden. Scroll the grid fully left first so the "Người dùng" column is visible. |
 | `Assets/Screenshots/quan-tri-nguoi-dung/user-list--empty--desktop-1440.png` | on demand | @ 1440×1000, type a string matching no user (e.g. `zzzz`), wait past the 300 ms debounce and the request, then capture the `Không có người dùng nào khớp bộ lọc.` row. |
 | `Assets/Screenshots/quan-tri-nguoi-dung/user-list--loading--desktop-1440.png` | on demand | @ 1440×1000, throttle the network in DevTools, change the page, and capture while the `.p-datatable-mask` spinner is visible. |
 | `Assets/Screenshots/quan-tri-nguoi-dung/user-form-dialog--create--desktop-1440.png` | on demand | @ 1440×1000, click "+ Thêm người dùng" and capture the empty dialog with backdrop — both `.form-grid` rows visible, username field focused. |

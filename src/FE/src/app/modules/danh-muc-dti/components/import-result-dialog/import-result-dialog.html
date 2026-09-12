@@ -1,0 +1,41 @@
+<dialog #dialogEl class="form-dialog" (close)="onNativeClose()">
+  <div class="title">
+    <h2>{{ 'danh-muc-dti.import.resultTitle' | translate }}</h2>
+    <button
+      type="button"
+      class="icon-btn"
+      [attr.aria-label]="'shared.action.close' | translate"
+      [attr.title]="'shared.action.close' | translate"
+      (click)="dialogEl.close()"
+    >
+      <i class="pi pi-times"></i>
+    </button>
+  </div>
+
+  <div class="import-summary">
+    <!-- MỘT chuỗi có bốn chỗ cắm tham số, không phải bốn mẩu nối bằng `+`: nối chuỗi khoá cứng
+         trật tự từ theo tiếng Việt và không dịch sang ngôn ngữ khác được (ui-spec §8). -->
+    <p>{{ 'danh-muc-dti.import.summary' | translate: summaryParams() }}</p>
+
+    @if (errorLines().length > 0) {
+      <ul>
+        @for (line of errorLines(); track line.Key) {
+          <!-- `track` theo khoá ghép, KHÔNG theo `rowNumber`: một dòng sai cả hai cột điểm cho ra
+               HAI phần tử cùng `rowNumber` (DM-7), và `track` trùng sẽ làm Angular ném lỗi. -->
+          <li class="err">{{ line.Text }}</li>
+        }
+      </ul>
+    }
+
+    <!-- Q24 — `Tiến độ %` để TRỐNG sau import, người dùng tự nhập. Hệ quả phải nói thẳng ngay tại
+         đây: Dashboard sẽ trống/0% cho tới khi có người nhập, và nếu không nói thì nó trông y hệt
+         một lỗi import. -->
+    <p class="muted">{{ 'danh-muc-dti.import.progressReminder' | translate }}</p>
+  </div>
+
+  <div class="dialog-actions">
+    <button type="button" class="btn primary" (click)="dialogEl.close()">
+      {{ 'shared.action.close' | translate }}
+    </button>
+  </div>
+</dialog>

@@ -293,6 +293,51 @@ describe('UserFormDialog — lỗi theo từng ô', () => {
     expect(el<HTMLElement>('.form-error').textContent?.trim()).toBe('Tên đăng nhập đã tồn tại.');
   });
 
+  it('🛑 `CommonPassword` hiện DƯỚI Ô mật khẩu tạm, bằng câu nói phải làm gì', () => {
+    // Ca người dùng báo 2026-09-11: mật khẩu tạm `qwerty123456` đủ 12 ký tự nên form cho qua, rồi
+    // `AddTop10000PasswordValidator` từ chối với mã `CommonPassword`. Khi đó bảng dịch chưa có mã
+    // này, và đường lùi `?? fieldError.message` trả về CHÍNH MÃ (BE gửi `message` bằng `code`).
+    //
+    // BE nay ánh xạ mã đó về ô mật khẩu (`IdentityFieldErrors.SlotByCode`), nên nó tới đây dưới
+    // khoá `TempPassword` — đúng ô người dùng vừa gõ.
+    openCreate();
+    fixture.componentRef.setInput('serverError', 'Tạo người dùng thất bại.');
+    fixture.componentRef.setInput('serverFieldErrors', {
+      TempPassword: [{ code: 'CommonPassword', message: 'CommonPassword' }],
+    });
+    fixture.detectChanges();
+
+    const input = el<HTMLInputElement>('#ufTempPassword');
+    expect(input.getAttribute('aria-invalid')).toBe('true');
+    const text = el<HTMLElement>(`#${input.getAttribute('aria-describedby')}`).textContent ?? '';
+    expect(text).toContain('phổ biến');
+    expect(text)
+      .withContext('mã máy KHÔNG được lọt ra màn hình — đường lùi cũ trả thẳng `code`')
+      .not.toContain('CommonPassword');
+  });
+
+  it('🛑 lỗi mức BẢN GHI (`$record`) vẫn phải hiện một câu, không rơi vào lỗ đen', () => {
+    // Bảng ánh xạ mã → ô của BE là ALLOWLIST, nên mã Identity mới mặc định rơi về `$record`.
+    // Trước bản vá 2026-09-11, hộp thoại nuốt trọn: `$record` không bind vào ô nào NÊN không hiện,
+    // đồng thời sự có mặt của nó làm `generalError` trả `null` NÊN câu chung cũng biến mất. Người
+    // dùng chỉ còn một toast "Tạo người dùng thất bại." và không có cách nào biết vì sao.
+    openCreate();
+    fixture.componentRef.setInput('serverError', 'Tạo người dùng thất bại.');
+    fixture.componentRef.setInput('serverFieldErrors', {
+      $record: [{ code: 'ConcurrencyFailure', message: 'ConcurrencyFailure' }],
+    });
+    fixture.detectChanges();
+
+    const messages = Array.from(fixture.nativeElement.querySelectorAll('.form-error')).map((node) =>
+      (node as HTMLElement).textContent?.trim(),
+    );
+
+    expect(messages.length).withContext('lỗi rơi vào lỗ đen: form từ chối mà không hiện chữ nào').toBe(1);
+    expect(messages[0])
+      .withContext('mã lạ chưa có bản dịch vẫn phải ra một CÂU, không phải chuỗi mã')
+      .toBe('Giá trị này không được chấp nhận. Vui lòng kiểm tra lại.');
+  });
+
   it('kiểm tại chỗ báo HẾT lỗi trong một lần bấm Lưu, và không phát `saved`', () => {
     openCreate();
 

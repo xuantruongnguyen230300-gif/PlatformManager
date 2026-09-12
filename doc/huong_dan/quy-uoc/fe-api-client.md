@@ -175,15 +175,24 @@ grep -rn "\.data\s*??" src/FE/src --include=*.ts
 # PASS: không dòng nào. Mọi chỗ đọc `data` phải đi qua `unwrapData()`.
 ```
 
-> #### ✅ CÓ THẬT — đối chiếu 2026-09-08
+> #### ✅ CÓ THẬT — đối chiếu 2026-09-10
 >
-> Lệnh grep trên **PASS** (0 dòng, chạy 2026-09-08). Chỗ vi phạm cuối cùng —
+> Lệnh grep trên **PASS** (0 dòng, chạy lại 2026-09-10). Chỗ vi phạm cuối cùng ở CODE —
 > `core/menu/menu.service.ts` — nay đọc `data` qua
 > `unwrapData(res)` (`src/FE/src/app/core/menu/menu.service.ts:162`).
 >
-> Chú ý khi viết chú thích: nhắc đến dạng bị cấm bằng **cách gọi tên** ("toán tử `??` kèm giá trị
-> mặc định") chứ đừng gõ lại nguyên văn nó trong comment — lệnh grep không phân biệt code với
-> comment, và một chú thích tử tế sẽ làm cổng đỏ mà không có gì hỏng cả.
+> Chú ý khi viết chú thích: nhắc đến dạng bị cấm bằng **cách gọi tên** ("toán tử hợp nhất-null kèm
+> giá trị mặc định") chứ đừng gõ lại nguyên văn nó trong comment — lệnh grep không phân biệt code
+> với comment, và một chú thích tử tế sẽ làm cổng đỏ mà không có gì hỏng cả.
+>
+> 🔄 **Ngày đối chiếu nâng từ 2026-09-08 lên 2026-09-10, và nó từng SAI trong khoảng giữa.** Lượt
+> dựng FE vòng 1 của cụm DTI viết hai chú thích gõ **nguyên văn** dạng bị cấm
+> (`modules/danh-muc-dti/services/danh-muc-dti.service.ts`, `shared/services/dti-period.service.spec.ts`),
+> nên lệnh trên trả về **2 dòng** trong khi nhãn ở đây vẫn nói PASS — tức nhãn `✅ CÓ THẬT` mô tả
+> một phép đo không còn đúng. Đáng ghi lại vì đây là **chính cái bẫy mà đoạn ngay trên vừa cảnh
+> báo**: người viết đọc cảnh báo, hiểu nó, rồi vẫn dính — bằng chứng rằng một dòng cảnh báo không
+> thay được việc chạy lại lệnh. Hai chú thích đã đổi sang cách gọi tên; lệnh chạy lại về 0 dòng
+> **trước khi** ngày ở dòng này được sửa.
 
 ### Đường lùi đặt ở đâu — nơi gọi là mặc định, service là NGOẠI LỆ có điều kiện
 

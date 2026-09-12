@@ -4,6 +4,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { CurrentUserService } from '../../../../core/auth/current-user.service';
 import { ApiFieldError, IApiResult, IHttpErrorWithApiResult } from '../../../../core/http/api-result.model';
+import { IServerFieldErrorView, groupServerFieldErrors } from '../../../../core/http/server-field-errors';
 import { ApiErrorMessageService } from '../../../../core/i18n/api-error-message.service';
 import { AuthCard } from '../../../../shared/components/auth-card/auth-card';
 import { CORE_ROUTES } from '../../../../core/config/core-routes';
@@ -148,31 +149,40 @@ export class DoiMatKhauPage {
         this.translate.instant(key as string) as string,
       ]),
     );
-    return { ...this.resolveServerFieldErrors(), ...local };
+    return { ...this.serverErrorView().byField, ...local };
   });
 
   /**
-   * Dịch từng `ApiFieldError` của một ô rồi gộp lại — mỗi ô chỉ có một chỗ để hiện câu.
+   * Lỗi server đã dịch, TÁCH làm hai: theo ô và mức bản ghi (`$record`).
+   *
+   * Dùng `groupServerFieldErrors` của `core/http/` từ 2026-09-11, thay cho một vòng lặp viết tay
+   * ngay tại màn này. Bản viết tay đó là bản sao thứ hai của cùng một việc và **thiếu hai** trong
+   * số bốn việc mà hàm chung làm: nó không cắt hậu tố chỉ số (`Roles[0]`) và không tách `$record`
+   * — cái thứ hai là lỗ đen đã làm mọi mã Identity ngoài allowlist của BE biến mất không dấu vết.
+   * Xem `core/http/server-field-errors.ts` §"Vì sao ở `core/http/`" và §`$record`.
    *
    * Dịch Ở ĐÂY chứ không lúc nhận response: `fieldMessage` tra bảng dịch theo mã, nên gọi lại mỗi
    * lần `computed` chạy thì câu đổi theo ngôn ngữ. Giữ câu đã dịch trong signal sẽ đóng băng nó ở
    * ngôn ngữ lúc lỗi xảy ra.
    */
-  private resolveServerFieldErrors(): Record<string, string> {
-    const errors = this.serverFieldErrors();
-    if (!errors) return {};
-    return Object.fromEntries(
-      Object.entries(errors).map(([field, list]) => [
-        field,
-        list.map((error) => this.errorMessages.fieldMessage(error)).join(' '),
-      ]),
-    );
-  }
+  private readonly serverErrorView = computed<IServerFieldErrorView>(() => {
+    this.translate.currentLang();
+    return groupServerFieldErrors(this.serverFieldErrors(), (error) => this.errorMessages.fieldMessage(error));
+  });
 
-  /** Câu lỗi chung ở đầu form — CHỈ hiện khi không có lỗi ô nào, để không lặp lại cùng một thông
-   * tin bằng câu mơ hồ hơn ngay bên trên câu cụ thể. */
-  protected readonly errorMessage = computed(() =>
-    Object.keys(this.fieldErrors()).length > 0 ? null : this.serverError(),
+  /**
+   * Câu lỗi chung ở đầu form. Cùng thứ tự ưu tiên với `UserFormDialog.generalError` — **cụ thể
+   * nhất trước**:
+   *
+   * 1. Lỗi mức BẢN GHI (`$record`) nếu có — hiện vô điều kiện, vì không ô nào bind tới khoá đó.
+   * 2. `message` của envelope, chỉ khi không có lỗi ô nào, để không lặp lại cùng một thông tin
+   *    bằng câu mơ hồ hơn ngay bên trên câu cụ thể.
+   *
+   * Màn này đâm vào ĐÚNG bộ lọc mật khẩu như màn tạo người dùng: `ChangePasswordAsync` chạy cùng
+   * dàn `IPasswordValidator`, nên `CommonPassword` phát ra ở đây y hệt.
+   */
+  protected readonly errorMessage = computed(
+    () => this.serverErrorView().record ?? (Object.keys(this.fieldErrors()).length > 0 ? null : this.serverError()),
   );
 
   protected readonly isForced = computed(() => this.currentUser.mustChangePassword());

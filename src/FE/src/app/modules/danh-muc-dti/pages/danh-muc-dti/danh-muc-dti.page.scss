@@ -1,12 +1,10 @@
 // Chỉ chứa BỐ CỤC riêng của trang. Mọi bề mặt/nút/badge dùng class toàn cục ở src/styles.scss —
 // không khai lại ở đây, và không có màu literal nào (cổng G1 + G11).
-
-// Nửa sau của chuỗi chiều cao `.page-fill`: thẻ host của trang không được cắt đứt chuỗi flex, nếu
-// không card dừng ở chiều cao nội dung và lưới (sẽ có ở lượt sau) không còn chỗ để cuộn bên trong.
-// styles.scss § .page-fill giải thích đầy đủ vì sao không dùng `calc(100vh - N)`.
-:host {
-  display: contents;
-}
+//
+// 🛑 KHÔNG khai `:host { display: contents }` nữa. Chuỗi chiều cao nay đi qua chính thẻ host, vì
+// host mang class `page-fill` (xem `host: { class }` trong danh-muc-dti.page.ts) — cùng khuôn với
+// `platform/quan-tri-nguoi-dung/`. `display: contents` ở đây sẽ ghi đè `display: flex` của
+// `.page-fill` và cắt đứt đúng chuỗi mà nó sinh ra để nối.
 
 // `.dti-grid-card` là layout page-local, KHÔNG phải một component dùng chung mới —
 // spec/danh-muc-dti/ui-spec.md §3 liệt nó trong danh sách class page-local. Cột flex với
@@ -16,4 +14,11 @@
   flex-direction: column;
   gap: var(--sp-4);
   min-height: 0;
+}
+
+// Mỗi mã của `editBlockedBy` một dòng riêng trong thân băng (ui-spec §5.5.1). Hôm nay tối đa một
+// mã (Q48), nhưng shape mảng là chỗ dành cho điều kiện thứ tư về sau — hai dòng dính liền nhau
+// trên một hàng sẽ đọc thành một câu.
+.notice-line {
+  display: block;
 }

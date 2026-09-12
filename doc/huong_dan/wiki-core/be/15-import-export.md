@@ -1,8 +1,8 @@
 ---
 kind: luat
 scope: core
-status: "import built 2026-09-09; export not built"
-verified: 2026-09-09
+status: "import + export built 2026-09-11; seam ITabularWriter hoãn (Q9)"
+verified: 2026-09-11
 ---
 
 # 15. Import / Export engine — định dạng, bộ lọc, hình dạng endpoint
@@ -24,16 +24,22 @@ một nửa đã chạy thật, vừa hứa một nửa còn chưa có dòng nà
 | Nửa | Nhãn | Neo |
 | --- | --- | --- |
 | **Import** — seam + 3 reader + bộ chọn | ✅ **CÓ THẬT**, thi công 2026-09-09 | `src/BE/Core/PlatformManager.Core.Application/Import/IImportFileReader.cs:17` · `.../Import/IImportFileReaderSelector.cs` · `src/BE/Core/PlatformManager.Core.Infrastructure/Import/{CsvImportFileReader,ExcelImportFileReader,ImportFileReaderSelector}.cs` |
-| **Import** — nơi gọi (endpoint/handler/bảng job) | 📐 **CHƯA THI CÔNG** | Seam đã có nhưng chưa nghiệp vụ nào dùng; `ImportJobs` là bảng nghiệp vụ, xem §1 |
-| **Export** | 📐 **CHƯA THI CÔNG** | `ITabularWriter` **hoãn có chủ đích** (Q9) — xem §7. Không phải bỏ sót |
+| **Import** — nơi gọi (endpoint/handler/bảng job) | ✅ **CÓ THẬT**, thi công 2026-09-11 | `src/BE/Business/PlatformManager.Business.Api/Controllers/ImportController.cs:56` (hai route) · handler bước 1 `src/BE/Business/PlatformManager.Business.Application/Import/StartImportCommand.cs:73` · thân job `src/BE/Business/PlatformManager.Business.Application/Import/ImportJobRunner.cs:34` |
+| **Export** — nơi ghi file | ✅ **CÓ THẬT**, thi công 2026-09-11 | DB-4: `src/BE/Business/PlatformManager.Business.Infrastructure/Export/DashboardExcelExportWriter.cs` — NPOI trực tiếp, đúng Q9 |
+| **Export** — seam `ITabularWriter` của Core | 📐 **CHƯA THI CÔNG** | **hoãn có chủ đích** (Q9) — xem §7. Không phải bỏ sót |
 
 Kiểm bằng lệnh, đừng tin bảng (`.claude/CLAUDE.md` §6):
 
 ```bash
 grep -rn "interface IImportFileReader\b" src/BE --include=*.cs | grep -v /obj/   # PASS: 1 dòng
 grep -rn "ITabularWriter" src/BE --include=*.cs | grep -v /obj/                  # PASS: rỗng
+grep -rn "ReadRowsAsync" src/BE --include=*.cs | grep -v /obj/                   # PASS: khác rỗng (nơi gọi đã có)
 ```
 
+> 🔄 **LẬT 2026-09-11 (nửa "nơi gọi" và nửa Export).** Hai hàng đó mang nhãn 📐 cho tới hết
+> 2026-09-10; đường import của DM-7 và đường xuất của DB-4 đều thi công ngày 2026-09-11 và đã chạy
+> thật trên `platformmanager_dev`. Seam `ITabularWriter` thì **vẫn** hoãn, đúng Q9 — xem §7.
+>
 > 🔄 **LẬT 2026-09-09.** Bản trước ghi *"📐 ĐÍCH ĐẾN, CHƯA THI CÔNG — Core hiện chưa có
 > dòng nào"*, cùng `status: "import/export not built"` + `verified: khong-ap-dung` ở
 > frontmatter. Nửa import đã hết đúng. Đáng chú ý là **`verified: khong-ap-dung` không phải
@@ -54,15 +60,15 @@ giới Core/Business ở [`../../../kien-truc-core-module.md`](../../../kien-tru
 | Đọc file → dòng dữ liệu trung tính (`IImportFileReader`) | Cột nào bắt buộc, validate gì, upsert vào entity nào |
 | Ghi dòng + mô tả cột → file (`ITabularWriter`) | Query nào, **lọc theo gì**, cột nào xuất ra, format từng ô |
 | Lưu file, chạy job nền (`IBackgroundJobScheduler`), trả link | **Bảng trạng thái job** (`ImportJobs`) + entity + endpoint poll — xem ghi chú ngay dưới |
-| Trần số dòng, trần **dung lượng file**, tắt phân trang, dọn file hết hạn | Permission-key của chính nghiệp vụ đó · ý nghĩa nghiệp vụ của bộ lọc |
+| Trần số dòng (**Q75** — §2), trần **dung lượng file**, tắt phân trang, dọn file hết hạn | Permission-key của chính nghiệp vụ đó · ý nghĩa nghiệp vụ của bộ lọc |
 
 > ### 🔄 SỬA 2026-09-09 (Q11) — `ImportJobs` là bảng NGHIỆP VỤ, không phải bảng Core
 >
 > Bản trước xếp *"theo dõi trạng thái"* vào cột Core giữ. Sai, và nó nói ngược lại hai file
 > đã chốt điều đó trước: [`../../../cau-truc-database.md`](../../../cau-truc-database.md)
 > — *"Định nghĩa `business."ImportJobs"` **không** còn ở đây — nó là bảng nghiệp vụ"* — và
-> [`../../../cau-truc-database-business.md`](../../../cau-truc-database-business.md), nơi giữ
-> bộ cột của nó.
+> [`../../../cau-truc-database-dti.md`](../../../cau-truc-database-dti.md), nơi khai bảng đó;
+> bộ cột đầy đủ ở `spec/danh-muc-dti/business-rules.md` §1.5.
 >
 > Chốt: bảng ở schema **`business`**, entity ở **`Business.Domain`**, EF Configuration ở
 > `Business.Persistence`, endpoint poll ở `Business.Api`. Core **không** khai entity nào cho
@@ -172,6 +178,60 @@ lỗi** trả ra thì thuộc catalog của nghiệp vụ gọi.
 giới hạn thân request riêng, và nếu chúng thấp hơn thì người dùng nhận lỗi hạ tầng cụt lủn
 trước khi tới được `ErrorDescriptor` này. Đặt hai chỗ khớp nhau khi triển khai —
 [`../fe/17-phuc-vu-va-trien-khai.md`](../fe/17-phuc-vu-va-trien-khai.md).
+
+### Trần SỐ DÒNG — **Q75, chốt 2026-09-11** · mặc định **20.000 dòng** · ✅ đã thi công (2026-09-11)
+
+Neo: mặc định + kiểm hợp lệ ở
+`src/BE/Core/PlatformManager.Core.Infrastructure/Import/ImportOptions.cs:50`; bộ chọn đưa con số ra ở
+`src/BE/Core/PlatformManager.Core.Infrastructure/Import/ImportFileReaderSelector.cs:22`; trần đi ra qua
+`src/BE/Core/PlatformManager.Core.Application/Import/IImportFileReaderSelector.cs:40`; và **đường đọc
+đã áp trần** — thứ thật sự cưỡng chế nó — ở
+`src/BE/Core/PlatformManager.Core.Application/Import/ImportFileReaderSelectionExtensions.cs`.
+
+Hàng *"trần số dòng"* đã nằm trong bảng §1 từ đầu như một trách nhiệm của Core, nhưng **không có
+con số và không có chỗ cài** — nên trên thực tế nó không tồn tại, và trần dung lượng là guard duy
+nhất. Q75 đóng lỗ đó.
+
+**Cách đo ra con số, thay vì chọn một số tròn:**
+
+| Ràng buộc | Giá trị | Suy ra từ |
+| --- | ---: | --- |
+| Ca dùng thật hôm nay | 62 dòng | file BA gửi — 62 dòng ≈ 19 KB |
+| Kích thước một dòng của định dạng này | ≈ 314 byte | 19 KB ÷ 62 dòng, đo trên chính file đó |
+| Số dòng mà trần DUNG LƯỢNG 10 MB còn cho lọt | ≈ **33.000** | 10 MB ÷ 314 byte |
+| Ca lớn nhất còn hợp lý | ≈ 12.000 | 62 chỉ tiêu × ~200 đơn vị, nếu về sau có người gộp nhiều đơn vị vào một file |
+
+Trần phải nằm **giữa hai con số cuối**: dưới ~33.000 thì nó mới thật sự bịt được lỗ (cao hơn thì
+trần dung lượng luôn chạm trước và trần số dòng không bao giờ chạy), và trên ~12.000 thì nó không
+chặn nhầm một file hợp lệ. **20.000** nằm giữa — dư ~320 lần so với ca dùng thật, vẫn bắt trước
+trần dung lượng.
+
+> ⚠️ **Vì sao trần số dòng KHÔNG thừa dù đã có trần dung lượng:** một file 200 KB gồm toàn dòng
+> ngắn vẫn có thể có nửa triệu dòng. Hai trần chặn hai thứ khác nhau — một cái chặn *byte đọc từ
+> đĩa*, một cái chặn *đối tượng dựng trong bộ nhớ*. Đây chính là câu cảnh báo đã có sẵn ở mục trần
+> dung lượng; Q75 là chỗ nó được thi hành.
+
+**Ranh giới, giữ đúng khuôn của trần dung lượng:** Core giữ **con số** (`Import:MaxRows`,
+`ImportOptions`) **và cấp một ĐƯỜNG ĐỌC đã áp trần**
+(`ImportFileReaderSelectionExtensions.ReadRowsAsync`); **mã lỗi** thì thuộc catalog của nghiệp vụ
+gọi — Core không được biết mã lỗi của một nghiệp vụ nào. Với DTI đó là
+`IMPORT.FILE_TOO_MANY_ROWS` ([`../../../contracts/danh-muc-dti.md`](../../../contracts/danh-muc-dti.md) DM-7).
+
+> 🛑 **Core cấp ĐƯỜNG ĐỌC, không cấp một con số rời — sửa 2026-09-11.** Bản đầu chỉ thêm `MaxRows`
+> vào `ImportFileReaderSelection` và để việc áp trần cho từng bên gọi tự giác. Hai trần khi đó
+> **không cùng khuôn dù đoạn văn này nói là cùng**: trần dung lượng ép bằng CẤU TRÚC (vượt trần ⇒
+> `Reader = null` ⇒ quên kiểm là nổ ngay, ồn ào), còn trần dòng chỉ là một `int` đi kèm — bên gọi
+> **thứ hai** bỏ qua thì biên dịch sạch, test xanh, **trần biến mất im lặng**. Một trần khuyến nghị
+> không phải là trần.
+>
+> Nay bên gọi phải đi qua `selection.ReadRowsAsync(...)`; vượt trần thì Core ném
+> `ImportRowLimitExceededException` mang đúng con số, bên gọi bắt rồi ánh xạ sang `ErrorDescriptor`
+> của mình — **đúng y khuôn `ImportFileRejection` → catalog nghiệp vụ**. Cưỡng chế thêm bằng máy:
+> `ImportSeamUsageTests` cấm mọi mã sản phẩm gọi thẳng `Reader.ReadAsync`.
+
+⚠️ **Core KHÔNG tự cắt dòng thừa.** Nạp một file bị cắt cụt mà không ai biết còn tệ hơn từ chối
+nó: người dùng thấy "thành công" và một kỳ thiếu dữ liệu. Bên gọi đọc `MaxRows` rồi TỪ CHỐI cả
+lượt.
 
 ### Ba lỗi phải sửa khi bê code cũ lên — ✅ cả ba ĐÃ SỬA (đối chiếu 2026-09-09)
 
@@ -366,11 +426,12 @@ Người dùng gặp một trong hai sẽ báo là *"file lỗi"*, không báo l
 | --- | --- | --- |
 | ~~`IImportFileReader` + 3 reader (CSV/XLSX/XLS) ở Core~~ | ✅ **Xong** (đối chiếu 2026-09-09) | `.../Application/Import/IImportFileReader.cs:17`; hiện thực ở `Core.Infrastructure/Import/`: `CsvImportFileReader.cs:19`, `ExcelImportFileReader.cs:20` (lớp cơ sở) → `XlsxImportFileReader.cs:9` + `XlsImportFileReader.cs:14`, bộ chọn `ImportFileReaderSelector.cs:7`. Cả 3 lỗi §2 đã sửa |
 | ~~Nhận diện định dạng bằng magic byte (§2a)~~ | ✅ **Xong** (đối chiếu 2026-09-09) | Rẻ, và là chỗ duy nhất chặn được file đổi đuôi |
-| Nơi gọi seam import (endpoint + handler + bảng job) | khi có màn import nghiệp vụ đầu tiên | Seam xong không có nghĩa là tính năng xong — hôm nay chưa nơi nào gọi `ReadAsync` |
+| ~~Nơi gọi seam import (endpoint + handler + bảng job)~~ | ✅ **Xong** (2026-09-11) | DM-7 — `ImportController` + `StartImportCommand` + `ImportJobRunner` + bảng `business."ImportJobs"` |
+| ~~Trần SỐ DÒNG (Q75)~~ | ✅ **Xong** (2026-09-11) | `Import:MaxRows` mặc định 20.000, cưỡng chế bằng `ReadRowsAsync` — xem §2 |
 | `ITabularWriter` + `IExportDefinition<T>` ở Core | **KHÔNG phải lượt này** — Q9, 2026-09-09 | Chờ người tiêu thụ thứ hai; DB-4 dùng NPOI thẳng ở `Business.Infrastructure`. Xem §7 |
-| Đường export đồng bộ (§3) | **ngay** | Là ca phổ biến nhất, làm trước. Không cần seam Core: `FileStreamResult` là cơ chế của ASP.NET |
+| ~~Đường export đồng bộ (§3)~~ | ✅ **Xong** (2026-09-11) | DB-4 — `File(...)` của ASP.NET, không qua seam Core nào |
 | Đường export job nền + `ExportJob` + retention | khi có màn thật vượt ngưỡng | Hạ tầng đã sẵn (`IBackgroundJobScheduler`), không phải dựng mới |
-| Test "số dòng export = `totalCount`" (§4) | cùng lúc với màn export đầu tiên | Đây là thứ duy nhất giữ hai đường lọc không lệch |
+| Test "số dòng export = `totalCount`" (§4) | 🚧 **viết rồi, CHƯA CHẠY** (2026-09-11) | `src/BE/Tests/PlatformManager.Business.IntegrationTests/Dashboard/ExportMatchesTableTests.cs` — cần Docker, máy thi công không có. Đã đối chiếu TAY trên 5 bộ lọc: `doc/contracts/dashboard.md` DB-4 §Nghiệm thu |
 | BOM + dấu phân cách CSV (§5) | cùng lúc với writer CSV | Sửa sau khi có người dùng thật thì đã mất niềm tin rồi |
 
 Permission-key cho các endpoint này khai ở `ResourceKeys` (`Core.Application`) —

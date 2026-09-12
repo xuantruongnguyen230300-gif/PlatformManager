@@ -148,20 +148,18 @@ export const httpErrorInterceptor: HttpInterceptorFn = (req, next) => {
 `ApiErrorMessageService.fieldMessage`. `fields` là trường **cũ, đang trên đường gỡ** — không
 viết code mới đọc nó.
 
-```ts
-// trong component form
-const errors = err.apiResult?.fieldErrors;          // Record<string, ApiFieldError[]>
-if (errors) {
-  this.form.setFieldErrors(
-    Object.fromEntries(
-      Object.entries(errors).map(([field, list]) => [
-        field,
-        list.map((e) => this.errorMessages.fieldMessage(e)).join(' '),
-      ]),
-    ),
-  );
-}
-```
+🛑 **Đừng tự viết vòng lặp gom lỗi — gọi `groupServerFieldErrors` của `core/http/`.**
+Cách bind và cách hiển thị (kể cả lỗi mức bản ghi `$record`) thuộc
+[09-forms-validation.md](09-forms-validation.md) §"Bind lỗi từ `fieldErrors` vào form" — **file chủ**.
+
+> 🔄 **GỠ 2026-09-11 — khối mẫu ở đây đang dạy đúng khuôn đã sinh ra sự cố.** Bản trước in một
+> đoạn `ts` map **toàn bộ** `Object.entries(fieldErrors)` vào lỗi theo ô: không cắt hậu tố chỉ số
+> (`Roles[0]` trượt, lỗi biến mất im lặng) và không tách `$record` (câu không hiện ở đâu, đồng
+> thời che luôn khối lỗi chung). Ai chép mẫu đó cho dialog tiếp theo sẽ dựng lại **nguyên văn** lỗ
+> đen kép vừa phải đi vá — chi tiết ở file chủ.
+>
+> Mục này giữ phần thật sự thuộc **envelope**: bảng `fields` vs `fieldErrors` ngay dưới, quy ước
+> casing PascalCase của khoá, và trình tự expand/contract.
 
 ### Vì sao KHÔNG còn đọc `fields` được nữa — không phải chuyện gọn gàng
 

@@ -31,6 +31,11 @@ public static class HostModuleRegistrars
         // Core LUÔN đứng đầu — tầng nghiệp vụ có thể cần dịch vụ/role/user của Core đã có mặt.
         new CoreModuleRegistrar(requireBootstrapOptions),
 
+        // Tầng nghiệp vụ (thêm 2026-09-10, vòng 1 của cụm DTI). Thêm đúng MỘT dòng ở đây đã nối
+        // đủ BA đường: dịch vụ vào DI, cấu hình EF của 4 entity vào model, controller vào bảng
+        // route — Program.cs và PlatformManagerDbContextFactory không phải sửa một dòng nào.
+        new BusinessModuleRegistrar(),
+
         // Thêm tầng nghiệp vụ mới: thêm registrar của nó vào ngay dưới dòng này. KHÔNG sửa
         // Program.cs, KHÔNG sửa PlatformManagerDbContextFactory, KHÔNG sửa gì trong Core.
         // ArchTest ModuleRegistrarSeamTests đỏ nếu có hiện thực IModuleRegistrar nào trong cây

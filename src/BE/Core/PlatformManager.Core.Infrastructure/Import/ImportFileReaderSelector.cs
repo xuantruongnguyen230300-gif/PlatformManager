@@ -19,12 +19,13 @@ public sealed class ImportFileReaderSelector(
                 "MemoryStream trước khi gọi.", nameof(stream));
 
         var maxBytes = options.Value.MaxFileSizeBytes;
+        var maxRows = options.Value.MaxRows;
 
         // Trần dung lượng kiểm TRƯỚC khi đọc byte nội dung nào — đúng yêu cầu
         // doc/huong_dan/wiki-core/be/15-import-export.md §2.
         var length = stream.Length;
         if (length > maxBytes)
-            return new ImportFileReaderSelection(null, ImportFileRejection.FileTooLarge, length, maxBytes);
+            return new ImportFileReaderSelection(null, ImportFileRejection.FileTooLarge, length, maxBytes, maxRows);
 
         stream.Seek(0, SeekOrigin.Begin);
 
@@ -51,7 +52,7 @@ public sealed class ImportFileReaderSelector(
         }
 
         return reader is null
-            ? new ImportFileReaderSelection(null, ImportFileRejection.UnsupportedFormat, length, maxBytes)
-            : new ImportFileReaderSelection(reader, ImportFileRejection.None, length, maxBytes);
+            ? new ImportFileReaderSelection(null, ImportFileRejection.UnsupportedFormat, length, maxBytes, maxRows)
+            : new ImportFileReaderSelection(reader, ImportFileRejection.None, length, maxBytes, maxRows);
     }
 }

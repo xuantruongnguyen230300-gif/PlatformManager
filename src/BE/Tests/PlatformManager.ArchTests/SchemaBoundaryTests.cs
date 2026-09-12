@@ -30,12 +30,15 @@ namespace PlatformManager.ArchTests;
 /// chạy migration, và lúc đó đã muộn. Cũng nhờ vậy test không cần Docker và nằm được ở ArchTests:
 /// dựng model không mở kết nối nào (xem <see cref="EfModelProbe"/>).</para>
 ///
-/// <para><b>Hiện trạng khi viết (2026-09-03): chưa có assembly nghiệp vụ nào.</b> Khối
-/// <c>Business.*</c> chưa dựng lại, nên nhánh "phải ở schema business" KHÔNG chạy trên dữ liệu
-/// thật — đúng tình trạng mà một test luôn xanh không phân biệt được với một test chết. Vì vậy
-/// <see cref="Detector_Judges_EachSideCorrectly"/> là phần BẮT BUỘC của luật này chứ không phải
-/// phần trang trí: nó chạy chính hàm <see cref="SchemaViolations"/> mà test thật chạy, trên các
-/// hàng dựng tay phủ đủ 4 phán quyết.</para>
+/// <para><b>Cập nhật 2026-09-10 — nhánh "business" nay CHẠY TRÊN DỮ LIỆU THẬT.</b> Khi viết
+/// (2026-09-03) chưa có assembly nghiệp vụ nào, nên nhánh đó chỉ sống trong ca đối chứng — đúng
+/// tình trạng mà một test luôn xanh không phân biệt được với một test chết. Từ lượt dựng
+/// <c>Business.*</c>, model mang 4 entity nghiệp vụ và cả hai nhánh đều có phần tử.</para>
+///
+/// <para><see cref="Detector_Judges_EachSideCorrectly"/> vẫn là phần BẮT BUỘC chứ không phải
+/// trang trí: nó là nơi DUY NHẤT chạy nhánh fail-closed (assembly lạ) và các ca VI PHẠM — hai thứ
+/// mà một cây mã đang sạch không bao giờ tạo ra. Nó chạy chính hàm <see cref="SchemaViolations"/>
+/// mà test thật chạy, trên các hàng dựng tay phủ đủ 4 phán quyết.</para>
 /// </summary>
 public class SchemaBoundaryTests
 {
@@ -81,8 +84,8 @@ public class SchemaBoundaryTests
 
     /// <summary>
     /// Đối chứng — chứng minh bộ dò biết nói CÓ với từng kiểu vi phạm và nói KHÔNG với code đúng.
-    /// Đây là ca duy nhất chạy nhánh "business" hôm nay (chưa có assembly nghiệp vụ nào), và cũng
-    /// là ca duy nhất chạy nhánh fail-closed.
+    /// Từ 2026-09-10 nhánh "business" đã có dữ liệu thật ở test trên, nhưng đây vẫn là ca DUY NHẤT
+    /// chạy nhánh fail-closed và các ca VI PHẠM — một cây mã đang sạch không tự sinh ra chúng.
     /// </summary>
     [Fact(DisplayName = "Đối chứng: bộ dò bắt Core lạc sang business, nghiệp vụ quên khai schema, và assembly lạ")]
     public void Detector_Judges_EachSideCorrectly()

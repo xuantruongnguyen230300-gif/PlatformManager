@@ -1,0 +1,221 @@
+<dialog #dialogEl class="form-dialog" (close)="onNativeClose()">
+  <div class="title">
+    <h2>{{ titleKey() | translate }}</h2>
+    <button
+      type="button"
+      class="icon-btn"
+      [attr.aria-label]="'shared.action.close' | translate"
+      [attr.title]="'shared.action.close' | translate"
+      (click)="dialogEl.close()"
+    >
+      <i class="pi pi-times"></i>
+    </button>
+  </div>
+
+  <!-- Kỳ đích. Ở chế độ `Tất cả` đây là TUẦN HIỆN TẠI, không phải kỳ của dòng đang mở (§5.5 mục
+       2) — dòng này là chỗ duy nhất trong hộp thoại nói ra điều đó. -->
+  @if (targetPeriodText()) {
+    <p class="form-target-period">{{ targetPeriodText() }}</p>
+  }
+
+  <!-- ===== Nhóm 1 — bản thân chỉ tiêu. Bốn ô, đều bắt buộc. ===== -->
+  <div class="form-row">
+    <label for="cfCode">
+      {{ 'danh-muc-dti.field.code' | translate }} <span class="required">*</span>
+    </label>
+    <!-- ⚠️ KHÔNG đặt `pattern` hai cấp: `4.22.11` là mã có thật. Khuôn kiểm nằm ở `CODE_PATTERN`
+         trong .ts, và nó không giới hạn SỐ CẤP. -->
+    <input
+      id="cfCode"
+      class="input w-sm"
+      [attr.maxlength]="codeMaxLength"
+      [class.invalid]="!!fieldErrors()['Code']"
+      [attr.aria-invalid]="fieldErrors()['Code'] ? 'true' : null"
+      [attr.aria-describedby]="fieldErrors()['Code'] ? errorId('Code') : null"
+      appAutofocus
+      [placeholder]="'danh-muc-dti.field.codePlaceholder' | translate"
+      [value]="codeField()"
+      (input)="onInput('code', $event)"
+    />
+    @if (fieldErrors()['Code']; as message) {
+      <p class="form-error" [id]="errorId('Code')">{{ message }}</p>
+    }
+  </div>
+
+  <div class="form-row">
+    <label for="cfName">
+      {{ 'danh-muc-dti.field.name' | translate }} <span class="required">*</span>
+    </label>
+    <textarea
+      id="cfName"
+      class="input"
+      rows="2"
+      [class.invalid]="!!fieldErrors()['Name']"
+      [attr.aria-invalid]="fieldErrors()['Name'] ? 'true' : null"
+      [attr.aria-describedby]="fieldErrors()['Name'] ? errorId('Name') : null"
+      [placeholder]="'danh-muc-dti.field.namePlaceholder' | translate"
+      [value]="nameField()"
+      (input)="onInput('name', $event)"
+    ></textarea>
+    @if (fieldErrors()['Name']; as message) {
+      <p class="form-error" [id]="errorId('Name')">{{ message }}</p>
+    }
+  </div>
+
+  <div class="form-grid">
+    <div class="form-row">
+      <label for="cfGroup">
+        {{ 'danh-muc-dti.field.group' | translate }} <span class="required">*</span>
+      </label>
+      <select
+        id="cfGroup"
+        [class.invalid]="!!fieldErrors()['GroupId']"
+        [attr.aria-invalid]="fieldErrors()['GroupId'] ? 'true' : null"
+        [attr.aria-describedby]="fieldErrors()['GroupId'] ? errorId('GroupId') : null"
+        [value]="groupField()"
+        (change)="onSelect('group', $event)"
+      >
+        <option value="">{{ 'danh-muc-dti.field.groupPlaceholder' | translate }}</option>
+        @for (group of groups(); track group.Id) {
+          <option [value]="group.Id">{{ 'danh-muc-dti.grid.groupLabel' | translate: groupParams(group) }}</option>
+        }
+      </select>
+      @if (fieldErrors()['GroupId']; as message) {
+        <p class="form-error" [id]="errorId('GroupId')">{{ message }}</p>
+      }
+    </div>
+
+    <div class="form-row">
+      <label for="cfMaxScore">
+        {{ 'danh-muc-dti.field.maxScore' | translate }} <span class="required">*</span>
+      </label>
+      <input
+        id="cfMaxScore"
+        type="number"
+        class="input"
+        min="0.01"
+        step="0.01"
+        [class.invalid]="!!fieldErrors()['MaxScore']"
+        [attr.aria-invalid]="fieldErrors()['MaxScore'] ? 'true' : null"
+        [attr.aria-describedby]="fieldErrors()['MaxScore'] ? errorId('MaxScore') : null"
+        [placeholder]="'danh-muc-dti.field.maxScorePlaceholder' | translate"
+        [value]="maxScoreField()"
+        (input)="onInput('maxScore', $event)"
+      />
+      @if (fieldErrors()['MaxScore']; as message) {
+        <p class="form-error" [id]="errorId('MaxScore')">{{ message }}</p>
+      }
+    </div>
+  </div>
+
+  <!-- ===== Nhóm 2 — đánh giá theo kỳ (Q9). Sáu ô, đều KHÔNG bắt buộc. ===== -->
+  <div class="form-grid">
+    <div class="form-row">
+      <label for="cfSelfScore">{{ 'danh-muc-dti.field.selfScore' | translate }}</label>
+      <input
+        id="cfSelfScore"
+        type="number"
+        class="input"
+        min="0"
+        step="0.01"
+        [placeholder]="'danh-muc-dti.field.selfScorePlaceholder' | translate"
+        [value]="selfScoreField()"
+        (input)="onInput('selfScore', $event)"
+      />
+    </div>
+
+    <div class="form-row">
+      <label for="cfVerifiedScore">{{ 'danh-muc-dti.field.verifiedScore' | translate }}</label>
+      <input
+        id="cfVerifiedScore"
+        type="number"
+        class="input"
+        min="0"
+        step="0.01"
+        [placeholder]="'danh-muc-dti.field.verifiedScorePlaceholder' | translate"
+        [value]="verifiedScoreField()"
+        (input)="onInput('verifiedScore', $event)"
+      />
+    </div>
+  </div>
+
+  <div class="form-grid">
+    <div class="form-row">
+      <label for="cfStatus">{{ 'danh-muc-dti.field.status' | translate }}</label>
+      <select id="cfStatus" [value]="statusField()" (change)="onSelect('status', $event)">
+        <option value="">{{ 'shared.format.absentValue' | translate }}</option>
+        <!-- Bốn chuỗi tiếng Việt NGUYÊN VĂN đi thẳng lên API (Q4). -->
+        @for (status of statuses; track status) {
+          <option [value]="status">{{ status }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="form-row">
+      <label for="cfDeadline">{{ 'danh-muc-dti.field.deadline' | translate }}</label>
+      <input
+        id="cfDeadline"
+        type="date"
+        class="input"
+        [value]="deadlineField()"
+        (input)="onDeadlineInput($event)"
+      />
+    </div>
+  </div>
+
+  <div class="form-row">
+    <label for="cfOwner">{{ 'danh-muc-dti.field.owner' | translate }}</label>
+    <!-- Danh sách có phân trang và có TRẦN — đừng giả định một lời gọi lấy hết. Vượt trần thì ô
+         tìm kiếm hiện ra, thay vì lặng lẽ cắt cụt danh sách. -->
+    @if (ownersTruncated()) {
+      <input
+        class="input"
+        type="search"
+        [attr.aria-label]="'danh-muc-dti.field.ownerSearchAriaLabel' | translate"
+        [placeholder]="'danh-muc-dti.field.ownerSearchPlaceholder' | translate"
+        (input)="onOwnerSearch($event)"
+      />
+    }
+    <select id="cfOwner" [disabled]="ownersFailed()" [value]="ownerField()" (change)="onSelect('owner', $event)">
+      <!-- Giá trị RỖNG = *không phân công ai*; mapper quy về `null`, KHÔNG gửi chuỗi rỗng. -->
+      <option value="">{{ 'danh-muc-dti.field.ownerUnassigned' | translate }}</option>
+      @for (owner of owners(); track owner.Id) {
+        <option [value]="owner.Id">{{ owner.Name }}</option>
+      }
+    </select>
+    <!-- Tải danh sách hỏng (thường là 403) KHÔNG đóng hộp thoại và KHÔNG chặn lưu bốn trường danh
+         mục — nó chỉ là lỗi tải một ô chọn (§3.3). -->
+    @if (ownersFailed()) {
+      <p class="muted">{{ 'danh-muc-dti.field.ownerLoadFailed' | translate }}</p>
+    }
+  </div>
+
+  <div class="form-row">
+    <label for="cfNote">{{ 'danh-muc-dti.field.note' | translate }}</label>
+    <!-- MỘT ô text duy nhất (Q5) — không phải danh sách minh chứng nhiều dòng bản ghi. -->
+    <textarea
+      id="cfNote"
+      class="input"
+      rows="3"
+      [placeholder]="'danh-muc-dti.field.notePlaceholder' | translate"
+      [value]="noteField()"
+      (input)="onInput('note', $event)"
+    ></textarea>
+  </div>
+
+  <!-- Lỗi cấp REQUEST của catalog DTI (`CRITERIA.DUPLICATE_CODE`, `GROUP_NOT_FOUND`,
+       `OWNER_NOT_FOUND`, `ASSESSMENT_*_EXCEEDS_MAX`, `ASSESSMENT_CONFLICT`…). Hộp thoại KHÔNG
+       đóng — người dùng không mất thứ vừa gõ. -->
+  @if (serverError(); as message) {
+    <div class="form-error">{{ message }}</div>
+  }
+
+  <div class="dialog-actions">
+    <button type="button" class="btn" (click)="dialogEl.close()">
+      {{ 'shared.action.cancel' | translate }}
+    </button>
+    <button type="button" class="btn primary" [disabled]="saving()" (click)="onSubmit()">
+      {{ (saving() ? 'shared.action.saving' : 'danh-muc-dti.action.save') | translate }}
+    </button>
+  </div>
+</dialog>

@@ -6,21 +6,27 @@ verified: 2026-09-06
 
 # API Contract — Danh mục DTI (`modules/danh-muc-dti`)
 
-> ## 📐 ĐÍCH ĐẾN — CHƯA THI CÔNG
+> ## 🚧 ĐÃ CHỐT — ĐANG THI CÔNG (BE vòng 1 thi công 2026-09-10)
 >
-> **Không có dòng code nào của tính năng này tồn tại hôm nay (đối chiếu lại 2026-09-08).**
-> Module BE `DtiWeekly` và màn FE `danh-muc-dti` đều gỡ 2026-08-29; thư mục
-> `src/BE/Modules/` — nơi rác build của nó còn sót lại — **đã xoá 2026-09-08**
-> ([`../kien-truc-core-module.md`](../kien-truc-core-module.md), §bảng "có thật hôm nay").
-> Solution BE hiện chỉ có `Core.*` + host + `Tests/` — đếm bằng
-> `grep -c '<Project Path=' src/BE/PlatformManager.slnx`.
+> Câu *"không có dòng code nào của tính năng này tồn tại"* (đối chiếu 2026-09-08) **hết đúng
+> từ 2026-09-10**. Đối chiếu lại theo từng card, vì chúng ở ba trạng thái khác nhau:
 >
-> Card này là **hợp đồng phải hiện thực**, không phải mô tả thứ đang chạy. Mọi câu ở dạng
-> "trả về X" đọc là "phải trả về X".
+> | Card | BE hôm nay | Ghi chú |
+> | --- | --- | --- |
+> | DM-1 · DM-2 · DM-8 (**đọc**) | ✅ có endpoint thật, build + ArchTests + unit test xanh | **vẫn `AGREED`, chưa `IMPLEMENTED`** — xem ngay dưới |
+> | **DM-7 (import)** | ✅ **`IMPLEMENTED` 2026-09-11** — chạy thật trên `platformmanager_dev`, shape dán ở chính card | catalog `ImportErrors.cs` đã khai đủ mã |
+> | **DM-3 · DM-4 · DM-5 · DM-6 (ghi tay)** | ✅ **`IMPLEMENTED` 2026-09-11** — gọi thật từng route trên `platformmanager_dev` | catalog `CriteriaErrors.cs` đã khai đủ mã của đường ghi |
+> | Ô `Phụ trách` (`GET /api/users`) | ✅ endpoint Core đã có sẵn từ trước | không phải việc của lượt này |
 >
-> **Đích đến kiến trúc: `PlatformManager.Business.*`** (Domain/Application/Persistence/
-> Infrastructure/Api) — **KHÔNG** dựng lại `Modules.DtiWeekly.*`. Ranh giới, thứ tự phụ
-> thuộc và bảng *"có thật hôm nay → sẽ thành"*: [`../kien-truc-core-module.md`](../kien-truc-core-module.md).
+> 🔄 **Sửa 2026-09-11 — lý do cũ của việc DM-1/DM-2/DM-8 còn `AGREED` ĐÃ HẾT HẠN.** Bản trước ghi
+> *"schema `business` chưa được áp lên database nào"*; nay schema **đã áp** và có dữ liệu thật —
+> lượt 2026-09-11 nạp bộ mẫu ẩn danh qua chính đường DM-7 và gọi lại `GET /api/criteria` trên kết
+> quả đó (shape thật dán ở DM-7 § Nghiệm thu). Ba card đọc vì thế **không còn bị chặn bởi hạ tầng**;
+> chúng ở lại `AGREED` chỉ vì các mục còn lại của §5 chưa chạy đủ, không vì thiếu database.
+>
+> **Kiến trúc: `PlatformManager.Business.*`** (Domain/Application/Persistence/Infrastructure/Api)
+> — đã dựng đủ 5 project. Ranh giới, thứ tự phụ thuộc và bảng *"có thật hôm nay → sẽ thành"*:
+> [`../kien-truc-core-module.md`](../kien-truc-core-module.md).
 >
 > **Luật nghiệp vụ** (mô hình dữ liệu, công thức, quy tắc kỳ, quy tắc import) **không nằm
 > ở đây** — file chủ là `spec/danh-muc-dti/business-rules.md`. Card này chỉ giữ *hình dạng
@@ -202,6 +208,9 @@ CriteriaGridDto:                     // = PagedList<CriteriaRowDto> + khối quy
   isCurrentYear: bool                // kỳ đang xem có thuộc NĂM HIỆN TẠI không — Q66 (2026-09-10)
                                      // FE chọn BIẾN THỂ câu của lời nhắc "PERIOD_NOT_WEEKLY" (Q60) theo đây,
                                      // KHÔNG suy từ đồng hồ máy khách — cùng lý do Q40
+  currentPeriod:      string         // KỲ HIỆN TẠI = tuần ISO chứa hôm nay, "YYYY-Www" — Q72 (2026-09-10)
+  currentPeriodLabel: string         // nhãn kỳ đầy đủ của kỳ đó, BE dựng sẵn — Q72
+                                     // LUÔN có mặt, cả hai, kể cả khi lưới rỗng
 
 CriteriaRowDto:
   criteriaId:      guid
@@ -264,6 +273,40 @@ CriteriaRowDto:
    | `isEditable` | bật/**tắt** sửa inline và nút Lưu của dialog |
    | `editBlockedBy` | chọn **lời nhắc** nào hiện trên dải băng, và chỉ đúng ô lọc đang chặn |
    | `isCurrentYear` | chọn **biến thể câu** của lời nhắc `PERIOD_NOT_WEEKLY` (Q60): năm hiện tại gợi ý thêm lối `Tất cả`, năm cũ thì không |
+   | `currentPeriod` · `currentPeriodLabel` | dựng dải băng **"nhắc kỳ đích"** (Q72) — so kỳ đang xem với kỳ mà lời ghi sẽ rơi vào |
+
+   ### `currentPeriod` / `currentPeriodLabel` — Q72 (chốt 2026-09-10)
+
+   Dải băng V3 *"nhắc kỳ đích"* (`spec/danh-muc-dti/ui-spec.md` §5.5) phải nói **lời ghi sẽ rơi
+   vào tuần nào**. Trước Q72, **không trường nào trên dây trả lời được câu đó**:
+
+   | Nguồn FE từng có | Vì sao không đủ |
+   | --- | --- |
+   | `isCurrentYear` của DM-2 | chỉ nói về **năm**, không nói tuần nào |
+   | `weeksInYear[]` của DB-3 | không cờ nào đánh dấu tuần hiện tại, và DB-3 khai rõ năm chưa có dữ liệu ⇒ mảng **rỗng** — tuần hiện tại có thể **không có mặt** |
+   | Đồng hồ máy khách | **cấm** — §5.5 mục 2 của ui-spec, cùng lý do Q40 (lịch ISO chỉ có một bản cài) |
+
+   | | Chốt |
+   | --- | --- |
+   | Đặt ở đâu | **khối quyền cấp màn của DM-2**, cạnh `canWrite`/`isEditable`/`editBlockedBy`/`isCurrentYear` |
+   | Giá trị | `currentPeriod` = tuần ISO chứa **hôm nay** (§5.1 của `spec/danh-muc-dti/business-rules.md`), khuôn `"YYYY-Www"`; `currentPeriodLabel` = nhãn kỳ đầy đủ, BE dựng (`spec/dashboard-dti/business-rules.md` §6.2) |
+   | Vòng đời | tính **mỗi request**, cùng lần đánh giá với bốn cờ kia |
+   | Vắng mặt | **không bao giờ** — cả hai luôn có mặt, kể cả lưới rỗng và kể cả `canWrite = false` |
+
+   **Vì sao ở DM-2 chứ không phải DB-3:** nó phải **không bao giờ lệch** với `editBlockedBy` và
+   `isEditable` — cả ba trả lời cùng một câu hỏi *"lời ghi của tôi sẽ đi đâu, và có đi được
+   không"*, nên chúng phải sinh ra trong **cùng một** lần đánh giá của **cùng một** request. Nhét
+   vào DB-3 thì hai màn phải ghép hai response của hai thời điểm, và tuần hiện tại có thể đổi
+   giữa hai lời gọi. Ngoài ra DB-3 nuôi **ô lọc** của cả hai màn — thêm một tuần "có mặt nhưng
+   không có dữ liệu" vào `weeksInYear` là đổi nghĩa của chính mảng đó.
+
+   ⚠️ Đây là trường **thứ hai và thứ ba** cộng thêm vào `PagedList<T>` sau `canWrite` — vẫn đúng
+   ngoại lệ đã đăng ký ở §0: **cộng thêm** ở cùng cấp, **không lồng** `PagedList` vào object khác.
+   Mapper lưới dùng chung đọc bốn khoá phân trang vẫn chạy nguyên vẹn.
+
+   **Nghiệm thu:** gọi DM-2 trên DB **chưa import lần nào** — `items` rỗng nhưng `currentPeriod`
+   và `currentPeriodLabel` vẫn **có mặt** và đúng tuần hiện tại. Rồi gọi bằng tài khoản **không
+   có quyền**: hai trường vẫn có mặt (chúng mô tả lịch, không mô tả quyền).
 
    > ### ⚠️ `isEditable` ĐÃ RỜI khỏi `CriteriaRowDto` (2026-09-06) — đừng đọc nó ở cấp dòng
    >
@@ -425,6 +468,48 @@ CriteriaRowDto:
 > `"Tất cả (mới nhất trong năm)"`, tức chính ngữ nghĩa mới; và một lưới mà số dòng phụ
 > thuộc số lần ai đó bấm sửa thì không phân trang ổn định được.
 
+### ⚠️ Khoá nào VẮNG MẶT khỏi JSON — bảng cho mapper FE (đo 2026-09-10)
+
+§0 cảnh báo *"trường `null` KHÔNG ra dây; nó VẮNG MẶT"*. Với DM-2 thì đó không phải một chú ý
+nhỏ — **đa số trường của một dòng là nullable**, nên bảng này là thứ mapper phải bind theo.
+
+**Bằng chứng cấu hình là THẬT, không suy diễn:** gọi một endpoint bất kỳ khi chưa đăng nhập
+(2026-09-10) trả về đúng envelope này — `data`, `fields`, `messageParams`, `fieldErrors` **vắng
+mặt hoàn toàn** trong khi `retryable` (giá trị `false`) thì có:
+
+```json
+{"message":"Chưa đăng nhập.","status":"BUSINESS_ERROR","code":"AuthenticationError","businessCode":"AUTH.NOT_AUTHENTICATED","traceId":"...","retryable":false}
+```
+
+| Nhóm khoá của `items[]` | Có mặt khi nào |
+| --- | --- |
+| `criteriaId` · `code` · `name` · `groupId` · `groupCode` · `groupName` · `maxScore` | **LUÔN** — chúng đến từ bảng `Criteria`/`CriteriaGroups`, không phụ thuộc kỳ |
+| `assessmentId` · `assessmentDate` · `progressPercent` · `selfScore` · `verifiedScore` · `status` · `ownerId` · `deadline` · `note` · `version` · `assessmentPeriod` · `assessmentPeriodLabel` | **CHỈ KHI** chỉ tiêu có bản ghi đánh giá trong kỳ đang xem. Không có bản ghi ⇒ **cả 12 khoá đều biến mất**, dòng chỉ còn 7 khoá ở hàng trên |
+| `diff` | khi **cả** `selfScore` **lẫn** `verifiedScore` có mặt. Có bản ghi nhưng thiếu một trong hai điểm ⇒ `diff` vắng dù các khoá khác có |
+| `ownerName` | khi `ownerId` có **và** tra được `AppUser.FullName`. Có `ownerId` mà `ownerName` vắng là ca hợp lệ |
+
+| Khoá cấp màn | Có mặt khi nào |
+| --- | --- |
+| `items` · `page` · `pageSize` · `totalCount` · `canWrite` · `isEditable` · `isCurrentYear` | **LUÔN** — bốn khoá đầu là `PagedList<T>` nguyên vẹn, ba khoá sau là bool nên không bao giờ `null` |
+| `editBlockedBy` | **LUÔN**, kể cả khi rỗng: BE trả `[]`, không trả `null` |
+
+⚠️ **Ca dễ vấp nhất cho mapper:** một chỉ tiêu chưa có đánh giá KHÔNG trả `"selfScore": null` —
+nó **không có khoá `selfScore`** nào cả. Mapper phải đọc "vắng mặt" và "null" như nhau. Đây là
+loại lệch không lộ ra cho tới khi có dữ liệu thật, và khi lộ thì trông như lỗi TÍNH TOÁN chứ
+không như lỗi mapper.
+
+> 🔴 **Chưa dán được payload THẬT.** Bảng trên suy từ DTO của handler cộng với cấu hình serializer
+> đã xác minh bằng lần gọi ở trên; nó **không** thay được mục 1 của §5 (*"gọi thật trên DB đã có
+> dữ liệu, dán shape response THẬT"*). Lý do: schema `business` chưa áp lên database nào. Việc đó
+> làm được ngay sau khi người dùng chạy
+> `src/BE/Business/PlatformManager.Business.Persistence/Migrations/sql/0002_business_dti_tables.sql`
+> rồi `--seed`.
+
+**Route đã ĐƯỢC ĐỊNH TUYẾN THẬT** (đo 2026-09-10, đọc `/swagger/v1/swagger.json` của host đang
+chạy): `GET /api/criteria`, `GET /api/criteria-groups`, `GET /api/dashboard`,
+`GET /api/dashboard/periods`. Đây cũng là lần đầu nhánh `ApiAssembly != null` của
+`IModuleRegistrar` chạy trên một tầng SẢN PHẨM — trước đó nó chỉ chạy trên registrar giả trong test.
+
 ### Mã lỗi của DM-2 — vá 2026-09-09
 
 Bản trước khai *"`status` giá trị lạ → 400"* mà **không nêu `businessCode` nào**, tức FE không
@@ -450,7 +535,7 @@ có gì để bind và BE không có descriptor nào để khai. Đóng lỗ đ�
 
 ## CONTRACT DM-3 — Tạo chỉ tiêu
 
-- **Status: AGREED** (2026-09-05)
+- **Status: IMPLEMENTED** (thi công + gọi thật 2026-09-11; chốt hợp đồng 2026-09-05)
 - Route: `POST /api/criteria`
 - Request:
 
@@ -483,7 +568,7 @@ assessment: object?   // TUỲ CHỌN — 6 trường của Q9, xem DM-4
 
 ## CONTRACT DM-4 — Sửa chỉ tiêu (dialog "Sửa chỉ tiêu")
 
-- **Status: AGREED** (2026-09-05)
+- **Status: IMPLEMENTED** (thi công + gọi thật 2026-09-11; chốt hợp đồng 2026-09-05)
 - Route: `PUT /api/criteria/{id}`
 - Query params: **không có.** Kỳ đích đi trong thân request (xem `assessment.period`).
 - Request:
@@ -614,7 +699,7 @@ với `assessment` có mọi trường `null` (xoá trắng dữ liệu đánh g
 
 ## CONTRACT DM-5 — Xoá chỉ tiêu
 
-- **Status: AGREED** (2026-09-05)
+- **Status: IMPLEMENTED** (thi công + gọi thật 2026-09-11; chốt hợp đồng 2026-09-05)
 - Route: `DELETE /api/criteria/{id}`
 - Response: `IApiResult<DeleteCriteriaResultDto>` — `{ hardDeleted: bool }`
   (`true` = xoá cứng vì chưa từng có bản ghi đánh giá nào; `false` = xoá mềm vì đã có lịch sử)
@@ -628,7 +713,7 @@ với `assessment` có mọi trường `null` (xoá trắng dữ liệu đánh g
 
 ## CONTRACT DM-6 — Sửa inline trong lưới (đúng 2 trường)
 
-- **Status: AGREED** (2026-09-05)
+- **Status: IMPLEMENTED** (thi công + gọi thật 2026-09-11; chốt hợp đồng 2026-09-05)
 - Route: `PUT /api/criteria/{id}/assessment`
 - Query params: **không có.**
 - Request:
@@ -655,22 +740,74 @@ version:         string?   // token đọc ở DM-2
 - **Đúng 2 trường nghiệp vụ, không hơn** (Q9): `Tiến độ %` và `Minh chứng/Ghi chú`. Bốn
   trường còn lại của bộ 6 chỉ sửa được qua dialog (DM-4). Đây là ràng buộc của hợp đồng,
   không phải giới hạn tạm thời.
-- **FE LUÔN gửi cả 2 trường** kể cả khi chỉ sửa 1 — lấy giá trị hiện tại của trường còn lại
-  từ dòng đang có trong bộ nhớ. Ngữ nghĩa đã chốt của endpoint này là **ghi đè cả hai**
-  (`PUT`), không phải patch từng phần: một `PUT` mà bỏ trống trường nào thì null-hoá trường
-  đó. Bản card cũ để ngỏ đúng câu hỏi này và dặn "backend-expert xác nhận sau" — nay chốt.
+- **FE gửi ĐÚNG trường mình vừa sửa. Khoá VẮNG = giữ nguyên; khoá mang `null` = xoá trắng.**
+
+> ### 🔄 LẬT 2026-09-11 (Q74) — dòng trên vừa bị đảo ngược, đọc kỹ trước khi sửa code
+>
+> Bản trước chốt: *"FE **LUÔN gửi cả 2 trường** kể cả khi chỉ sửa 1 — lấy giá trị hiện tại của
+> trường còn lại từ dòng đang có trong bộ nhớ"*, và **lý do** nó nêu là *"một `PUT` mà bỏ trống
+> trường nào thì null-hoá trường đó"*.
+>
+> **Lý do đó đã hết đúng.** Q74 (2026-09-11) phân biệt được *"khoá vắng khỏi JSON"* với *"khoá
+> mang `null`"* ở cả ba đường ghi — bỏ trống nay nghĩa là **giữ nguyên**, không phải null-hoá.
+> Luật đầy đủ + vì sao: `spec/danh-muc-dti/business-rules.md` §6.2.
+>
+> **Giữ nguyên câu chữ cũ sau khi lý do biến mất sẽ dựng lại đúng thứ card muốn tránh, chỉ ở
+> chiều ngược:** điền giá trị đọc lúc **mở** ô sửa là **ghi đè mù** thứ người khác vừa đổi trong
+> khoảng giữa — một lost update mà `version` chỉ chặn khi có `version`, và dòng chưa có bản ghi
+> đánh giá thì **không có** `version` nào để gửi.
+>
+> | Client gửi | Nghĩa |
+> | --- | --- |
+> | `{ "progressPercent": 70 }` | đặt `Tiến độ %` = 70, **giữ nguyên** `Ghi chú` |
+> | `{ "note": null }` | **xoá trắng** `Ghi chú`, giữ nguyên `Tiến độ %` |
+> | `{ "progressPercent": 70, "note": null }` | đặt 70 **và** xoá trắng ghi chú |
+>
+> ⚠️ **`version` cũng theo luật này.** Dòng chưa có bản ghi đánh giá ⇒ **bỏ hẳn khoá**, đừng gửi
+> `version: null` — sau Q74, `null` là một giá trị **được gán**, không còn là "vắng mặt". Card
+> chốt *"vắng mặt = không kiểm concurrency"*, nên gửi `null` là gửi một token rỗng đi kiểm.
+>
+> ⚠️ **DM-4 KHÔNG đổi theo.** Dialog là bộ soạn **trọn gói** — người dùng nhìn thấy cả sáu ô, nên
+> ô họ xoá trắng đúng là "xoá trắng", và nó **vẫn gửi cả 6 trường** kể cả `null`. Hai card khác
+> nhau ở đây là **có chủ đích**, không phải bỏ sót: khác nhau vì cái người dùng nhìn thấy khác
+> nhau.
+>
+> **Ghi nhận nguồn:** FE phát hiện khi cài Q74 và **không tự sửa hợp đồng** — đúng quy trình.
+> Hợp đồng sửa ở đây, sau đó code mới theo.
+
+- Ngữ nghĩa `PUT` vẫn là **thay thế**, không phải patch từng phần — nhưng đơn vị bị thay thế là
+  *tập trường được gán*, không phải *toàn bộ bản ghi*. Trường không gán thì không nằm trong lời
+  ghi nào cả.
 - Response: `IApiResult<CriteriaRowDto>` — cùng shape DM-2, FE thay dòng tại chỗ.
 - Lỗi: `CRITERIA.NOT_FOUND` (404) · `CRITERIA.ASSESSMENT_PERIOD_REQUIRED` (400) ·
   `CRITERIA.ASSESSMENT_PERIOD_INVALID` (400) ·
   **`CRITERIA.ASSESSMENT_PERIOD_NOT_WEEKLY`** (400, mới 2026-09-06) ·
   **`CRITERIA.ASSESSMENT_PERIOD_OUT_OF_YEAR`** (400, mới 2026-09-06) ·
-  `CRITERIA.ASSESSMENT_CONFLICT` (409) · `CRITERIA.PROGRESS_PERCENT_INVALID` (400)
+  `CRITERIA.ASSESSMENT_CONFLICT` (409)
+
+> ### 🔄 GỠ 2026-09-11 — `CRITERIA.PROGRESS_PERCENT_INVALID` KHÔNG tồn tại, và không nên tồn tại
+>
+> Bản trước liệt nó ở dòng trên. Nó mâu thuẫn với file chủ của luật nghiệp vụ:
+> `spec/danh-muc-dti/business-rules.md` §3.2 quy định *"ngoài miền 0..100 ⇒ **kẹp** về biên,
+> **không** báo lỗi khi sửa inline"* — bảo vệ chiều sâu, FE kẹp trước, BE kẹp lại. Entity đã kẹp
+> thật (`CriteriaAssessment.SetProgressPercent`).
+>
+> Hai file chủ nói ngược nhau, và **luật nghiệp vụ thắng**: giữ mã này nghĩa là khai một mã mà
+> **không đường nào ném được** — đúng thứ §2 của chính card này cấm (*"khai trước mà không có nơi
+> ném là dựng một hợp đồng chưa ai giữ"*). FE không cần một nhánh xử lý cho nó.
+>
+> Giá trị ngoài miền vẫn đi tới BE bình thường và trả `200` với giá trị đã kẹp; chỉ giá trị **sai
+> kiểu** mới ra `400 ValidationError` + `fields`, do model binder.
 
 ---
 
 ## CONTRACT DM-7 — Import `.csv` / `.xlsx` / `.xls` (job nền + poll)
 
-- **Status: AGREED** (2026-09-05)
+- **Status: IMPLEMENTED** (thi công + nghiệm thu 2026-09-11; chốt hợp đồng 2026-09-05)
+- Thi công: `src/BE/Business/PlatformManager.Business.Api/Controllers/ImportController.cs:56` ·
+  handler bước 1 `…/Business.Application/Import/StartImportCommand.cs:73` ·
+  thân job `…/Business.Application/Import/ImportJobRunner.cs:34` ·
+  catalog `…/Business.Application/Import/ImportErrors.cs:32`
 
 ### Bước 1 — bắt đầu import
 
@@ -772,8 +909,23 @@ result: {                       // chỉ có khi status = "Succeeded"
     messageParams: { [name: string]: string }?  // tham số RỜI, khoá là TÊN
   } ]
 }?
+errorCode:    string?           // chỉ có khi status = "Failed" VÀ lỗi có mã nghiệp vụ (Q75)
+                                //   vd "IMPORT.FILE_TOO_MANY_ROWS" — FE dịch như mọi businessCode
 errorMessage: string?           // chỉ có khi status = "Failed" — dev-facing, KHÔNG để hiển thị
 ```
+
+> ### `errorCode` — trường THÊM 2026-09-11, additive, cùng lượt với Q75
+>
+> **Lỗ hổng nó bịt:** trước đó nhánh `Failed` chỉ có `errorMessage`, thứ card này khai thẳng là
+> *"dev-facing, KHÔNG để hiển thị"*. Nghĩa là mọi lỗi CẢ FILE — file hỏng, thiếu cột bắt buộc, và
+> nay cả vượt trần số dòng — đều **không có gì để FE dịch thành câu cho người dùng**. Một trần mà
+> người dùng chạm phải nhưng không đọc được lý do thì chẳng khác gì không có trần.
+>
+> | | |
+> | --- | --- |
+> | Vắng mặt khi | `status` ≠ `"Failed"`, **hoặc** lỗi hạ tầng không có mã nghiệp vụ (job crash, file hỏng ở mức byte) |
+> | FE làm gì | tra bảng dịch như mọi `businessCode`; **không có** `errorCode` thì lùi về câu chung "nạp file thất bại" và ghi log `errorMessage` |
+> | Phá shape cũ không | **không** — khoá mới, tuỳ chọn, và luật `null` ⇒ vắng khoá (§0) giữ nguyên payload cũ cho job không có mã |
 
 > ### ⚠️ Sửa 2026-09-05 — `errors[].message` đã GỠ. BE không ghép câu tiếng Việt.
 >
@@ -837,6 +989,34 @@ code, hoặc tệ hơn, gộp chung vào một mã "lỗi dòng" không dịch n
 | **Một đoạn của `Mã` quá 4 chữ số** (Q58) | **`IMPORT.ROW_CODE_SEGMENT_TOO_LONG`** | `Code`, `MaxSegmentDigits` |
 | **`Mã` sai định dạng** — có chữ cái, đoạn rỗng kiểu `4..2`, hoặc dấu chấm ở đầu/cuối (Q65) | **`IMPORT.ROW_CODE_FORMAT_INVALID`** | `Code` |
 | **`Mã` quá 20 ký tự** (Q65) | **`IMPORT.ROW_CODE_TOO_LONG`** | `Code`, `MaxLength` |
+| **Tạo mới nhưng `Chỉ tiêu` rỗng** (Q73) | **`IMPORT.ROW_NAME_MISSING`** | `Code` |
+| **Tạo mới nhưng `Điểm tối đa` rỗng/không phải số/`<= 0`** (Q73) | **`IMPORT.ROW_MAX_SCORE_INVALID`** | `Code`, `MaxScore` |
+| **`Tự đánh giá` có nội dung nhưng không đọc ra số** (Q73) | **`IMPORT.ROW_SELF_SCORE_INVALID`** | `Code`, `SelfScore` |
+| **`Thẩm định` có nội dung nhưng không đọc ra số** (Q73) | **`IMPORT.ROW_VERIFIED_SCORE_INVALID`** | `Code`, `VerifiedScore` |
+| **`Hạn xử lý` có nội dung nhưng không đọc ra ngày** (Q73) | **`IMPORT.ROW_DEADLINE_INVALID`** | `Code`, `Deadline` |
+
+| **File vượt trần SỐ DÒNG** (Q75) — lỗi CẢ FILE | **`IMPORT.FILE_TOO_MANY_ROWS`** | `MaxRows` |
+| **Thiếu cột bắt buộc `Mã`/`Nhóm`** — lỗi CẢ FILE | **`IMPORT.FILE_MISSING_COLUMN`** | `Columns` |
+
+> **Năm hàng mang `(Q73)` là mã THÊM ở lượt 2026-09-11, người dùng duyệt NGUYÊN VĂN cùng ngày.**
+> Chúng không có trong §6.3 lúc card này được viết, nhưng cả ba lối xử lý còn lại đều tệ hơn: bỏ
+> qua thì mất dữ liệu im lặng; để `DomainException` bay lên thì theo **Q64** cả file không dòng nào
+> được ghi — một ô trống làm hỏng những dòng đúng còn lại; điền mặc định thì bịa số liệu. Lý lẽ đầy
+> đủ: `spec/danh-muc-dti/business-rules.md` §6.3.
+>
+> ⚠️ **Hai mã `IMPORT.FILE_*` cuối bảng KHÔNG mang tiền tố `ROW_`, và đó là chủ đích** — kể cả mã
+> có chữ "rows" trong tên. Tiền tố `ROW_` phân biệt lỗi **một dòng** (job vẫn `Succeeded`, lỗi nằm
+> trong `result.errors[]`) với lỗi **cả file**; cả hai ca này là lỗi cả file nên chúng đi cùng họ
+> `FILE_` với `IMPORT.FILE_TOO_LARGE`. Chúng **không bao giờ** xuất hiện trong `result.errors[]` —
+> chúng ra dây qua `errorCode` của bước 2, xem mục ngay dưới.
+>
+> `IMPORT.FILE_TOO_MANY_ROWS` **không** mang số dòng thật: job dừng đọc ngay khi vượt trần, nên nó
+> thành thật là không biết tổng. `MaxRows` là toàn bộ thông tin cần cho câu dẫn đường.
+>
+> `IMPORT.FILE_MISSING_COLUMN` thêm 2026-09-11 cùng lượt — cùng khuôn `FILE_*`, và nó là ca mà
+> `errorCode` sinh ra để phục vụ: trước đó "tải nhầm file" chỉ có một câu dev-facing.
+>
+> Đổi tên thì đổi ở đúng **hai** chỗ — bảng này và `ImportErrors.cs`.
 
 Các mã in đậm là **mã mới**, khai trong `ImportErrors.cs` như mọi mã khác (§2): bốn mã của lượt
 vá 2026-09-09, cộng `IMPORT.ROW_CODE_SEGMENT_TOO_LONG` của Q58 (2026-09-10).
@@ -879,6 +1059,86 @@ Bản trước **không khai mã nào cho `GET /api/import/{jobId}`**, kể cả
   Q25 điều này còn quan trọng hơn: cột đó trong file gốc của BA tính theo chiều **cũ**, tức
   ngược dấu với thứ hệ thống tính ra ở **27/62 dòng**. Một đường import có đối chiếu sẽ từ
   chối gần nửa file gốc và đổ lỗi cho dữ liệu của BA.
+
+### Nghiệm thu — shape THẬT, gọi trên `platformmanager_dev` ngày 2026-09-11
+
+Đây là bản dán **nguyên văn** từ lần gọi thật (đăng nhập bằng `Admin`, nạp bộ mẫu ẩn danh
+`spec/danh-muc-dti/dti-mau-an-danh-62-dong.csv`), không phải shape suy ra từ DTO — đúng mục 1 của §5.
+
+**Bước 1 — `POST /api/import`** (`multipart/form-data`: `file` + `period=2026-W33` + `year=2026`):
+
+```json
+{"data":{"jobId":"01a08e77-eb2e-70a2-9316-6e9fd37e4479"},"status":"SUCCESS","code":"Success","traceId":"0HNOFMC459BNH:00000001"}
+```
+
+**Bước 2 — `GET /api/import/{jobId}`**, lượt nạp sạch:
+
+```json
+{"data":{"status":"Succeeded","result":{"totalRows":62,"successCount":62,"errorCount":0,"criteriaCreatedCount":62,"errors":[]}},"status":"SUCCESS","code":"Success","traceId":"0HNOFMC459BNI:00000001"}
+```
+
+**Bước 2 — lượt nạp CÓ dòng lỗi.** Job vẫn `Succeeded`; `errors[]` mang **mã + tham số đặt tên**,
+**không** có khoá `message` nào, và `IMPORT.ROW_CODE_MISSING` **vắng hẳn** `messageParams`:
+
+```json
+{"status":"Succeeded","result":{"totalRows":8,"successCount":2,"errorCount":6,"criteriaCreatedCount":0,"errors":[
+ {"rowNumber":2,"code":"IMPORT.ROW_GROUP_NOT_FOUND","messageParams":{"Code":"1.1","GroupName":"Nhóm Không Có"}},
+ {"rowNumber":3,"code":"IMPORT.ROW_SELF_SCORE_EXCEEDS_MAX","messageParams":{"Code":"1.2","SelfScore":"99","MaxScore":"4.00"}},
+ {"rowNumber":4,"code":"IMPORT.ROW_STATUS_INVALID","messageParams":{"Code":"1.3","Status":"Đã xong"}},
+ {"rowNumber":5,"code":"IMPORT.ROW_CODE_DUPLICATED_IN_FILE","messageParams":{"Code":"1.3","FirstRowNumber":"4"}},
+ {"rowNumber":6,"code":"IMPORT.ROW_CODE_MISSING"},
+ {"rowNumber":7,"code":"IMPORT.ROW_CODE_FORMAT_INVALID","messageParams":{"Code":"1.a"}}]}}
+```
+
+⚠️ **`errorCount` đếm số DÒNG hỏng, không đếm số phần tử `errors[]`.** Một dòng sai cả hai cột
+điểm cho ra hai phần tử cùng `rowNumber` nhưng vẫn là một dòng.
+
+**Nhánh lỗi cả request** — envelope như mọi endpoint khác, `code` là tên member enum:
+
+| Gửi gì | HTTP | `businessCode` |
+| --- | ---: | --- |
+| `period` vắng mặt | 400 | `IMPORT.PERIOD_REQUIRED` |
+| `period=2026-W99` | 400 | `IMPORT.PERIOD_INVALID` |
+| `period=2026-08` | 400 | `IMPORT.PERIOD_NOT_WEEKLY` |
+| `period=all` + `year=2025` | 400 | `IMPORT.PERIOD_OUT_OF_YEAR` |
+| file 0 byte | 400 | `IMPORT.FILE_EMPTY` |
+| nội dung CSV nhưng đặt tên `.xlsx` | 400 | `IMPORT.FORMAT_UNSUPPORTED` |
+| `jobId` không tồn tại | 404 | `IMPORT.JOB_NOT_FOUND` |
+
+```json
+{"message":"Không tìm thấy lượt nạp file.","status":"BUSINESS_ERROR","code":"NotFound","businessCode":"IMPORT.JOB_NOT_FOUND","traceId":"0HNOFMC459BND:00000001","retryable":false}
+```
+
+#### 🛡️ CSRF — điều FE phải biết trước khi gọi, đo được 2026-09-11
+
+`POST /api/import` đi qua middleware CSRF của host như mọi request ghi: thiếu header
+`X-XSRF-TOKEN` ⇒ **`403 AUTH.CSRF_REJECTED`**, không phải lỗi của đường import. Hai điểm đã vấp
+thật khi nghiệm thu:
+
+1. Với `multipart/form-data`, token đi ở **HEADER**, không phải ở một trường form.
+2. **Token phải lấy LẠI sau khi đăng nhập.** Token phát trước lúc login gắn với danh tính ẩn danh;
+   dùng lại nó cho request ghi đầu tiên sau login sẽ nhận đúng `403` ở trên.
+
+#### ✅ Q35 — nghiệm thu mục 10 của §5: ĐÃ ĐẠT (2026-09-11)
+
+Chạy import bằng tài khoản `Admin`, rồi đọc thẳng database:
+
+```sql
+select "CreatedBy", "UpdatedBy", count(*) from business."CriteriaAssessments" group by 1, 2;
+-- Admin | Admin | 62
+```
+
+Không dòng nào mang `"system"`. Đây là điều kiện tiên quyết của cả card (`spec/danh-muc-dti/business-rules.md`
+§5.6) — trước lượt này nó mới chỉ được xác minh bằng unit test ghép `AuditInterceptor` với bản cài
+`ICurrentUser` thứ hai; nay đã có **một lượt job nền thật đi qua Hangfire**.
+
+#### Ba luật ghi đã kiểm trên dữ liệu thật, không chỉ trên unit test
+
+| Luật | Cách kiểm | Kết quả |
+| --- | --- | --- |
+| Neo ngày §5.3 | nạp cho `2026-W33` khi hôm nay là 11/09 (ngoài tuần đó) | `assessmentDate = 2026-08-16` — Chủ nhật của tuần đích |
+| Upsert theo KỲ (§6.4) | nạp lại **cùng** bộ mẫu vào **cùng** `2026-W33` | số bản ghi đánh giá không đổi, `criteriaCreatedCount = 0` — ghi đè, không tạo bản thứ hai |
+| Copy-forward §5.3 | nạp `2026-W35` bằng file **chỉ có cột điểm** | bản ghi mới mang `status`/`note` của tuần 33, `selfScore`/`verifiedScore` lấy từ file, và tuần 33 **còn nguyên** |
 
 ### Hạ tầng — cái nào có sẵn, cái nào phải dựng
 

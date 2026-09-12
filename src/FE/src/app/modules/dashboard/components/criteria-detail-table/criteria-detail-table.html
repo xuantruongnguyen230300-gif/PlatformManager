@@ -1,0 +1,56 @@
+<!-- `.tablewrap.scroll` — bảng THUẦN, cuộn dọc bên trong, KHÔNG paginator (T4). Bề rộng cột theo
+     phần trăm, đúng bộ đã duyệt ở Screens/01-dashboard.md § Layout Blueprint. -->
+<div class="tablewrap scroll">
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 5%">{{ 'dashboard.grid.code' | translate }}</th>
+        <th style="width: 26%">{{ 'dashboard.grid.name' | translate }}</th>
+        <th style="width: 13%">{{ 'dashboard.grid.group' | translate }}</th>
+        <th class="num" style="width: 8%">{{ 'dashboard.grid.maxScore' | translate }}</th>
+        <th class="num" style="width: 9%">{{ 'dashboard.grid.selfScore' | translate }}</th>
+        <th class="num" style="width: 9%">{{ 'dashboard.grid.verifiedScore' | translate }}</th>
+        <th class="num" style="width: 9%">{{ 'dashboard.grid.diff' | translate }}</th>
+        <th style="width: 10%">{{ 'dashboard.grid.status' | translate }}</th>
+        <th style="width: 11%">{{ 'dashboard.grid.note' | translate }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (row of rows(); track row.CriteriaId) {
+        <tr>
+          <td><b>{{ row.Code }}</b></td>
+          <td>{{ row.Name }}</td>
+          <td>{{ 'dashboard.grid.groupLabel' | translate: { Code: row.GroupCode, Name: row.GroupName } }}</td>
+          <td class="num">{{ num(row.MaxScore) }}</td>
+          <td class="num">{{ num(row.SelfScore) ?? ('shared.format.absentValue' | translate) }}</td>
+          <td class="num">{{ num(row.VerifiedScore) ?? ('shared.format.absentValue' | translate) }}</td>
+
+          <!-- Dấu của `Diff` LÀ THÔNG TIN (Q25): dương = được thẩm định cao hơn tự chấm, âm = bị
+               trừ. Truyền số THÔ còn nguyên dấu; component tự phân loại và tự đặt dấu. -->
+          <td class="num"><app-delta-indicator [value]="row.Diff" format="score" [localeId]="localeId()" /></td>
+
+          <td>
+            @if (badgeClass(row); as tone) {
+              <span [class]="'badge ' + tone">{{ row.Status }}</span>
+            } @else if (row.Status) {
+              <span class="muted">{{ row.Status }}</span>
+            } @else {
+              {{ 'shared.format.absentValue' | translate }}
+            }
+          </td>
+          <td>
+            @if (row.Note) {
+              {{ row.Note }}
+            } @else {
+              <span class="muted">{{ 'shared.format.absentValue' | translate }}</span>
+            }
+          </td>
+        </tr>
+      } @empty {
+        <tr>
+          <td colspan="9" class="muted detail-empty">{{ 'dashboard.grid.tableEmpty' | translate }}</td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>

@@ -1,8 +1,130 @@
+@use '../../../../core/theme/breakpoints' as bp;
+
 // Chỉ chứa BỐ CỤC riêng của trang. Mọi bề mặt/nút/badge dùng class toàn cục ở src/styles.scss —
 // không khai lại ở đây, và không có màu literal nào (cổng G1 + G11).
 //
-// Khoảng cách giữa hàng tiêu đề và phần thân. Dải KPI + biểu đồ + bảng tổng hợp của màn thật sẽ
-// vào đây ở lượt sau (spec/dashboard-dti/ui-spec.md).
+// Bốn class dưới đây là PAGE-LOCAL, KHÔNG phải component (spec/dashboard-dti/ui-spec.md §3):
+// `.kpis`, `.layout`, `.period-display`, `.criteria-table-card` / `.history-card`.
+
 :host {
   display: block;
+}
+
+// ===== V1 — ô hiển thị kỳ =====
+// 🛑 CHỈ ĐỌC, cố ý KHÔNG dùng hợp đồng `Input`: nó không phải ô nhập. Đừng "sửa cho đồng bộ"
+// thành `.input`. `white-space: nowrap` để nhãn kỳ đầy đủ không bao giờ xuống dòng.
+.period-display {
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--muted);
+  padding: var(--sp-2) var(--sp-3);
+  font-size: var(--fs-sm);
+  white-space: nowrap;
+}
+
+// ===== Cụm số liệu V2…V5 và trạng thái đang tải (Q34 + T10) =====
+// `position: relative` để vòng quay đặt được ở giữa cụm; nó là MỘT vòng quay cho cả cụm, không
+// phải mỗi vùng một cái.
+.data-regions {
+  position: relative;
+}
+
+// Mờ, KHÔNG ẩn: giữ số cũ nhìn thấy được để layout không sụp và mắt người dùng không mất chỗ neo.
+// `.5` là đúng giá trị mà `.btn:disabled` đang dùng ở styles.scss — "không dùng được lúc này"
+// trông giống nhau ở mọi chỗ, nên không sinh ra một mức mờ thứ hai.
+.data-regions.is-busy > :not(.busy-veil) {
+  opacity: 0.5;
+  // Số đang mờ là số CŨ; cho bấm vào bảng lúc đó là mời người dùng thao tác trên dữ liệu đã hết
+  // hạn. Thanh chọn kỳ (V1) nằm NGOÀI cụm này nên vẫn dùng được — đó là chủ đích.
+  pointer-events: none;
+}
+
+.busy-veil {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: var(--sp-5);
+  z-index: 2;
+}
+
+// ===== V2 — dải KPI =====
+// `app-kpi-tile` là `display: contents`, nên `.card` bên trong nó là con TRỰC TIẾP của lưới này.
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--sp-4);
+}
+
+// ===== Lưới hai cột V3 | V4 =====
+.layout {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: var(--sp-5);
+  margin-top: var(--sp-5);
+
+  > .card {
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+// Danh sách thanh tiến độ — mỗi `app-progress-bar` tự là một hàng lưới ba cột, ở đây chỉ lo
+// khoảng cách giữa các hàng.
+.group-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+// Placeholder của `@defer` — giữ ĐÚNG chiều cao của biểu đồ (220px) để card không nhảy khi chunk
+// về. Đây là trạng thái tải MÃ, khác hẳn trạng thái tải DỮ LIỆU ở `.is-busy` phía trên.
+.chart-skeleton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 220px;
+}
+
+// ===== V5 và V8 — chỉ đặt khoảng cách =====
+.criteria-table-card,
+.history-card {
+  margin-top: var(--sp-5);
+}
+
+.history {
+  display: flex;
+  flex-direction: column;
+  // Vùng lịch sử cuộn bên trong thay vì kéo dài trang vô hạn khi một năm có 52 kỳ.
+  max-height: var(--grid-h-min);
+  overflow: auto;
+}
+
+// ===== In ấn =====
+// Vùng cuộn phải BỎ chặn chiều cao khi in, nếu không bản in cắt cụt danh sách mà không báo gì
+// (fe-ui-conventions.md §"In ấn"). Quy tắc `@media print` chung đặt tập trung ở styles.scss; đây
+// là phần riêng của trang vì `.history` cũng chỉ tồn tại ở trang này.
+@media print {
+  .history {
+    max-height: none;
+    overflow: visible;
+  }
+}
+
+@include bp.tablet {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .kpis {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@include bp.mobile {
+  .kpis {
+    gap: var(--sp-3);
+  }
 }

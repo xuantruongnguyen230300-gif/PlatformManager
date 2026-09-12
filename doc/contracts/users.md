@@ -151,8 +151,8 @@ mang tham số — `USER.DUPLICATE_USERNAME` kèm `{"UserName":"…"}`, `USER.DU
 > **✅ `{"Reasons":"…"}` đã biến mất — thi công 2026-09-05.** `USER.CREATE_FAILED` và
 > `USER.UPDATE_FAILED` không còn tham số nào; câu của chúng là câu cố định
 > (`"Tạo người dùng thất bại."` / `"Cập nhật người dùng thất bại."`). Từng **mã lỗi Identity**
-> (`DuplicateUserName`, `PasswordTooShort`, `ConcurrencyFailure`…) đi ra `fieldErrors` với `code`
-> là chính mã đó, gắn vào ô nhập mà mã đó nói tới:
+> (`DuplicateUserName`, `PasswordTooShort`, `CommonPassword`, `ConcurrencyFailure`…) đi ra
+> `fieldErrors` với `code` là chính mã đó, gắn vào ô nhập mà mã đó nói tới:
 >
 > ```json
 > {
@@ -160,18 +160,39 @@ mang tham số — `USER.DUPLICATE_USERNAME` kèm `{"UserName":"…"}`, `USER.DU
 >   "message": "Tạo người dùng thất bại.",
 >   "fieldErrors": {
 >     "UserName": [{ "code": "DuplicateUserName", "message": "DuplicateUserName" }],
->     "TempPassword": [{ "code": "PasswordTooShort", "message": "PasswordTooShort" }]
+>     "TempPassword": [{ "code": "CommonPassword", "message": "CommonPassword" }]
 >   }
 > }
 > ```
 >
+> 🛑 **`CommonPassword` KHÔNG có trong tài liệu Identity của Microsoft — đừng đi tìm ở đó.** Nó
+> không thuộc `IdentityErrorDescriber`; nó đến từ gói **`CommonPasswordsValidator`** (đăng ký bằng
+> `.AddTop10000PasswordValidator<AppUser>()`, hoạt động hoàn toàn **offline** bằng danh sách nhúng
+> — **không** gọi API ra ngoài). Nhưng nó đi ra qua cùng `IdentityResult.Errors[].Code` nên client
+> nhận nó y như mọi mã Identity khác.
+>
+> Ghi ở đây vì nó là mã **hay gặp nhất** của đường này trên thực tế: chính sách đòi 12 ký tự, nên
+> phần lớn mật khẩu người dùng gõ đã qua `PasswordTooShort` và thứ chặn họ là bộ lọc mật khẩu phổ
+> biến. Người cài client đọc *"mã lỗi ASP.NET Core Identity"* rồi tra tài liệu Microsoft sẽ **không
+> bao giờ** tìm thấy mã này — và đó đúng là cách nó lọt lưới ngày 2026-09-11.
+
 > Khoá là tên ô PascalCase, khớp `UserFormField` phía FE. Mã **không thuộc ô nhập nào**
 > (`ConcurrencyFailure` — nó nói về bản ghi) rơi vào khoá `"$record"`; khoá đó cố ý bắt đầu bằng
 > `$` để không bao giờ trùng tên một property thật. Envelope **không** đổi hình dạng —
 > `fieldErrors` đã có sẵn từ 2026-09-03.
 >
-> ⚠️ **FE hôm nay chưa đọc `fieldErrors`** (còn bind từ `fields`), nên màn hình chưa đổi. Quyết
-> định + lý do + nghiệm thu:
+> ✅ **FE đã đọc `fieldErrors`** (đối chiếu 2026-09-11):
+> `src/FE/src/app/platform/quan-tri-nguoi-dung/components/user-form-dialog/user-form-dialog.ts`
+> nhận nguyên văn `fieldErrors` qua input `serverFieldErrors`, gom bằng `groupServerFieldErrors`
+> của `core/http/`, và hiện lỗi `$record` ở khối lỗi cuối form — **ưu tiên trên** `message` của
+> envelope. Luật hiển thị:
+> [`../huong_dan/wiki-core/fe/09-forms-validation.md`](../huong_dan/wiki-core/fe/09-forms-validation.md)
+> §"Bind lỗi từ `fieldErrors` vào form".
+>
+> > 🔄 **LẬT 2026-09-11.** Bản trước ghi *"FE hôm nay chưa đọc `fieldErrors` (còn bind từ
+> > `fields`), nên màn hình chưa đổi"* — sai từ 2026-09-06.
+>
+> Quyết định + lý do + nghiệm thu:
 > [`../huong_dan/wiki-core/be/16-i18n-va-ma-loi.md`](../huong_dan/wiki-core/be/16-i18n-va-ma-loi.md) §11.
 
 ## `GET /api/users?page=1&pageSize=20&searchText=...`

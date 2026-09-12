@@ -513,8 +513,8 @@ bắt được (khác với coupling qua `using` mà ArchTest quét được).
 
 1. Đối chiếu schema đang chạy trước khi thiết kế bảng mới:
    [`../../cau-truc-database.md`](../../cau-truc-database.md) cho schema `core`,
-   [`../../cau-truc-database-business.md`](../../cau-truc-database-business.md) cho schema
-   `business` (đang đóng băng, chờ module dựng lại).
+   [`../../cau-truc-database-dti.md`](../../cau-truc-database-dti.md) cho schema
+   `business` (4 bảng cụm DTI, đang sống).
 
    > **🔄 LẬT 2026-09-06.** Bước này trước đây bảo *"đối chiếu dữ liệu mẫu CSV
    > (`doc/ERD/` đã xoá 2026-08-23, sẽ bổ sung lại sau)"* — tức trỏ người đọc tới một thư

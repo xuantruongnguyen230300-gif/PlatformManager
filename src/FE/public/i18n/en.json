@@ -48,6 +48,7 @@
     "VERSION_CONFLICT": "Someone else just updated this user. Reload the list and redo your changes — nothing you just did was saved."
   },
   "VALIDATION": {
+    "CommonPassword": "This password is on the list of commonly used passwords, so it is easy to guess. Choose a long, uncommon phrase instead.",
     "DuplicateEmail": "This email address is already in use.",
     "DuplicateRoleName": "This role already exists.",
     "DuplicateUserName": "This user name already exists.",
@@ -63,6 +64,7 @@
     "PasswordRequiresUniqueChars": "The password must use more distinct characters.",
     "PasswordRequiresUpper": "The password must contain at least one uppercase letter (A–Z).",
     "PasswordTooShort": "The password is too short.",
+    "UNKNOWN": "This value was not accepted. Please check it and try again.",
     "UserAlreadyInRole": "The user already has this role.",
     "UserNotInRole": "The user does not have this role."
   },
@@ -299,16 +301,6 @@
     "topbar": {
       "logout": "Sign out",
       "openMenu": "Open the navigation menu"
-    }
-  },
-  "trang-chu": {
-    "greeting": "Hello",
-    "greetingNamed": "Hello, {{name}}",
-    "routeTitle": "Home",
-    "hint": {
-      "intro": "This is the home page of {{name}}. The features listed in the menu on the left are served by the server according to the account's permissions, so two users with different roles see two different menus.",
-      "noModules": "No business module is installed yet. Use the menu on the left to reach the system administration features.",
-      "noRoles": "No role assigned"
     }
   }
 }

@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 // không còn tồn tại.
 using PlatformManager.Core.Application.Bootstrap;
 using PlatformManager.Core.Application.Menu;
+using PlatformManager.Business.Persistence;
 using PlatformManager.Core.Infrastructure.Persistence;
 
 namespace PlatformManager.Api.Common;
@@ -62,9 +63,17 @@ internal static class SeedCommand
             var seeder = scope.ServiceProvider.GetRequiredService<CoreSeeder>();
             await seeder.SeedAsync();
 
-            // CoreSeeder kiểm tra tồn tại trước khi ghi ⇒ chạy lại nhiều lần không nhân đôi dòng
-            // nào (nghiệm thu #3 của 13-core-data-migration.md).
-            logger.LogInformation("Seed dữ liệu Core hoàn tất. Tiến trình thoát, KHÔNG mở cổng.");
+            // Seeder của tầng NGHIỆP VỤ chạy SAU CoreSeeder — thứ tự đó không suy ra được từ
+            // HostModuleRegistrars (ngoại lệ đã ghi trong docstring của lớp đó), nên nó phải khai
+            // tường minh ở đây. Hôm nay nó seed 6 nhóm chỉ tiêu của
+            // spec/danh-muc-dti/business-rules.md §1.6 — danh mục ĐÓNG mà import không tự tạo
+            // được, nên phải có sẵn TRƯỚC lần import đầu tiên.
+            var businessSeeder = scope.ServiceProvider.GetRequiredService<BusinessSeeder>();
+            await businessSeeder.SeedAsync();
+
+            // Cả hai seeder kiểm tra tồn tại trước khi ghi ⇒ chạy lại nhiều lần không nhân đôi
+            // dòng nào (nghiệm thu #3 của 13-core-data-migration.md, và nghiệm thu §1.6).
+            logger.LogInformation("Seed dữ liệu Core + nghiệp vụ hoàn tất. Tiến trình thoát, KHÔNG mở cổng.");
             return 0;
         }
         catch (Exception ex)
@@ -80,7 +89,7 @@ internal static class SeedCommand
             // khuôn các thông báo lỗi trong CoreSeeder.
             logger.LogCritical(
                 ex,
-                "Seed dữ liệu Core THẤT BẠI. Kiểm tra: (1) đã chạy tay file schema .sql lên Postgres chưa, "
+                "Seed dữ liệu THẤT BẠI. Kiểm tra: (1) đã chạy tay file schema .sql lên Postgres chưa, "
                 + "(2) ConnectionStrings:Default trỏ đúng database chưa, (3) đã đặt Bootstrap:SuperAdminPassword "
                 + "và Bootstrap:AdminPassword chưa, (4) nếu lỗi kèm theo là 'Unable to resolve service for type' "
                 + $"kèm {nameof(ICoreMenuSeedSource)} hoặc {nameof(ICoreBootstrapAccountSource)} thì KHÔNG phải lỗi "

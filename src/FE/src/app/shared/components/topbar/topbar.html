@@ -16,13 +16,36 @@
     @if (currentUser.isAuthenticated()) {
       <div class="topbar-user no-print">
         <span class="topbar-user-name">{{ currentUser.fullName() }}</span>
+        <!-- Lối vào TỰ NGUYỆN của màn đổi mật khẩu. Luồng ép buộc đi qua `mustChangePasswordGuard`
+             và không cần nút nào; nút này dành cho người đã đổi rồi mà muốn đổi lại — trước
+             2026-09-11 lối đó nằm trên trang chủ cũ, và nó biến mất cùng trang đó.
+             `<a>` chứ không `<button>`: đây là ĐIỀU HƯỚNG tới một URL, nên nó phải mở được ở tab
+             mới và phải hiện ra trên thanh trạng thái khi rê chuột. -->
+        <a
+          class="btn"
+          [routerLink]="routes.changePassword"
+          [attr.title]="'shared.action.changePassword' | translate"
+          [attr.aria-label]="'shared.action.changePassword' | translate"
+        >
+          <!-- Nhãn ẩn ở mobile (cùng breakpoint với `.topbar-user-name`) để hai hành động tài
+               khoản không đẩy tiêu đề trang ra khỏi thanh. `aria-label` ở trên giữ nguyên TÊN
+               TRUY CẬP ĐƯỢC khi chữ biến mất — ẩn nhãn bằng CSS mà không có nó là để lại một nút
+               chỉ có icon, và trình đọc màn hình chỉ đọc được "link". -->
+          <i class="pi pi-key"></i>
+          <span class="topbar-action-label">{{ 'shared.action.changePassword' | translate }}</span>
+        </a>
+        <!-- Nhãn bọc trong `.topbar-action-label` GIỐNG liên kết ở trên: ẩn một nhãn mà để nhãn
+             kia ở lại cho ra `[🔑][🚪 Đăng xuất]` — một glyph trần cạnh một nút có nhãn đầy đủ.
+             `aria-label` là BẮT BUỘC khi đi cùng: `title` không thay được tên truy cập được. -->
         <button
           type="button"
           class="btn"
           [attr.title]="'shared.topbar.logout' | translate"
+          [attr.aria-label]="'shared.topbar.logout' | translate"
           (click)="onLogout()"
         >
-          <i class="pi pi-sign-out"></i> {{ 'shared.topbar.logout' | translate }}
+          <i class="pi pi-sign-out"></i>
+          <span class="topbar-action-label">{{ 'shared.topbar.logout' | translate }}</span>
         </button>
       </div>
     }

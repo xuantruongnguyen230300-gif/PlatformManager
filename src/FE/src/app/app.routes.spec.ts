@@ -7,7 +7,6 @@ import { adminGuard, superAdminGuard } from './core/auth/role.guard';
 import { IHasUnsavedChanges, unsavedChangesGuard } from './core/guards/unsaved-changes.guard';
 import { LOGIN_ROUTES } from './platform/login/login.routes';
 import { DOI_MAT_KHAU_ROUTES } from './platform/doi-mat-khau/doi-mat-khau.routes';
-import { TRANG_CHU_ROUTES } from './platform/trang-chu/trang-chu.routes';
 import { QUAN_TRI_NGUOI_DUNG_ROUTES } from './platform/quan-tri-nguoi-dung/quan-tri-nguoi-dung.routes';
 import { PHAN_QUYEN_ROUTES } from './platform/phan-quyen/phan-quyen.routes';
 import { DANH_MUC_DTI_ROUTES } from './modules/danh-muc-dti/danh-muc-dti.routes';
@@ -112,7 +111,8 @@ const MUST_CHANGE_PASSWORD_EXEMPT: readonly string[] = ['/doi-mat-khau'];
 const ALL_LEAF_ROUTES: readonly { readonly name: string; readonly routes: Routes; readonly title: string }[] = [
   { name: '/dang-nhap', routes: LOGIN_ROUTES, title: 'login.routeTitle' },
   { name: '/doi-mat-khau', routes: DOI_MAT_KHAU_ROUTES, title: 'doi-mat-khau.routeTitle' },
-  { name: '/trang-chu', routes: TRANG_CHU_ROUTES, title: 'trang-chu.routeTitle' },
+  // `/trang-chu` nay là Dashboard DTI (Q3, hoán đổi 2026-09-11) — `platform/trang-chu/` đã xoá.
+  { name: '/trang-chu', routes: DASHBOARD_ROUTES, title: 'dashboard.routeTitle' },
   { name: '/quan-tri/nguoi-dung', routes: QUAN_TRI_NGUOI_DUNG_ROUTES, title: 'quan-tri-nguoi-dung.routeTitle' },
   { name: '/quan-tri/phan-quyen', routes: PHAN_QUYEN_ROUTES, title: 'phan-quyen.routeTitle' },
   { name: '/danh-muc/dti', routes: DANH_MUC_DTI_ROUTES, title: 'danh-muc-dti.routeTitle' },
@@ -141,9 +141,9 @@ describe('Bảng route — guard đúng và đủ (fe-routing-guard.md §1, §6)
   // doi-mat-khau sau khi đổi xong, `**` khi URL lạ). Gắn thêm guard theo VAI TRÒ vào đây sẽ tạo
   // vòng lặp redirect vô hạn cho đúng nhóm người bị đá về đây — nên test khoá lại ĐÚNG 2 guard.
   it('/trang-chu: ĐÚNG authGuard → mustChangePasswordGuard, không guard vai trò nào', () => {
-    expect(guardsOf(TRANG_CHU_ROUTES)).toEqual([authGuard, mustChangePasswordGuard]);
-    expect(guardsOf(TRANG_CHU_ROUTES)).not.toContain(adminGuard);
-    expect(guardsOf(TRANG_CHU_ROUTES)).not.toContain(superAdminGuard);
+    expect(guardsOf(DASHBOARD_ROUTES)).toEqual([authGuard, mustChangePasswordGuard]);
+    expect(guardsOf(DASHBOARD_ROUTES)).not.toContain(adminGuard);
+    expect(guardsOf(DASHBOARD_ROUTES)).not.toContain(superAdminGuard);
   });
 
   it('/quan-tri/nguoi-dung: authGuard → mustChangePasswordGuard → adminGuard', () => {
@@ -166,16 +166,16 @@ describe('Bảng route — guard đúng và đủ (fe-routing-guard.md §1, §6)
   });
 
   /**
-   * `modules/dashboard/` CHƯA được khai vào `app.routes.ts` — có chủ đích (nó sẽ THAY `/trang-chu`
-   * theo chốt Q3, xem `modules/dashboard/dashboard.routes.ts`). Vì chưa có đường nào từ router tới
-   * nó, `loadLeafRoutes()` không chạm tới, nên hai ràng buộc dưới đây không ai canh nếu không viết
-   * ra ở đây — và chúng là hai ràng buộc của chính route mặc định tương lai:
-   * đủ hai guard, và KHÔNG guard theo vai trò (đích của mọi redirect "về chỗ an toàn").
+   * 🛑 KHÔNG còn route thứ hai trỏ vào Dashboard.
+   *
+   * Vòng 1 khai nó ở `/tong-quan/dti` để kiểm thử mà không đụng vào bến an toàn của cả app; lượt
+   * hoán đổi 2026-09-11 (Q3) gỡ hẳn đường đó. Test này khoá lại điều ấy vì hai URL cho một màn là
+   * hai bookmark và hai mục lịch sử, và một trong hai sẽ trôi khỏi mọi phép kiểm mà không ai thấy.
    */
-  it('modules/dashboard đã đủ guard và KHÔNG guard vai trò — sẵn cho lượt hoán đổi /trang-chu', () => {
-    expect(guardsOf(DASHBOARD_ROUTES)).toEqual([authGuard, mustChangePasswordGuard]);
-    expect(guardsOf(DASHBOARD_ROUTES)).not.toContain(adminGuard);
-    expect(guardsOf(DASHBOARD_ROUTES)).not.toContain(superAdminGuard);
+  it('🛑 `/tong-quan/dti` đã GỠ — Dashboard chỉ còn MỘT đường vào, là `/trang-chu`', () => {
+    const paths = routes.map((route) => route.path);
+    expect(paths).not.toContain('tong-quan/dti');
+    expect(paths).toContain('trang-chu');
     expect(titleOf(DASHBOARD_ROUTES)).toBe('dashboard.routeTitle');
   });
 
@@ -271,7 +271,7 @@ describe('Bảng route — guard đúng và đủ (fe-routing-guard.md §1, §6)
   it('đúng 2 màn auth khai noShell (§7)', () => {
     expect(dataOf(LOGIN_ROUTES)?.['noShell']).toBeTrue();
     expect(dataOf(DOI_MAT_KHAU_ROUTES)?.['noShell']).toBeTrue();
-    expect(dataOf(TRANG_CHU_ROUTES)?.['noShell']).toBeUndefined();
+    expect(dataOf(DASHBOARD_ROUTES)?.['noShell']).toBeUndefined();
     expect(dataOf(PHAN_QUYEN_ROUTES)?.['noShell']).toBeUndefined();
   });
 });

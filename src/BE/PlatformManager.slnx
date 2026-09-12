@@ -6,10 +6,19 @@
     <Project Path="Core/PlatformManager.Core.Infrastructure/PlatformManager.Core.Infrastructure.csproj" />
     <Project Path="Core/PlatformManager.Core.Api/PlatformManager.Core.Api.csproj" />
   </Folder>
+  <Folder Name="/Business/">
+    <Project Path="Business/PlatformManager.Business.Domain/PlatformManager.Business.Domain.csproj" />
+    <Project Path="Business/PlatformManager.Business.Application/PlatformManager.Business.Application.csproj" />
+    <Project Path="Business/PlatformManager.Business.Persistence/PlatformManager.Business.Persistence.csproj" />
+    <Project Path="Business/PlatformManager.Business.Infrastructure/PlatformManager.Business.Infrastructure.csproj" />
+    <Project Path="Business/PlatformManager.Business.Api/PlatformManager.Business.Api.csproj" />
+  </Folder>
   <Project Path="PlatformManager.Api/PlatformManager.Api.csproj" />
   <Folder Name="/Tests/">
     <Project Path="Tests/PlatformManager.ArchTests/PlatformManager.ArchTests.csproj" />
     <Project Path="Tests/PlatformManager.Core.UnitTests/PlatformManager.Core.UnitTests.csproj" />
     <Project Path="Tests/PlatformManager.Core.IntegrationTests/PlatformManager.Core.IntegrationTests.csproj" />
+    <Project Path="Tests/PlatformManager.Business.UnitTests/PlatformManager.Business.UnitTests.csproj" />
+    <Project Path="Tests/PlatformManager.Business.IntegrationTests/PlatformManager.Business.IntegrationTests.csproj" />
   </Folder>
 </Solution>

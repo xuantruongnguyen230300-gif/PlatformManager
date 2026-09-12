@@ -1,3 +1,5 @@
+using PlatformManager.Business.Application.Permissions;
+using PlatformManager.Core.Application.Common;
 using PlatformManager.Core.Application.Permissions;
 
 namespace PlatformManager.Api.Permissions;
@@ -40,6 +42,24 @@ public static class AppResourceKeys
     /// đè toàn bộ nên chúng cũng không tự dọn).
     /// </summary>
     public const string Import = "import.manage";
+
+    /// <summary>
+    /// Ghi dữ liệu DTI — ĐÚNG MỘT key cho toàn bộ đường ghi của nghiệp vụ (Q27, chốt 2026-09-05,
+    /// spec/danh-muc-dti/business-rules.md §6.5): tạo/sửa/xoá chỉ tiêu, lưu đánh giá qua dialog,
+    /// sửa inline, VÀ import. Áp cho MỌI kỳ, kể cả kỳ đã qua và năm trước.
+    ///
+    /// <para><b>Trỏ vào hằng số của <c>Business.Application</c> thay vì gõ lại chuỗi</b>: tầng
+    /// nghiệp vụ cũng cần đúng chuỗi này cho <c>[RequirePermission(...)]</c> trên controller của
+    /// nó, mà <c>Business.Api → host</c> là vòng tròn tham chiếu. Một chuỗi literal trong repo,
+    /// hai nơi tiêu thụ, và cả hai vẫn là hằng số biết được lúc biên dịch (điều kiện bắt buộc để
+    /// dùng làm đối số attribute).</para>
+    ///
+    /// <para>⚠️ KHÔNG dùng lại <see cref="Import"/> cho nghiệp vụ DTI: key đó là di sản của module
+    /// đã gỡ. Dùng lại một key vì nó "trông đúng tên" sẽ trộn quyền của một năng lực Core dùng
+    /// chung với quyền của một nghiệp vụ — và khi sản phẩm thứ hai dùng lại CoreBase, hai thứ đó
+    /// phải tách rời được.</para>
+    /// </summary>
+    public const string DtiManage = BusinessResourceKeys.DtiManage;
 }
 
 /// <summary>
@@ -60,6 +80,31 @@ internal sealed class AppResourceKeySource : ICoreResourceKeySource
     private static readonly ResourceKeyDefinition[] Definitions =
     [
         new(AppResourceKeys.Import, "Import CSV/Excel"),
+
+        // ── dti.manage — NGOẠI LỆ có chủ đích của luật seed mặc định (Q36, chốt 2026-09-06) ──
+        //
+        // SeedRoles = [Admin] và CHỈ Admin. Vai User KHÔNG được cấp sẵn; ai cần thì SuperAdmin cấp
+        // tay ở màn Phân quyền.
+        //
+        // 🔴 Đây là NGOẠI LỆ, không phải hành vi mặc định — đọc trước khi "dọn cho nhất quán".
+        // Mặc định của seam là [Admin, User] (ResourceKeyDefinition.DefaultSeedRoles), và mặc định
+        // đó CỐ Ý: nó giữ nguyên hành vi trước khi bật deny-by-default, một quyết định DI TRÚ để
+        // việc siết quyền không khoá mất người đang dùng hệ thống.
+        //
+        // Vì sao DTI được miễn: lý lẽ "giữ nguyên hành vi cũ" không áp cho một key MỚI TOANH —
+        // không có ai đang ghi dữ liệu DTI để mà giữ nguyên hành vi cho họ (module gỡ 2026-08-29).
+        // Cấp sẵn cho User ở đây không phải "không làm hỏng cái đang chạy", nó là MỞ QUYỀN GHI cho
+        // toàn bộ người đăng nhập ngay ở lần seed đầu, trên một tập dữ liệu mà một lần nạp đè file
+        // có thể ghi lại 62 dòng của một kỳ đã báo cáo.
+        //
+        // ⚠️ QUÊN mệnh đề SeedRoles thì key rơi về mặc định [Admin, User] và Q36 bị vi phạm mà
+        // KHÔNG có gì báo — vì mặc định là một giá trị hợp lệ. Nghiệm thu bắt buộc sau khi seed:
+        // mở GET /api/admin/permissions/resources và xác nhận dòng dti.manage có Admin và KHÔNG có
+        // User (spec/danh-muc-dti/business-rules.md §6.5).
+        new(AppResourceKeys.DtiManage, BusinessResourceKeys.DtiManageDisplayName)
+        {
+            SeedRoles = [Roles.Admin],
+        },
     ];
 
     public IReadOnlyCollection<ResourceKeyDefinition> GetResourceKeys() => Definitions;

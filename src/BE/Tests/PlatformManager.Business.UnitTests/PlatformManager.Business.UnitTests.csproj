@@ -1,0 +1,54 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <RootNamespace>PlatformManager.Business.UnitTests</RootNamespace>
+  </PropertyGroup>
+
+  <!-- Project test của TẦNG NGHIỆP VỤ, tách khỏi PlatformManager.Core.UnitTests (thêm 2026-09-10
+       cùng lượt dựng Business.*). Lý do tách chứ không nhét chung: bộ test Core phải chạy được
+       nguyên vẹn khi CoreBase tách sang dự án thứ hai — dự án đó không có 4 entity DTI nào, nên
+       một file test về công thức DTI nằm trong Core.UnitTests sẽ không biên dịch được ở đó.
+
+       Phạm vi: LOGIC THUẦN, không DB, không Docker — công thức tổng hợp, quy đổi kỳ, chuẩn hoá
+       tìm kiếm, khoá sắp xếp mã, và khối quyền cấp màn. Phần cần Postgres thật (dịch LINQ sang
+       SQL, ràng buộc unique/CHECK) thuộc integration test, xem
+       doc/huong_dan/wiki-core/be/04-testing-strategy.md. -->
+
+  <!-- FrameworkReference — KHÔNG phải để dùng API ASP.NET, mà để BẬT PHÉP TỈA gói do shared
+       framework cung cấp. Cần từ 2026-09-11, khi project này tham chiếu Business.Infrastructure:
+       NPOI kéo transitively System.Security.Cryptography.Xml 8.0.2 (16 cảnh báo NU1903). Trên
+       net10.0 gói đó THUỘC framework nên SDK tự tỉa, nhưng danh sách tỉa dẫn xuất từ
+       FrameworkReference của CHÍNH project, không kế thừa qua ProjectReference — lý do đầy đủ đã
+       ghi ở PlatformManager.Business.Infrastructure.csproj.
+       ⚠️ Đừng "dọn" bằng cách ghim tường minh phiên bản mới: ghim chỉ đổi NU1903 thành NU1510. -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <!-- NSubstitute chứ KHÔNG Moq — theo doc/huong_dan/wiki-core/be/04-testing-strategy.md. -->
+    <PackageReference Include="NSubstitute" Version="5.3.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Business\PlatformManager.Business.Domain\PlatformManager.Business.Domain.csproj" />
+    <ProjectReference Include="..\..\Business\PlatformManager.Business.Application\PlatformManager.Business.Application.csproj" />
+
+    <!-- Business.Infrastructure: CHỈ để đọc NGƯỢC file .xlsx mà DB-4 vừa ghi (NPOI vào theo đường
+         transitive). Bố cục file là thứ dễ sai một cách IM LẶNG nhất của cả card — sai chỉ số dòng
+         header, quên dấu "—" ở ô trống, hay đặt nhầm tên sheet đều build xanh, test logic xanh, và
+         chỉ lộ ra khi có người mở file bằng Excel.
+         ⚠️ Cạnh Tests → *.Infrastructure KHÔNG vi phạm luật tầng nào: ApplicationLayerBoundaryTests
+         và ApiLayerBoundaryTests chỉ soi csproj của *.Application và *.Api. -->
+    <ProjectReference Include="..\..\Business\PlatformManager.Business.Infrastructure\PlatformManager.Business.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

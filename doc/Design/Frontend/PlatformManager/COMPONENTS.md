@@ -5,7 +5,7 @@ verified: 2026-09-06
 project: "PlatformManager"
 artifact: "Component index"
 status: "current"
-updated: "2026-09-10"
+updated: "2026-09-11"
 ---
 
 # Components — PlatformManager
@@ -87,7 +87,7 @@ one thing to build.
 | Table | [Components/Table.md](./Components/Table.md) | The table primitive (`.tablewrap`, `.tablewrap.scroll`, global `th`/`td`/zebra) painting **every** table including PrimeNG's |
 | Toast | [Components/Toast.md](./Components/Toast.md) | Floating notification stack — severity icon, title, body, dismiss |
 | Toolbar | [Components/Toolbar.md](./Components/Toolbar.md) | `<app-toolbar>` — the above-list control surface: bounded search, filter panel behind a control with a count badge, removable condition chips, action group |
-| Topbar | [Components/Topbar.md](./Components/Topbar.md) | App-shell sticky header — hamburger, route title, user + logout |
+| Topbar | [Components/Topbar.md](./Components/Topbar.md) | App-shell sticky header — hamburger, route title, user + two account actions (change password, logout) |
 | TrendChart 🚧 | [Components/TrendChart.md](./Components/TrendChart.md) | The app's only chart — single-series line over the saved periods. **Restored 2026-09-05 by decision Q17** and built 2026-09-09 on PrimeNG `p-chart` over `chart.js`, which went back into `src/FE/package.json` the same day. The four `chart-*` roles stay out of the stylesheet by design: the component reads `:root` at runtime and hands the canvas literals (`Tokens/colors.md` § Chart Palette) |
 
 **🚧 marks a spec whose component is built but not yet composed** — it exists under

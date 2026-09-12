@@ -2,8 +2,10 @@
   [title]="'shared.action.changePassword' | translate"
   [subtitle]="subtitleKey() | translate"
 >
-  <!-- Chỉ còn lỗi KHÔNG gắn ô nào (vd `AUTH.CHANGE_PASSWORD_FAILED` 422 — Identity trả lý do
-       chi tiết trong `message`). Lỗi có `fields` đã nằm dưới đúng ô ở dưới. -->
+  <!-- Lỗi KHÔNG gắn ô nào: `message` của envelope (vd `AUTH.CHANGE_PASSWORD_FAILED` 422) HOẶC lỗi
+       mức bản ghi `$record` (mã Identity mà BE chưa ánh xạ về ô nào — vd `CommonPassword`, phát ra
+       khi mật khẩu mới nằm trong danh sách phổ biến). Lỗi có khoá ô đã nằm dưới đúng ô ở dưới.
+       Thứ tự ưu tiên: xem `errorMessage`. -->
   @if (errorMessage(); as message) {
     <div class="login-error show">
       <i class="pi pi-exclamation-circle"></i>

@@ -6,14 +6,25 @@ verified: 2026-09-06
 
 # API Contract — Dashboard DTI (`modules/dashboard`)
 
-> ## 📐 ĐÍCH ĐẾN — CHƯA THI CÔNG
+> ## 🚧 ĐÃ CHỐT — ĐANG THI CÔNG (BE vòng 1 thi công 2026-09-10)
 >
-> **Không có dòng code nào của tính năng này tồn tại hôm nay (2026-09-05).** `src/FE/src/app/modules/dashboard/`
-> và module BE `DtiWeekly` gỡ 2026-08-29. Card này là **hợp đồng phải hiện thực**, không
-> phải mô tả thứ đang chạy.
+> Câu *"không có dòng code nào của tính năng này tồn tại"* (2026-09-05) **hết đúng từ
+> 2026-09-10** cho phía BE:
 >
-> **Đích đến kiến trúc: `PlatformManager.Business.*`** — không dựng lại `Modules.DtiWeekly.*`.
-> 📖 [`../kien-truc-core-module.md`](../kien-truc-core-module.md)
+> | Card | BE hôm nay |
+> | --- | --- |
+> | DB-1 `GET /api/dashboard` | ✅ có endpoint thật — cả 3 `mode`, `trend` theo Q43/Q44/Q54/Q57, ba mã lỗi Q61/Q63 |
+> | DB-3 `GET /api/dashboard/periods` | ✅ có endpoint thật (dùng chung với DM-8) |
+> | DB-4 `GET /api/dashboard/export` | ✅ `IMPLEMENTED` 2026-09-11 — gọi thật, xem § Nghiệm thu của card |
+> | DB-2 | đã gỡ khỏi phạm vi từ 2026-09-05, không dựng lại |
+>
+> 🔴 **DB-1 và DB-3 vẫn `AGREED`, CHƯA `IMPLEMENTED`:** mục 1 của §3 đòi gọi thật ở cả 3 `mode`
+> trên DB có dữ liệu rồi dán shape response THẬT. Lượt 2026-09-10 không làm được bước đó —
+> schema `business` chưa áp lên database nào và Docker không chạy trên máy thi công. Lý do đầy
+> đủ: [`danh-muc-dti.md`](danh-muc-dti.md) §banner.
+>
+> **Kiến trúc: `PlatformManager.Business.*`** — đã dựng đủ 5 project; không dựng lại
+> `Modules.DtiWeekly.*`. 📖 [`../kien-truc-core-module.md`](../kien-truc-core-module.md)
 >
 > **Casing đã CHỐT** (camelCase xuyên suốt, `null` ⇒ khoá vắng mặt, khoá `fields` giữ
 > PascalCase): file chủ là [`danh-muc-dti.md`](danh-muc-dti.md) §0 — **không mô tả lại ở
@@ -80,8 +91,28 @@ Ràng buộc phía FE (ba trạng thái rỗng phải hiển thị tử tế) th
 > một dải `NoticeBanner` kèm nút dẫn sang màn Danh mục ở địa chỉ **`/danh-muc/dti`** (Q33), vì
 > nhập `Tiến độ %` là việc duy nhất làm được lúc đó. Copy và bố cục dải băng thuộc
 > `Screens/01-dashboard.md` + `spec/dashboard-dti/ui-spec.md` — card này chỉ chốt rằng BE
-> **không** cần trường mới nào cho việc đó: FE phân biệt được ca này bằng `table` có phần tử
-> **và** `kpi.overallProgress` vắng mặt.
+> **không** cần trường mới nào cho việc đó.
+
+> ### 🔄 LẬT 2026-09-10 (Q69) — proxy nhận dạng ca Q32 đổi từ `table` sang `kpi`
+>
+> Bản trước chốt: *"FE phân biệt được ca này bằng `table` có phần tử **và**
+> `kpi.overallProgress` vắng mặt"*. **Sai ở vế đầu**, và sai theo đúng luật 1 của chính card
+> này: `search`/`groupId`/`status` **chỉ áp cho `table`**, còn `kpi` luôn tính trên toàn bộ chỉ
+> tiêu của kỳ. Nên lọc một nhóm không có dòng nào ⇒ `table` rỗng trong khi kỳ vẫn đủ chỉ tiêu,
+> và dải băng Q32 biến mất đúng lúc nó cần hiện.
+>
+> **Chốt: hai vế đều đọc từ `kpi`** — cùng một khối, cùng phạm vi tính, không bị bộ lọc động tới:
+>
+> ```
+> ca Q32  ⟺  kpi.totalCriteria > 0  VÀ  kpi.overallProgress vắng mặt
+> ```
+>
+> BE **vẫn không cần trường mới nào** — `totalCriteria` đã có sẵn trong `kpi`, đó là lý do vế kết
+> luận của Q32 giữ nguyên. Bảng điều kiện ba ca (`spec/dashboard-dti/ui-spec.md` §5.3.1) là file
+> chủ của **luật**; dòng trên là ánh xạ luật đó sang **trường trên dây**, thuộc card này.
+>
+> **Nghiệm thu:** ngay sau import, lọc `groupId` về một nhóm **không có chỉ tiêu nào khớp** ⇒
+> `table` rỗng nhưng dải băng Q32 **vẫn hiện**. Dùng proxy cũ thì băng biến mất — đó là ca bắt lỗi.
 
 ---
 
@@ -220,6 +251,34 @@ Thẩm định · Chênh lệch · Trạng thái · Minh chứng/Ghi chú**.
    thành", cách gộp tháng/năm từ các kỳ tuần) nằm ở `spec/dashboard-dti/business-rules.md`
    §Công thức. **BE tính, FE chỉ hiển thị** — FE tính lại là tạo nguồn sự thật thứ hai.
 
+### ⚠️ Khoá nào VẮNG MẶT khỏi JSON — bảng cho mapper FE (đo 2026-09-10)
+
+Cùng luật với [`danh-muc-dti.md`](danh-muc-dti.md) §"Khoá nào VẮNG MẶT" — bằng chứng cấu hình
+serializer ghi ở đó, không chép lại. Phần riêng của DB-1:
+
+| Khoá | Có mặt khi nào |
+| --- | --- |
+| `mode` · `periodLabel` · `periodStart` · `periodEnd` · `kpi` · `groups` · `trend` · `table` | **LUÔN** — bốn mảng/object cuối có thể RỖNG nhưng không bao giờ vắng |
+| `kpi.up` · `kpi.flat` · `kpi.down` · `kpi.done` · `kpi.totalCriteria` | **LUÔN** — số đếm, không nullable |
+| `kpi.overallProgress` | chỉ khi có ít nhất một chỉ tiêu có `Tiến độ %` trong kỳ. **Ngay sau import: VẮNG** |
+| `kpi.delta` · `kpi.previousPeriodLabel` | chỉ khi tìm được kỳ liền trước **CÓ DỮ LIỆU** và cả hai kỳ đều tính được `overallProgress`. **Ngay sau import: VẮNG** |
+| `groups[].progress` | chỉ khi nhóm đó có ít nhất một chỉ tiêu có `Tiến độ %` trong kỳ |
+| `trend[].value` | chỉ khi kỳ đó có dữ liệu. **Phần tử của kỳ thì LUÔN có mặt** kèm `period` + `periodLabel` — đừng lọc bỏ phần tử thiếu `value` |
+| `table[].selfScore` · `verifiedScore` · `status` · `note` | chỉ khi chỉ tiêu có bản ghi đánh giá trong kỳ |
+| `table[].diff` | chỉ khi **cả hai** điểm có mặt |
+
+⚠️ **Ba khoá `overallProgress`/`delta`/`previousPeriodLabel` vắng mặt là trạng thái THƯỜNG GẶP
+NHẤT trong ngày đầu chạy thật**, không phải ca hiếm (§0 + §1.6 của file luật). FE phải hiện dấu
+gạch cho chúng, và **không** được coi khoá vắng là `0`.
+
+⚠️ **Proxy nhận dạng ca Q32 đọc từ `kpi`, không từ `table`:**
+`kpi.totalCriteria > 0 VÀ kpi.overallProgress vắng mặt`. Dùng `table.length` là sai — lọc một
+nhóm không có dòng nào làm `table` rỗng trong khi kỳ vẫn đủ chỉ tiêu, và dải băng biến mất đúng
+lúc nó cần hiện (🔄 LẬT Q69, §0).
+
+> 🔴 **Chưa dán được payload THẬT** — cùng lý do và cùng điều kiện gỡ như đã ghi ở
+> [`danh-muc-dti.md`](danh-muc-dti.md).
+
 ### Mã lỗi của DB-1 — vá 2026-09-09
 
 Bản trước khai *"`status` giá trị lạ -> 400"* trong khối query param mà **không nêu mã nào**,
@@ -245,6 +304,36 @@ và cả card không có mục lỗi. Đóng lỗ đó:
   **cả** `date` lẫn `year` thì giữ mặc định cũ: tuần hiện tại của năm hiện tại. Chế độ
   `month`/`year` **không có ca này** — một tháng dương lịch luôn nằm gọn trong một năm — nên
   Q61 và Q63 là luật của **riêng chế độ Tuần**.
+- **Gửi `year` mà KHÔNG gửi `date` ⇒ tuần ISO CUỐI của năm đó — Q71 (chốt 2026-09-10).**
+  Ca này trước đây **không có luật nào**, và sự im lặng đó đã sinh ra hai kết luận ngược nhau
+  trong cùng một ngày: BE cài fail-closed (`400`), FE thì gửi đúng như card cho phép.
+
+  | `date` | `year` | Kỳ đang xem |
+  | --- | --- | --- |
+  | có | vắng | tuần ISO chứa `date` (Q63) |
+  | có | có, **khớp** năm ISO của tuần chứa `date` | tuần ISO đó |
+  | có | có, **lệch** | `400 DASHBOARD.PERIOD_YEAR_MISMATCH` (Q61) |
+  | **vắng** | **có, = năm ISO hiện tại** | **tuần hiện tại** — giữ nguyên hành vi cũ |
+  | **vắng** | **có, ≠ năm ISO hiện tại** | **tuần ISO CUỐI của năm `year`** |
+  | vắng | vắng | tuần hiện tại của năm hiện tại |
+
+  ⚠️ **`400` CHỈ sinh ở hàng 3** — khi gửi **cả hai** mà lệch nhau. Một bản cài neo `date`
+  mặc định vào *hôm nay* rồi áp Q61 sẽ bắn `400` cho **hàng 5**, và hàng 5 là đường đi hoàn
+  toàn hợp lệ: DB-3 khai *"năm không có dữ liệu ⇒ `weeksInYear` **rỗng**, `200`, không phải
+  lỗi"*, nên FE **không có** `date` nào để gửi. Đây là lỗi đã xảy ra thật và đã sửa.
+
+  **Vì sao tuần CUỐI chứ không phải tuần 1:** khớp ngữ nghĩa *"mới nhất"* mà cả mô hình dùng
+  (§5.2 của `spec/danh-muc-dti/business-rules.md` lấy bản ghi có `AssessmentDate` lớn nhất), và
+  cho biểu đồ `trend` một cửa sổ 12 tuần đầy đủ thay vì đúng một cột — Q57 cắt cửa sổ ở **đầu**
+  năm, nên neo vào tuần 1 sẽ trả về một trục chỉ có một điểm.
+
+  **Vì sao SERVER quy đổi chứ không phải FE tự tính:** cùng lý do Q40 — lịch ISO chỉ có **một**
+  bản cài, ở BE. Bắt FE dựng một `date` cho năm chưa có dữ liệu là dựng bản sao thứ hai của lịch
+  ISO, cộng thêm một quyết định nghiệp vụ (*"năm cũ thì mở ra ở tuần nào"*) mà FE không có thẩm
+  quyền chốt.
+
+  **Nghiệm thu:** `GET /api/dashboard?mode=week&year=<năm chưa có dữ liệu>` (không `date`) ⇒
+  `200`, `periodLabel` chỉ tuần cuối của năm đó. Trả `400` là bản cài còn theo hành vi cũ.
 - **Người dùng bình thường không gặp ba mã trên — Q62 (chốt 2026-09-10).** FE đưa tham số lạ
   trên URL về mặc định **trước** khi gọi API (`spec/dashboard-dti/ui-spec.md` §2), nên các mã
   này là lưới chặn cuối ở BE và **không cần câu hiển thị**. Chúng vẫn phải có ở BE.
@@ -331,7 +420,48 @@ này không nhận `mode` lẫn `status`.
 
 ## CONTRACT DB-4 — "Xuất báo cáo": tải thẳng file `.xlsx`
 
-- **Status: AGREED** (2026-09-05) — thay DB-2 đã gỡ.
+- **Status: IMPLEMENTED** (thi công + gọi thật 2026-09-11; chốt hợp đồng 2026-09-05) — thay DB-2 đã gỡ.
+- Thi công: `src/BE/Business/PlatformManager.Business.Api/Controllers/DashboardController.cs` ·
+  handler `…/Business.Application/Dashboard/ExportDashboardQuery.cs` ·
+  bộ ghi NPOI `…/Business.Infrastructure/Export/DashboardExcelExportWriter.cs`
+
+### Nghiệm thu — gọi thật trên `platformmanager_dev` ngày 2026-09-11
+
+**Nhánh thành công KHÔNG bọc envelope, đúng như card khai** (dán nguyên văn header thật):
+
+```
+HTTP 200
+Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+Content-Disposition: attachment; filename=bao-cao-dti_Tuan-33-2026.xlsx; filename*=UTF-8''bao-cao-dti_Tuan-33-2026.xlsx
+```
+
+Thân là bytes `.xlsx` thật (bắt đầu bằng chữ ký zip `PK`), **không** phải JSON.
+
+**Nhánh lỗi VẪN bọc envelope** — đây là thứ làm ngoại lệ ở trên kiểm được:
+
+| Gửi gì | HTTP | `Content-Type` | `businessCode` |
+| --- | ---: | --- | --- |
+| `mode=year` | 400 | `application/json` | `DASHBOARD.EXPORT_MODE_UNSUPPORTED` |
+| `mode=quarter` | 400 | `application/json` | `DASHBOARD.MODE_INVALID` |
+| `status` ngoài 4 giá trị | 400 | `application/json` | `DASHBOARD.STATUS_INVALID` |
+
+**Kiểm §4.6 — số dòng file = số phần tử `data.table`**, chạy trên 62 chỉ tiêu thật với năm bộ
+tham số khác nhau, tất cả **KHỚP**:
+
+| Bộ tham số | `data.table` | dòng trong file |
+| --- | ---: | ---: |
+| `mode=week` | 62 | 62 |
+| `mode=week` + `status=Hoàn thành` | 15 | 15 |
+| `mode=week` + `search=4.2` | 1 | 1 |
+| `mode=week` + `search=nen tang` (không dấu — Q47) | 8 | 8 |
+| `mode=month` + `status=Đang thực hiện` | 16 | 16 |
+
+**Bố cục file thật** (đọc ngược bằng cách giải nén OOXML): tên sheet `Tuần 33-2026`; dòng 1 tiêu
+đề; dòng 5 `Thuộc tháng` = `Tháng 8/2026` ở file tuần, còn file tháng ghi `Gồm các tuần` =
+`Tuần 31 (27/07 – 02/08) · … · Tuần 36 (31/08 – 06/09)` — **liệt kê cả tuần vắt sang tháng 7 và
+tháng 9**, đúng luật "mọi tuần GIAO với tháng"; dòng 10 `Bộ lọc đang áp` = `Không lọc — đủ 62 chỉ
+tiêu`; header 12 cột ở dòng 12; dòng cuối `TỔNG CỘNG` với tổng bốn cột điểm và **cột `Tiến độ %`
+để trống**.
 - Route: `GET /api/dashboard/export`
 - Query params: **đúng bộ của DB-1**, thêm không gì cả:
 
@@ -423,6 +553,29 @@ dây:
   > theo locale `vi-VN`) **chưa** phải xử lý cho đường này, và sẽ phải xử lý **ngay khi** ai
   > đó thêm `format=csv` trở lại.
 
+### Projection của export là RIÊNG, không dùng lại `table[]` của DB-1 — Q68 (chốt 2026-09-10)
+
+File xuất cần **12 cột** (`spec/dashboard-dti/business-rules.md` §4.3), trong đó ba cột
+`Phụ trách` · `Hạn xử lý` · `Tiến độ %` **không có** trong `table[]` của DB-1 — bảng chi tiết
+trên màn chỉ hiện 9 cột (Q8).
+
+| Câu hỏi | Chốt |
+| --- | --- |
+| DB-1 `table[]` có thêm ba trường đó không | **KHÔNG** — shape của card `AGREED` giữ nguyên 9 cột |
+| Export lấy dữ liệu ở đâu | **projection RIÊNG** của handler export, mang đủ 12 cột, kể cả `OwnerName` (tên đầy đủ tra từ `OwnerId`), `Deadline`, `ProgressPercent` |
+| Hai đường có dùng chung gì không | **có — đúng object bộ lọc** (`search`/`groupId`/`status` + `mode`/`date`/`year`) và **đúng luật chọn bản ghi đại diện cho kỳ** (`spec/danh-muc-dti/business-rules.md` §5.2, Q46). Chỉ **bộ trường chiếu ra** là khác |
+
+**Vì sao không phình `table[]` cho tiện:** ba trường đó không có cột nào trên màn để hiện, nên
+thêm vào là bắt **mọi** lần tải Dashboard mang theo dữ liệu không ai đọc — cộng một lần tra tên
+người cho từng dòng mà màn hình không dùng tới. Chiều ngược cũng sai: bỏ ba cột khỏi file xuất
+là phá round-trip export → sửa → import (§4.3 của file luật).
+
+⚠️ **Ràng buộc phải giữ khi cài hai projection rời nhau:** kiểm nghiệm thu *"số dòng file = số
+phần tử `data.table`"* (`spec/dashboard-dti/business-rules.md` §4.6) là thứ duy nhất cưỡng chế
+hai đường còn lọc giống nhau. Hai projection rời nhau nghĩa là một lần sửa bộ lọc ở một đường sẽ
+**không** làm đường kia đỏ — trừ kiểm này. Đừng bỏ nó, và đừng để hai đường tự viết lại luật lọc:
+tách **một** chỗ dựng `IQueryable` đã lọc, hai handler chỉ khác phép `Select`.
+
 ### Đường đồng bộ, không job nền
 
 62 chỉ tiêu nằm **rất xa** ngưỡng cần job nền. Đi đường đồng bộ: không chạm đĩa, không tạo
@@ -451,6 +604,27 @@ nhóm. Cách hiển thị (nhắc bộ lọc đang áp cạnh nút, hoặc trong
 
 📖 Test nghiệm thu ràng buộc này (số dòng file = số phần tử `data.table`) khai **đúng một
 chỗ**: `spec/dashboard-dti/business-rules.md` §Export. Không chép ra đây.
+
+---
+
+## Rate limit và cache — áp cho MỌI endpoint của card này (Q70, chốt 2026-09-10)
+
+| Câu hỏi | Chốt |
+| --- | --- |
+| Policy rate limit riêng cho DB-1 / DB-3 / DB-4 | **KHÔNG** — không gắn `[EnableRateLimiting]` vào controller Dashboard |
+| Thứ canh chúng | **`GlobalLimiter`** đã chạy sẵn ở host, phủ mọi request đi qua `UseRateLimiter` |
+| Cache (server hoặc HTTP) | **KHÔNG** — không `ResponseCache`, không `IMemoryCache`, không `ETag` |
+
+**Vì sao không thêm policy riêng:** policy riêng chỉ đáng khi một endpoint có hồ sơ lạm dụng khác
+phần còn lại — như `login`, nơi mỗi lần gọi là một lần đoán mật khẩu. Ba endpoint ở đây đều
+`[Authorize]`, chỉ đọc, và chạy trên một tập vài chục chỉ tiêu. Thêm một con số phải chăm sóc cho
+một rủi ro chưa đo được là thêm một chỗ hỏng ít người nhớ.
+
+**Vì sao không cache — lý do nghiệp vụ, không phải lười:** dữ liệu đằng sau ba endpoint này **đổi
+ngay sau mỗi lần sửa inline và mỗi lần import**, mà cả hai đều là thao tác người dùng làm rồi
+**quay lại xem ngay**. Một bản cache dù chỉ vài chục giây cũng biến "số tôi vừa nhập đi đâu mất"
+thành một báo lỗi không tái hiện được. Ngưỡng để xem lại: khi tập chỉ tiêu vượt xa quy mô hiện nay
+hoặc có đo được một truy vấn chậm thật — **có số đo trước, mới thêm cache**.
 
 ---
 

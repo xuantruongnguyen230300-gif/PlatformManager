@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>PlatformManager.Business.Persistence</RootNamespace>
+    <AssemblyName>PlatformManager.Business.Persistence</AssemblyName>
+  </PropertyGroup>
+
+  <!-- CÁCH LƯU DỮ LIỆU của tầng nghiệp vụ: IEntityTypeConfiguration<T> của 4 entity,
+       repository dùng EF, BusinessSeeder. Chỉ EF Core — KHÔNG provider (Npgsql): provider
+       do host/Core.Infrastructure khai một lần ở AddCoreModule, DbContext không biết provider nào.
+
+       IdentityDbContext là kiểu cơ sở của PlatformManagerDbContext, nên kéo theo shared
+       framework ASP.NET Core — cùng lý do FrameworkReference ở Core.Persistence.csproj. -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.11" />
+  </ItemGroup>
+
+  <!-- Đúng cạnh đã khai: Business.Persistence → Core.Persistence (cần KIỂU
+       PlatformManagerDbContext dùng chung), Business.Application, Business.Domain.
+       TUYỆT ĐỐI KHÔNG reference *.Infrastructure hay *.Api — PersistenceLayerBoundaryTests
+       canh cả ở mức assembly lẫn mức văn bản .csproj. -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\Core\PlatformManager.Core.Persistence\PlatformManager.Core.Persistence.csproj" />
+    <ProjectReference Include="..\PlatformManager.Business.Application\PlatformManager.Business.Application.csproj" />
+    <ProjectReference Include="..\PlatformManager.Business.Domain\PlatformManager.Business.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

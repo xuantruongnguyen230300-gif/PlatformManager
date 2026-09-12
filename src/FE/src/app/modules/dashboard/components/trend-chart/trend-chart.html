@@ -27,7 +27,9 @@
         <tr>
           <th scope="row">{{ 'dashboard.grid.trendValueHeader' | translate }}</th>
           @for (row of rows(); track row.Label) {
-            <td>{{ row.Text }}</td>
+            <!-- Kỳ không có số liệu in `—`, KHÔNG in `0%`: bảng này là bản đọc-được của chính
+                 chỗ đường bị ngắt (Q44). -->
+            <td>{{ row.Text ?? ('shared.format.absentValue' | translate) }}</td>
           }
         </tr>
       </tbody>

@@ -44,6 +44,15 @@
          Middleware là internal, nhưng Assembly.GetTypes() vẫn thấy — KHÔNG cần InternalsVisibleTo
          (và vì thế ArchTests không cần Mvc.Testing như IntegrationTests). -->
     <ProjectReference Include="..\..\PlatformManager.Api\PlatformManager.Api.csproj" />
+    <!-- Tầng nghiệp vụ (thêm 2026-09-10). Đủ CẢ NĂM project — ProductAssemblies.All nạp assembly
+         qua typeof, nên thiếu một project ở đây là assembly đó lặng lẽ rơi khỏi phạm vi của 7 luật
+         reflection, không test nào đỏ. Api reference bắc cầu tới cả năm, nhưng khai tường minh để
+         đồ thị đọc được ngay trong .csproj. -->
+    <ProjectReference Include="..\..\Business\PlatformManager.Business.Domain\PlatformManager.Business.Domain.csproj" />
+    <ProjectReference Include="..\..\Business\PlatformManager.Business.Application\PlatformManager.Business.Application.csproj" />
+    <ProjectReference Include="..\..\Business\PlatformManager.Business.Persistence\PlatformManager.Business.Persistence.csproj" />
+    <ProjectReference Include="..\..\Business\PlatformManager.Business.Infrastructure\PlatformManager.Business.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Business\PlatformManager.Business.Api\PlatformManager.Business.Api.csproj" />
   </ItemGroup>
 
   <!-- Kiểu của Api và của Core.Persistence (IdentityDbContext) chạm shared framework ASP.NET

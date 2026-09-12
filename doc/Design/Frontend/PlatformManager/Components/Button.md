@@ -4,14 +4,14 @@ scope: du-an
 verified: 2026-09-06
 project: "PlatformManager"
 status: "draft"
-updated: "2026-08-29"
+updated: "2026-09-11"
 component: "Button"
 sources:
   - "src/FE/src/styles.scss"
   - "src/FE/src/app/shared/components/topbar/topbar.html"
   - "src/FE/src/app/shared/components/toolbar/toolbar.html"
   - "src/FE/src/app/shared/components/confirm-dialog/confirm-dialog.html"
-  - "src/FE/src/app/platform/trang-chu/pages/trang-chu/trang-chu.page.html"
+  - "src/FE/src/app/modules/dashboard/pages/dashboard/dashboard.page.html"
   - "src/FE/src/app/platform/quan-tri-nguoi-dung/pages/quan-tri-nguoi-dung/quan-tri-nguoi-dung.page.html"
   - "src/FE/src/app/platform/quan-tri-nguoi-dung/components/user-form-dialog/user-form-dialog.html"
   - "src/FE/src/app/platform/phan-quyen/pages/phan-quyen/phan-quyen.page.html"
@@ -30,18 +30,18 @@ Single-line text label, optionally preceded by a PrimeIcons `<i class="pi pi-…
 Two of those properties are new on 2026-08-29 and both are load-bearing:
 
 - **The border replaced a transparent one.** `.btn` used to declare `1px solid transparent` so hover colour changes would not shift layout. The new `colors.tonal-bg` fill separates from `colors.card` by only 1.45:1 — not enough to see a button edge — and darkening the fill to 3:1 would drop the dark-blue label below AA. The boundary therefore moved to the border, where it costs nothing. The source records the measurement inline.
-- **`text-decoration: none`.** `<a class="btn">` is how the app navigates with a button (`trang-chu.page.html` → `/doi-mat-khau`). Without the reset the anchor renders underlined and reads as a broken link.
+- **`text-decoration: none`.** It is what lets an `<a>` be styled as a button instead of rendering underlined and reading as a broken link. **No `<a class="btn">` ships today** — the home screen's link to `/doi-mat-khau` was the only one and went with that screen on 2026-09-11. Check before relying on the variant: `grep -rn '<a[^>]*class="btn' src/FE/src/app --include=*.html`.
 
 ## Variants
 
 | Variant | Classes | Key values | When to use |
 | --- | --- | --- | --- |
-| Default (tonal secondary) | `btn` | border `colors.line`, fill `colors.tonal-bg`, ink `colors.tonal-ink` | Every labelled secondary action: dialog `Huỷ`, toolbar `Xoá lọc`, topbar `Đăng xuất`, the home card's `Đổi mật khẩu` link |
+| Default (tonal secondary) | `btn` | border `colors.line`, fill `colors.tonal-bg`, ink `colors.tonal-ink` | Every labelled secondary action: dialog `Huỷ`, toolbar `Xoá lọc`, and both topbar account actions — `Đăng xuất` plus the `Đổi mật khẩu` link that moved there on 2026-09-11 when the old home card was deleted |
 | Primary | `btn primary` | fill **and** border `colors.brand`, ink `colors.on-primary` | The one primary action per context: `+ Thêm người dùng`, `Áp dụng`, `Lưu thay đổi`, `Lưu`, `Đăng nhập`, `Đổi mật khẩu` |
 | Danger | `btn danger` | border `colors.danger-border`, fill `colors.bad-bg`, ink `colors.bad` | Destructive confirmation only — `ConfirmDialog`'s confirm action while `[confirmDanger]` is true |
 | Small | `btn sm` | padding `spacing.button-sm-padding`, `typography.button-sm-label`; everything else inherited | Row-level actions inside a table. **Declared in the shared library, no shipped call site today** — the one grid that ships uses ghost icon buttons instead |
 | Block | `btn primary btn-block` | `width: 100%`, padding `spacing.button-block-padding`, `typography.button-block-label`, centred flex, gap `spacing.sp-3` | Full-width form submit on the two auth screens |
-| Anchor | `a.btn` | identical box; `text-decoration: none` is what makes it read as a button | `trang-chu.page.html` — the only route into `/doi-mat-khau` when the account is not forced to change its password |
+| Anchor | `a.btn` | identical box; `text-decoration: none` is what makes it read as a button | **No shipped call site since 2026-09-11.** The home screen's link into `/doi-mat-khau` was the only one, and it went with that screen — see Normalize #5 |
 | Disclosure summary | `details.filter > summary.btn` | `.btn` box plus `list-style: none`, `inline-flex`, gap `spacing.sp-2`, `user-select: none`; while `[open]` the summary flips to fill and border `colors.brand`, ink `colors.on-primary` | The toolbar's `Lọc` trigger |
 | Icon-only shell | `btn sidebar-hamburger` | `.btn` base plus screen-local geometry in `topbar.scss`; hidden above `spacing.breakpoint-tablet` | The mobile drawer trigger, holding only `pi pi-bars` |
 
@@ -107,7 +107,7 @@ The `translateY(1px)` press offset is a literal with no token behind it — ther
 </button>
 ```
 
-Sources: `src/FE/src/styles.scss` (§ 3.1 `.btn`, `.btn.primary`, `.btn.danger`, `.btn.sm`, `.btn-block`; § 6 `.filter > summary`, `.filter[open] > summary`), `src/FE/src/app/shared/components/topbar/topbar.html`, `src/FE/src/app/shared/components/topbar/topbar.scss` (`.sidebar-hamburger`), `src/FE/src/app/shared/components/toolbar/toolbar.html`, `src/FE/src/app/shared/components/confirm-dialog/confirm-dialog.html`, `src/FE/src/app/platform/trang-chu/pages/trang-chu/trang-chu.page.html`, `src/FE/src/app/platform/quan-tri-nguoi-dung/pages/quan-tri-nguoi-dung/quan-tri-nguoi-dung.page.html`, `src/FE/src/app/platform/quan-tri-nguoi-dung/components/user-form-dialog/user-form-dialog.html`, `src/FE/src/app/platform/phan-quyen/pages/phan-quyen/phan-quyen.page.html`, `src/FE/src/app/platform/login/pages/login/login.page.html`, `src/FE/src/app/platform/doi-mat-khau/pages/doi-mat-khau/doi-mat-khau.page.html`
+Sources: `src/FE/src/styles.scss` (§ 3.1 `.btn`, `.btn.primary`, `.btn.danger`, `.btn.sm`, `.btn-block`; § 6 `.filter > summary`, `.filter[open] > summary`), `src/FE/src/app/shared/components/topbar/topbar.html`, `src/FE/src/app/shared/components/topbar/topbar.scss` (`.sidebar-hamburger`), `src/FE/src/app/shared/components/toolbar/toolbar.html`, `src/FE/src/app/shared/components/confirm-dialog/confirm-dialog.html`, `src/FE/src/app/modules/dashboard/pages/dashboard/dashboard.page.html:12` (plain `.btn`, the load-failure Retry) and `:113-121` (`.btn.primary`, `Xuất báo cáo`), `src/FE/src/app/platform/quan-tri-nguoi-dung/pages/quan-tri-nguoi-dung/quan-tri-nguoi-dung.page.html`, `src/FE/src/app/platform/quan-tri-nguoi-dung/components/user-form-dialog/user-form-dialog.html`, `src/FE/src/app/platform/phan-quyen/pages/phan-quyen/phan-quyen.page.html`, `src/FE/src/app/platform/login/pages/login/login.page.html`, `src/FE/src/app/platform/doi-mat-khau/pages/doi-mat-khau/doi-mat-khau.page.html`
 
 ## Do / Don't
 
@@ -125,6 +125,7 @@ Sources: `src/FE/src/styles.scss` (§ 3.1 `.btn`, `.btn.primary`, `.btn.danger`,
 2. **The `translateY(1px)` press offset is a bare literal.** Shadows and durations gained tokens in the 2026-08-29 pass (`shadow.*`, `duration.*`); motion *distance* still has none.
 3. **`.btn-block` is only ever combined with `primary`.** A tonal or danger block button has no defined treatment should one be needed.
 4. **`summary.btn` inherits the button box but not `:disabled`.** A `<summary>` cannot be disabled, so a filter trigger that must be unavailable has no shipped appearance.
+5. **The `a.btn` anchor variant now has no call site.** It lost its only one when the home screen was deleted on 2026-09-11. Keep the rule only if a link-shaped action lands again; otherwise it is, like `.btn.sm`, a spec for something nobody renders. The consequence is not cosmetic: `/doi-mat-khau` is now reachable only by the forced-change redirect or by typing its URL.
 
 ## Resolved in the 2026-08-29 redesign
 <!-- Items that used to sit in "Normalize on redesign" and were actually done. Kept, not deleted, so the history is not lost. -->

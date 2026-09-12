@@ -1,7 +1,7 @@
 ---
 kind: lich-su
 scope: du-an
-verified: 2026-09-03
+verified: khong-ap-dung
 ---
 
 # Cấu trúc Database — schema `business` (PlatformManager)
@@ -10,7 +10,7 @@ verified: 2026-09-03
 >
 > | Trong file này | Thực tế hôm nay |
 > | --- | --- |
-> | 5 bảng `business.*` của module DTI Weekly | **Không entity nào còn khai schema `business`** — đo: `grep -c 'ToTable("[A-Za-z]*", "business")' src/BE/PlatformManager.Api/Persistence/Migrations/PlatformManagerDbContextModelSnapshot.cs` → `0` |
+> | 5 bảng `business.*` của module DTI Weekly | **Không bảng nào trong 5 bảng đó còn trong code.** ⚠️ Lệnh đếm cũ ở ô này (`grep -c 'ToTable(…, "business")'` trên `ModelSnapshot`) nay trả **4**, KHÔNG phải `0` — nhưng 4 đó là **bộ bảng MỚI** (2026-09-10), không phải 5 bảng cũ. Lệnh ấy đếm "có bao nhiêu bảng ở schema `business`", nó **không** phân biệt được bộ cũ với bộ mới, nên nó đã thôi chống lưng được cho câu này. Phép kiểm đúng: 3 lệnh ở [`cau-truc-database-dti.md`](cau-truc-database-dti.md) §"Ba lệnh tự-kiểm", cộng `grep -rn "class CriteriaEvidence" src/BE --include=*.cs \| grep -v /obj/` → **rỗng** (bảng thứ năm không dựng lại). Chữ `class` là bắt buộc: mẫu trần khớp cả hai CHÚ THÍCH đang nhắc tên nó, tức trả `2` cho một cây mã hoàn toàn đúng |
 > | `src/BE/Modules/DtiWeekly.*` | Thư mục **đã xoá 2026-09-08** — module gỡ 2026-08-29, phần rác build còn lại dọn nốt; xem `doc/kien-truc-core-module.md:42` |
 > | Baseline `0001_initial_baseline.sql` | Chỉ dựng **11 bảng `core`**, không bảng `business` nào |
 >
@@ -21,14 +21,15 @@ verified: 2026-09-03
 >
 > Nguồn sống về ranh giới schema: [`cau-truc-database.md`](cau-truc-database.md) §1.1.
 >
-> ### ➡️ Thiết kế THAY THẾ đã có (2026-09-06) — đọc trước khi viết migration
+> ### ➡️ Thiết kế THAY THẾ đã có (2026-09-06), và đã THI CÔNG (2026-09-10)
 >
-> Bộ bảng `business.*` được thiết kế lại cho đợt dựng lại DTI. **Đặc tả đầy đủ — thực thể,
-> từng cột, kiểu, ràng buộc, khoá ngoại xuyên schema, chỉ mục — nằm ở
-> [`../spec/danh-muc-dti/business-rules.md`](../spec/danh-muc-dti/business-rules.md) §1 "Mô hình
-> dữ liệu".** File bạn đang đọc **không** được cập nhật theo: nó mô tả *schema đang chạy*, mà
-> hôm nay schema `business` **rỗng** — nên nó chỉ trở lại thành nguồn sống sau khi migration
-> đầu tiên chạy.
+> Bộ bảng `business.*` được thiết kế lại cho đợt dựng lại DTI, và nay đã thành entity +
+> migration thật. **Schema `business` hôm nay:**
+> [`cau-truc-database-dti.md`](cau-truc-database-dti.md). **Đặc tả từng cột:**
+> [`../spec/danh-muc-dti/business-rules.md`](../spec/danh-muc-dti/business-rules.md) §1.
+>
+> File bạn đang đọc **không** mô tả bộ bảng mới, và cố ý không bao giờ mô tả — nó chỉ giữ 5 bảng
+> đã chết.
 >
 > Ba khác biệt lớn nhất so với 5 bảng cũ dưới đây, nêu ra để người đọc không chép nhầm:
 >
@@ -38,57 +39,20 @@ verified: 2026-09-03
 > | Kỳ suy ra từ phần ngày của `DateCreate`, kèm hàm SQL `IMMUTABLE` viết tay để index được | cột **`AssessmentDate`** riêng kiểu `date` — EF Core index thẳng, không cần hàm SQL tay |
 > | Chỉ có `ProgressPercent` | thêm **`SelfScore`** · **`VerifiedScore`**; `Chênh lệch` là trường **TÍNH** (`Thẩm định − Tự đánh giá`), **không lưu** |
 
-## 📐 ĐÍCH ĐẾN — CHƯA THI CÔNG: 4 bảng `business` của đợt dựng lại (khai 2026-09-09)
+## ➡️ 4 bảng ĐANG SỐNG — đã tách sang file chủ riêng (2026-09-10)
 
-**Chưa có dòng code nào**, và cũng chưa có migration nào — kiểm bằng chính lệnh ở banner
-trên (`grep -c 'ToTable("[A-Za-z]*", "business")' …ModelSnapshot.cs` → `0`). Mục này khai
-**bảng nào sẽ có, ở schema nào, entity thuộc project nào**; nó cố ý **không** chép lại từng
-cột.
+📖 Schema `business` hôm nay (4 bảng của cụm DTI, ràng buộc, hai script `.sql`, ba lệnh tự-kiểm):
+đọc [`cau-truc-database-dti.md`](cau-truc-database-dti.md).
 
-| Bảng (schema `business`) | Entity ở | Đặc tả từng cột — file chủ |
-| --- | --- | --- |
-| `CriteriaGroups` | `PlatformManager.Business.Domain` | [`../spec/danh-muc-dti/business-rules.md`](../spec/danh-muc-dti/business-rules.md) §1.1 |
-| `Criteria` | `PlatformManager.Business.Domain` | cùng file, §1.2 |
-| `CriteriaAssessments` | `PlatformManager.Business.Domain` | cùng file, §1.3 |
-| `ImportJobs` | `PlatformManager.Business.Domain` | cùng file, §1.5 — bộ cột cũ **cộng** một cột tuần đích đã quy đổi (Q45) |
+**Vì sao tách** (quyết định người dùng 2026-09-10): file bạn đang đọc mang banner
+`TÀI LIỆU LỊCH SỬ`, và banner đó **miễn trừ file khỏi mục 4/5/6 của `check-docs.sh`**
+([`../.claude/CLAUDE.md`](../.claude/CLAUDE.md) §5). Miễn trừ ấy đúng cho 5 bảng đã chết bên
+dưới — không còn source để đối chiếu — nhưng **sai cho phần đang sống**, và cái giá lộ ra ngay
+lượt đầu: ba lệnh tự-kiểm viết ở đây đều cho kết quả mâu thuẫn với câu văn ngay trên chúng, mà
+không có gì báo. Bốn bảng đó còn bị tra cứu suốt vòng 2 (import DM-7, export DB-4) nên chúng phải
+nằm trong vùng gate kiểm được.
 
-> 🔄 **LẬT 2026-09-10 (Q45).** Hàng `ImportJobs` ở trên từng ghi *"bộ cột giữ nguyên như hàng
-> `ImportJobs` ở §Danh sách bảng dưới đây"*. Không còn giữ nguyên: Q45 thêm một cột lưu **tuần
-> đích đã quy đổi** (không bao giờ là `"all"`). Đặc tả từng cột nay ở file chủ, như ba bảng kia —
-> hàng `ImportJobs` ở §Danh sách bảng là **lịch sử**, đừng chép cột từ đó.
-
-**Ba luật khai bảng, cả ba đều hỏng im lặng nếu quên:**
-
-1. **Khai schema TƯỜNG MINH trong `ToTable("<Tên>", "business")`.** Entity không khai schema
-   rơi vào `core` — [`cau-truc-database.md`](cau-truc-database.md) §1.1. Triệu chứng không
-   phải lỗi biên dịch mà là một bảng nghiệp vụ nằm lẫn trong schema đi theo CoreBase.
-2. **EF Configuration đặt ở `PlatformManager.Business.Persistence`**, để nó vào model qua
-   `PersistenceAssembly` của registrar tầng nghiệp vụ — cơ chế ở
-   [`kien-truc-core-module.md`](kien-truc-core-module.md) §`IModuleRegistrar`. Đặt nhầm sang
-   `Core.Persistence` là kéo entity nghiệp vụ vào Core.
-3. **`ImportJobs` là bảng NGHIỆP VỤ (Q11, chốt 2026-09-09)** — không phải bảng Core, dù nó
-   lưu *trạng thái tiến trình* chứ không lưu dữ liệu nghiệp vụ. Core chỉ giữ **cơ chế** chạy
-   job (`IBackgroundJobScheduler`) và lưu file; bảng theo dõi thuộc tầng nghiệp vụ dùng nó.
-   Chốt này khớp [`cau-truc-database.md`](cau-truc-database.md) (đã trỏ `ImportJobs` sang
-   file này từ trước) và
-   [`huong_dan/wiki-core/be/15-import-export.md`](huong_dan/wiki-core/be/15-import-export.md)
-   §1 (sửa cùng ngày — bản trước xếp "theo dõi trạng thái" nhầm vào cột Core).
-
-**Khoá ngoại xuyên schema — đúng một, đúng một chiều:**
-
-```
-business."CriteriaAssessments"."OwnerId"  →  core."AspNetUsers"."Id"
-```
-
-Không có FK nào đi ngược `core → business`. Đây cũng là lý do hai schema ở chung **một**
-database (Postgres không khai được FK xuyên database) — [`cau-truc-database.md`](cau-truc-database.md) §1.1.
-
-**`CriteriaEvidences` KHÔNG dựng lại** — bảng thứ năm của thiết kế cũ bị bỏ hẳn, `Minh
-chứng/Ghi chú` là **một ô text** trên `CriteriaAssessments` (bảng khác biệt ở banner trên).
-
-> **Mục này trở thành ✅ khi nào:** sau khi migration đầu tiên chạy, cập nhật §Danh sách bảng
-> bên dưới cho khớp schema thật rồi đổi `kind` của file khỏi `lich-su`. Đừng đổi nhãn trước
-> lúc đó — [`../.claude/CLAUDE.md`](../.claude/CLAUDE.md) §4.
+Giữ **một dòng trỏ đường** thay vì hai bản mô tả — `.claude/CLAUDE.md` §5.
 
 ## Vì sao file này tách khỏi file chủ schema `core`
 

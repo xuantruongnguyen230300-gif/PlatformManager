@@ -82,7 +82,7 @@ export class QuanTriNguoiDungService {
    * **`version` bật lớp chống ghi đè** (nối 2026-09-08, hoàn tất quyết định 3 của
    * doc/contracts/users.md §"Quyết định người dùng 2026-08-30"). Trước ngày này FE chỉ gửi 3
    * trường `{ email, fullName, roles }`, mà BE lại chỉ kiểm khi client CÓ gửi token
-   * (`UpdateUserCommand.cs:62`) — nên lớp bảo vệ 409 đã tồn tại đủ ở BE nhưng chưa bên nào bật
+   * (`UpdateUserHandler.Handle`) — nên lớp bảo vệ 409 đã tồn tại đủ ở BE nhưng chưa bên nào bật
    * lên, và hai admin sửa cùng một người vẫn ghi đè nhau im lặng.
    *
    * Gửi `version: null` khi không có token (BE cũ) chứ không bỏ hẳn key: hai cách cho ra cùng
