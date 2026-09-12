@@ -1,10 +1,10 @@
 ---
 kind: luat
 scope: du-an
-verified: 2026-09-06
+verified: 2026-09-11
 project: "PlatformManager"
 status: "draft"
-updated: "2026-09-06"
+updated: "2026-09-11"
 library: "PrimeIcons v7 (icon font, loaded globally via angular.json, authored as <i class=\"pi pi-*\">) + PrimeNG inline SVG (injected at runtime by the paginator and loading spinner of the one shipped p-table, not written in src/FE)"
 legacy_exceptions: ["Unicode box-drawing glyph (└) as the permission-matrix tree branch", "Unicode bullet (●) inside the user-status Badge label"]
 ---
@@ -73,8 +73,9 @@ Paths in the last column are relative to `src/FE/src/app/`.
 | Edit a user row | pencil | PrimeIcons | `pi pi-pencil` on `.icon-btn.primary` | `platform/quan-tri-nguoi-dung/components/user-grid-table/user-grid-table.html` |
 | Lock a user account | closed padlock | PrimeIcons | `pi pi-lock` (bound `[class.pi-lock]="!row.IsLocked"`) | `…/user-grid-table.html` |
 | Unlock a user account | open padlock | PrimeIcons | `pi pi-lock-open` (bound `[class.pi-lock-open]="row.IsLocked"`) | `…/user-grid-table.html` |
-| Home — "no business module yet" banner | info in circle | PrimeIcons | `pi pi-info-circle` inside `.notice` | `platform/trang-chu/pages/trang-chu/trang-chu.page.html` |
-| Home — go to change password | key | PrimeIcons | `pi pi-key` inside an `<a class="btn">` | `platform/trang-chu/pages/trang-chu/trang-chu.page.html` |
+| ~~Home — "no business module yet" banner~~ | ~~info in circle~~ | — | — | **gỡ 2026-09-11**: `platform/trang-chu/` đã xoá cùng lượt hoán đổi `/trang-chu` (Q3). Biến thể `.notice` + `pi pi-info-circle` vẫn ship, nay ở hai màn DTI — xem hai hàng ngay dưới |
+| DTI catalogue / Dashboard — in-page notice | info in circle | PrimeIcons | `pi pi-info-circle` inside `.notice` | `modules/danh-muc-dti/pages/danh-muc-dti/danh-muc-dti.page.html`, `modules/dashboard/pages/dashboard/dashboard.page.html` |
+| Topbar — go to change password | key | PrimeIcons | `pi pi-key` inside an `<a class="btn">` | `shared/components/topbar/topbar.html` |
 | Permission matrix — explanatory footnote | info in circle | PrimeIcons | `pi pi-info-circle` (`aria-hidden`) | `platform/phan-quyen/pages/phan-quyen/phan-quyen.page.html` |
 | Submit sign-in | enter arrow | PrimeIcons | `pi pi-sign-in` | `platform/login/pages/login/login.page.html` |
 | Username field adornment | **person** (decorative) | PrimeIcons | `pi pi-user` | `platform/login/pages/login/login.page.html` |
@@ -108,7 +109,7 @@ Paths in the last column are relative to `src/FE/src/app/`.
 
 PrimeNG's table also ships sort and filter icons (`SortAltIcon`, `ArrowUpIcon`, `ArrowDownIcon`, `FilterIcon`), but **none of them render here** — no template uses `pSortableColumn`, `[sortField]` or `[filters]`. The app's own funnel (`pi-filter`, toolbar) is unrelated to PrimeNG's `FilterIcon`; they would collide visually if column filters were ever switched on. Listed so a future `sortable` flag is understood to add icons nobody chose.
 
-**Actions that deliberately ship without an icon.** Most `.btn`s are text-only — dialog close/cancel/save, "Lưu thay đổi" on both Phân quyền tabs, the lock confirmation, "+ Thêm người dùng", and the toolbar's clear/apply filter pair. The exceptions, all listed as rows above, are: the sign-in submit (`pi-sign-in`), the topbar's sign-out (`pi-sign-out`), the home page's change-password link (`pi-key`), and the two reload/retry buttons (`pi-refresh`). Every `<select>` in the filter panel is unadorned, and so are the two `<button>`s of the language switcher.
+**Actions that deliberately ship without an icon.** Most `.btn`s are text-only — dialog close/cancel/save, "Lưu thay đổi" on both Phân quyền tabs, the lock confirmation, "+ Thêm người dùng", and the toolbar's clear/apply filter pair. The exceptions, all listed as rows above, are: the sign-in submit (`pi-sign-in`), the topbar's sign-out (`pi-sign-out`), the topbar's change-password link (`pi-key`), and the two reload/retry buttons (`pi-refresh`). Every `<select>` in the filter panel is unadorned, and so are the two `<button>`s of the language switcher.
 
 > 🔄 **SỬA 2026-09-06 — this paragraph used to quote the button labels as Vietnamese literals** (`Đóng`, `Huỷ`, `Lưu`, `Xoá lọc`, `Áp dụng`, `Đăng xuất`…). Those strings no longer exist in any template: every one is now a translation key resolved at runtime, so quoting them here described a template that has not shipped since the i18n runtime landed. Buttons are named by role above instead. It also missed the two `pi-refresh` buttons, which are genuine counter-examples to "text-only".
 

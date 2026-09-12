@@ -6,6 +6,24 @@
     <RootNamespace>PlatformManager.Core.IntegrationTests</RootNamespace>
   </PropertyGroup>
 
+  <!-- Bộ test NGHIỆP VỤ dùng lại hạ tầng test ở đây: PostgresFixture (public, KẾ THỪA ĐƯỢC) và
+       IntegrationTestHostEnvironment (internal). Mở internal cho ĐÚNG một assembly thay vì đổi lớp
+       kia thành public — nó là hạ tầng của CÂY TEST, không phải API để bất kỳ ai dùng, và giữ
+       internal là cách nói ra điều đó.
+
+       ✅ Cạnh này VÔ HẠI với lượt tách CoreBase (làm rõ 2026-09-11 sau finding F5): InternalsVisibleTo
+       trỏ một assembly KHÔNG TỒN TẠI cũng không gây lỗi biên dịch lẫn lỗi chạy — nó chỉ là một
+       attribute không ai khớp. Gỡ cây src/BE/Business/ đi thì dòng này nằm im, vô hại.
+
+       🛑 Cạnh NGUY HIỂM là một cạnh KHÁC, và nó đã bị gỡ: bản đầu của lượt 2026-09-11 khai cứng ba
+       file .sql của Business.Persistence vào chính PostgresFixture. Cạnh đó KHÔNG tự biến mất khi
+       gỡ cây Business — nó làm toàn bộ collection chết ở InitializeAsync. Nay danh sách script
+       nghiệp vụ sống ở BusinessPostgresFixture.ExtraScripts, tức chết cùng project của nó.
+       Phép thử: xoá src/BE/Business/ thì project NÀY phải vẫn biên dịch và chạy nguyên vẹn. -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="PlatformManager.Business.IntegrationTests" />
+  </ItemGroup>
+
   <!-- PlatformManagerDbContext kế thừa IdentityDbContext → cần shared framework ASP.NET Core. -->
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />

@@ -62,6 +62,16 @@ internal static class ProductAssemblies
         // controller bị đem đi kiểm.
         typeof(Core.Api.ApiControllerBase).Assembly,
         typeof(Api.Common.CorsPolicyOptions).Assembly,
+
+        // Tầng nghiệp vụ — thêm 2026-09-10 cùng lượt dựng Business.* (vòng 1 cụm DTI). ĐỦ CẢ NĂM
+        // assembly, đúng như khối cảnh báo phía trên dặn. Business.Api là mục quan trọng nhất:
+        // thiếu nó thì EveryController_Inherits_ApiControllerBase không nhìn thấy controller
+        // nghiệp vụ nào, tức luật fail-closed [Authorize] ngừng canh đúng tập controller mới viết.
+        typeof(Business.Domain.Entities.Criteria).Assembly,
+        typeof(Business.Application.DependencyInjection).Assembly,
+        typeof(Business.Persistence.BusinessSeeder).Assembly,
+        typeof(Business.Infrastructure.DependencyInjection).Assembly,
+        typeof(Business.Api.Controllers.CriteriaController).Assembly,
     ];
 
     /// <summary>
@@ -186,8 +196,17 @@ internal static class RepoSourceTree
     public static IReadOnlyList<string> ProductSourceFiles() =>
     [
         .. CoreSourceFiles(),
+        .. CSharpFilesUnder(BusinessDirectory),
         .. CSharpFilesUnder(ApiDirectory),
     ];
+
+    /// <summary>
+    /// Thư mục chứa mọi project <c>PlatformManager.Business.*</c> (thêm 2026-09-10). Mọi project
+    /// nghiệp vụ mới phải nằm dưới đây để tự động vào phạm vi <see cref="ProductSourceFiles"/> —
+    /// đặt chỗ khác là tự rơi khỏi 5 luật quét văn bản, y như lý do project Core mới phải nằm
+    /// trong <c>Core/</c>.
+    /// </summary>
+    public static string BusinessDirectory => Path.Combine(BackendRoot, "Business");
 
     /// <summary>
     /// Thư mục chứa mọi project <c>PlatformManager.Core.*</c> — đếm bằng lệnh, không chép số ở

@@ -16,7 +16,13 @@ import type { ChartData, ChartOptions } from 'chart.js';
  */
 export interface ITrendPoint {
   readonly Label: string;
-  readonly Value: number;
+  /**
+   * `null` = kỳ KHÔNG có dữ liệu (Q44, 2026-09-10). Phần tử vẫn phải có mặt trong `points`.
+   *
+   * 🛑 Đừng "dọn" các phần tử `null` cho gọn, và đừng kẹp chúng về `0`. Lý do ở ràng buộc 2 trong
+   * JSDoc của class.
+   */
+  readonly Value: number | null;
 }
 
 /** Trục Y ghim cứng, không tự co giãn theo dữ liệu. */
@@ -82,9 +88,16 @@ function withAlpha(color: string, alpha: number): string {
  * ## Bốn ràng buộc, mỗi cái chặn một cách đọc sai số liệu
  *
  * 1. **Trục Y ghim `[0, 100]`.** Trục tự co giãn biến một biến động 2 điểm thành một vách đá.
- * 2. **Chỉ vẽ điểm CÓ dữ liệu** — không nội suy, không chèn `null` cho đủ 52 tuần. Chuỗi thưa vẽ
- *    ra đường đứt đoạn, và đó là sự thật; một đường liền do nội suy là số liệu bịa
+ * 2. **Mỗi kỳ một ô trên trục; kỳ rỗng để `null`, đường ngắt đúng chỗ đó** — không nội suy,
+ *    không `spanGaps`. Một đường liền qua chỗ không có số liệu là số liệu bịa
  *    (`spec/dashboard-dti/business-rules.md` §1.5).
+ *
+ *    > 🔄 **LẬT 2026-09-10 (Q44).** Ràng buộc này trước đây đọc *"Chỉ vẽ điểm CÓ dữ liệu — không
+ *    > chèn `null` cho đủ 52 tuần"*, và nó **sai về kỹ thuật**: trên trục **category** của
+ *    > `chart.js`, bỏ hẳn một điểm thì hai điểm kề nhau được nối THẲNG — trục không có ô nào cho
+ *    > kỳ bị bỏ, nên không có khoảng đứt nào để nhìn thấy. Chỉ một `null` nằm đúng ô của kỳ (khi
+ *    > `spanGaps` tắt) mới ngắt được đường. BE nay trả **đủ** các kỳ của phạm vi
+ *    > (`doc/contracts/dashboard.md` DB-1 luật 2); vế "không nội suy" giữ nguyên.
  * 3. **`tension: 0`** — đường gấp khúc, không làm mượt. Đường cong bịa ra những giá trị trung
  *    gian chưa từng được đo.
  * 4. **Giá trị kẹp `[0, 100]`** trước khi vẽ.
@@ -122,9 +135,9 @@ export class TrendChart {
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
   /**
-   * Chuỗi điểm, đã sắp xếp theo thời gian và ĐÃ LOẠI những kỳ không có số liệu.
+   * Chuỗi điểm, đã sắp xếp theo thời gian, **đủ mọi kỳ của phạm vi** — kỳ rỗng mang `Value: null`.
    *
-   * 🛑 Đừng chèn điểm `null` cho đủ số kỳ trong năm — xem ràng buộc 2 ở JSDoc của class.
+   * 🛑 Đừng lọc bỏ phần tử `null` trước khi truyền vào — xem ràng buộc 2 ở JSDoc của class.
    */
   readonly points = input<readonly ITrendPoint[]>([]);
 
@@ -139,7 +152,15 @@ export class TrendChart {
   /** `localeId` của ngôn ngữ đang chọn (cổng G4 — không `inject(LanguageService)`). */
   readonly localeId = input<string>('vi');
 
-  protected readonly hasData = computed<boolean>(() => this.points().length > 0);
+  /**
+   * "Có gì để vẽ không" — đo bằng *"có kỳ nào MANG GIÁ TRỊ không"*, **không** bằng *"mảng có phần
+   * tử không"* (`spec/dashboard-dti/ui-spec.md` §5.3, sửa theo Q44).
+   *
+   * Sau Q44 mảng gần như không bao giờ rỗng: ngay sau import, BE vẫn trả đủ 12 kỳ với `value`
+   * vắng mặt ở cả 12. Đo bằng `length` khi đó sẽ vẽ ra một cặp trục trống hoàn toàn — đúng thứ
+   * trạng thái rỗng sinh ra để thay thế.
+   */
+  protected readonly hasData = computed<boolean>(() => this.points().some((point) => point.Value !== null));
 
   /**
    * Ba token nền đọc một lần từ `:root`, cộng màu mặt card cho viền điểm.
@@ -171,7 +192,8 @@ export class TrendChart {
       labels: points.map((point) => point.Label),
       datasets: [
         {
-          data: points.map((point) => Math.min(Y_MAX, Math.max(Y_MIN, point.Value))),
+          // `null` đi thẳng vào dataset và giữ đúng ô của kỳ; chỉ giá trị THẬT mới bị kẹp.
+          data: points.map((point) => (point.Value === null ? null : Math.min(Y_MAX, Math.max(Y_MIN, point.Value)))),
           borderColor: palette.series,
           backgroundColor: palette.seriesFill,
           pointBackgroundColor: palette.series,
@@ -181,6 +203,10 @@ export class TrendChart {
           borderWidth: LINE_WIDTH,
           tension: 0,
           fill: true,
+          // 🛑 Khai TƯỜNG MINH dù `false` đã là mặc định của chart.js: bật nó lên là nối liền qua
+          // đúng chỗ không có số liệu, tức xoá mất thứ Q44 vừa dựng ra. Một dòng ở đây làm ý định
+          // hiện rõ trên diff nếu có người đổi.
+          spanGaps: false,
         },
       ],
     };
@@ -219,11 +245,13 @@ export class TrendChart {
   });
 
   /** Giá trị từng điểm cho bảng thay thế dành cho trình đọc màn hình. */
-  protected readonly rows = computed<readonly { Label: string; Text: string }[]>(() => {
+  protected readonly rows = computed<readonly { Label: string; Text: string | null }[]>(() => {
     const percent = this.percentFormatter();
     return this.points().map((point) => ({
       Label: point.Label,
-      Text: percent.format(Math.min(Y_MAX, Math.max(Y_MIN, point.Value)) / 100),
+      // `null` ⇒ ô để trống chỗ này và template điền `—`: bảng thay thế phải nói được "kỳ này
+      // không có số", chứ không lặng lẽ in `0%`.
+      Text: point.Value === null ? null : percent.format(Math.min(Y_MAX, Math.max(Y_MIN, point.Value)) / 100),
     }));
   });
 

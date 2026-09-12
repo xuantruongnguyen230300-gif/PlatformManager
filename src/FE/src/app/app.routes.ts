@@ -7,11 +7,15 @@ import { Routes } from '@angular/router';
 // `platform/` = màn hình Core dùng lại được cho mọi sản phẩm (đăng nhập, đổi mật khẩu, quản trị
 // người dùng, phân quyền); `modules/` = module NGHIỆP VỤ — xem doc/kien-truc-core-module.md.
 //
-// `/trang-chu` VẪN là trang đích mặc định (đích của `''`, của `**`, và của mọi chuyển hướng "về
-// chỗ an toàn"). Dashboard DTI sẽ THAY nó theo chốt Q3 (spec/dashboard-dti/business-rules.md),
-// nhưng `modules/dashboard/` hôm nay mới là khung rỗng — hoán đổi bến an toàn của cả app để lấy
-// một trang trắng là làm hỏng đúng thứ không được hỏng. Lý do đầy đủ ghi tại chỗ trong
-// `modules/dashboard/dashboard.routes.ts`.
+// `/trang-chu` là trang đích mặc định (đích của `''`, của `**`, và của mọi chuyển hướng "về chỗ
+// an toàn"), và **từ 2026-09-11 nó là Dashboard DTI** — chốt Q3
+// (spec/dashboard-dti/business-rules.md §"Dashboard thay /trang-chu"). Đường dẫn **không đổi**
+// (Q18: `APP_CORE_ROUTES.home` vẫn là `/trang-chu`), thứ đổi là màn nằm sau nó; `platform/trang-chu/`
+// đã bị gỡ (Q29) chứ không đứng cạnh.
+//
+// 🛑 Route này KHÔNG được mang guard theo VAI TRÒ — nó là đích của mọi redirect "về chỗ an toàn",
+// nên một `adminGuard` ở đây là vòng lặp redirect vô hạn cho đúng nhóm người bị đá về
+// (doc/huong_dan/quy-uoc/fe-routing-guard.md §1). Có test khoá lại trong `app.routes.spec.ts`.
 export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'trang-chu' },
   {
@@ -24,7 +28,7 @@ export const routes: Routes = [
   },
   {
     path: 'trang-chu',
-    loadChildren: () => import('./platform/trang-chu/trang-chu.routes').then((m) => m.TRANG_CHU_ROUTES),
+    loadChildren: () => import('./modules/dashboard/dashboard.routes').then((m) => m.DASHBOARD_ROUTES),
   },
   {
     path: 'quan-tri/nguoi-dung',
@@ -41,5 +45,8 @@ export const routes: Routes = [
     loadChildren: () =>
       import('./modules/danh-muc-dti/danh-muc-dti.routes').then((m) => m.DANH_MUC_DTI_ROUTES),
   },
+  // `/tong-quan/dti` — route TẠM của vòng 1 — đã GỠ 2026-09-11 cùng lượt hoán đổi. Không giữ hai
+  // đường vào cùng một màn: hai URL cho một trang là hai bookmark, hai mục lịch sử, và một trong
+  // hai sẽ trôi khỏi mọi phép kiểm.
   { path: '**', redirectTo: 'trang-chu' },
 ];

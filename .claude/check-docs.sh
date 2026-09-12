@@ -307,7 +307,14 @@ while IFS=: read -r f ln cite; do
   case "$HIST_FILES" in *" $f "*) continue ;; esac
   case "$HIST_LINES" in *" $f:$ln "*) continue ;; esac
   [ -f "$path" ] || continue          # file không tồn tại đã do §4a báo
-  if [ -z "${LC[$path]:-}" ]; then LC[$path]=$(wc -l < "$path"); fi
+  # Đếm bằng awk NR, KHÔNG bằng `wc -l` — sửa 2026-09-11 sau một phép đo.
+  # `wc -l` đếm số ký tự xuống dòng, nên file THIẾU newline cuối bị báo hụt đúng 1 dòng,
+  # và cổng từ chối một trích dẫn neo vào dòng cuối cùng dù dòng đó có thật. Đo hôm đó:
+  # 6 file `.scss` trong `src/FE` thiếu newline cuối, gồm `styles.scss` — file bị khu Design
+  # trích dẫn nhiều nhất. Triệu chứng là người viết tài liệu phải neo lùi một dòng cho gate
+  # xanh, tức gate dạy người ta viết trích dẫn SAI. Đổi này chỉ nới trần, không nới chặt:
+  # nó không thể biến một trích dẫn sai thành hợp lệ.
+  if [ -z "${LC[$path]:-}" ]; then LC[$path]=$(awk "END{print NR}" "$path"); fi
   [ "$num" -le "${LC[$path]}" ] && continue
   bad "$f:$ln  trích dẫn  $cite  nhưng file chỉ có ${LC[$path]} dòng"
   n=$((n+1))
@@ -381,7 +388,7 @@ while IFS=: read -r f ln cite; do
     bad "$f:$ln  trích dẫn  $cite  — có nhiều file tên \`$base\`, phải viết rõ đường dẫn"
     n=$((n+1)); continue
   fi
-  [ -z "${LC2[$tgt]:-}" ] && LC2[$tgt]=$(wc -l < "$tgt")
+  [ -z "${LC2[$tgt]:-}" ] && LC2[$tgt]=$(awk "END{print NR}" "$tgt")
   [ "$num" -le "${LC2[$tgt]}" ] && continue
   bad "$f:$ln  trích dẫn  $cite  → $tgt chỉ có ${LC2[$tgt]} dòng"
   n=$((n+1))

@@ -12,7 +12,8 @@ export interface IUserDto {
   isLocked: boolean;
   mustChangePassword: boolean;
   /**
-   * `DateTimeOffset?` phía BE (`src/BE/Core/PlatformManager.Core.Application/Users/UserDto.cs:20`),
+   * `DateTimeOffset?` phía BE (`UserDto.DateCreate`,
+   * `src/BE/Core/PlatformManager.Core.Application/Users/UserDto.cs`),
    * và `Program.cs` bật `DefaultIgnoreCondition = WhenWritingNull` — nên `null` phía C# về tới đây
    * là **key VẮNG MẶT** (`undefined`), không phải `null`. Vì vậy khai `?:` **và** `| null`: hai
    * hình dạng khác nhau cùng nghĩa "không có ngày tạo", mapper chuẩn hoá về một.
@@ -20,7 +21,7 @@ export interface IUserDto {
   dateCreate?: string | null;
   /**
    * `ConcurrencyStamp` của Identity — token chống hai admin ghi đè lẫn nhau
-   * (`UserDto.cs:21`, doc/contracts/users.md §"Quyết định người dùng 2026-08-30" quyết định 3).
+   * (`UserDto.Version`, doc/contracts/users.md §"Quyết định người dùng 2026-08-30" quyết định 3).
    * Cùng lý do `?:` như `dateCreate`: `string?` + `WhenWritingNull` ⇒ vắng mặt chứ không `null`.
    */
   version?: string | null;
@@ -104,7 +105,7 @@ export interface IUpdateUserPayload {
    * `Version` của **chính bản ghi đang mở form** (`IUser.Version`), gửi lại nguyên văn.
    *
    * Vì sao trường này bắt buộc chứ không tuỳ chọn: BE chỉ kiểm khi client THẬT SỰ gửi token
-   * (`UpdateUserCommand.cs:62` — `cmd.Version is not null`), nên "quên truyền" không gây lỗi nào,
+   * (`UpdateUserHandler.Handle` — `cmd.Version is not null`), nên "quên truyền" không gây lỗi nào,
    * không đỏ test nào, chỉ lặng lẽ quay về đúng lỗ hổng ghi đè mà nó sinh ra để bịt. Khai bắt buộc
    * biến chỗ quên đó thành lỗi biên dịch.
    *

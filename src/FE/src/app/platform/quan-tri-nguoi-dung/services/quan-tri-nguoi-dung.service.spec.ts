@@ -197,7 +197,7 @@ describe('QuanTriNguoiDungService', () => {
   /**
    * 🛑 Test này canh một lỗ hổng KHÔNG lộ ra ở đâu khác.
    *
-   * BE chỉ kiểm tranh chấp ghi khi client THẬT SỰ gửi token (`UpdateUserCommand.cs:62` —
+   * BE chỉ kiểm tranh chấp ghi khi client THẬT SỰ gửi token (`UpdateUserHandler.Handle` —
    * `cmd.Version is not null`). Nên nếu FE thôi gửi `version`, mọi thứ vẫn xanh: build xanh, lint
    * xanh, `update()` vẫn trả `true`, người dùng vẫn thấy toast "Đã cập nhật". Thứ DUY NHẤT thay
    * đổi là hai admin sửa cùng một người lại ghi đè nhau im lặng — đúng trạng thái trước 2026-09-08.

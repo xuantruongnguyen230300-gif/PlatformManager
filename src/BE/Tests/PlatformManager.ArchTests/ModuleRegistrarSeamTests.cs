@@ -1,5 +1,6 @@
 ﻿using System.Reflection;
 using System.Text.RegularExpressions;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -215,6 +216,43 @@ public class ModuleRegistrarSeamTests
         // Đối chứng trong cùng phép đo: CoreModuleRegistrar khai ApiAssembly = null, và nhánh null
         // phải là BỎ QUA chứ không phải nạp nhầm assembly nào khác của tầng đó.
         Assert.DoesNotContain(typeof(PlatformManagerDbContext).Assembly, assemblies);
+
+        // ── Tầng nghiệp vụ THẬT (thêm 2026-09-10, finding F2 của core-reviewer) ─────────────
+        //
+        // Ba khẳng định trên chỉ nói về registrar GIẢ dựng ngay trong file này. Hệ quả đo được:
+        // nếu BusinessModuleRegistrar.ApiAssembly trả null thì MỌI endpoint nghiệp vụ trả 404 —
+        // và cả 75 test vẫn XANH. Một seam được chứng minh bằng chính vật thí nghiệm của nó thì
+        // không nói gì về người dùng thật của nó.
+        //
+        // Assembly lấy qua typeof của một controller thật, KHÔNG qua registrar — lấy từ registrar
+        // là hỏi nó "anh khai gì" rồi kiểm đúng thứ nó vừa khai.
+        var businessApi = typeof(PlatformManager.Business.Api.Controllers.CriteriaController).Assembly;
+
+        Assert.Contains(businessApi, assemblies);
+    }
+
+    /// <summary>
+    /// Nửa còn lại của finding F2: <c>ApplicationPart</c> có mặt mới chỉ là điều kiện CẦN —
+    /// MVC còn phải thật sự tìm ra controller trong đó. Assembly được nạp nhưng rỗng controller
+    /// thì bảng route vẫn trống, và khẳng định ở trên vẫn xanh.
+    ///
+    /// <para>Đây là ca duy nhất của bộ này chạm tới controller nghiệp vụ THẬT, nên nó cũng là
+    /// lưới bắt việc ai đó gỡ <c>[ApiController]</c> hay đổi assembly của tầng.</para>
+    /// </summary>
+    [Fact(DisplayName = "Đường 3 — assembly Api của tầng nghiệp vụ thật CÓ controller để nạp")]
+    public void BusinessApiAssembly_ActuallyContains_Controllers()
+    {
+        var businessApi = typeof(PlatformManager.Business.Api.Controllers.CriteriaController).Assembly;
+
+        var controllers = businessApi.LoadableTypes()
+            .Where(type => type is { IsClass: true, IsAbstract: false }
+                           && typeof(ControllerBase).IsAssignableFrom(type))
+            .ToList();
+
+        Assert.True(controllers.Count > 0,
+            $"Assembly '{businessApi.GetName().Name}' được nộp làm ApplicationPart nhưng KHÔNG chứa " +
+            "controller nào ⇒ mọi endpoint nghiệp vụ trả 404 trong im lặng. Hoặc controller đã bị dời " +
+            "sang assembly khác (khi đó sửa BusinessModuleRegistrar.ApiAssembly), hoặc chúng đã bị xoá.");
     }
 
     // ── Guard của cơ chế ─────────────────────────────────────────────────
@@ -295,8 +333,12 @@ public class ModuleRegistrarSeamTests
 /// nghiệp vụ <c>private set</c>) để phép đo nói về entity thật chứ về một thứ khác.
 ///
 /// <para>KHÔNG lọt vào các luật khác: <c>EntityEncapsulationTests</c> và
-/// <c>SoftDeleteQueryFilterTests</c> chỉ quét assembly <c>Core.Domain</c>, còn model của ứng dụng
-/// thật (<c>EfModelProbe</c>) chỉ nhận assembly do host nộp — assembly test không có trong đó.</para>
+/// <c>SoftDeleteQueryFilterTests</c> chỉ quét assembly <b>domain của SẢN PHẨM</b>
+/// (<c>Core.Domain</c> + <c>Business.Domain</c> từ 2026-09-10) — assembly TEST không nằm trong
+/// hai danh sách đó. Model của ứng dụng thật (<c>EfModelProbe</c>) cũng chỉ nhận assembly do host
+/// nộp. Câu trước ghi "chỉ quét assembly <c>Core.Domain</c>", đúng cho tới lượt dựng
+/// <c>Business.*</c>; điều KHÔNG đổi — và là điều duy nhất mục này cần — là entity giả này vẫn
+/// vô hình với chúng.</para>
 /// </summary>
 public sealed class ProbeModuleEntity : BaseEntity
 {

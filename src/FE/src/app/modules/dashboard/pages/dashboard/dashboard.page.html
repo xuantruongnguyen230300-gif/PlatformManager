@@ -1,10 +1,320 @@
-<!-- 🚧 KHUNG — hình dạng cuối cùng ở spec/dashboard-dti/ui-spec.md. Không dựng trước dải KPI hay
-     khung biểu đồ rỗng: một bố cục đúng hình mà không có số là thứ người đọc sau tưởng là màn thật
-     rồi đi tìm xem "vì sao dữ liệu không về". -->
-<div class="card">
-  <div class="title">
-    <h2>{{ 'dashboard.title' | translate }}</h2>
+<!-- Vùng V0…V5, V8, V9 của spec/dashboard-dti/ui-spec.md §3. Nút `Xuất báo cáo` (V1) thuộc VÒNG 2
+     (Q68) và cố ý KHÔNG render — xem JSDoc của `DashboardPage`.
+
+     Trang này KHÔNG dùng `.page-fill`: nội dung dài hơn màn hình và cuộn theo trang, khác màn
+     Danh mục. -->
+
+<!-- V0 — băng thông báo đầu trang. BA vai loại trừ nhau, tối đa MỘT băng hiển thị. -->
+@if (hasError()) {
+  <div class="notice bad">
+    <i class="pi pi-exclamation-triangle"></i>
+    <span>{{ 'dashboard.error.loadFailed' | translate }}</span>
+    <button type="button" class="btn no-print" (click)="reload()">
+      {{ 'shared.action.retry' | translate }}
+    </button>
+  </div>
+} @else if (showFirstRunNotice()) {
+  <!-- Chưa có chỉ tiêu nào trong năm đang chọn. Lối đi tiếp là LIÊN KẾT CHỮ inline (T11), không
+       phải nút: hợp đồng `NoticeBanner` khai sẵn `a` inline và không có slot cho nút có nhãn. -->
+  <div class="notice">
+    <i class="pi pi-info-circle"></i>
+    <span
+      >{{ 'dashboard.notice.firstRunLead' | translate
+      }}<a routerLink="/danh-muc/dti">{{ 'dashboard.notice.catalogueLink' | translate }}</a
+      >{{ 'dashboard.notice.firstRunTail' | translate }}</span
+    >
+  </div>
+} @else if (showAwaitingProgressNotice()) {
+  <!-- Ca Q32 — trạng thái BÌNH THƯỜNG ngay sau MỖI lần import, không phải lỗi và không phải cảnh
+       báo: biến thể mặc định (thông tin), KHÔNG `.warn`, KHÔNG `.bad`. Nói ngược lại là dạy người
+       dùng rằng import vừa rồi hỏng. -->
+  <div class="notice">
+    <i class="pi pi-info-circle"></i>
+    <span
+      >{{ 'dashboard.notice.awaitingProgressLead' | translate: { Count: kpi()?.TotalCriteria ?? 0 }
+      }}<a routerLink="/danh-muc/dti">{{ 'dashboard.notice.catalogueLink' | translate }}</a
+      >{{ 'dashboard.notice.awaitingProgressTail' | translate }}</span
+    >
+  </div>
+}
+
+<!-- V1 — thanh chọn kỳ. Dùng class toàn cục `.toolbar` trên một <div>, KHÔNG dùng <app-toolbar>:
+     component đó chỉ có hai slot [filter]/[actions] và không có chỗ cho control đứng TRƯỚC ô tìm
+     kiếm — mà thanh này toàn control loại đó (Toolbar.md §Anatomy, lối dùng thứ hai).
+     Thanh KHÔNG bọc trong `.card`: `.toolbar` đã tự mang nền + viền.
+     Thanh này KHÔNG mờ khi đang tải — control vừa khởi động lượt tải không được biến mất. -->
+<div class="toolbar no-print">
+  <strong>{{ 'dashboard.period.viewing' | translate }}</strong>
+
+  <!-- `.period-display` là ô CHỈ ĐỌC, cố ý không dùng hợp đồng `Input` — nó không phải ô nhập. -->
+  <span class="period-display">{{ aggregate()?.PeriodLabel ?? ('shared.format.absentValue' | translate) }}</span>
+
+  <select
+    [value]="filters.year()"
+    [attr.aria-label]="'dashboard.period.yearAriaLabel' | translate"
+    (change)="filters.onYearChange($event)"
+  >
+    @for (item of filters.years(); track item) {
+      <option [value]="item">{{ item }}</option>
+    }
+  </select>
+
+  <select
+    [value]="filters.periodSelectValue()"
+    [attr.aria-label]="'dashboard.period.periodAriaLabel' | translate"
+    (change)="filters.onPeriodSelect($event)"
+  >
+    <option value="">
+      @if (filters.mode() === 'month') {
+        {{ 'dashboard.period.currentMonth' | translate }}
+      } @else {
+        {{ 'dashboard.period.currentPeriod' | translate }}
+      }
+    </option>
+    <option value="year">{{ 'dashboard.period.wholeYear' | translate }}</option>
+    @for (option of filters.periodChoices(); track option.Value) {
+      <option [value]="option.Value">{{ labels.periodOptionLabel(option) }}</option>
+    }
+  </select>
+
+  <div class="segmented" role="group" [attr.aria-label]="'dashboard.period.modeGroup' | translate">
+    <button
+      type="button"
+      class="seg-btn"
+      [class.active]="filters.mode() === 'week'"
+      [attr.aria-pressed]="filters.mode() === 'week'"
+      (click)="filters.onModeChange('week')"
+    >
+      {{ 'dashboard.period.week' | translate }}
+    </button>
+    <button
+      type="button"
+      class="seg-btn"
+      [class.active]="filters.mode() === 'month'"
+      [attr.aria-pressed]="filters.mode() === 'month'"
+      (click)="filters.onModeChange('month')"
+    >
+      {{ 'dashboard.period.month' | translate }}
+    </button>
   </div>
 
-  <p class="muted">{{ 'dashboard.hint.underConstruction' | translate }}</p>
+  @if (filters.mode() === 'year') {
+    <!-- Badge `.warn` để không ai nhầm số tổng hợp cả năm với số của một tuần. -->
+    <span class="badge warn">{{ 'dashboard.period.wholeYearBadge' | translate: { Year: filters.year() } }}</span>
+  }
+
+  <div class="toolbar-sep"></div>
+
+  <!-- V1 — `Xuất báo cáo` (DB-4). Tải thẳng file, không dialog (Q13), theo ĐÚNG bộ lọc đang áp
+       của bảng chi tiết (Q23) — `title` nói ra điều đó kèm số đếm, vì nút ngồi ở thanh KỲ trong
+       khi nó xuất theo bộ lọc của BẢNG.
+       `mode=year` ⇒ `disabled` + `title` nêu lối ra TRƯỚC khi bấm (ui-spec §4). -->
+  <div class="toolbar-actions">
+    <button
+      type="button"
+      class="btn primary"
+      [disabled]="!exportEnabled()"
+      [attr.title]="exportTitle()"
+      (click)="onExport()"
+    >
+      {{ 'dashboard.action.export' | translate }}
+    </button>
+  </div>
+</div>
+
+@if (showDataRegions()) {
+  <!-- Cụm V2…V5 mờ đi khi đang tải, kèm ĐÚNG MỘT vòng quay cho cả cụm (Q34 + T10). Bốn vòng quay
+       quay cùng lúc trên một trang trông như bốn thứ hỏng riêng lẻ. Mờ KHÔNG phải ẩn: giữ số cũ
+       nhìn thấy được để layout không sụp và mắt người dùng không mất chỗ neo. -->
+  <div class="data-regions" [class.is-busy]="feed.loading()" [attr.aria-busy]="feed.loading()">
+    @if (feed.loading()) {
+      <div class="busy-veil" [attr.aria-label]="'dashboard.state.loading' | translate">
+        <p-progressSpinner
+          [style]="{ width: '42px', height: '42px' }"
+          [attr.aria-label]="'dashboard.state.loading' | translate"
+        />
+      </div>
+    }
+
+    <!-- V2 — dải 5 ô KPI. `.kpis` là lưới page-local, không phải component. -->
+    <section class="kpis">
+      <app-kpi-tile
+        [label]="'dashboard.kpi.overall.' + kpiLabelSuffix() | translate"
+        [value]="overallProgressText()"
+        [sub]="'dashboard.kpi.overallSub' | translate"
+      />
+      <app-kpi-tile
+        [label]="'dashboard.kpi.delta.' + kpiLabelSuffix() | translate"
+        [value]="deltaText()"
+        [tone]="deltaTone()"
+        [sub]="kpi()?.PreviousPeriodLabel ?? ''"
+      />
+      <!-- Ô 3 và ô 4 mang tone CỐ ĐỊNH bất kể giá trị — hành vi của bản dựng đã duyệt, ghi nhận ở
+           KpiTile.md § Normalize chứ không lặng lẽ sửa ở đây. -->
+      <app-kpi-tile
+        [label]="'dashboard.kpi.up' | translate"
+        [value]="upText()"
+        tone="good"
+        [sub]="'dashboard.kpi.upSub' | translate"
+      />
+      <app-kpi-tile
+        [label]="'dashboard.kpi.flat' | translate"
+        [value]="flatText()"
+        tone="warn"
+        [sub]="'dashboard.kpi.flatSub' | translate"
+      />
+      <app-kpi-tile
+        [label]="'dashboard.kpi.done' | translate"
+        [value]="doneText()"
+        [sub]="'dashboard.kpi.doneSub' | translate"
+      />
+    </section>
+
+    <!-- Hai card cạnh nhau — `.layout` là lưới page-local `1.15fr 0.85fr`. -->
+    <div class="layout">
+      <!-- V3 — tiến độ theo nhóm. Vẽ theo `Tiến độ %` (Q11), KHÔNG theo điểm thẩm định. -->
+      <section class="card">
+        <div class="title">
+          <h2>{{ 'dashboard.group.heading' | translate }}</h2>
+          <span class="muted">{{ aggregate()?.PeriodLabel }}</span>
+        </div>
+        <div class="group-list">
+          @for (group of aggregate()?.Groups ?? []; track group.GroupId) {
+            <!-- RỖNG ≠ 0: `Progress` null ⇒ component KHÔNG dựng `.fill` nào và cột số in `—`.
+                 Một `.fill` rộng 0 nói "đã đo, toàn xã đạt 0%". -->
+            <app-progress-bar
+              [label]="labels.groupOptionLabel(group.GroupCode, group.GroupName)"
+              [percent]="group.Progress"
+              [localeId]="localeId()"
+            />
+          } @empty {
+            <p class="muted">{{ 'dashboard.group.empty' | translate }}</p>
+          }
+        </div>
+      </section>
+
+      <!-- V4 — biểu đồ xu hướng. `@defer (on viewport)`: đây là thứ nặng nhất trang và thường nằm
+           dưới nếp gấp. Placeholder giữ đủ chiều cao để card không nhảy khi chunk về. -->
+      <section class="card">
+        <div class="title">
+          <h2>
+            @if (filters.mode() === 'week') {
+              {{ 'dashboard.chart.headingWeek' | translate }}
+            } @else {
+              {{ 'dashboard.chart.headingMonth' | translate }}
+            }
+          </h2>
+          <span class="muted">{{ 'dashboard.chart.caption' | translate }}</span>
+        </div>
+        @defer (on viewport) {
+          <app-trend-chart [points]="trendPoints()" [summary]="trendSummary()" [localeId]="localeId()" />
+        } @placeholder {
+          <div class="chart-skeleton"><span class="muted">{{ 'dashboard.chart.loading' | translate }}</span></div>
+        }
+      </section>
+    </div>
+
+    <!-- V5 — bảng chi tiết 9 cột. -->
+    <section class="card criteria-table-card">
+      <div class="title">
+        <h2>{{ 'dashboard.table.heading' | translate: { Total: kpi()?.TotalCriteria ?? 0 } }}</h2>
+        <!-- 🛑 Caption `{đang hiện}/{tổng}` là BẮT BUỘC: lọc bảng KHÔNG đổi KPI/nhóm/biểu đồ (luật
+             1 của DB-1), nên đây là chỗ DUY NHẤT trên màn nói rằng bảng đang hẹp hơn phần còn lại
+             của trang. `aria-live` để người dùng trình đọc màn hình biết bộ lọc đã chạy. -->
+        <span class="muted" aria-live="polite">
+          {{
+            'dashboard.table.count'
+              | translate: { Shown: sortedTable().length, Total: kpi()?.TotalCriteria ?? 0 }
+          }}
+        </span>
+      </div>
+
+      <app-toolbar
+        [searchValue]="filters.searchInput()"
+        (searchValueChange)="filters.onSearchValueChange($event)"
+        [searchPlaceholder]="'dashboard.filter.searchPlaceholder' | translate"
+        [searchAriaLabel]="'dashboard.filter.searchAriaLabel' | translate"
+        [hasFilter]="true"
+        [filterCount]="filters.activeFilterCount()"
+        [chips]="labels.filterChips()"
+        (chipRemove)="filters.onRemoveFilter($event)"
+        (filterApply)="filters.onApplyFilters()"
+        (filterClear)="filters.onClearFilters()"
+      >
+        <ng-container filter>
+          <div class="form-row">
+            <label for="dash-filter-group">{{ 'dashboard.filter.group' | translate }}</label>
+            <select id="dash-filter-group" [value]="filters.groupDraft()" (change)="filters.onGroupDraftChange($event)">
+              <option value="">{{ 'dashboard.filter.allGroups' | translate }}</option>
+              @for (group of labels.groupChoices(); track group.GroupId) {
+                <option [value]="group.GroupId">
+                  {{ labels.groupOptionLabel(group.GroupCode, group.GroupName) }}
+                </option>
+              }
+            </select>
+          </div>
+
+          <div class="form-row">
+            <label for="dash-filter-status">{{ 'dashboard.filter.status' | translate }}</label>
+            <select id="dash-filter-status" [value]="filters.statusDraft()" (change)="filters.onStatusDraftChange($event)">
+              <option value="">{{ 'dashboard.filter.allStatuses' | translate }}</option>
+              @for (status of filters.statuses; track status) {
+                <option [value]="status">{{ status }}</option>
+              }
+            </select>
+          </div>
+        </ng-container>
+
+        <ng-container actions>
+          <!-- Ô sắp xếp ở `.toolbar-actions`, KHÔNG nhét vào `.filter-panel`: nó không phải điều
+               kiện lọc, và một chip "sắp xếp theo mã" mà gỡ đi không đổi tập dòng nào sẽ dạy người
+               dùng sai về ý nghĩa của chip. Vì vậy nó cũng KHÔNG tính vào `.filter-count`. -->
+          <select
+            [value]="filters.sortBy()"
+            [attr.aria-label]="'dashboard.filter.sortAriaLabel' | translate"
+            (change)="filters.onSortChange($event)"
+          >
+            <option value="code">{{ 'dashboard.filter.sortByCode' | translate }}</option>
+            <option value="diff">{{ 'dashboard.filter.sortByDiff' | translate }}</option>
+          </select>
+        </ng-container>
+      </app-toolbar>
+
+      <app-criteria-detail-table [rows]="sortedTable()" [localeId]="localeId()" />
+    </section>
+  </div>
+
+  <!-- V8 — lịch sử các kỳ đã lưu. KHÔNG mờ khi V2…V5 đang tải: nó ăn theo nguồn thứ hai
+       (`GET /api/dashboard/periods`), không đổi theo kỳ đang xem. -->
+  <section class="card history-card">
+    <div class="title">
+      <h2>{{ 'dashboard.history.heading' | translate }}</h2>
+      <span class="muted">{{ 'dashboard.history.caption' | translate }}</span>
+    </div>
+    <div class="history">
+      @for (item of historyRows(); track item.Option.Value) {
+        <!-- `.histrow` đã nằm trên host của chính component (xem `host: { class }` ở history-row.ts)
+             — đừng khai lại ở đây, hai chỗ cùng đặt một class là hai chỗ để lệch. -->
+        <app-history-row
+          [periodStart]="item.Option.StartDate"
+          [periodEnd]="item.Option.EndDate"
+          [overallProgress]="item.Option.OverallProgress"
+          [delta]="item.Delta"
+          [isFirstPeriod]="item.IsFirst"
+          [localeId]="localeId()"
+          (view)="filters.onViewPeriod(item.Option)"
+        />
+      } @empty {
+        <p class="muted">{{ 'dashboard.history.empty' | translate }}</p>
+      }
+    </div>
+  </section>
+}
+
+<!-- V9 — chân trang, một câu và một liên kết sang màn Danh mục (đích `/danh-muc/dti`, Q33). -->
+<div class="footer">
+  {{ 'dashboard.footer.lead' | translate }}<a routerLink="/danh-muc/dti">{{
+    'dashboard.footer.link' | translate
+  }}</a
+  >{{ 'dashboard.footer.tail' | translate }}
 </div>

@@ -1,0 +1,68 @@
+<dialog #dialogEl class="form-dialog" (close)="onNativeClose()">
+  <!-- `.title` + nút × là hợp đồng của hộp thoại NHẬP LIỆU (`dialog.form-dialog`); `.dialog-head`
+       với icon tròn màu là hợp đồng của hộp thoại HỎI. Xem chú thích ở `user-form-dialog.html`. -->
+  <div class="title">
+    <h2>{{ 'danh-muc-dti.import.title' | translate }}</h2>
+    <button
+      type="button"
+      class="icon-btn"
+      [attr.aria-label]="'shared.action.close' | translate"
+      [attr.title]="'shared.action.close' | translate"
+      (click)="dialogEl.close()"
+    >
+      <i class="pi pi-times"></i>
+    </button>
+  </div>
+
+  <!-- Kỳ đích, nói TRƯỚC khi bấm. Đây là thứ duy nhất trên hộp thoại cho biết 62 dòng sắp rơi vào
+       tuần nào — hệ thống KHÔNG đọc kỳ từ nội dung file (DM-7). -->
+  @if (targetPeriodText()) {
+    <p class="import-target">{{ targetPeriodText() }}</p>
+  }
+
+  <div class="form-row">
+    <label for="dtiImportFile">{{ 'danh-muc-dti.import.fileLabel' | translate }}</label>
+    <!-- `accept` chỉ lọc hộp thoại chọn file của hệ điều hành. Phép kiểm THẬT là magic byte ở
+         server — xem JSDoc của class. -->
+    <input
+      #fileEl
+      id="dtiImportFile"
+      type="file"
+      class="input"
+      [attr.accept]="accept"
+      [disabled]="busy()"
+      (change)="onFileChange($event)"
+    />
+  </div>
+
+  @if (chosenFileName(); as name) {
+    <p class="muted">{{ 'danh-muc-dti.import.chosenFile' | translate: { Name: name } }}</p>
+  }
+
+  <!-- Tiến trình phải nói được thành LỜI, không chỉ bằng một nút xám: người dùng trình đọc màn
+       hình không có tín hiệu nào khác cho biết máy đang chạy (a11y §4 mục 4). `aria-live="polite"`
+       chứ không `assertive` — đây là tin tiến trình, không phải cảnh báo cắt ngang. -->
+  <p class="muted" role="status" aria-live="polite">
+    @if (busy()) {
+      {{ 'danh-muc-dti.import.processing' | translate }}
+    }
+  </p>
+
+  <!-- Lỗi CẤP REQUEST của bước 1 (`IMPORT.FILE_MISSING` · `FILE_EMPTY` · `FORMAT_UNSUPPORTED` ·
+       `FILE_TOO_LARGE`) hiện ngay tại đây, KHÔNG mở V12: chưa có `jobId` thì chưa có kết quả nào
+       để trình bày, và người dùng phải chọn lại file ngay trong hộp thoại đang mở. -->
+  @if (errorMessage(); as message) {
+    <div class="form-error">{{ message }}</div>
+  }
+
+  <!-- Nút `Huỷ` KHÔNG bị khoá khi đang chạy: job sống ở server, đóng hộp thoại không huỷ nó, nên
+       đóng là một lối thoát hợp lệ chứ không phải thao tác ghi. -->
+  <div class="dialog-actions">
+    <button type="button" class="btn" (click)="dialogEl.close()">
+      {{ 'shared.action.cancel' | translate }}
+    </button>
+    <button type="button" class="btn primary" [disabled]="!canSubmit()" (click)="onSubmit()">
+      {{ 'danh-muc-dti.import.submit' | translate }}
+    </button>
+  </div>
+</dialog>

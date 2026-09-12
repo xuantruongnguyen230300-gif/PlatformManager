@@ -331,7 +331,7 @@ rơi vào `core` chứ không phải `business` — xem §1.1.
 > (`: BaseEntity`).
 
 Định nghĩa `business."ImportJobs"` **không** còn ở đây — nó là bảng nghiệp vụ, xem
-[`cau-truc-database-business.md`](cau-truc-database-business.md) §`ImportJobs`.
+[`cau-truc-database-dti.md`](cau-truc-database-dti.md) §"Bốn bảng".
 
 ### Vì sao `IX_RolePermissions_ResourceKey_RoleId` là bắt buộc, không phải tối ưu sớm
 
@@ -366,7 +366,7 @@ biết về Core; Core không được biết về nghiệp vụ. Đây là cùn
 Luật ở lại file này vì nó là **ràng buộc của Core** — nó vẫn đúng, và vẫn phải được tuân,
 kể cả khi không còn bảng nghiệp vụ nào. Thể hiện cụ thể hôm nay (đúng một khoá ngoại, từ
 `CriteriaAssessments`) nằm ở
-[`cau-truc-database-business.md`](cau-truc-database-business.md) §"Khoá ngoại xuyên schema",
+[`cau-truc-database-dti.md`](cau-truc-database-dti.md) §"Bốn bảng",
 vì nó mô tả một bảng `business`.
 
 Chính chiều FK này là một trong hai lý do hai schema **ở lại chung một database** — §1.1.
@@ -378,7 +378,7 @@ Chính chiều FK này là một trong hai lý do hai schema **ở lại chung m
   thành công. Đây là **quy ước chung của cả hai schema**. Ca thuộc `core`:
   `IX_SysMenus_Code` (từ `0008`). Ca thuộc `business`
   (`IX_Criteria_Code_Active`, `IX_CriteriaGroups_Code_Active`):
-  [`cau-truc-database-business.md`](cau-truc-database-business.md).
+  [`cau-truc-database-dti.md`](cau-truc-database-dti.md).
 
   > ✅ **`SysMenus` KHÔNG còn là ngoại lệ — vá 2026-08-28 bằng migration `0008`.**
   > `IX_SysMenus_Code` nay là unique **partial** `WHERE "IsDeleted" = false`,
@@ -525,7 +525,8 @@ tại, kể cả khi đã dự phòng chỗ trong cấu trúc cây.
 | File | Vai | `scope` |
 | --- | --- | --- |
 | [`cau-truc-database.md`](cau-truc-database.md) *(chính file này)* | Mô tả schema **`core`** — bảng, cột, ràng buộc, quyết định thiết kế | `core` |
-| [`cau-truc-database-business.md`](cau-truc-database-business.md) | Mô tả schema **`business`** (đóng băng, tách ra 2026-09-03) | `du-an` |
+| [`cau-truc-database-dti.md`](cau-truc-database-dti.md) | Mô tả schema **`business`** đang sống — 4 bảng cụm DTI (tách 2026-09-10) | `du-an` |
+| [`cau-truc-database-business.md`](cau-truc-database-business.md) | **Lịch sử** — 5 bảng cũ của module `DtiWeekly` đã gỡ | `du-an` |
 | [`cau-truc-database.sql`](cau-truc-database.sql) | **DDL viết tay** EF không sinh được — nay toàn bộ nội dung là `business`, mang banner lịch sử | `du-an` |
 
 > Ba file, hai schema, **một** database (§1.1). Số file không phải số database.

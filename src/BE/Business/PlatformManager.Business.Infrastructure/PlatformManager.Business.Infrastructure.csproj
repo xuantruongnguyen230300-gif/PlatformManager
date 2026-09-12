@@ -1,0 +1,51 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>PlatformManager.Business.Infrastructure</RootNamespace>
+    <AssemblyName>PlatformManager.Business.Infrastructure</AssemblyName>
+    <!-- NPOI bundle định dạng OOXML theo giấy phép OSMF riêng (khác Apache 2.0 của chính NPOI) —
+         chấp nhận tường minh để build không cảnh báo. Cùng lý do và cùng giá trị với
+         Core.Infrastructure.csproj; đọc kỹ trước khi đổi:
+         https://github.com/nissl-lab/npoi/blob/master/OSMFEULA.txt -->
+    <AcceptNPOIOSMFLicense>true</AcceptNPOIOSMFLicense>
+  </PropertyGroup>
+
+  <!-- Phần CÒN LẠI không phải EF của tầng nghiệp vụ — tích hợp ra ngoài database.
+       Hôm nay GẦN NHƯ TRỐNG, và đó là trạng thái ĐÚNG DỰ KIẾN (doc/kien-truc-core-module.md
+       §"Quyết định BE"): vòng 1 của cụm DTI chỉ có đường ĐỌC, chưa có tích hợp ngoài nào.
+       Người tiêu thụ đầu tiên đã biết trước: bộ ghi file .xlsx của DB-4 (Q9 — ghi NPOI trực
+       tiếp ở tầng này, doc/contracts/dashboard.md § "Đường đồng bộ, không job nền").
+       KHÔNG bịa code cho project trông có nội dung. -->
+
+  <!-- FrameworkReference — KHÔNG phải để dùng API ASP.NET (tầng này chưa có code nào), mà để
+       BẬT PHÉP TỈA gói do shared framework cung cấp. Đo được 2026-09-10: thiếu dòng này, build
+       ra 16 cảnh báo NU1903 cho System.Security.Cryptography.Xml 8.0.2 — gói mà NPOI kéo
+       transitively qua Core.Infrastructure. Trên net10.0 gói đó THUỘC framework nên SDK tự tỉa,
+       nhưng danh sách tỉa dẫn xuất từ FrameworkReference của CHÍNH project, không kế thừa qua
+       ProjectReference. Core.Infrastructure không cảnh báo vì nó đã khai dòng này.
+       ⚠️ Đừng "dọn" bằng cách ghim tường minh phiên bản mới: chú thích ở Core.Infrastructure.csproj
+       ghi rõ ghim chỉ đổi NU1903 thành NU1510. -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <!-- NPOI — bộ ghi .xlsx của DB-4, viết TRỰC TIẾP ở tầng này chứ không qua seam ITabularWriter
+       của Core (chốt Q9, doc/huong_dan/wiki-core/be/15-import-export.md §7): chữ ký của seam đó
+       chỉ diễn đạt được một bảng phẳng, còn bố cục file đã duyệt có khối nhận dạng kỳ nhiều dòng,
+       dòng TỔNG CỘNG, nền màu header và tên sheet đổi theo kỳ.
+       ⚠️ Đây là tầng *.Infrastructure nên reference này HỢP LỆ. Kéo NPOI vào Business.Application
+       hay vào Core.Application là test ĐỎ — LayerDependencyTests liệt "NPOI" vào
+       ForbiddenAssemblyPrefixes của mọi tầng Application.
+       Cùng phiên bản với Core.Infrastructure: hai bản NPOI khác nhau trong một tiến trình là một
+       lớp lỗi nạp assembly không có triệu chứng nào ở lúc build. -->
+  <ItemGroup>
+    <PackageReference Include="NPOI" Version="2.8.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Core\PlatformManager.Core.Infrastructure\PlatformManager.Core.Infrastructure.csproj" />
+    <ProjectReference Include="..\PlatformManager.Business.Application\PlatformManager.Business.Application.csproj" />
+    <ProjectReference Include="..\PlatformManager.Business.Domain\PlatformManager.Business.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

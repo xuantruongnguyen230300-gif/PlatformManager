@@ -41,11 +41,14 @@ namespace PlatformManager.ArchTests;
 /// trong model — entity vắng mặt thì cũng vắng khỏi tập chúng kiểm. Đó chính là lý do ca (3)
 /// cần một test riêng thay vì trông cậy vào chúng.)</para>
 ///
-/// <para><b>2026-08-29:</b> module nghiệp vụ duy nhất đã bị xoá, nên hiện chỉ còn Core trong cả
-/// <see cref="DomainAssemblies"/> lẫn <see cref="ConfigurationAssembliesFromDi"/>. Ca (3) vì thế
-/// tạm thời không có gì để bắt. <b>Cập nhật 2026-09-08:</b> dựng tầng mới thì chỉ phải thêm
+/// <para><b>2026-08-29:</b> module nghiệp vụ duy nhất đã bị xoá, nên khi đó chỉ còn Core trong cả
+/// <see cref="DomainAssemblies"/> lẫn <see cref="ConfigurationAssembliesFromDi"/>, và ca (3)
+/// không có gì để bắt. <b>Cập nhật 2026-09-08:</b> dựng tầng mới thì chỉ phải thêm
 /// <see cref="DomainAssemblies"/> — vế còn lại tự đi theo, vì
-/// <see cref="ConfigurationAssembliesFromDi"/> đọc thẳng danh sách registrar của host.</para>
+/// <see cref="ConfigurationAssembliesFromDi"/> đọc thẳng danh sách registrar của host.
+/// <b>Cập nhật 2026-09-10:</b> <c>Business.Domain</c> đã có mặt trong
+/// <see cref="DomainAssemblies"/>, nên ca (3) nay đo trên dữ liệu THẬT — hai nguồn (reflection
+/// trên assembly domain · model dựng từ DI thật) độc lập nhau đúng như thiết kế.</para>
 ///
 /// KHÔNG cần Docker — chỉ dựng model EF (model building không mở kết nối) và đọc
 /// <c>ServiceCollection</c> ở mức MÔ TẢ đăng ký (không build provider, không mở kết nối), nên
@@ -70,6 +73,11 @@ public class SoftDeleteQueryFilterTests
     private static readonly Assembly[] DomainAssemblies =
     [
         typeof(BaseEntity).Assembly,
+
+        // Thêm 2026-09-10 cùng lượt dựng Business.Domain (finding F1 của core-reviewer). Trước
+        // dòng này, 4 entity nghiệp vụ MỚI nằm ngoài tầm cả ba luật soft-delete — đúng cách hỏng
+        // mà nhãn 🛑 ở trên mô tả, và nó lọt ngay ở lượt đầu tiên có entity nghiệp vụ để bỏ sót.
+        typeof(PlatformManager.Business.Domain.Entities.Criteria).Assembly,
     ];
 
     /// <summary>

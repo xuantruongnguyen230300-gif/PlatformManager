@@ -1,7 +1,7 @@
 ---
 kind: luat
 scope: core
-verified: 2026-09-06
+verified: 2026-09-10
 ---
 
 # Kiến trúc Core ↔ Business — ranh giới tái sử dụng cho BE và FE
@@ -12,10 +12,16 @@ verified: 2026-09-06
 > thống nhất, hiện có DTI Weekly là tính năng đầu tiên) — áp dụng khi sửa code hiện có VÀ khi
 > thêm tính năng nghiệp vụ mới sau này.
 
-## 🚧 ĐÃ CHỐT — ĐANG THI CÔNG (đối chiếu `src/BE/PlatformManager.slnx` + cây `src/BE` ngày 2026-08-29)
+## 🚧 ĐÃ CHỐT — ĐANG THI CÔNG (đối chiếu `src/BE/PlatformManager.slnx` + cây `src/BE` ngày 2026-09-10)
 
-**Toàn bộ layout mô tả bên dưới là ĐÍCH ĐẾN, chưa phải hiện trạng.** Đọc bảng
-này trước khi tạo bất kỳ file nào, để không tạo vào project chưa tồn tại.
+**Layout bên dưới nay ĐÚNG MỘT PHẦN — bảng ngay dưới là thứ duy nhất nói phần nào.**
+Đọc nó trước khi tạo bất kỳ file nào, để không tạo vào project chưa tồn tại.
+
+> 🔄 **SỬA 2026-09-10.** Hai câu dẫn của mục này từng ghi *"đối chiếu … ngày 2026-08-29"* và
+> *"Toàn bộ layout mô tả bên dưới là ĐÍCH ĐẾN, chưa phải hiện trạng"*. Cả hai chỏi với chính
+> bảng ngay dưới sau khi `Business.*` được dựng: `Core.*` và `Business.*` nay CÓ THẬT, chỉ
+> `Core.Common` là còn chưa. Một câu dẫn nói "toàn bộ là đích đến" đứng trên một bảng nói "đã
+> có" là đúng loại mâu thuẫn khiến người đọc tin vế nào tiện hơn.
 
 **Số project: đếm bằng lệnh, đừng chép số vào đây** (`.claude/CLAUDE.md` §6) —
 `find src/BE -iname '*.csproj'` cho số project trên đĩa, còn
@@ -25,15 +31,15 @@ nhất 2 lần: 8 → 10 khi thêm 2 project test (2026-08-24), rồi giảm l�
 nghiệp vụ bị gỡ (2026-08-29). Bản trước của bảng này chép cứng "8 project" và
 sai suốt từ đó.
 
-| Có thật hôm nay (2026-08-29) | Sẽ thành |
+| Có thật hôm nay (2026-09-10) | Sẽ thành |
 | --- | --- |
 | `Core.Domain`, `Core.Application`, `Core.Infrastructure`, `Core.Api` (2026-09-09), `Core.Persistence` (✅ tách 2026-09-10, xem §DbContext) | tách thêm `Core.Common` → 6 project |
 | ✅ `ApiControllerBase` **đã ở** `Core.Api` — **Q8, chốt và thi công 2026-09-09** (`src/BE/Core/PlatformManager.Core.Api/ApiControllerBase.cs:32`) | 4 controller Core chuyển sang nốt; xem §`Core.Api` giữ `ApiControllerBase` bên dưới |
-| **Không còn project `Modules.*` nào trong solution** — module nghiệp vụ duy nhất (`Modules.DtiWeekly.*`) đã gỡ 2026-08-29 | `Business.{Domain,Application,Persistence,Infrastructure,Api}` khi module nghiệp vụ đầu tiên được dựng lại |
+| ✅ **Đủ 5 project `Business.{Domain,Application,Persistence,Infrastructure,Api}`** — dựng 2026-09-10 cùng vòng 1 của cụm DTI. Không project `Modules.*` nào (mô hình đó bỏ từ v3) | giữ nguyên — thêm tính năng nghiệp vụ là thêm thư mục feature trong CÙNG 5 project này |
 | `PlatformManager.Api` (host mỏng) | giữ nguyên |
-| `Tests/` — `PlatformManager.ArchTests`, `PlatformManager.Core.UnitTests`, `PlatformManager.Core.IntegrationTests` | giữ nguyên |
+| `Tests/` — `ArchTests`, `Core.UnitTests`, `Core.IntegrationTests`, `Business.UnitTests` (thêm 2026-09-10) | thêm `Business.IntegrationTests` khi có phần cần Postgres thật (vòng 2) |
 
-**Chưa tồn tại:** `Core.Common`, mọi `Business.*`. **`Core.Persistence` đã tách 2026-09-10.**
+**Chưa tồn tại:** `Core.Common`. **`Core.Persistence` đã tách 2026-09-10; `Business.*` đã dựng 2026-09-10** (§"Business.* — đã dựng").
 **`Core.Api` đã dựng 2026-09-09** (Q8) — hiện chỉ chứa `ApiControllerBase`.
 `PlatformManagerDbContext` và `CoreSeeder` hiện ở `Core.Persistence/` (§DbContext, khối 2026-09-10);
 mọi controller hiện ở `PlatformManager.Api/Controllers/`.
@@ -62,9 +68,16 @@ ArchTest ranh giới **`Core_MustNotReference_AnyModulesAssembly`** và
 giữ nguyên**, dù hiện không còn assembly `Modules.*` nào để chúng bắt. Rule thứ
 nhất vẫn kiểm thật (nó quét tham chiếu của `Core.*`, không cần module tồn tại);
 rule thứ hai hiện qua một cách hiển nhiên và là **bảo hiểm cho module đầu tiên
-được dựng lại**. Mục "ArchTest cần có" bên dưới yêu cầu bỏ rule thứ hai — điều
-đó chỉ áp dụng **sau** khi tầng nghiệp vụ đã thật sự tồn tại dưới tên
-`Business.*`.
+được dựng lại**.
+
+> 🔄 **SỬA 2026-09-10.** Câu tiếp theo ở đây từng ghi: *"Mục 'ArchTest cần có' bên dưới yêu cầu
+> BỎ rule thứ hai — điều đó chỉ áp dụng sau khi tầng nghiệp vụ đã thật sự tồn tại dưới tên
+> `Business.*`"*. Nó mô tả sai chính mục nó trỏ tới: đề nghị bỏ rule đã bị **ĐẢO thành GIỮ**
+> ngày 2026-09-01 (xem gạch ngang ở §"ArchTest cần có"), với lý do tốt hơn — mảng
+> `ModuleAssemblies` rỗng nên rule qua hiển nhiên, nhưng nó là bảo hiểm miễn phí và xoá đi thì
+> lúc dựng module phải nhớ viết lại, mà đó là lúc dễ quên nhất. Tầng nghiệp vụ nay ĐÃ tồn tại
+> dưới tên `Business.*` (2026-09-10) và rule vẫn **GIỮ** — điều kiện trong câu cũ đã xảy ra mà
+> kết luận của nó thì không còn hiệu lực.
 
 > Vì sao phải ghi việc này ra: bản trước của file không có dấu trạng thái nào và
 > viết ở thì hiện tại mô tả, nên `.claude/agents/backend-expert.md` đã chép
@@ -436,6 +449,70 @@ người dùng chốt.
 | 8 | `bash .claude/check-docs.sh` | ✅ PASS |
 | 9 | `dotnet test` `Core.IntegrationTests` | ⏸ **chưa đo** — Docker không chạy trên máy thi công (`docker version`: không kết nối được daemon). Phần **chưa được xác minh bằng chạy thật**: `PostgresFixture` đọc `.sql` từ đường dẫn mới, và host boot thật với assembly mới. Phép thử 1 + 4 + 6 phủ việc biên dịch, model EF và đường dẫn tĩnh (`MigrationsLocationTests` kiểm cùng thư mục), nhưng không thay được lần chạy đó |
 
+### 🚧 ĐÃ CHỐT — ĐANG THI CÔNG: `Business.*` đã dựng (2026-09-10, vòng 1 cụm DTI)
+
+Năm project của tầng nghiệp vụ đã có thật trong solution, đúng cây và đúng thứ tự phụ thuộc khai
+ở §"Nguyên tắc phụ thuộc bắt buộc". Nhãn vẫn là `🚧` chứ không phải `✅` vì **phần đường GHI
+(DM-3…DM-7, DB-4) chưa làm** — vòng 1 cố ý chỉ làm đường ĐỌC.
+
+| Có thật hôm nay (2026-09-10) | Sẽ thành |
+| --- | --- |
+| 5 project `Business.*` trong solution; `Business.Infrastructure` gần như trống — **đúng dự kiến** | `Business.Infrastructure` nhận bộ ghi `.xlsx` của DB-4 (Q9) ở vòng 2 |
+| 4 entity + 4 EF Configuration + migration `20260910100110_ThemBangNghiepVuDti` **đã sinh** | migration đó **được chạy tay lên Postgres** — hôm nay chưa DB nào có 4 bảng này |
+| Endpoint ĐỌC: DM-1, DM-2, DM-8/DB-3, DB-1 | thêm DM-3…DM-7 (ghi + import) và DB-4 (export) |
+| `BusinessSeeder` (6 nhóm §1.6) + `dti.manage` khai ở host | nghiệm thu chạy `--seed` thật, xem §6.5 của file luật |
+| `Tests/PlatformManager.Business.UnitTests` — logic thuần (công thức, quy đổi kỳ, chuẩn hoá, khối quyền) | `Business.IntegrationTests` cho phần cần Postgres thật (dịch LINQ→SQL, ràng buộc unique/CHECK) |
+
+Đếm bằng lệnh, đừng chép số (`.claude/CLAUDE.md` §6):
+
+```bash
+find src/BE/Business -name "*.csproj" -not -path "*/obj/*" | wc -l
+grep -c '<Project Path=' src/BE/PlatformManager.slnx
+```
+
+#### `BusinessModuleRegistrar` đặt ở HOST — câu hỏi mà `CoreModuleRegistrar` để ngỏ
+
+Docstring của `CoreModuleRegistrar` (`src/BE/Core/PlatformManager.Core.Infrastructure/Modules/CoreModuleRegistrar.cs`)
+ghi nhận một việc **chưa có lời giải**: registrar sống trong `*.Infrastructure`, mà một registrar
+có `ApiAssembly` khác `null` thì phải thấy `*.Api` — cạnh `Infrastructure → Api` đi **ngược chiều
+phân lớp** và không có trong đồ thị ở §"Nguyên tắc phụ thuộc bắt buộc". Lượt này buộc phải trả
+lời, vì `Business.Api` có controller thật.
+
+**Chốt: registrar của tầng nghiệp vụ đặt ở `PlatformManager.Api`** (`Modules/BusinessModuleRegistrar.cs`).
+
+| Phương án | Vì sao loại |
+| --- | --- |
+| `Business.Infrastructure` | cần thêm HAI cạnh không khai: `→ Business.Persistence` (cho `PersistenceAssembly`) và `→ Business.Api` (cho `ApiAssembly`, ngược chiều phân lớp) |
+| `Business.Api` | cần cạnh `Api → Persistence` — chính thứ `ApiLayerBoundaryTests` cấm |
+| **host** ✅ | host vốn ĐÃ phải reference cả 5 project để gọi `AddApplicationPart`; đặt registrar ở đây **không mở thêm cạnh nào** |
+
+Lời hứa của seam không đổi: `Core.*` không sửa một dòng nào, và dự án thứ hai vẫn chỉ phải viết
+một lớp hiện thực `IModuleRegistrar` trong host của nó. `ModuleRegistrarSeamTests` canh đúng như
+cũ — nó quét TOÀN cây `src/BE`, không quét theo thư mục biết trước.
+
+**Hệ quả cho `CoreModuleRegistrar`**: câu hỏi "đặt ở đâu" khi 4 controller Core dời sang `Core.Api`
+nay đã có tiền lệ — chuyển nó sang host luôn, cùng lượt đó.
+
+#### `.sql` của tầng nghiệp vụ KHÔNG nằm trong thư mục `.sql` của Core
+
+Chốt 2026-09-04 (`doc/cau-truc-database.md` §5.3) nói *"Core ship `.sql`"* và đặt artifact ở
+`Core/PlatformManager.Core.Persistence/Migrations/sql/`. Chốt đó nói về **schema Core**; nó không
+trả lời cho bảng nghiệp vụ. Lượt này chốt phần còn lại:
+
+| Loại `.sql` | Ở đâu | Vì sao |
+| --- | --- | --- |
+| Schema `core` | `Core/PlatformManager.Core.Persistence/Migrations/sql/` | artifact CoreBase ship cho dự án sau |
+| Schema `business` | `Business/PlatformManager.Business.Persistence/Migrations/sql/` | để trong thư mục Core là **ship bảng DTI sang một dự án không có nghiệp vụ DTI** |
+
+`MigrationsLocationTests` không bị ảnh hưởng: nó canh (a) không `.cs` migration nào dưới
+`src/BE/Core`, và (b) thư mục `.sql` của Core còn tồn tại và khác rỗng. Cả hai vẫn đúng.
+
+⚠️ **Việc còn lại, nói rõ để không ai tưởng đã xong:** `PostgresFixture.MigrationScripts`
+(`src/BE/Tests/PlatformManager.Core.IntegrationTests/PostgresFixture.cs`) chỉ đọc thư mục `.sql`
+của Core, nên schema `business` **chưa** vào database của integration test. Nối nó vào cùng lượt
+viết `Business.IntegrationTests` đầu tiên — nối trước thì bộ test Core phải mang theo 4 bảng nó
+không dùng, đúng thứ ranh giới này sinh ra để tránh.
+
 ### ArchTest cần có
 
 > ### 🚧 Trạng thái từng rule — đối chiếu 2026-09-01
@@ -449,13 +526,17 @@ người dùng chốt.
 > | `Core_MustNotKnowBusinessName` | ✅ **Đã có** (đối chiếu 2026-09-06) | Thi công dưới tên `CoreSource_MustNotContain_BusinessNameStringLiteral` (`src/BE/Tests/PlatformManager.ArchTests/CoreMustNotKnowBusinessNameTests.cs:80`), kèm 3 test tự-kiểm bộ dò (`:171`, `:201`, `:220` — 🔄 neo lại 2026-09-10: bộ cũ `:162`/`:192`/`:211` đã trôi, trỏ vào dòng trống/chú thích). 🔄 LẬT 2026-09-06 — ô này giữ nhãn `🚧 Đang thi công 2026-09-01` cho tới lượt đối chiếu này, tức 5 ngày sau khi test đã vào code |
 > | `Api_MustNotReference_PersistenceOrInfrastructure_Directly` | ✅ **Đã có** (thi công + đối chiếu 2026-09-09) | `src/BE/Tests/PlatformManager.ArchTests/ApiLayerBoundaryTests.cs:61`, kèm luật thứ hai ở mức văn bản `.csproj` (`:109`). Xem khối 🔄 ngay dưới bảng |
 > | `Application_MustNotReference_PersistenceOrInfrastructure` | ✅ **Đã có** (thi công + đối chiếu 2026-09-10) | Hai mức + một ca đối chứng ở `src/BE/Tests/PlatformManager.ArchTests/ApplicationLayerBoundaryTests.cs`: mức assembly `:39`, mức `.csproj` `:61`, ca `Business.Application → Core.Persistence` dựng tay `:100`. Áp cho **mọi** `*.Application`, không riêng Core. Sinh ra từ finding của `core-reviewer` ngay sau lượt tách `Core.Persistence`: trước đó `Core.Application` chỉ bị chặn nhờ **vòng tham chiếu** (hệ quả phụ, không phải luật), còn `Business.Application → Core.Persistence` không có gì chặn. Canary 2026-09-10 đỏ ở cả hai mức, mỗi mức đỏ đúng vì luật mới |
-> | `OnlyHostApi_MustReference_BothUnits` | 📐 **ĐÍCH ĐẾN** | `Business.*` chưa tồn tại. Kiểm: `find src/BE -name "*.csproj" -not -path "*/obj/*" \| grep Business` → **PASS khi không dòng nào ra**, tức chưa có tầng nghiệp vụ để luật này đo |
+> | `OnlyHostApi_MustReference_BothUnits` | ✅ **Đã có** (thi công + đối chiếu 2026-09-10) | `src/BE/Tests/PlatformManager.ArchTests/HostOnlySeesBothUnitsTests.cs` — hai luật ở mức VĂN BẢN `.csproj`, kèm luật thứ hai `CoreProjects_MustNotReference_Business_AtCsprojLevel`. Viết đúng lượt dựng `Business.*` như ô này dặn, và mang theo khẳng định *"tập quét khác rỗng"* mà nó đòi: test đỏ nếu không còn project `PlatformManager.Business.*` nào trên đĩa |
 > | `Core_Common_MustHaveZeroProjectReference` | 📐 **ĐÍCH ĐẾN** | `Core.Common` chưa là project riêng — hiện chỉ là thư mục `Common/` bên trong từng project |
 >
-> Hai rule `📐` còn lại **viết bây giờ sẽ là test rỗng**: chúng quét một tập không có phần tử nào,
-> nên xanh vĩnh viễn mà không đo gì. Đó đúng khuôn lỗi mà bộ test này vừa phải sửa **hai** lần. Viết
-> chúng **cùng lượt** dựng `Business.*` đầu tiên, và khi đó nhớ kèm khẳng định *"tập quét được khác
-> rỗng"*.
+> Rule `📐` còn lại (`Core_Common_MustHaveZeroProjectReference`) **viết bây giờ sẽ là test rỗng**: nó
+> quét một tập không có phần tử nào, nên xanh vĩnh viễn mà không đo gì. Đó đúng khuôn lỗi mà bộ test
+> này đã phải sửa **hai** lần. Viết nó **cùng lượt** tách `Core.Common`, và khi đó nhớ kèm khẳng định
+> *"tập quét được khác rỗng"*.
+>
+> 🔄 **ĐÓNG 2026-09-10 — `OnlyHostApi_MustReference_BothUnits` không còn rỗng.** Điều kiện mà đoạn
+> trên đặt ra (*"viết cùng lượt dựng `Business.*` đầu tiên"*) đã xảy ra, và luật được viết đúng lượt
+> đó. Đoạn văn này trước đây nói về **hai** rule; nay chỉ còn một.
 >
 > 🔄 **LẬT 2026-09-09 — `Api_MustNotReference_PersistenceOrInfrastructure_Directly` không còn rỗng.**
 > Lý do hoãn cũ (*"không có assembly `*.Api` theo module, chỉ có host và host thì PHẢI reference
@@ -616,9 +697,38 @@ Chỗ mang, đo được:
 | FE `platform/**` — màn Core theo khối cây ở mục trên | **Tên sản phẩm** trong template lẫn `.ts` của màn Core | ✅ **ĐÃ TÁCH 2026-09-03** — xem "Đã thi công (FE) — đóng ba đường thoát" bên dưới. Canh bằng phép thử 7 |
 | FE `platform/**` | **Route khai cứng** (`/trang-chu`, `/doi-mat-khau`) trong trang tự điều hướng, dù seam `CORE_ROUTES` đã có sẵn cho đúng việc đó | ✅ **ĐÃ TÁCH 2026-09-03** — xem "Đã thi công (FE) — route trong `platform/`" bên dưới. Canh bằng phép thử 3, nay **rỗng** |
 | `ResourceKeys` (`Core.Application`) | **Nhãn hiển thị** của permission-key (`DisplayNames`), **và** một danh mục key ĐÓNG mà docstring lại ra chỉ thị cho module nghiệp vụ khai key *vào trong Core* | ✅ **ĐÃ TÁCH 2026-09-03** — seam `ICoreResourceKeySource`, host hiện thực bằng `AppResourceKeySource`. Canh bằng phép thử **10**. Còn một nửa nợ **i18n**, xem §nợ ngay dưới |
+| FE `shared/services/` + `shared/models/` | **Nghiệp vụ DTI**: endpoint `GET /api/dashboard/periods`, bốn chuỗi `Trạng thái` tiếng Việt, khái niệm **tuần ISO** của DTI, ánh xạ trạng thái → lớp badge | 🚧 **NỢ ĐÃ ĐĂNG KÝ 2026-09-10** — cố ý chưa trả, xem §"Nợ FE" ngay dưới. Canh bằng phép thử **11** |
 
 Dự án 2 sẽ khác cả nhãn, route lẫn ngôn ngữ. Hôm nay dùng lại Core thì **phải sửa vào trong
 Core** — đúng thứ định nghĩa "CoreBase xong" ở §"Khi Core thật sự tách thành thư viện" loại trừ.
+
+#### 🚧 Nợ FE — những gì `shared/` đang mang theo mà KHÔNG thuộc CoreBase (đăng ký 2026-09-10)
+
+`core/` và `shared/` là CoreBase, tức chúng **đi theo** khi tách sang sản phẩm thứ hai. Lượt dựng
+FE vòng 1 của cụm DTI đặt bốn thứ **nghiệp vụ** vào `shared/`, và người dùng đã chốt **giữ nguyên
+vị trí, đăng ký nợ** thay vì tái cấu trúc giữa vòng.
+
+| Mang gì | Ở đâu | Vì sao phải ở đó hôm nay |
+| --- | --- | --- |
+| Endpoint `GET /api/dashboard/periods` | `src/FE/src/app/shared/services/dti-period.service.ts` | hai module nghiệp vụ cùng cần; gate **G8** cấm `modules/<A>` import `modules/<B>` |
+| Bốn chuỗi `Trạng thái` tiếng Việt + ánh xạ badge | `src/FE/src/app/shared/models/dti-criteria-status.model.ts` | `spec/dashboard-dti/business-rules.md` §2 chốt đây là **bảng ánh xạ DUY NHẤT**, áp cho cả hai màn |
+| Khái niệm **tuần ISO / tháng** của DTI (mốc cuối kỳ, mã kỳ) | `src/FE/src/app/shared/models/dti-period.model.ts`, `shared/services/dti-period.mapper.ts` | cùng lý do G8 |
+| Khuôn nhãn kỳ (`dd/MM` – `dd/MM/yyyy`) | `src/FE/src/app/shared/services/dti-period.format.ts` | cùng lý do G8 |
+
+**Điều kiện để nó là NỢ chứ không phải vi phạm** — cả ba phải đúng, khai ở
+[`huong_dan/quy-uoc/fe-architecture.md`](huong_dan/quy-uoc/fe-architecture.md) §"Bên trong
+`shared/`": ≥ 2 module nghiệp vụ dùng thật · G8 chặn mọi lối khác · **đăng ký vào chính bảng
+trên**. Vế thứ ba là vế dễ mất nhất, và nó là lý do mục này tồn tại.
+
+**Hoãn tới khi nào:** khi có **module DTI thứ ba**, hoặc khi thật sự tách sản phẩm thứ hai — lúc
+đó hai phương án đã cân nhắc và tạm gác là (1) dựng một tầng `domains/dti/` ngang hàng `shared/`
+nằm ngoài CoreBase, (2) đưa bốn thứ trên vào một module nghiệp vụ "chủ" rồi nới G8 cho đúng cặp
+đó. Cả hai đều là thay đổi cấu trúc cấp app, không phải việc của một lượt dựng màn.
+
+🛑 **Đừng đọc mục này thành giấy phép.** Nó đăng ký **đúng bốn** thứ đang có. Thêm một file nghiệp
+vụ DTI vào `shared/` chỉ vì "đã có mấy cái ở đó rồi" là biến một ngoại lệ có điều kiện thành một
+thói quen — và lúc đó phép thử 11 dưới đây không còn phân biệt được nợ đã chốt với nợ mới phát
+sinh.
 
 #### ✅ `ResourceKeys` — đã tách 2026-09-03, và nửa nợ còn lại KHÔNG cùng loại
 
@@ -726,11 +836,18 @@ NOCODE=':[0-9]+: *(///|//|\*)|/obj/|/Migrations/'
 | 8 | Gỡ dòng đăng ký DI của từng seam mới rồi khởi động | **Chết trước khi ghi/hiển thị**, không có bản mặc định im lặng |
 | 9 | `grep -nE "#(000000\|ffffff)" src/FE/src/app/core/theme/core-preset.ts \| grep -vE "mix\(" \| grep -vE "^[0-9]+: \*"` | **rỗng** — hex đen/trắng còn lại **chỉ** nằm trong `mix()`, tức đầu mút của phép pha |
 | 10 | `grep -rnE '"[a-z][a-z-]*\.[a-z][a-z-]*"' $BE_CORE --include=*.cs \| grep -vE "$NOCODE"` | **rỗng** — đã chạy 2026-09-03. Đối chứng bắt buộc: cùng lệnh trên `src/BE/PlatformManager.Api` phải **KHÔNG** rỗng (`AppResourceKeySource.cs:33`) — rỗng cả hai bên nghĩa là lệnh hỏng, không phải ranh giới sạch |
+| 11 | `find $FE_CORE -name '*dti*'` **và** `grep -rnE "'/(dashboard\|criteria)[a-z/-]*'" $FE_CORE --include=*.ts \| grep -v '\.spec\.'` | ❌ **CHƯA rỗng — nợ đã đăng ký**, xem §"Nợ FE" ở trên. PASS khi **cả hai** rỗng. Đối chứng bắt buộc: cùng hai lệnh trên `src/FE/src/app/modules` phải **KHÔNG** rỗng — rỗng cả hai bên nghĩa là lệnh hỏng, không phải ranh giới sạch |
 
 Những chi tiết đánh số dưới đây là **kết quả của một lần thoát lưới đã xảy ra thật**, không phải cầu
 kỳ thừa — đọc §"Bài học — vì sao `platform/` thoát lưới" bên dưới trước khi rút gọn chúng đi:
 
 0. **`$BE_CORE` là `src/BE/Core`, không phải `CoreSeeder.cs`** — cùng lỗi với #1, khác phía.
+0b. **Phép thử 11 là bản FE của phép thử 10, và nó thiếu suốt từ 2026-09-03 tới 2026-09-10.** Phía
+   BE có #10 dò **dữ liệu miền nghiệp vụ** trong `$BE_CORE`; phía FE thì không có bản tương ứng —
+   #3 chỉ dò **route**, #7 chỉ dò **tên sản phẩm**. Hệ quả đo được: bốn file nghiệp vụ DTI nằm gọn
+   trong `shared/` mà **cả #3 lẫn #7 đều xanh**. Đây đúng khuôn "quét hẹp hơn ranh giới" mà mục
+   §"Bài học — vì sao `platform/` thoát lưới" mô tả, chỉ khác là lần này lưới hẹp theo **loại thứ
+   cần dò**, không hẹp theo thư mục.
 1. **`platform/` có trong `$FE_CORE`** — bỏ ra là quét hẹp hơn ranh giới.
 2. **`-i` và `[_ -]?`** ở phép thử 7 — tên sản phẩm còn xuất hiện dưới dạng `snake_case` chữ thường.
 3. **`--include=*.html`** ở phép thử 3 — dữ liệu dự án nấp trong template không bị `.ts`-only bắt.

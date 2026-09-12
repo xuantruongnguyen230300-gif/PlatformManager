@@ -111,7 +111,7 @@ Loaded faces cover **400, 500, 600, 700, 800**. Two shipped weights fall outside
 | --- | --- | --- | --- |
 | `400` | yes | body default (inherited); **two** explicit declarations, both on Phân quyền — the resource-matrix role tag and the page-level explainer | `src/FE/src/app/platform/phan-quyen/components/resource-permission-matrix/resource-permission-matrix.scss`, `src/FE/src/app/platform/phan-quyen/pages/phan-quyen/phan-quyen.page.scss` |
 | `500` | yes | **nothing uses it** — the face is loaded but never requested | — |
-| `600` | yes | sidebar nav item, `.role-checkbox`, `.facts dd` (home-page fact values) | `src/FE/src/app/shared/components/sidebar/sidebar.scss`, `src/FE/src/app/platform/quan-tri-nguoi-dung/components/user-form-dialog/user-form-dialog.scss`, `src/FE/src/app/platform/trang-chu/pages/trang-chu/trang-chu.page.scss` |
+| `600` | yes | sidebar nav item, `.role-checkbox`, and the two DTI dialogs' "entering data for period X" line (`.form-target-period` / `.import-target`) | `src/FE/src/app/shared/components/sidebar/sidebar.scss`, `src/FE/src/app/platform/quan-tri-nguoi-dung/components/user-form-dialog/user-form-dialog.scss`, `src/FE/src/app/modules/danh-muc-dti/components/criteria-form-dialog/criteria-form-dialog.scss`, `src/FE/src/app/modules/danh-muc-dti/components/import-dialog/import-dialog.scss` |
 | `700` | yes | the dominant emphasis weight — `.btn`, `.seg-btn`, `th`, form labels, `.filter-chip`, `.text-*`, links, `.user-name`, `.topbar-user-name`, active nav item | `src/FE/src/styles.scss` and component SCSS |
 | `750` | **no** | `.badge` only | `src/FE/src/styles.scss` |
 | `800` | yes | `.filter-count`, `.dialog-title`, brand marks, brand text, avatar, auth `h1` | `src/FE/src/styles.scss`, and component SCSS |
@@ -145,7 +145,7 @@ Be Vietnam Pro is shipped here as **static** faces, not a variable font, so `750
 | `1.45` | `.toast-text` | `src/FE/src/app/shared/components/toast/toast.scss` |
 | `1.5` | `.dialog-desc` | `src/FE/src/styles.scss` |
 | `1.5` | `.always-note` (permission matrix footnote) | `src/FE/src/app/platform/phan-quyen/components/resource-permission-matrix/resource-permission-matrix.scss` |
-| `1.6` | `.lead` (home page intro paragraph) | `src/FE/src/app/platform/trang-chu/pages/trang-chu/trang-chu.page.scss` |
+| `1.6` | `.import-summary` (the import-result dialog's summary sentence) | `src/FE/src/app/modules/danh-muc-dti/components/import-result-dialog/import-result-dialog.scss` |
 
 ### Responsive overrides
 

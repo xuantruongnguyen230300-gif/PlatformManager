@@ -127,9 +127,23 @@ lý do mục này tồn tại:
 shared/
 ├── components/   # dumb UI component tái dùng > 1 feature
 ├── directives/   # directive dùng chung, cũng dumb
-├── models/       # kiểu dùng chung giữa nhiều feature (KHÔNG phải DTO — xem fe-api-client.md)
-└── services/     # service TRẠNG THÁI UI, không phải hạ tầng và không gọi HTTP
+├── models/       # kiểu dùng chung giữa nhiều feature, VÀ hàm thuần đi liền kiểu đó
+│                 #   (bảng tra, hàm phân loại, hàm định dạng — không state, không inject)
+└── services/     # service TRẠNG THÁI UI  ·  service DỮ LIỆU dùng chung (có điều kiện, xem bảng dưới)
 ```
+
+> 🔄 **SỬA 2026-09-10 — hai ô trên vừa được nới, và cả hai đều sai theo cùng một kiểu: mô tả hẹp
+> hơn thứ đang nằm trong thư mục.**
+>
+> | Ô | Bản trước nói | Thứ thật sự nằm ở đó |
+> | --- | --- | --- |
+> | `models/` | *"kiểu dùng chung … (KHÔNG phải DTO)"* | `dti-criteria-status.model.ts` có một **bảng tra** và một **hàm** `criteriaStatusBadge()`, không chỉ có `type` |
+> | `services/` | *"không phải hạ tầng và **không gọi HTTP**"* | `dti-period.service.ts` **gọi HTTP** — và đó là nơi đúng của nó, xem bảng ba ô bên dưới |
+>
+> Vế "KHÔNG phải DTO" của `models/` **giữ nguyên** — DTO thuộc về feature sở hữu endpoint. Điều
+> được nới là: một hàm THUẦN đi liền với kiểu (`dti-period.format.ts` dựng mảnh nhãn kỳ) không có
+> ô nào để đứng trước 2026-09-10, nên nó sẽ bị đẩy nhầm vào `services/` — chỗ dành cho thứ **có
+> vòng đời**.
 
 > 🔄 **SỬA 2026-09-08 (cùng ngày, lần thứ hai).** Tiêu đề mục này vừa được viết là *"ba thư
 > mục, không phải một"* trong khi khối ngay dưới nó liệt **bốn** — một con số chép tay sai
@@ -146,14 +160,44 @@ shared/
 **Ranh giới `shared/services/` ↔ `core/`** — đây là chỗ dễ đặt nhầm nhất, và nhầm thì gãy gate
 G9 (`core/` không được import ngược lên `shared/`):
 
-| Câu hỏi | `core/` | `shared/services/` |
-|---|---|---|
-| Có gọi HTTP / giữ phiên / cấu hình app không? | **Có** | Không bao giờ |
-| Có tồn tại khi không có giao diện nào không? | Có | Không — nó phục vụ đúng một nhu cầu UI |
-| Ví dụ đang chạy | `core/toast/toast.service.ts`, `core/auth/*` | `shared/services/sidebar-state.service.ts` (mở/thu gọn menu) |
+| Câu hỏi | `core/` | `shared/services/` — trạng thái UI | `shared/services/` — DỮ LIỆU dùng chung |
+|---|---|---|---|
+| Có gọi HTTP / giữ phiên / cấu hình app không? | **Có** | Không bao giờ | **Có** — nhưng chỉ HTTP, không phiên, không cấu hình app |
+| Có tồn tại khi không có giao diện nào không? | Có | Không — nó phục vụ đúng một nhu cầu UI | Không — nó nuôi một control của màn hình |
+| Endpoint nó gọi thuộc về ai | nền tảng (auth, menu, CSRF…) | — | **một miền nghiệp vụ**, không phải nền tảng |
+| Ví dụ đang chạy | `core/toast/toast.service.ts`, `core/auth/*` | `shared/services/sidebar-state.service.ts` (mở/thu gọn menu) | `shared/services/dti-period.service.ts` (`GET /api/dashboard/periods`) |
 
 Phép thử: *"bỏ hết màn hình đi thì service này còn nghĩa gì không?"* Còn → `core/`. Không →
-`shared/services/`.
+`shared/services/`, rồi chọn cột hai hay cột ba theo hàng "có gọi HTTP".
+
+> ### ✅ CHỐT 2026-09-10 — cột thứ ba, và ĐIỀU KIỆN của nó
+>
+> Bảng này từng chỉ có **hai** cột, và ô `shared/services/` khai *"không gọi HTTP"*. Loại thứ ba
+> vẫn tồn tại: một service **dữ liệu** mà **từ hai module nghiệp vụ trở lên** cùng cần. Nó không
+> có chỗ đứng nào khác — gate **G8** (`src/FE/eslint.config.js`) cấm `modules/<A>` import nội bộ
+> `modules/<B>`, và chính thông điệp của G8 chỉ sang `shared/`.
+>
+> 🛑 **Cột ba mở có ĐIỀU KIỆN, không mở toang.** Một service dữ liệu được đặt ở `shared/services/`
+> **khi và chỉ khi** cả ba điều sau cùng đúng:
+>
+> 1. **≥ 2 module nghiệp vụ** đang thật sự dùng nó (không phải "sẽ dùng");
+> 2. **G8 chặn mọi lối khác** — tức nó không đặt được trong module nào mà không phá ranh giới;
+> 3. nó được **đăng ký vào danh sách "đi kèm dự án"** ở
+>    [`../../kien-truc-core-module.md`](../../kien-truc-core-module.md) § "Chỗ mang, đo được" —
+>    vì `shared/` đi theo CoreBase, nên mỗi file loại này là một món **nợ** phải trả khi tách sản
+>    phẩm thứ hai, và nợ không đăng ký là nợ không ai trả.
+>
+> Thiếu bất kỳ điều nào ⇒ nó thuộc `modules/<feature>/services/`.
+>
+> **Vì sao bản hai cột là một lỗi thật, không phải chuyện chữ nghĩa:** cả hai câu hỏi của bảng cũ
+> đều đẩy `DtiPeriodService` về `core/` — "có gọi HTTP: Có" ⇒ cột `core/`. Đáp án đó tệ hơn hẳn:
+> nó nhét một endpoint **nghiệp vụ DTI** vào tầng đáy của CoreBase, đúng thứ
+> [`../../kien-truc-core-module.md`](../../kien-truc-core-module.md) sinh ra để ngăn.
+>
+> Và nó đã sinh ra một mâu thuẫn đo được: `doc/contracts/dashboard.md` DB-3 §"Owner FE" viện dẫn
+> **chính file này** làm căn cứ để đặt service ở `shared/`, trong khi file này nói ngược lại. Một
+> hợp đồng trỏ sang một quy ước phủ định nó — đúng cơ chế `.claude/CLAUDE.md` §5 mô tả, và không
+> gate nào bắt được vì cả hai đường dẫn đều tồn tại.
 
 ## Seam cấu hình cấp app — `core/` giữ CƠ CHẾ, app cấp DỮ LIỆU
 
@@ -167,7 +211,7 @@ lại ở đây (`.claude/CLAUDE.md` §5):
 
 | Seam | Cấp gì cho `core/` | File chủ |
 |---|---|---|
-| `CORE_ROUTES` | 3 đường dẫn mà guard chuyển hướng tới | [`fe-routing-guard.md`](fe-routing-guard.md) §10 |
+| `CORE_ROUTES` | 3 đường dẫn mà guard, interceptor **và app-shell** trỏ tới | [`fe-routing-guard.md`](fe-routing-guard.md) §10 |
 | `CORE_BRANDING` | Tên sản phẩm (`name`) + chữ tắt (`shortName`) | **mục này** |
 | `CORE_I18N` | Danh sách ngôn ngữ + ngôn ngữ mặc định | [`../wiki-core/fe/08-i18n.md`](../wiki-core/fe/08-i18n.md) §Khuôn CoreBase |
 | `createCorePreset(palette)` | Bảng màu cho ramp PrimeNG — **tham số hàm, không phải token** | [`../wiki-core/fe/04-design-token-system.md`](../wiki-core/fe/04-design-token-system.md) |
@@ -364,8 +408,8 @@ sự cần store — không cài trước khi có nhu cầu.
   là điều phối chứ không phải giao diện — tách thành lớp cộng tác `@Injectable()` khai trong
   `providers` của chính trang (xem khuôn ở dưới).
 
-  ✅ **Không còn vi phạm (đối chiếu 2026-09-10)** — đếm bằng lệnh, đừng chép danh sách vào đây
-  (`.claude/CLAUDE.md` §6):
+  ✅ **Không còn vi phạm (đối chiếu 2026-09-11)** — nhưng đọc tiếp khối 🛑 bên dưới trước khi tin
+  dòng này. Đếm bằng lệnh, đừng chép danh sách vào đây (`.claude/CLAUDE.md` §6):
 
   ```bash
   find src/FE/src/app -name '*.ts' -not -name '*.spec.ts' \
@@ -373,8 +417,34 @@ sự cần store — không cài trước khi có nhu cầu.
   # PASS khi không in dòng nào
   ```
 
-  🔄 **LẬT 2026-09-10.** Mục này mang nhãn *"⚠️ Đang có vi phạm"* từ 2026-09-06; ca duy nhất là
-  `quan-tri-nguoi-dung.page.ts` (579 dòng), nay còn 358 sau khi tách ba lớp cộng tác.
+  🔄 **HAI lần lật trong cùng ngày 2026-09-10 — đọc cả hai, vì lần thứ hai là bài học.**
+  Sáng: mục này mang nhãn *"⚠️ Đang có vi phạm"* từ 2026-09-06, ca duy nhất là
+  `quan-tri-nguoi-dung.page.ts` (579 dòng), tách ba lớp cộng tác xong còn 358 ⇒ đổi sang
+  ✅. Chiều: lượt dựng FE vòng 1 của cụm DTI thêm **hai** trang mới và cả hai vượt trần
+  (`modules/danh-muc-dti/pages/danh-muc-dti/danh-muc-dti.page.ts`,
+  `modules/dashboard/pages/dashboard/dashboard.page.ts`) ⇒ nhãn ✅ hết đúng **trong cùng ngày nó
+  được viết**.
+
+  🛑 **Vì sao ghi lại thay vì lặng lẽ đổi nhãn:** đây là dạng nhãn có tuổi thọ ngắn hơn người viết
+  tưởng. `✅ Không còn vi phạm` đọc như một trạng thái ổn định, nhưng nó chỉ là **ảnh chụp của một
+  lệnh tại một thời điểm** — và lệnh đó thì bất kỳ trang mới nào cũng lật được. Chạy lại lệnh,
+  đừng tin nhãn.
+
+  **Nợ vòng 1 đã trả xong (2026-09-11).** Hai trang DTI vượt trần hôm 2026-09-10 nay đều dưới
+  ngưỡng, tách theo đúng khuôn ở mục ngay dưới — và phần tách ra đúng là loại "không phải giao
+  diện" mà khuôn đó nhắm tới:
+
+  | Trang | Tách thành |
+  | --- | --- |
+  | `modules/danh-muc-dti/pages/danh-muc-dti/` | `criteria-filters.ts` (bộ lọc + URL) · `criteria-labels.ts` (câu chữ) · bốn lớp luồng ghi (`criteria-import-flow` · `criteria-form-flow` · `criteria-inline-edit-flow` · `criteria-delete-flow`) |
+  | `modules/dashboard/pages/dashboard/` | `dashboard-filters.ts` (bộ lọc + chọn kỳ + URL) · `dashboard-labels.ts` (câu chữ + định dạng số) · `dashboard-export-flow.ts` |
+
+  Cả hai trang giữ lại **đúng phần điều phối**: quyết định băng nào hiện, luồng nào mở, và nối
+  `isClean()` với lượt tải. Đó là vai "nhạc trưởng" mà một trang nên có.
+
+  🛑 **Nhãn ✅ ở trên vẫn là ảnh chụp của một lệnh tại một thời điểm** — xem hai lần lật ngày
+  2026-09-10 ngay trên. Trang mới nào cũng lật được nó, và lần trước nó hết đúng **trong cùng ngày
+  nó được viết**. Chạy lại lệnh, đừng tin nhãn.
 
 - **Khuôn tách một trang quá dài mà phần thừa KHÔNG phải giao diện.** Trang lưới + hộp thoại
   thường phình vì nó ôm nhiều máy trạng thái độc lập, chứ không vì template rườm rà — lúc đó tách

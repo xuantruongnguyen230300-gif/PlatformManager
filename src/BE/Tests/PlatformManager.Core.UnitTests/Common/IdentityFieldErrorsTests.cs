@@ -1,3 +1,4 @@
+using System.Reflection;
 using NSubstitute;
 using PlatformManager.Core.Application.Auth;
 using PlatformManager.Core.Application.Common;
@@ -214,6 +215,9 @@ public class IdentityFieldErrorsTests
     [Theory(DisplayName = "Đối chứng bảng ánh xạ: mã nào nói về ô nào")]
     [InlineData("PasswordMismatch", IdentityFieldSlot.CurrentPassword)]
     [InlineData("PasswordTooShort", IdentityFieldSlot.NewPassword)]
+    // CommonPassword — mã của .AddTop10000PasswordValidator<AppUser>(), thêm 2026-09-11. Trước đó
+    // nó rơi về $record và màn hình KHÔNG hiện lý do nào; xem ca hồi quy riêng ở cuối file.
+    [InlineData("CommonPassword", IdentityFieldSlot.NewPassword)]
     [InlineData("PasswordRequiresDigit", IdentityFieldSlot.NewPassword)]
     [InlineData("DuplicateUserName", IdentityFieldSlot.UserName)]
     [InlineData("DuplicateEmail", IdentityFieldSlot.Email)]
@@ -251,4 +255,143 @@ public class IdentityFieldErrorsTests
     [Fact(DisplayName = "Đối chứng: không mã nào → fieldErrors null (vắng mặt trên dây)")]
     public void Build_ReturnsNull_WhenThereIsNoCode()
         => Assert.Null(IdentityFieldErrors.Build([], IdentityFormFields.ChangePassword));
+
+    // ---------- Hồi quy 2026-09-11: mật khẩu phổ biến ----------
+
+    /// <summary>
+    /// 🔴 <b>Ca thật, không phải ca giả định.</b> Người dùng tạo tài khoản với mật khẩu
+    /// <c>qwerty123456</c> → Identity từ chối bằng mã <c>CommonPassword</c> (validator của
+    /// <c>.AddTop10000PasswordValidator&lt;AppUser&gt;()</c>), mã đó KHÔNG có trong allowlist nên
+    /// rơi về <c>$record</c>, và <b>màn hình không hiện lý do nào</b>.
+    ///
+    /// <para>Khẳng định <c>DoesNotContain(RecordKey)</c> mới là khẳng định chống hồi quy: chỉ kiểm
+    /// "có khoá TempPassword" thì một bản sửa gắn mã vào CẢ HAI chỗ vẫn xanh, trong khi khối lỗi
+    /// chung cuối form vẫn hiện thừa một dòng.</para>
+    /// </summary>
+    [Fact(DisplayName = "Hồi quy: CommonPassword về ô mật khẩu, KHÔNG rơi về $record")]
+    public void CommonPassword_LandsOnThePasswordInput_NotTheRecordKey()
+    {
+        Assert.Equal(IdentityFieldSlot.NewPassword, IdentityFieldErrors.SlotFor("CommonPassword"));
+
+        // Màn Thêm/Sửa người dùng — ô mật khẩu ở form này tên `TempPassword`.
+        var userForm = IdentityFieldErrors.Build(["CommonPassword"], IdentityFormFields.UserForm);
+
+        Assert.NotNull(userForm);
+        Assert.Equal("CommonPassword", userForm!["TempPassword"][0].Code);
+        Assert.DoesNotContain(IdentityFieldErrors.RecordKey, userForm.Keys);
+
+        // Cùng mã, form khác, ô khác tên — đây là toàn bộ lý do hai tầng (mã → slot → tên field)
+        // tồn tại; gộp một tầng thì mỗi form phải chép lại cả bảng mã.
+        var changePassword = IdentityFieldErrors.Build(["CommonPassword"], IdentityFormFields.ChangePassword);
+
+        Assert.NotNull(changePassword);
+        Assert.Equal("CommonPassword", changePassword!["NewPassword"][0].Code);
+        Assert.DoesNotContain(IdentityFieldErrors.RecordKey, changePassword.Keys);
+    }
+
+    /// <summary>
+    /// Lưới chặn HỒI QUY cho các mã họ <c>Password*</c> <b>ĐÃ KHAI</b>: không mã nào trong số đó
+    /// được phép tuột về <c>$record</c>. <c>PasswordMismatch</c> là ngoại lệ có chủ đích (bẫy 1):
+    /// nó nói về mật khẩu HIỆN TẠI — vẫn là một ô mật khẩu.
+    ///
+    /// <para>🛑 <b>Test này KHÔNG bắt được mã MỚI, và nói riêng nó KHÔNG bắt được ca
+    /// 2026-09-11.</b> Bản đầu của docstring này khẳng định ngược lại (*"lẽ ra đã bắt được trước
+    /// khi người dùng gặp"*) — sai theo hai đường, và <c>core-reviewer</c> bắt được:</para>
+    /// <list type="number">
+    ///   <item><c>CommonPassword</c> <b>không</b> bắt đầu bằng <c>Password</c> — mã gây ra sự cố
+    ///   nằm NGOÀI đúng cái họ mà lưới này nhận là mình phủ.</item>
+    ///   <item>Danh sách dưới đây là <c>[InlineData]</c> gõ tay, không phải phép liệt kê từ nguồn.
+    ///   Nó chỉ khẳng định được những mã đã có người gõ vào file test — mà ai gõ được tên mã vào
+    ///   đây thì đã gõ được dòng vào <c>SlotByCode</c> rồi.</item>
+    /// </list>
+    ///
+    /// <para>Hai lưới thật sự bắt được "dòng còn thiếu" nằm ở chỗ khác, và chúng bù nhau:
+    /// <see cref="EveryDescriberCode_IsClassified"/> phủ mã của Identity lõi bằng PHẢN CHIẾU; còn
+    /// mã của validator bên thứ ba (không có describer để phản chiếu) thì do
+    /// <c>IdentityCodeFieldErrorsTests</c> phủ bằng một request HTTP thật, không cần biết tên mã.</para>
+    /// </summary>
+    [Theory(DisplayName = "Mọi mã họ Password* đều về MỘT ô mật khẩu, không về $record")]
+    [InlineData("PasswordTooShort")]
+    [InlineData("PasswordRequiresDigit")]
+    [InlineData("PasswordRequiresLower")]
+    [InlineData("PasswordRequiresUpper")]
+    [InlineData("PasswordRequiresNonAlphanumeric")]
+    [InlineData("PasswordRequiresUniqueChars")]
+    [InlineData("PasswordMismatch")]
+    public void EveryPasswordCode_LandsOnAPasswordInput(string code)
+    {
+        var slot = IdentityFieldErrors.SlotFor(code);
+
+        Assert.True(
+            slot is IdentityFieldSlot.NewPassword or IdentityFieldSlot.CurrentPassword,
+            $"Mã '{code}' nói về một ô mật khẩu nhưng đang về slot {slot}. Rơi về " +
+            $"{nameof(IdentityFieldSlot.Record)} nghĩa là câu lỗi hiện ở khối lỗi chung cuối form " +
+            "thay vì ngay dưới ô người dùng đang gõ — đúng ca đã xảy ra với CommonPassword ngày " +
+            "2026-09-11. Thêm một dòng vào IdentityFieldErrors.SlotByCode.");
+    }
+
+    /// <summary>
+    /// 🔴 <b>Lưới DUY NHẤT trong file này bind vào NGUỒN thay vì vào một danh sách gõ tay.</b>
+    /// Tên method khai trên <c>IdentityErrorDescriber</c> CHÍNH LÀ mã lỗi mà Identity sinh ra, nên
+    /// phản chiếu lớp đó cho ra trọn bộ mã của bản .NET đang dùng — không phải bộ mã mà người viết
+    /// test nhớ được.
+    ///
+    /// <para>Khẳng định: mỗi mã hoặc <b>có ô</b> (<c>SlotFor != Record</c>), hoặc nằm trong
+    /// <see cref="IdentityFieldErrors.IntentionallyRecord"/> — tức đã được PHÂN LOẠI tường minh.
+    /// Không có cửa thứ ba. Hôm nay xanh với trọn bộ describer; nó chỉ ĐỎ khi .NET thêm một mã mới
+    /// mà chưa ai quyết định mã đó thuộc ô nào.</para>
+    ///
+    /// <para><b>Vì sao <c>IntentionallyRecord</c> phải public:</b> nếu chép danh sách loại trừ sang
+    /// đây thì có HAI bản của cùng một danh sách, và bản ở test sẽ lệch ngay lần đầu ai đó sửa bản
+    /// kia — test vẫn xanh, và nó xanh vì mù. Đọc từ chính nguồn là điều kiện để lưới này có nghĩa.</para>
+    ///
+    /// <para>⚠️ Lưới này KHÔNG phủ mã của validator bên thứ ba: <c>CommonPassword</c> đến từ gói
+    /// <c>CommonPasswordsValidator</c> và không có mặt trong describer. Ca đó do
+    /// <c>IdentityCodeFieldErrorsTests</c> phủ bằng HTTP thật.</para>
+    /// </summary>
+    [Fact(DisplayName = "Mọi mã của IdentityErrorDescriber đều ĐÃ ĐƯỢC PHÂN LOẠI (có ô, hoặc cố ý về $record)")]
+    public void EveryDescriberCode_IsClassified()
+    {
+        var codes = typeof(Microsoft.AspNetCore.Identity.IdentityErrorDescriber)
+            .GetMethods(BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.Instance)
+            .Where(method => method.ReturnType == typeof(Microsoft.AspNetCore.Identity.IdentityError))
+            .Select(method => method.Name)
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(name => name, StringComparer.Ordinal)
+            .ToList();
+
+        // Chặn "xanh mà không đo gì": phản chiếu trả rỗng (đổi API, đổi kiểu trả về) thì mọi khẳng
+        // định dưới đây vô nghĩa. Không chép CON SỐ vào đây — nó là thứ đếm được bằng lệnh.
+        Assert.True(codes.Count > 0,
+            "Không phản chiếu được mã nào từ IdentityErrorDescriber ⇒ lưới này không đo gì. " +
+            "Nguyên nhân thường gặp: bản .NET mới đổi chữ ký (method không còn trả IdentityError).");
+
+        var unclassified = codes
+            .Where(code => IdentityFieldErrors.SlotFor(code) == IdentityFieldSlot.Record
+                           && !IdentityFieldErrors.IntentionallyRecord.Contains(code))
+            .ToList();
+
+        Assert.True(unclassified.Count == 0,
+            "Mã Identity CHƯA ĐƯỢC PHÂN LOẠI: " + string.Join(", ", unclassified) + ". " +
+            "Mỗi mã phải hoặc có một dòng trong IdentityFieldErrors.SlotByCode (nói về một ô nhập), " +
+            "hoặc được khai tường minh trong IdentityFieldErrors.IntentionallyRecord (nói về bản " +
+            "ghi/trạng thái). Mặc định rơi về $record nghĩa là câu lỗi hiện ở khối lỗi chung cuối " +
+            "form thay vì dưới ô người dùng đang gõ — im lặng, đúng ca 2026-09-11.");
+    }
+
+    /// <summary>
+    /// Đối chứng cho lưới ngay trên: hai tập phải RỜI NHAU. Một mã vừa có ô vừa nằm trong danh sách
+    /// "cố ý về bản ghi" nghĩa là hai chỗ nói ngược nhau, và lưới kia vẫn xanh vì nó chỉ hỏi
+    /// "có ít nhất một trong hai".
+    /// </summary>
+    [Fact(DisplayName = "Đối chứng: SlotByCode và IntentionallyRecord không có mã chung")]
+    public void ClassificationSets_DoNotOverlap()
+    {
+        var overlap = IdentityFieldErrors.IntentionallyRecord
+            .Where(code => IdentityFieldErrors.SlotFor(code) != IdentityFieldSlot.Record)
+            .ToList();
+
+        Assert.True(overlap.Count == 0,
+            "Mã vừa được gán một ô vừa khai là 'cố ý về bản ghi': " + string.Join(", ", overlap));
+    }
 }

@@ -32,10 +32,30 @@ const FALLBACK_KEYS: Readonly<Record<number, { title: string; text: string }>> =
  *    HOA/thường là biết ai sở hữu";
  *  · gom lại một nhánh thì `grep '"VALIDATION"' -A` trả về trọn bộ câu lỗi validate.
  *
- * ⚠️ Đây là chỗ doc CHƯA chốt (khuôn khoá dịch chỉ nói về `businessCode`, không nói về
- * `fieldErrors[].code`) — xem báo cáo bàn giao, cần người dùng xác nhận.
+ * ✅ **Đã chốt ở doc 2026-09-11** — trước đó chỗ này ghi "doc CHƯA chốt, cần người dùng xác nhận".
+ * Khuôn khoá dịch nay có hàng thứ ba cho `fieldErrors[].code`
+ * (doc/huong_dan/wiki-core/fe/08-i18n.md §"Hai họ khoá"), nên đoạn lập luận ngay trên không còn là
+ * suy diễn tại chỗ.
+ *
+ * 📖 Mã nào trong nhánh này BE phát được hôm nay, mã nào không (bốn khoá `PasswordRequires*`
+ * đang chết vì chính sách NIST không có luật thành phần) và vì sao vẫn GIỮ chúng: đọc
+ * doc/huong_dan/wiki-core/fe/08-i18n.md §"Hai họ khoá".
  */
 const FIELD_ERROR_KEY_PREFIX = 'VALIDATION.';
+
+/**
+ * Câu cho một `fieldErrors[].code` mà bảng dịch CHƯA có — chốt chặn cuối của {@link
+ * ApiErrorMessageService.fieldMessage}, xem bậc 3 ở đó.
+ *
+ * 🛑 Khoá **FE tự đặt** nằm giữa họ khoá do BE sở hữu — ngoại lệ DUY NHẤT của nhánh này, khai ở
+ * doc/huong_dan/wiki-core/fe/08-i18n.md §"Hai họ khoá".
+ *
+ * Viết HOA TOÀN PHẦN là điều kiện để nó an toàn: mọi mã đi vào nhánh này đều PascalCase, nên khoá
+ * này không thể va vào mã nào. Đổi thành `Unknown` là mở ra khả năng một ngày nào đó Identity phát
+ * đúng mã đó và câu dự phòng chiếm chỗ câu thật. (Lý do KHÔNG phải "cho giống `VALIDATION.FAILED`"
+ * — khoá đó là `businessCode` thật của BE; lập luận đầy đủ ở doc trên.)
+ */
+const UNKNOWN_FIELD_ERROR_KEY = `${FIELD_ERROR_KEY_PREFIX}UNKNOWN`;
 
 const UNEXPECTED_KEYS = {
   title: 'shared.httpError.unexpectedTitle',
@@ -60,6 +80,9 @@ const UNEXPECTED_KEYS = {
  * {@link translateCode} bên dưới.
  *
  * ## Thứ tự ưu tiên khi dựng câu — có chủ đích, đừng đảo
+ *
+ * Bảng này nói về {@link ApiErrorMessageService.messageFor}, tức lỗi ở mức REQUEST. Lỗi theo Ô có
+ * bậc thang RIÊNG và **không giống bảng này** ở bậc 2 — xem {@link ApiErrorMessageService.fieldMessage}.
  *
  * 1. `businessCode` có bản dịch  → dùng bản dịch (đã ráp `messageParams`).
  * 2. `message` của envelope      → dùng nguyên văn của BE.
@@ -123,6 +146,41 @@ export class ApiErrorMessageService {
   /**
    * Dịch một phần tử `fieldErrors` — cùng cơ chế, chỉ khác chỗ đặt (§10.1 của doc BE).
    *
+   * ## Ba bậc, và bậc 3 là thứ vừa được thêm (2026-09-11)
+   *
+   * 1. `VALIDATION.<code>` có bản dịch → dùng, đã ráp `messageParams`.
+   * 2. `message` của BE — **chỉ khi nó thật sự là một câu**.
+   * 3. `VALIDATION.UNKNOWN` — câu chung, luôn có.
+   *
+   * 🛑 **Bậc 2 phải kiểm `message !== code`, không được chỉ kiểm "có giá trị".** Với lỗi
+   * ASP.NET Core Identity, BE cố ý đặt `message` **BẰNG CHÍNH `code`**:
+   * `IdentityFieldErrors.Build`
+   * (`src/BE/Core/PlatformManager.Core.Application/Common/Results/IdentityFieldErrors.cs`) dựng
+   * `new ApiFieldError(code, code)`, vì theo §3 của doc BE thì kênh có FE là kênh FE sở hữu câu
+   * chữ — BE không viết bộ chữ thứ hai. Đó là **chủ đích, không phải nợ kỹ thuật**: phía BE đã thu
+   * hẹp lời hứa của `ApiFieldError.Message` cho khớp (2026-09-11) — nó là fallback CHỈ ở nơi nguồn
+   * vốn có sẵn một câu (FluentValidation).
+   *
+   * 🛑 Neo CỐ Ý không mang số dòng — nó trỏ vào một **hàm**, và tên hàm đã định vị đủ. Bản trước
+   * neo `IdentityFieldErrors.cs` dòng 183; câu lệnh đó trôi xuống dòng **271** trong cùng một
+   * ngày qua ba lượt thêm docstring, và dòng 183 khi ấy trỏ vào `["DuplicateEmail"] = …` — một
+   * dòng hoàn toàn vô can.
+   * **Không cổng nào bắt được**: `check-docs.sh` mục 7/8 chỉ soi neo trong `*.md`, mục 11 chỉ soi
+   * đường dẫn `doc/` viết trong `src/`. Neo `src/` → `src/` là vùng mù, nên ở đây tự giữ kỷ luật.
+   * Đường lùi cũ (`?? fieldError.message`) vì vậy **không phải một đường lùi**: nó hiện nguyên mã
+   * máy ra màn hình cho MỌI mã Identity chưa dịch.
+   *
+   * Ca đã xảy ra thật: mật khẩu `qwerty123456` bị `AddTop10000PasswordValidator`
+   * (khai trong `…Core.Infrastructure/DependencyInjection.cs`) từ chối với mã `CommonPassword` — mã khi đó
+   * chưa có trong bảng dịch, nên thứ duy nhất người dùng có thể đọc là chuỗi `"CommonPassword"`.
+   * Mã đó nay đã có bản dịch; bậc 3 tồn tại cho **mã tiếp theo**, vì `IdentityErrorDescriber` có
+   * hơn 20 mã và bảng dịch sẽ luôn thiếu một cái nào đó.
+   *
+   * Vì sao không giữ mã máy trong câu cho dễ hỗ trợ: envelope đã mang `traceId`, và đó là chỗ đúng
+   * để tra. Một câu người dùng đọc không phải chỗ chứa định danh nội bộ — lập luận này tự đứng
+   * được, và CỐ Ý không neo vào điều khoản nào: không có luật nào của repo phát biểu nó, nên viện
+   * dẫn một điều khoản gần đúng chỉ tạo ra một trích dẫn sai mà lượt sau phải đi gỡ.
+   *
    * @param paramOverrides ghi đè lên `messageParams` của BE. Có mặt vì một tham số rất hay gặp,
    *   `PropertyName`, do FluentValidation sinh ra từ TÊN PROPERTY C# (`UserName` → `"User Name"`)
    *   — một chuỗi tiếng Anh, không dịch được, và đem ghép vào câu tiếng Việt sẽ ra *"Vui lòng nhập
@@ -132,11 +190,15 @@ export class ApiErrorMessageService {
    */
   fieldMessage(fieldError: ApiFieldError, paramOverrides?: Record<string, string>): string {
     const params = { ...(fieldError.messageParams ?? {}), ...(paramOverrides ?? {}) };
-    const key = `${FIELD_ERROR_KEY_PREFIX}${fieldError.code}`;
-    // `translateCode` so kết quả với chuỗi KHOÁ, nên khi bảng dịch chưa có validator này thì nó
-    // trả null và ta lùi về câu của BE — người dùng đọc một câu tiếng Việt thay vì
-    // "VALIDATION.GreaterThanValidator".
-    return this.translateCode(key, params) ?? fieldError.message;
+    const translated = this.translateCode(`${FIELD_ERROR_KEY_PREFIX}${fieldError.code}`, params);
+    if (translated) return translated;
+
+    // Bậc 2 — chỉ nhận `message` khi nó THẬT SỰ là một câu. Xem ghi chú của hàm.
+    const beSentence = fieldError.message?.trim();
+    if (beSentence && beSentence !== fieldError.code) return beSentence;
+
+    // Bậc 3 — chốt chặn. Không bao giờ trả chuỗi rỗng, `undefined`, hay một mã máy.
+    return this.translate.instant(UNKNOWN_FIELD_ERROR_KEY) as string;
   }
 
   private fallbackText(status: number): string {

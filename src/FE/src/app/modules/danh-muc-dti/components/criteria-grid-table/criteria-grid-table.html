@@ -1,0 +1,170 @@
+<!-- Lưới dùng chung giữ KHUNG; file này chỉ khai cột và cách vẽ từng ô.
+     `.grid-host` là NỬA SAU của chuỗi chiều cao (`page-fill` ⇄ `grid-host` ⇄ scrollHeight="flex").
+     Thiếu nó thì lưới âm thầm quay về chiều cao nội dung — không lỗi biên dịch, không test nào
+     bắt (Components/DataTable.md § Normalize mục 6). -->
+<app-data-grid
+  class="grid-host"
+  [rows]="rows()"
+  [loading]="loading()"
+  [totalCount]="totalCount()"
+  [page]="page()"
+  [pageSize]="pageSize()"
+  [minWidth]="minWidth()"
+  [frozenColumns]="frozenColumns()"
+  dataKey="CriteriaId"
+  [headerTemplate]="hdr"
+  [bodyTemplate]="row"
+  [emptyTemplate]="empty"
+  (pageChange)="onGridPageChange($event)"
+/>
+
+<ng-template #hdr>
+  <tr>
+    <th [style.min-width.px]="widths.code">{{ 'danh-muc-dti.grid.code' | translate }}</th>
+    <th [style.min-width.px]="widths.name">{{ 'danh-muc-dti.grid.name' | translate }}</th>
+    <th [style.min-width.px]="widths.group">{{ 'danh-muc-dti.grid.group' | translate }}</th>
+    @if (showPeriodColumn()) {
+      <th [style.min-width.px]="widths.period">{{ 'danh-muc-dti.grid.period' | translate }}</th>
+    }
+    <th class="num" [style.min-width.px]="widths.maxScore">{{ 'danh-muc-dti.grid.maxScore' | translate }}</th>
+    <th class="num" [style.min-width.px]="widths.selfScore">{{ 'danh-muc-dti.grid.selfScore' | translate }}</th>
+    <th class="num" [style.min-width.px]="widths.verifiedScore">
+      {{ 'danh-muc-dti.grid.verifiedScore' | translate }}
+    </th>
+    <th class="num" [style.min-width.px]="widths.diff">{{ 'danh-muc-dti.grid.diff' | translate }}</th>
+    <th [style.min-width.px]="widths.status">{{ 'danh-muc-dti.grid.status' | translate }}</th>
+    <th [style.min-width.px]="widths.owner">{{ 'danh-muc-dti.grid.owner' | translate }}</th>
+    <th [style.min-width.px]="widths.deadline">{{ 'danh-muc-dti.grid.deadline' | translate }}</th>
+    <th class="num" [style.min-width.px]="widths.progress">{{ 'danh-muc-dti.grid.progress' | translate }}</th>
+    <th [style.min-width.px]="widths.note">{{ 'danh-muc-dti.grid.note' | translate }}</th>
+    @if (canWrite()) {
+      <th class="no-print" [style.min-width.px]="widths.actions">
+        {{ 'danh-muc-dti.grid.actions' | translate }}
+      </th>
+    }
+  </tr>
+</ng-template>
+
+<ng-template #row let-row>
+  <tr>
+    <td><b>{{ row.Code }}</b></td>
+    <td>{{ row.Name }}</td>
+    <td>{{ 'danh-muc-dti.grid.groupLabel' | translate: groupParams(row) }}</td>
+
+    <!-- Q38 + T14: CHỈ khoảng ngày (`10/08 – 16/08`), bỏ số tuần và bỏ năm. Ngoại lệ có chủ đích
+         của Q12, đã đăng ký ở business-rules §6.2b — đừng "sửa cho nhất quán". -->
+    @if (showPeriodColumn()) {
+      <td>{{ periodText(row) ?? ('shared.format.absentValue' | translate) }}</td>
+    }
+
+    <td class="num">{{ num(row.MaxScore) }}</td>
+    <td class="num">{{ num(row.SelfScore) ?? ('shared.format.absentValue' | translate) }}</td>
+    <td class="num">{{ num(row.VerifiedScore) ?? ('shared.format.absentValue' | translate) }}</td>
+
+    <!-- Dấu của `Diff` LÀ THÔNG TIN (Q25): dương = được thẩm định cao hơn tự chấm. Truyền số THÔ
+         còn nguyên dấu; component tự phân loại theo epsilon và tự đặt dấu bằng `signDisplay`. -->
+    <td class="num"><app-delta-indicator [value]="row.Diff" format="score" [localeId]="localeId()" /></td>
+
+    <td>
+      @if (badgeClass(row); as tone) {
+        <span class="badge" [class]="'badge ' + tone">{{ row.Status }}</span>
+      } @else if (row.Status) {
+        <span class="muted">{{ row.Status }}</span>
+      } @else {
+        {{ 'shared.format.absentValue' | translate }}
+      }
+    </td>
+
+    <td>{{ row.OwnerName ?? ('shared.format.absentValue' | translate) }}</td>
+    <td>{{ deadlineText(row) ?? ('shared.format.absentValue' | translate) }}</td>
+
+    <!-- Hai ô sửa inline (DM-6). `isEditable` = false ⇒ ô THƯỜNG: mất `.cell-editable`, mất
+         `tabindex="0"`, mất `role="button"`, mất `title` — bàn phím không rơi vào một control
+         không làm gì (§5.6.1 ràng buộc 3). Đó cũng đúng là hình dạng của ca không có quyền ghi. -->
+    <td class="num">
+      @if (isEditingCell(row, 'progress')) {
+        <input
+          type="number"
+          class="input cell-edit progressInput"
+          min="0"
+          max="100"
+          step="0.01"
+          appAutofocus
+          [value]="draft()"
+          (input)="onDraftInput($event)"
+          (keydown)="onEditorKeydown($event, row, 'progress')"
+          (blur)="onEditorBlur(row, 'progress')"
+        />
+      } @else if (isEditable()) {
+        <span
+          class="cell-editable"
+          role="button"
+          tabindex="0"
+          [attr.title]="'danh-muc-dti.inline.editProgress' | translate"
+          (dblclick)="openEditor(row, 'progress')"
+          (keydown)="onCellKeydown($event, row, 'progress')"
+        >
+          {{ num(row.ProgressPercent) ?? ('shared.format.absentValue' | translate) }}
+        </span>
+      } @else {
+        {{ num(row.ProgressPercent) ?? ('shared.format.absentValue' | translate) }}
+      }
+    </td>
+
+    <td>
+      @if (isEditingCell(row, 'note')) {
+        <textarea
+          class="input cell-edit noteInput"
+          rows="2"
+          appAutofocus
+          [value]="draft()"
+          (input)="onDraftInput($event)"
+          (keydown)="onEditorKeydown($event, row, 'note')"
+          (blur)="onEditorBlur(row, 'note')"
+        ></textarea>
+      } @else if (isEditable()) {
+        <span
+          class="cell-editable"
+          role="button"
+          tabindex="0"
+          [attr.title]="'danh-muc-dti.inline.editNote' | translate"
+          (dblclick)="openEditor(row, 'note')"
+          (keydown)="onCellKeydown($event, row, 'note')"
+        >
+          <!-- Ô rỗng nói LUÔN cách dùng, thay vì một dấu gạch: một gợi ý "bấm đúp" chỉ có ích ở
+               đúng chỗ chưa có gì để đọc. -->
+          {{ row.Note ?? ('danh-muc-dti.inline.notePrompt' | translate) }}
+        </span>
+      } @else {
+        {{ row.Note ?? ('shared.format.absentValue' | translate) }}
+      }
+    </td>
+
+    @if (canWrite()) {
+      <td class="no-print">
+        <!-- `disabled` theo `isEditable` (§5.5.1): nút ở nguyên chỗ, chỉ xám đi. Ẩn hẳn là việc
+             của `canWrite` ở cấp `<td>` này. -->
+        <div class="row-actions">
+          <button type="button" class="btn sm" [disabled]="!isEditable()" (click)="editRow.emit(row.CriteriaId)">
+            {{ 'danh-muc-dti.action.edit' | translate }}
+          </button>
+          <button
+            type="button"
+            class="btn sm danger"
+            [disabled]="!isEditable()"
+            (click)="deleteRow.emit(row.CriteriaId)"
+          >
+            {{ 'danh-muc-dti.action.delete' | translate }}
+          </button>
+        </div>
+      </td>
+    }
+  </tr>
+</ng-template>
+
+<ng-template #empty>
+  <tr>
+    <!-- `colspan` theo số cột ĐANG render: đổi chế độ kỳ hoặc mất quyền ghi là đổi số cột. -->
+    <td [attr.colspan]="columnCount()" class="muted">{{ 'danh-muc-dti.grid.empty' | translate }}</td>
+  </tr>
+</ng-template>

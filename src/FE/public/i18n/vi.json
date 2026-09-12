@@ -48,6 +48,7 @@
     "VERSION_CONFLICT": "Người dùng này vừa được người khác cập nhật. Hãy tải lại danh sách rồi thực hiện lại — thay đổi vừa rồi CHƯA được lưu."
   },
   "VALIDATION": {
+    "CommonPassword": "Mật khẩu này nằm trong danh sách mật khẩu phổ biến nên rất dễ bị đoán. Hãy chọn một cụm từ dài và ít gặp.",
     "DuplicateEmail": "Email này đã được sử dụng.",
     "DuplicateRoleName": "Vai trò này đã tồn tại.",
     "DuplicateUserName": "Tên đăng nhập này đã tồn tại.",
@@ -63,6 +64,7 @@
     "PasswordRequiresUniqueChars": "Mật khẩu phải dùng nhiều ký tự khác nhau hơn.",
     "PasswordRequiresUpper": "Mật khẩu phải có ít nhất một chữ hoa (A–Z).",
     "PasswordTooShort": "Mật khẩu chưa đủ dài.",
+    "UNKNOWN": "Giá trị này không được chấp nhận. Vui lòng kiểm tra lại.",
     "UserAlreadyInRole": "Người dùng đã có vai trò này.",
     "UserNotInRole": "Người dùng không có vai trò này."
   },
@@ -299,16 +301,6 @@
     "topbar": {
       "logout": "Đăng xuất",
       "openMenu": "Mở menu điều hướng"
-    }
-  },
-  "trang-chu": {
-    "greeting": "Xin chào",
-    "greetingNamed": "Xin chào, {{name}}",
-    "routeTitle": "Trang chủ",
-    "hint": {
-      "intro": "Đây là trang chủ của {{name}}. Danh sách chức năng ở menu bên trái do máy chủ cấp theo quyền của tài khoản, nên hai người dùng khác vai trò sẽ thấy hai menu khác nhau.",
-      "noModules": "Chưa có module nghiệp vụ nào được cài đặt. Dùng menu bên trái để vào các chức năng quản trị hệ thống.",
-      "noRoles": "Chưa gán vai trò"
     }
   }
 }

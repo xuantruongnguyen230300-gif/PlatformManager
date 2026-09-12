@@ -37,7 +37,7 @@ verified: 2026-09-06
 | **Ranh giới Core ↔ Business, khi nào tách module** | [`kien-truc-core-module.md`](kien-truc-core-module.md) |
 | **Giao diện: layout, copy, token, component, ảnh màn hình** | [`Design/`](Design/) — nguồn UI **duy nhất**, cả FE lẫn BE |
 | **Hợp đồng API một endpoint cụ thể** | [`contracts/`](contracts/) |
-| **Schema thật, bảng/cột/index đang chạy** | [`cau-truc-database.md`](cau-truc-database.md) — schema `core`; bảng nghiệp vụ ở [`cau-truc-database-business.md`](cau-truc-database-business.md) |
+| **Schema thật, bảng/cột/index đang chạy** | [`cau-truc-database.md`](cau-truc-database.md) — schema `core`; bảng nghiệp vụ ở [`cau-truc-database-dti.md`](cau-truc-database-dti.md) |
 | **Dựng DB từ trống (chạy trong DBeaver)** | [`db-khoi-tao.sql`](db-khoi-tao.sql) — sinh tự động từ `src/BE/Core/PlatformManager.Core.Persistence/Migrations/sql/0001_initial_baseline.sql`, đừng sửa tay. Sau đó chạy lệnh seed: `dotnet run --project src/BE/PlatformManager.Api -- --seed` |
 | **Chấm review: cái gì là finding, cái gì không** | [`huong_dan/quy-uoc/tieu-chi-review.md`](huong_dan/quy-uoc/tieu-chi-review.md) |
 | **"Core đủ chưa, còn thiếu mảng nào"** | [`huong_dan/wiki-core/be/01-core-components.md`](huong_dan/wiki-core/be/01-core-components.md) §Áp dụng |
@@ -84,16 +84,18 @@ phải mang nhãn. Ở cấp file:
 | [`Design/`](Design/) | ✅ sống — nguồn UI duy nhất |
 | [`contracts/`](contracts/) | ✅ sống — nhưng đọc `Status:` ở đầu **từng** card (`DRAFT` / `AGREED` / `IMPLEMENTED`); `DRAFT` nghĩa là BE **chưa** cam kết làm |
 | [`cau-truc-database.md`](cau-truc-database.md) | ✅ sống (2026-09-03) — schema **`core`**, `scope: core`. Tách khỏi phần nghiệp vụ 2026-09-03 để khoá `scope` khai được cho đúng |
-| [`cau-truc-database-business.md`](cau-truc-database-business.md) | 🗄️ đóng băng (2026-09-03) — schema **`business`**, `scope: du-an`. Không code nào sở hữu; chờ module DTI dựng lại |
+| [`cau-truc-database-dti.md`](cau-truc-database-dti.md) | schema **`business`** — 4 bảng của cụm DTI, `scope: du-an`. Tách ra 2026-09-10 để phần đang sống chịu gate đầy đủ |
+| [`cau-truc-database-business.md`](cau-truc-database-business.md) | 🗄️ lịch sử — **5 bảng cũ** của module `DtiWeekly` đã gỡ. Phần đang sống chuyển sang dòng trên |
 | [`cau-truc-database.sql`](cau-truc-database.sql) | 🗄️ lịch sử — DDL viết tay EF không sinh được, nay toàn bộ là `business` |
-| [`kien-truc-core-module.md`](kien-truc-core-module.md) | 🚧 **ĐÃ CHỐT — ĐANG THI CÔNG.** Layout `Core.*`/`Business.*` là **đích đến**, chưa phải hiện trạng. Đọc bảng đối chiếu ở đầu file trước khi tạo project mới |
+| [`kien-truc-core-module.md`](kien-truc-core-module.md) | 🚧 **ĐÃ CHỐT — ĐANG THI CÔNG.** Đọc bảng đối chiếu ở đầu file trước khi tạo project mới — đừng đọc layout trong đó như hiện trạng, phần nào đã có và phần nào chưa thì chỉ bảng ấy nói |
 | ~~`ERD/`~~ | 🗑️ **đã xoá 2026-08-23.** 6 nguồn mô tả schema mâu thuẫn nhau (6 con số bảng khác nhau, 2 bộ tên cột `BaseEntity`) đã gộp về `cau-truc-database.md` |
 | [`ke-hoach-xay-lai-corebase.md`](ke-hoach-xay-lai-corebase.md) | 🗄️ **lịch sử, đã thực thi xong.** Không dùng làm mô tả hiện trạng |
 
 **Nguồn chuẩn cho schema:** [`cau-truc-database.md`](cau-truc-database.md) (schema `core`) +
-[`cau-truc-database-business.md`](cau-truc-database-business.md) (schema `business`) +
-[`cau-truc-database.sql`](cau-truc-database.sql) (DDL viết tay). Không còn nguồn nào khác.
-Ba file, hai schema, **một** database — xem `cau-truc-database.md` §1.1.
+[`cau-truc-database-dti.md`](cau-truc-database-dti.md) (schema `business` đang sống) +
+[`cau-truc-database.sql`](cau-truc-database.sql) (DDL viết tay, lịch sử). Không còn nguồn nào
+khác cho schema ĐANG CHẠY; [`cau-truc-database-business.md`](cau-truc-database-business.md) chỉ
+giữ 5 bảng đã gỡ. Hai schema, **một** database — xem `cau-truc-database.md` §1.1.
 
 ## Trước khi coi một thay đổi tài liệu là xong
 

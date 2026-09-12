@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>PlatformManager.Business.Api</RootNamespace>
+    <AssemblyName>PlatformManager.Business.Api</AssemblyName>
+  </PropertyGroup>
+
+  <!-- Microsoft.NET.Sdk (KHÔNG phải Sdk.Web) + FrameworkReference — cùng lý do đã ghi ở
+       Core.Api.csproj: đây là class library chứa controller, không phải một app. Host nạp nó
+       làm ApplicationPart qua IModuleRegistrar.ApiAssembly. -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <!-- Đúng cạnh đã khai: Business.Api → Core.Api (chỉ để kế thừa ApiControllerBase — Q8),
+       Business.Application, Business.Domain. TUYỆT ĐỐI KHÔNG reference *.Persistence /
+       *.Infrastructure: controller chỉ nói chuyện qua MediatR (ApiLayerBoundaryTests canh cả
+       ở mức assembly lẫn mức văn bản .csproj). Cạnh *.Api → *.Api thì KHÔNG bị cấm. -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\Core\PlatformManager.Core.Api\PlatformManager.Core.Api.csproj" />
+    <ProjectReference Include="..\PlatformManager.Business.Application\PlatformManager.Business.Application.csproj" />
+    <ProjectReference Include="..\PlatformManager.Business.Domain\PlatformManager.Business.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

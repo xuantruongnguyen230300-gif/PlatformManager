@@ -4,7 +4,7 @@ scope: du-an
 verified: 2026-09-06
 project: "PlatformManager"
 status: "draft"
-updated: "2026-09-08"
+updated: "2026-09-11"
 flow: "Permissions"
 screens: ["Phân quyền"]
 source_routes: ["/quan-tri/phan-quyen"]
@@ -39,7 +39,7 @@ The two defaults are opposites, which is why the screen ships two independent sa
 - **App shell** (`app.html:1-24`) — the route sets no `noShell` flag, so the full shell renders
   - **`Sidebar`** (`Components/Sidebar.md`; fixed left at `dimension.sidebar-w` / `dimension.sidebar-w-collapsed`, carrying `id="sidebar"` and `no-print`) — `sidebar.html:4-9`. This screen's own entry is the `SysMenu` row `Phân quyền` (`pi-shield`) under the group `Quản trị hệ thống` (`pi-cog`); both are database values seeded at `AppMenuSeedSource.cs:48,56`, not FE constants
   - **Shell content** (`.shell-content`, `margin-left` matching the sidebar width, 0.2 s transition) — `app.scss:37-48`
-    - **`Topbar`** (`Components/Topbar.md`; sticky; inner `.topin` capped at `dimension.container-max-width`) — `topbar.html:1-25`. Its `<h1>` prints the route-level `title` `Phân quyền` relayed by `PageTitleStrategy` (`topbar.html:14`, `phan-quyen.routes.ts:12`)
+    - **`Topbar`** (`Components/Topbar.md`; sticky; inner `.topin` capped at `dimension.container-max-width`) — `topbar.html:1-53`. Its `<h1>` prints the route-level `title` `Phân quyền` relayed by `PageTitleStrategy` (`topbar.html:14`, `phan-quyen.routes.ts:12`). Its right-hand `.topbar-user` block carries **two** account actions since 2026-09-11 — a change-password `<a class="btn">` then the logout `Button` (`topbar.html:24-49`)
     - **`main`** (capped at `dimension.container-max-width`, centred, padding `spacing.sp-5`) — `app.scss:50-71`
       - **`Card`** (`Components/Card.md`; `.card` — fill `colors.card`, border `colors.line`, `shadow.card`, `rounded.lg`, padding `spacing.sp-5`) — the route template's root and its only region (`phan-quyen.page.html:1,111`; `styles.scss` § `.card`)
         - **`SegmentedControl`** (`Components/SegmentedControl.md`; `.segmented.tabs` — `inline-flex`, border `colors.line`, `rounded.sm`, `overflow: hidden`) holding exactly two `.seg-btn`s, the chosen one carrying `.active` (fill `colors.brand`, ink `colors.on-primary`) — `phan-quyen.page.html:7-46`, `styles.scss` § `.segmented` / `.seg-btn` / `.seg-btn.active`
@@ -116,6 +116,8 @@ copy column is the `vi` value, which is the source language.
 | Element | Verbatim copy (`vi`) | Localization key | Source |
 | --- | --- | --- | --- |
 | Topbar heading (route title) | `Phân quyền` | `phan-quyen.routeTitle` | `phan-quyen.routes.ts` § `title`, rendered by `topbar.html` § `.logo h1` |
+| Topbar change-password link | `Đổi mật khẩu` | `shared.action.changePassword` | `topbar.html` § `.topbar-user`. Label, `title` and `aria-label` all read the one key |
+| Topbar logout button | `Đăng xuất` | `shared.topbar.logout` | `topbar.html` § `.topbar-user`. Same three consumers |
 | Switcher group label | `Chọn loại phân quyền` (`aria-label`, not visible) | `phan-quyen.action.tabGroupLabel` | `phan-quyen.page.html` § `.segmented` |
 | Segment 1 | `Theo màn hình` | `phan-quyen.action.tabMenu` | `phan-quyen.page.html` |
 | Segment 2 | `Theo tài nguyên` | `phan-quyen.action.tabResource` | `phan-quyen.page.html` |
@@ -189,10 +191,10 @@ emphasis, which is a real cost of the split and is recorded rather than hidden.
 - **No `@media` query exists in any of this screen's own stylesheets** — `phan-quyen.page.scss`, `permission-matrix.scss` and `resource-permission-matrix.scss` contain none. Every breakpoint effect below is inherited from the shell (`app.scss`, `topbar.scss`, `sidebar.scss`) or from global rules in `styles.scss`.
 - **≥`breakpoint.desktop` (981px, default):** sidebar fixed at `dimension.sidebar-w` with `.shell-content` offset to match; `main` centred at `dimension.container-max-width` with `spacing.sp-5` padding (`app.scss:37-71`). Collapsing the sidebar narrows the offset to `dimension.sidebar-w-collapsed` over 0.2 s; the card and both matrices simply reflow wider.
 - **≤`breakpoint.tablet` (980px):** `.shell-content { margin-left: 0 !important }` and the sidebar becomes an off-canvas drawer opened by the topbar hamburger, which is hidden above this width (`app.scss:73-77`). The full viewport width goes to `main`, so the matrices get *wider* here, not narrower.
-- **≤`breakpoint.mobile` (560px):** `main` padding drops to `10px` — a raw literal, no token — and the topbar hides the user's name (`app.scss:79-83`). **Nothing inside the card changes**: the `.segmented` group is a direct child of `.card`, not of a `.toolbar`, so the toolbar's mobile `flex: 1` override never reaches it and the two segments keep their intrinsic width.
+- **≤`breakpoint.mobile` (560px):** `main` padding drops to `10px` — a raw literal, no token (`app.scss:79-83`) — and the topbar hides the user's name **together with both account labels** (`topbar.scss:41-54`), leaving `pi-key` and `pi-sign-out` as bare glyphs named by their `aria-label`. **Nothing inside the card changes**: the `.segmented` group is a direct child of `.card`, not of a `.toolbar`, so the toolbar's mobile `flex: 1` override never reaches it and the two segments keep their intrinsic width.
 - **Wide role × row matrix on a narrow viewport:** each table is `width: 100%` with **no `min-width`** (`styles.scss` § `table`), so columns compress with the container — the name column is held at an inline `width:40%` and the role columns share the rest. Horizontal scrolling exists (`.tablewrap.scroll { overflow: auto }`) but is **content-driven**: it engages only once intrinsic min-content width exceeds the container, which with three roles and today's short labels does not happen even at 390px. There is no column collapse, no card-per-row fallback and no per-viewport column hiding.
 - **Vertical scrolling (all viewports):** each matrix fills the leftover viewport height and scrolls inside itself, with the global sticky `th` keeping the role headers pinned inside that scroll container (`styles.scss` § `th`). 🔄 **SỬA 2026-09-06 — the mechanism changed, and the token this line named is now the one thing that does *not* apply.** The previous revision said the wrapper is bounded at `dimension.grid-h` (`calc(100dvh - 280px)`) with `dimension.grid-h-min` as the floor. The page host now carries `page-fill` and each matrix carries `grid-host`, and `styles.scss` § `.page-fill .tablewrap.scroll` **resets `max-height: none; min-height: 0`** so a flex chain measures the real chrome instead of subtracting a constant. The reason is in the source: the fixed chrome above and below the grid is not the same on every page — it measured 443px on one and 280px on another — so any single constant is wrong somewhere. `dimension.grid-h` remains the fallback for a grid outside a `.page-fill` page.
-- **Print (`@media print`):** sidebar, topbar and toast stack disappear via the single centralised `.no-print` rule; `.shell-content` margin is zeroed and `main` loses its max-width (`styles.scss` § `@media print`). The per-component print blocks in `sidebar.scss` and `topbar.scss` were removed on 2026-08-29 in favour of that one rule (`sidebar.scss:321-324`, `topbar.scss:58-59`). The card and the active matrix do print — but `.tablewrap.scroll` keeps `overflow: auto` in print, so rows past the on-screen height are clipped, and **the inactive tab prints nothing at all** because it is not in the DOM. (The clipping height is now whatever the flex chain resolved to, not `dimension.grid-h`; the outcome for a printout is the same.)
+- **Print (`@media print`):** sidebar, topbar and toast stack disappear via the single centralised `.no-print` rule; `.shell-content` margin is zeroed and `main` loses its max-width (`styles.scss` § `@media print`). The per-component print blocks in `sidebar.scss` and `topbar.scss` were removed on 2026-08-29 in favour of that one rule (`sidebar.scss:326-328`, `topbar.scss:69`). The card and the active matrix do print — but `.tablewrap.scroll` keeps `overflow: auto` in print, so rows past the on-screen height are clipped, and **the inactive tab prints nothing at all** because it is not in the DOM. (The clipping height is now whatever the flex chain resolved to, not `dimension.grid-h`; the outcome for a printout is the same.)
 
 ### Iconography
 
@@ -210,7 +212,8 @@ The remaining icons visible while this screen is open belong to the app shell, w
 | Reload the matrix after a refused save | — (text `Button`, no icon) | Inside the same banner |
 | Sidebar entry for this screen | `pi-shield` (from `SysMenu.Icon`) | Shell sidebar, under the `pi-cog` group "Quản trị hệ thống". Both are seeded database values, not FE constants (`AppMenuSeedSource.cs:48,56`), so either can change without an FE deploy |
 | Open the navigation drawer (≤980px) | `pi pi-bars` | Shell topbar, left (`topbar.html:12`) |
-| Sign out | `pi pi-sign-out` | Shell topbar, right (`topbar.html:20`) |
+| Change password | `pi pi-key` | Shell topbar, right, on the `<a class="btn">` before the logout button (`topbar.html:34`) |
+| Sign out | `pi pi-sign-out` | Shell topbar, right (`topbar.html:47`) |
 | Dismiss a toast | `pi pi-times` | Shell toast item, right (`toast.html:19`) |
 
 ### Screenshots

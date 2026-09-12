@@ -1,7 +1,7 @@
 ---
 kind: luat
 scope: core
-verified: 2026-09-06
+verified: 2026-09-10
 ---
 
 # Tiêu chí chấm review — cái gì là finding, cái gì không
@@ -27,34 +27,52 @@ Mức chấm: **PASS** (đúng) · **PARTIAL** (có nhưng thiếu/sai một ph�
 
 > 🚧 **Hiện trạng 2026-09-10 — BE và FE nay LỆCH nhau, đừng chấm chung một câu.**
 >
-> - **BE — chưa có module nghiệp vụ.** Module duy nhất (`Modules.DtiWeekly.*`) đã gỡ
->   để xây lại và chưa dựng lại: không còn project `Modules.*` nào trong
->   `src/BE/PlatformManager.slnx`.
+> - **BE — tầng nghiệp vụ ĐÃ dựng lại (2026-09-10), dưới tên `Business.*`.** Mô hình
+>   `Modules.<Tên>.*` cũ bỏ hẳn từ v3, nên vắng project `Modules.*` là ĐÚNG, không
+>   phải finding. Vòng 1 của cụm DTI mới làm đường ĐỌC; đường ghi/import (DM-3…DM-7)
+>   và export (DB-4) thuộc vòng 2 — vắng chúng cũng không phải finding.
 > - **FE — `src/FE/src/app/modules/` đã có trở lại** (đối chiếu 2026-09-10): module
 >   nghiệp vụ dựng 2026-09-09, khai đủ trong `src/FE/eslint.config.js:29`.
 >
-> Kiểm bằng `grep -c '<Project Path=' src/BE/PlatformManager.slnx`,
+> Kiểm bằng `ls -d src/BE/Business/*/`, `grep -c '<Project Path=' src/BE/PlatformManager.slnx`,
 > `ls -d src/FE/src/app/modules/*/` và `ls -d src/FE/src/app/*/` — đừng chấm theo
 > con số nào chép sẵn trong văn bản.
 >
-> 🔄 **LẬT 2026-09-10:** bản trước ghi `src/FE/src/app/modules/` *"không tồn tại"*
-> cho cả hai phía. Vế BE vẫn đúng; vế FE đã lạc hậu.
+> 🔄 **LẬT 2026-09-10 (hai lần trong ngày):** bản sáng ghi `src/FE/src/app/modules/`
+> *"không tồn tại"* cho cả hai phía — vế FE lạc hậu trước. Bản chiều sửa nốt vế BE:
+> `Business.*` đã dựng, nên câu *"BE chưa có module nghiệp vụ"* cũng hết đúng. Đây
+> đúng loại câu mà `.claude/CLAUDE.md` §6 cấm chép — nó mô tả thứ đếm được, và nó
+> sai ngay lượt code kế tiếp. Chấm bằng LỆNH ở trên, đừng chấm bằng đoạn văn này.
 
 **KHÔNG phải finding:**
 
-- **Không tìm thấy module nghiệp vụ nào phía BE.** Đó là hiện trạng đã biết ở trên,
-  không phải MISSING, và không phải dấu hiệu ai đó xoá nhầm. 🔄 SỬA 2026-09-10: câu này
-  trước ghi *"(BE lẫn FE)"* — vế FE hết hiệu lực, `src/FE/src/app/modules/` nay có thật.
-- **ArchTest `Modules_MustNotReference_OtherModules` hiện pass "rỗng"** — không
-  còn assembly `Modules.*` nào để nó bắt. Đây **không** phải test chết:
-  `src/BE/Tests/PlatformManager.ArchTests/CoreModuleBoundaryTests.cs:49`. Rule
-  còn lại trong cùng file, `Core_MustNotReference_AnyModulesAssembly`
-  (`src/BE/Tests/PlatformManager.ArchTests/CoreModuleBoundaryTests.cs:32`),
-  **vẫn kiểm thật** vì nó quét tham chiếu của `Core.*`, không cần module tồn tại.
+- **Không tìm thấy project `Modules.*` nào phía BE.** Đúng theo thiết kế — mô hình N-module
+  bỏ từ v3, tầng nghiệp vụ nay tên `Business.*`. Không phải MISSING, không phải dấu hiệu ai
+  xoá nhầm. 🔄 SỬA 2026-09-10 (hai lượt): câu này từng ghi *"(BE lẫn FE)"* rồi *"không có
+  module nghiệp vụ nào phía BE"* — cả hai đã hết hiệu lực.
+- **ArchTest `Modules_MustNotReference_OtherModules` hiện pass "rỗng"** — và nó
+  vẫn rỗng **sau khi** `Business.*` đã dựng xong. Đây **không** phải test chết,
+  cũng không phải danh sách bị bỏ quên: luật đó bắt *"tầng nghiệp vụ A tham chiếu
+  tầng nghiệp vụ B"*, mà mô hình MỘT khối `Business` của v3 không có B nào. Điền
+  5 assembly vào danh sách chỉ tạo một tập một-phần-tử không có cặp nào để so —
+  hiệu lực vẫn 0, nhưng trông như đang canh. Lý do đầy đủ nằm ở docstring của
+  `BusinessTierAssemblies`.
+  Rule còn lại trong cùng file, `Core_MustNotReference_AnyModulesAssembly`,
+  **vẫn kiểm thật** vì nó quét tham chiếu của `Core.*`, không cần tầng nghiệp vụ
+  thứ hai tồn tại.
+  🔄 SỬA 2026-09-11: bản trước viết khi `Business.*` chưa có, nên câu *"không còn
+  assembly `Modules.*` nào để nó bắt"* đọc như một tình trạng tạm thời sẽ tự hết
+  khi tầng nghiệp vụ ra đời. Nó không tự hết — và đó là chủ đích.
 - Thấy tên `PlatformManager.Modules.<Tên>.*` quay lại — bản thân cái tên không
   sai; chỉ thành finding khi thiếu lý do tách domain (xem ngay dưới).
-- Chưa có `Business.*` — đang thi công. `Core.Api` **đã dựng 2026-09-09**; `Core.Persistence`
-  **đã tách 2026-09-10** — nó vắng mặt nay LÀ finding (xem `doc/kien-truc-core-module.md` §DbContext).
+- `Business.*` **đã dựng 2026-09-10** — đủ 5 project, nên nay việc VẮNG một trong năm mới là
+  finding. `Core.Api` **đã dựng 2026-09-09**; `Core.Persistence` **đã tách 2026-09-10** — cả hai
+  vắng mặt cũng LÀ finding (xem `doc/kien-truc-core-module.md` §DbContext).
+- **`Business.Infrastructure` gần như trống** — ĐÚNG DỰ KIẾN, không phải MISSING: vòng 1 chỉ có
+  đường đọc nên chưa có tích hợp ngoài nào. Người tiêu thụ đầu tiên đã biết trước (bộ ghi `.xlsx`
+  của DB-4, vòng 2).
+- **`BusinessModuleRegistrar` nằm ở project HOST**, không ở `Business.Infrastructure` — quyết
+  định có lý do, xem `doc/kien-truc-core-module.md` §"BusinessModuleRegistrar đặt ở HOST".
 - Namespace `PlatformManager.Core.Infrastructure.Persistence*` / `…Identity` nằm trong assembly
   `Core.Persistence` — nợ **có chủ đích** (giữ cho `ModelSnapshot` còn biên dịch), không phải finding.
 

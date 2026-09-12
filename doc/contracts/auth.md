@@ -140,7 +140,7 @@ Request (`[FromBody]`, phẳng):
 > [`../Design/Frontend/PlatformManager/Screens/05-auth.md`](../Design/Frontend/PlatformManager/Screens/05-auth.md)
 > § Normalize on redesign, mục 4.
 
-⚠️ **Cập nhật 2026-08-24: KHÔNG còn mật khẩu hardcode `"SuperAdmin@123"`.** `CoreSeeder` seed
+⚠️ **Cập nhật 2026-08-24: KHÔNG còn mật khẩu hardcode.** `CoreSeeder` seed
 **2 tài khoản bootstrap RIÊNG BIỆT** — `SuperAdmin` (role `SuperAdmin` DUY NHẤT) và `Admin` (role
 `Admin` DUY NHẤT) — mật khẩu đọc từ `BootstrapOptions` (User Secrets `Bootstrap:SuperAdminPassword`
 / `Bootstrap:AdminPassword` lúc dev, biến môi trường `Bootstrap__SuperAdminPassword` /
@@ -417,7 +417,7 @@ Content-Type: application/json; charset=utf-8
 Request:
 
 ```json
-{ "currentPassword": "SuperAdmin@123", "newPassword": "MatKhauMoi@123" }
+{ "currentPassword": "<mật khẩu hiện tại>", "newPassword": "<mật khẩu mới>" }
 ```
 
 Thành công → `Data: true`, đồng thời `AppUser.MustChangePassword` đổi thành `false` (verify
@@ -448,6 +448,20 @@ Lỗi:
 > }
 > ```
 >
+> Mật khẩu MỚI không đạt chính sách thì mã gắn vào ô `NewPassword` — ví dụ
+> `{ "code": "CommonPassword", "message": "CommonPassword" }`.
+>
+> 🛑 **`CommonPassword` KHÔNG có trong tài liệu Identity của Microsoft — đừng đi tìm ở đó.** Nó
+> không thuộc `IdentityErrorDescriber`; nó đến từ gói **`CommonPasswordsValidator`** (đăng ký bằng
+> `.AddTop10000PasswordValidator<AppUser>()`, hoạt động hoàn toàn **offline** bằng danh sách nhúng
+> — **không** gọi API ra ngoài). Nhưng nó đi ra qua cùng `IdentityResult.Errors[].Code` nên client
+> nhận nó y như mọi mã Identity khác.
+>
+> Ghi ở đây vì nó là mã **hay gặp nhất** của đường này trên thực tế: chính sách đòi 12 ký tự, nên
+> phần lớn mật khẩu người dùng gõ đã qua `PasswordTooShort` và thứ chặn họ là bộ lọc mật khẩu phổ
+> biến. Người cài client đọc *"mã lỗi ASP.NET Core Identity"* rồi tra tài liệu Microsoft sẽ **không
+> bao giờ** tìm thấy mã này — và đó đúng là cách nó lọt lưới ngày 2026-09-11.
+
 > **Khoá của `fieldErrors` là tên ô, PascalCase** — `CurrentPassword` / `NewPassword`. Ánh xạ đi
 > theo **MÃ**, không theo endpoint: `PasswordMismatch` nói về mật khẩu **hiện tại**, nên nó
 > KHÔNG rơi vào `NewPassword`. Mã không thuộc ô nào rơi vào khoá `"$record"`.
@@ -455,11 +469,20 @@ Lỗi:
 > `fieldErrors[].message` là **chính mã đó** — dev-facing + fallback. Câu cho người dùng do FE
 > tra từ bảng dịch theo `code`; BE cố ý không dựng bộ chữ thứ hai (§3, §5.2 của file chủ).
 >
-> ⚠️ **FE mới đọc `fieldErrors` ở MỘT màn** (đối chiếu 2026-09-06). Màn đăng nhập đã chuyển:
-> `src/FE/src/app/platform/login/pages/login/login.page.ts:209-216` đọc `result.fieldErrors` và
-> dịch từng phần tử qua `ApiErrorMessageService.fieldMessage`. Màn đổi mật khẩu thì **chưa**:
-> `src/FE/src/app/platform/doi-mat-khau/pages/doi-mat-khau/doi-mat-khau.page.ts:172` còn bind
-> `result?.fields`, nên chính endpoint này vẫn hiển thị qua đường cũ. Lý do + nghiệm thu:
+> ✅ **FE đọc `fieldErrors` ở CẢ hai màn của endpoint này** (đối chiếu 2026-09-11). Màn đăng nhập:
+> `src/FE/src/app/platform/login/pages/login/login.page.ts` (`fieldMessages`). Màn đổi mật khẩu:
+> `src/FE/src/app/platform/doi-mat-khau/pages/doi-mat-khau/doi-mat-khau.page.ts:251` bind
+> `result?.fieldErrors`, rồi gom qua `groupServerFieldErrors` của `core/http/`.
+>
+> > 🔄 **LẬT 2026-09-11.** Bản trước (đối chiếu 2026-09-06) ghi *"màn đổi mật khẩu thì **chưa**…
+> > còn bind `result?.fields`, nên chính endpoint này vẫn hiển thị qua đường cũ"*. Câu đó **hết
+> > đúng từ 2026-09-06** — cùng ngày nó được viết — và mục này mang nhãn **IMPLEMENTED**, tức
+> > người đọc có lý do tin nó. Lỗi loại này không gây lỗi biên dịch và không test nào bắt.
+>
+> Lỗi mức bản ghi (`$record`) hiện ở dải lỗi đầu form, **ưu tiên trên** `message` của envelope —
+> luật đầy đủ ở
+> [`../huong_dan/wiki-core/fe/09-forms-validation.md`](../huong_dan/wiki-core/fe/09-forms-validation.md)
+> §"Bind lỗi từ `fieldErrors` vào form". Lý do + nghiệm thu:
 > [`../huong_dan/wiki-core/be/16-i18n-va-ma-loi.md`](../huong_dan/wiki-core/be/16-i18n-va-ma-loi.md) §11.
 > Test: `Tests/PlatformManager.Core.IntegrationTests/Auth/IdentityCodeFieldErrorsTests.cs`.
 >

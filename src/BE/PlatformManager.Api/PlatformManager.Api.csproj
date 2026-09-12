@@ -50,4 +50,17 @@
     <ProjectReference Include="..\Core\PlatformManager.Core.Api\PlatformManager.Core.Api.csproj" />
   </ItemGroup>
 
+  <!-- Tầng NGHIỆP VỤ (thêm 2026-09-10). Host reference đủ CẢ NĂM project vì nó là nơi duy nhất
+       được phép thấy cả hai tầng, và vì BusinessModuleRegistrar (Modules/) cần: Application +
+       Persistence + Infrastructure để gọi ba hàm AddBusiness*, Persistence để khai
+       PersistenceAssembly, và Api để khai ApiAssembly cho AddApplicationPart. Lý do registrar
+       nằm ở host chứ không ở Business.Infrastructure: xem docstring của chính lớp đó. -->
+  <ItemGroup>
+    <ProjectReference Include="..\Business\PlatformManager.Business.Domain\PlatformManager.Business.Domain.csproj" />
+    <ProjectReference Include="..\Business\PlatformManager.Business.Application\PlatformManager.Business.Application.csproj" />
+    <ProjectReference Include="..\Business\PlatformManager.Business.Persistence\PlatformManager.Business.Persistence.csproj" />
+    <ProjectReference Include="..\Business\PlatformManager.Business.Infrastructure\PlatformManager.Business.Infrastructure.csproj" />
+    <ProjectReference Include="..\Business\PlatformManager.Business.Api\PlatformManager.Business.Api.csproj" />
+  </ItemGroup>
+
 </Project>

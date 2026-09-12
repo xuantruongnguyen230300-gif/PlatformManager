@@ -44,7 +44,8 @@ describe('mapUserDtoToModel — chuẩn hoá field vắng mặt', () => {
   });
 
   /**
-   * `dateCreate` là `DateTimeOffset?` (`UserDto.cs:20`) và `version` là `string?` (`:21`) — hai
+   * `dateCreate` là `DateTimeOffset?` (`UserDto.DateCreate`) và `version` là `string?`
+   * (`UserDto.Version`) — hai
    * field DUY NHẤT của DTO này đi qua `WhenWritingNull`. Dựng ca test bằng cách `delete` khoá
    * chứ không gán `undefined`: đó mới là hình dạng JSON thật khi BE bỏ qua field.
    */

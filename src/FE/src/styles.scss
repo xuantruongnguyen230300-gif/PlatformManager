@@ -493,8 +493,9 @@ h1, h2, h3, p { margin: 0; }
   font-size: var(--fs-sm);
   font-weight: 700;
   cursor: pointer;
-  /* `<a class="btn">` la cach dieu huong bang nut (trang chu -> doi mat khau).
-     Khong tat gach chan thi no trong nhu mot link hong. */
+  /* `<a class="btn">` la cach dieu huong bang nut (topbar -> doi mat khau).
+     Khong tat gach chan thi no trong nhu mot link hong.
+     Vi du cu neo vao trang chu — trang do da bi xoa 2026-09-11 cung luot hoan doi /trang-chu. */
   text-decoration: none;
   transition: background .15s ease, box-shadow .15s ease, transform .1s ease;
 }

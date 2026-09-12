@@ -9,7 +9,7 @@ component: "Badge"
 sources:
   - "src/FE/src/styles.scss"
   - "src/FE/src/app/platform/quan-tri-nguoi-dung/components/user-grid-table/user-grid-table.html"
-  - "src/FE/src/app/platform/trang-chu/pages/trang-chu/trang-chu.page.html"
+  - "src/FE/src/app/modules/danh-muc-dti/components/criteria-grid-table/criteria-grid-table.html"
 ---
 
 # Badge
@@ -36,15 +36,15 @@ The status-column call sites prepend a literal `●` character **inside the labe
 | Variant | Classes | Key values | When to use |
 | --- | --- | --- | --- |
 | Success | `badge ok` | fill `colors.good-bg`, ink `colors.good` | A positive, settled outcome. Shipped on the user grid: `● Đang hoạt động` when `!row.IsLocked` |
-| Warning | `badge warn` | fill `colors.warn-bg`, ink `colors.warn` | Work in progress, or an outcome that needs attention but is not a failure. **No shipped call site today** |
+| Warning | `badge warn` | fill `colors.warn-bg`, ink `colors.warn` | Work in progress, or an outcome that needs attention but is not a failure. Shipped on the DTI criteria grid for the status `Đang thực hiện` (`src/FE/src/app/shared/models/dti-criteria-status.model.ts:39-44`) |
 | Danger | `badge bad` | fill `colors.bad-bg`, ink `colors.bad` | A blocked or negative outcome. Shipped on the user grid: `● Đã khoá` when `row.IsLocked` |
-| Neutral | `badge neutral` | fill `colors.surface-table-header`, ink `colors.muted` | A no-data or "nothing to report" state carrying no judgement. **No shipped call site today** — the home-screen roles cell it used to hold moved to `.outline` on 2026-08-29, because a role is an identifier rather than a state |
+| Neutral | `badge neutral` | fill `colors.surface-table-header`, ink `colors.muted` | A no-data or "nothing to report" state carrying no judgement. Shipped on the DTI criteria grid for the status `Chưa thực hiện` (`src/FE/src/app/shared/models/dti-criteria-status.model.ts:39-44`). It is still **not** where an identifier goes — the home-screen roles cell it once held moved to `.outline` on 2026-08-29, because a role is an identifier rather than a state |
 
 **Identity family** — bordered, no semantic colour, describes what a thing *is*.
 
 | Variant | Classes | Key values | When to use |
 | --- | --- | --- | --- |
-| Identifier | `badge outline` | `background: transparent`, ink `colors.text`, 1px `colors.line` border, `rounded.sm`, weight 700 | A name or code carrying no judgement. Shipped in two places, both rendering one chip per role string returned by the API: the user grid's "Vai trò" column and the home screen's roles row |
+| Identifier | `badge outline` | `background: transparent`, ink `colors.text`, 1px `colors.line` border, `rounded.sm`, weight 700 | A name or code carrying no judgement. **One shipped call site**: the user grid's "Vai trò" column, one chip per role string returned by the API. The home screen's roles row was the second until that screen was deleted on 2026-09-11 |
 
 The four status names all mean a **result**. There is no brand-coloured informational badge (a "New" / "Open" chip) — carried below as Normalize #1.
 
@@ -87,21 +87,24 @@ The four status names all mean a **result**. There is no brand-coloured informat
   }
 </div>
 
-<!-- home screen, roles of the signed-in account -->
-@for (role of u.Roles; track role) {
-  <span class="badge outline">{{ role }}</span>
-} @empty {
-  <span class="muted">Chưa gán vai trò</span>
+<!-- DTI criteria grid, status column — the tone comes from the data, and an
+     unrecognised status renders as plain text rather than a made-up colour -->
+@if (badgeClass(row); as tone) {
+  <span class="badge" [class]="'badge ' + tone">{{ row.Status }}</span>
+} @else if (row.Status) {
+  <span class="muted">{{ row.Status }}</span>
+} @else {
+  {{ 'shared.format.absentValue' | translate }}
 }
 ```
 
-Sources: `src/FE/src/styles.scss` (§ 5 `.badge`, `.badge.ok`, `.badge.warn`, `.badge.bad`, `.badge.neutral`, `.badge.outline`, `.delta`), `src/FE/src/app/platform/quan-tri-nguoi-dung/components/user-grid-table/user-grid-table.html` (status column and roles column), `src/FE/src/app/platform/quan-tri-nguoi-dung/components/user-grid-table/user-grid-table.scss` (`.role-cell` — spacing only, no shape), `src/FE/src/app/platform/quan-tri-nguoi-dung/components/user-grid-table/user-grid-table.spec.ts` (the test pinning every role chip to `.badge.outline` and asserting zero `.role-tag` remain), `src/FE/src/app/platform/trang-chu/pages/trang-chu/trang-chu.page.html`
+Sources: `src/FE/src/styles.scss` (§ 5 `.badge`, `.badge.ok`, `.badge.warn`, `.badge.bad`, `.badge.neutral`, `.badge.outline`, `.delta`), `src/FE/src/app/platform/quan-tri-nguoi-dung/components/user-grid-table/user-grid-table.html` (status column and roles column), `src/FE/src/app/platform/quan-tri-nguoi-dung/components/user-grid-table/user-grid-table.scss` (`.role-cell` — spacing only, no shape), `src/FE/src/app/platform/quan-tri-nguoi-dung/components/user-grid-table/user-grid-table.spec.ts` (the test pinning every role chip to `.badge.outline` and asserting zero `.role-tag` remain), `src/FE/src/app/modules/danh-muc-dti/components/criteria-grid-table/criteria-grid-table.html:69-75` (the DTI status column), `src/FE/src/app/shared/models/dti-criteria-status.model.ts:39-44` (the status → tone map both DTI grids share)
 
 ## Do / Don't
 
 - ✅ Choose the **family first**: is this label reporting a state, or naming a thing? Status → `ok`/`warn`/`bad`/`neutral`. Identity → `outline`. Only then pick within the family.
 - ✅ Treat every badge as read-only computed output — none is clickable, focusable or editable anywhere in the app.
-- ✅ Render a `.muted` fallback rather than an empty pill when there is no value; the home screen's roles cell does exactly that.
+- ✅ Render a `.muted` fallback rather than an empty pill when there is no value; the DTI status column does exactly that — an unrecognised status prints as plain `.muted` text, and no status at all prints the absent-value dash.
 - ✅ Use `.badge.outline` for a name or a label that carries no judgement — a role is an identifier, and giving it a semantic fill would compete with the real status column sitting beside it in the same row.
 - ✅ Let a wrapper own only **spacing** when several chips share one cell. `.role-cell` in the user grid is a flex row with `flex-wrap` and a gap and nothing else; the moment a wrapper starts setting padding or radius, the second chip primitive is back.
 - ❌ Don't re-introduce a screen-local badge class. Two vocabularies for one pill is what the 2026-08-29 pass removed; a third would put the app straight back.

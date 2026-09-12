@@ -1,0 +1,44 @@
+// Chỉ BỐ CỤC riêng của lưới này. Mọi bề mặt/nút/badge dùng class toàn cục ở src/styles.scss —
+// không khai lại, và không có màu literal nào (cổng G1 + G11).
+
+// Thẻ host phải nối chuỗi flex chiều cao: `.grid-host` nằm trên <app-data-grid> BÊN TRONG template
+// này, nên nếu host của chính component này cắt chuỗi thì lưới lại co theo nội dung.
+:host {
+  display: contents;
+}
+
+// Hai nút trong ô `Hành động` — chỉ lo khoảng cách, hình dạng nút là của `.btn.sm` toàn cục.
+.row-actions {
+  display: flex;
+  gap: var(--sp-2);
+  white-space: nowrap;
+}
+
+// Hai ô sửa inline. `.cell-editable` là affordance (gạch chân nét đứt = "bấm đúp được"),
+// `.cell-edit` là ô nhập lúc đang sửa. Cả hai KHÔNG có bản dùng chung ở styles.scss
+// (kiểm: `grep -n 'cell-editable' src/FE/src/styles.scss` → rỗng) nên khai ở đây, bằng token.
+.cell-editable {
+  display: inline-block;
+  min-width: var(--sp-6);
+  border-bottom: 1px dashed var(--border);
+  cursor: pointer;
+}
+
+// Viền focus 2px `--brand` — bản duyệt đã có, và nó là thứ DUY NHẤT cho người dùng bàn phím biết
+// ô nào đang được chọn. `:focus-visible` chứ không `:focus`: bấm chuột không nên vẽ viền.
+.cell-editable:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+// Ô nhập lúc đang sửa: chiếm trọn bề rộng cột để không đẩy bảng giãn ra khi editor mở.
+.cell-edit {
+  width: 100%;
+  min-width: 0;
+}
+
+// `Minh chứng/Ghi chú` là MỘT ô text nhiều dòng (Q5) — không cho kéo giãn ngang, vì kéo ngang
+// trong một ô bảng làm vỡ bề rộng cột đã ghim.
+textarea.cell-edit {
+  resize: vertical;
+}

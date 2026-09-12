@@ -1,0 +1,10 @@
+/* Chỉ dòng "đang nhập cho kỳ X". Mọi thứ còn lại (`dialog.form-dialog`, `.title`, `.form-row`,
+   `.form-grid`, `.input`, `.required`, `.invalid`, `.muted`, `.form-error`, `.dialog-actions`) là
+   class TOÀN CỤC ở `src/FE/src/styles.scss` — chép lại là mở đường cho hai bản sao lệch nhau. */
+
+.form-target-period {
+  margin: 0 0 var(--sp-3);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text);
+}

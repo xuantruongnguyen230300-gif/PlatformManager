@@ -137,4 +137,56 @@ describe('ApiErrorMessageService', () => {
       service.fieldMessage({ code: 'GreaterThanValidator', message: "'Điểm' phải lớn hơn 0." }),
     ).toBe("'Điểm' phải lớn hơn 0.");
   });
+
+  it('🛑 `CommonPassword` có bản dịch ở CẢ hai ngôn ngữ, và câu nói rõ phải làm gì', async () => {
+    // Mã này là thứ `AddTop10000PasswordValidator` phát ra và là mã Identity DUY NHẤT liên quan
+    // tới độ mạnh mật khẩu mà chính sách hiện hành thật sự kích hoạt được — bốn mã
+    // `PasswordRequires*` đang chết vì `options.Password.Require* = false`. Nó từng KHÔNG có
+    // trong bảng dịch, và đó là nửa đầu của sự cố 2026-09-11.
+    const fieldError = { code: 'CommonPassword', message: 'CommonPassword' };
+
+    const vi = service.fieldMessage(fieldError);
+    expect(vi).toContain('phổ biến');
+    expect(vi)
+      .withContext('câu phải nói LỐI RA (dùng cụm từ dài, ít gặp), không chỉ nói cái sai')
+      .toContain('cụm từ dài');
+    expect(vi)
+      .withContext('hệ thống KHÔNG đòi luật thành phần — nói thế là dạy người dùng sai')
+      .not.toContain('chữ hoa');
+
+    await firstValueFrom(translate.use('en'));
+
+    expect(service.fieldMessage(fieldError)).toContain('commonly used');
+  });
+
+  it('🛑 mã LẠ mà BE gửi `message` BẰNG CHÍNH mã → câu chung, KHÔNG phải chuỗi mã', async () => {
+    // Nửa sau của sự cố 2026-09-11, và là phần đáng sửa hơn. `IdentityFieldErrors.Build` dựng
+    // `new ApiFieldError(code, code)` — đúng chính sách i18n (BE gửi MÃ, FE dịch), nên đường lùi
+    // `?? fieldError.message` không phải đường lùi: nó đẩy thẳng định danh nội bộ ra màn hình cho
+    // MỌI mã Identity chưa dịch. `IdentityErrorDescriber` có hơn 20 mã; bảng dịch sẽ luôn thiếu
+    // một cái nào đó, nên đây là lớp bảo vệ chứ không phải ca hiếm.
+    const message = service.fieldMessage({ code: 'UserAlreadyHasPassword', message: 'UserAlreadyHasPassword' });
+
+    expect(message).toBe('Giá trị này không được chấp nhận. Vui lòng kiểm tra lại.');
+    expect(message).not.toContain('UserAlreadyHasPassword');
+
+    await firstValueFrom(translate.use('en'));
+
+    expect(service.fieldMessage({ code: 'UserAlreadyHasPassword', message: 'UserAlreadyHasPassword' })).toBe(
+      'This value was not accepted. Please check it and try again.',
+    );
+  });
+
+  it('🛑 mã lạ KHÔNG kèm câu nào → vẫn ra một câu, không bao giờ `undefined`/rỗng', () => {
+    // `ApiFieldError.message` khai `string` ở FE, nhưng TypeScript bị xoá lúc chạy: một envelope
+    // thiếu trường đó (bản BE khác, proxy cắt bớt, endpoint mới) cho ra `undefined`, và đường lùi
+    // cũ trả thẳng `undefined` — template bind vào thì KHÔNG render gì cả, đúng dạng hỏng im lặng
+    // mà người dùng báo: "form từ chối nhưng không có chữ nào".
+    const missing = service.fieldMessage({ code: 'LạMã' } as never);
+    expect(missing).toBe('Giá trị này không được chấp nhận. Vui lòng kiểm tra lại.');
+
+    expect(service.fieldMessage({ code: 'InvalidToken', message: '   ' })).toBe(
+      'Giá trị này không được chấp nhận. Vui lòng kiểm tra lại.',
+    );
+  });
 });

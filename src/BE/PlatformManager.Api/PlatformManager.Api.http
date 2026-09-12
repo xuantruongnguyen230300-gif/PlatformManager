@@ -1,24 +1,60 @@
+###############################################################################
+# 🛑 KHÔNG BAO GIỜ GÕ MẬT KHẨU THẬT VÀO FILE NÀY
+#
+# File này ĐƯỢC COMMIT. Mọi giá trị viết ở đây đi thẳng vào lịch sử repo, và
+# lịch sử thì xoá sau không gỡ được — repo này đã từng có mật khẩu SuperAdmin
+# nằm công khai trên GitHub vì đúng lý do đó (phát hiện 2026-09-12).
+#
+# Mật khẩu thật đặt ở `http-client.env.json` cạnh file này — file đó đã được
+# `.gitignore` chặn. Mẫu: `http-client.env.json.example`.
+#
+# Ba giá trị dưới đây CỐ Ý không dùng được: chúng ngắn hơn 12 ký tự nên
+# Identity từ chối ngay (`PasswordTooShort`). Nếu một request đăng nhập bằng
+# chúng mà THÀNH CÔNG, nghĩa là ai đó đã thay bằng mật khẩu thật — sửa lại.
+###############################################################################
+
 @PlatformManager.Api_HostAddress = http://localhost:5027
 
-### Đăng nhập (cookie session — client HTTP giữ cookie qua các request sau nếu hỗ trợ cookie jar)
+@superAdminUserName = SuperAdmin
+@superAdminPassword = <DAT-O-http-client.env.json>
+@newPassword        = <DAT-O-http-client.env.json>
+@tempPassword       = <DAT-O-http-client.env.json>
+
+###############################################################################
+# CSRF — đọc trước khi chạy bất kỳ request GHI nào (POST/PUT/DELETE)
+#
+# 1. Token đi ở HEADER `X-XSRF-TOKEN`, KHÔNG phải trường form — kể cả với
+#    `multipart/form-data`.
+# 2. Phải LẤY LẠI token SAU khi đăng nhập. Token phát trước login gắn danh tính
+#    ẩn danh; dùng lại sẽ nhận `403 AUTH.CSRF_REJECTED`, trông y hệt lỗi phân
+#    quyền và rất dễ đi chẩn đoán nhầm sang `dti.manage`.
+###############################################################################
+
+### Lấy antifogery token (gọi LẠI sau khi đăng nhập)
+GET {{PlatformManager.Api_HostAddress}}/api/antiforgery/token
+
+### Đăng nhập (cookie session — client HTTP phải giữ cookie jar qua các request sau)
 POST {{PlatformManager.Api_HostAddress}}/api/auth/login
 Content-Type: application/json
 
 {
-  "UserName": "SuperAdmin",
-  "Password": "SuperAdmin@123"
+  "UserName": "{{superAdminUserName}}",
+  "Password": "{{superAdminPassword}}"
 }
 
-### Thông tin user hiện tại — kỳ vọng MustChangePassword=true cho tài khoản bootstrap
+### Thông tin user hiện tại — tài khoản bootstrap kỳ vọng MustChangePassword=true
 GET {{PlatformManager.Api_HostAddress}}/api/auth/me
 
-###
+### Đổi mật khẩu
+# ⚠️ Mật khẩu mới phải ≥ 12 ký tự VÀ không nằm trong danh sách 10.000 mật khẩu
+# phổ biến (`AddTop10000PasswordValidator`). Không đòi hoa/số/ký tự đặc biệt —
+# xem Core.Infrastructure/DependencyInjection.cs, khối IdentityOptions.
 POST {{PlatformManager.Api_HostAddress}}/api/auth/change-password
 Content-Type: application/json
 
 {
-  "CurrentPassword": "SuperAdmin@123",
-  "NewPassword": "MatKhauMoi@123"
+  "CurrentPassword": "{{superAdminPassword}}",
+  "NewPassword": "{{newPassword}}"
 }
 
 ### Menu điều hướng theo role hiện tại
@@ -27,20 +63,13 @@ GET {{PlatformManager.Api_HostAddress}}/api/meta/menu
 ### Ma trận phân quyền (chỉ SuperAdmin)
 GET {{PlatformManager.Api_HostAddress}}/api/admin/permissions
 
-###
-PUT {{PlatformManager.Api_HostAddress}}/api/admin/permissions
-Content-Type: application/json
+### Ma trận quyền theo resource-key — dòng `dti.manage` phải có Admin, KHÔNG có User (Q36)
+GET {{PlatformManager.Api_HostAddress}}/api/admin/permissions/resources
 
-{
-  "Entries": [
-    { "SysMenuId": "00000000-0000-0000-0000-000000000000", "Roles": ["SuperAdmin"] }
-  ]
-}
-
-### Danh sách người dùng (Admin+SuperAdmin)
+### Danh sách người dùng
 GET {{PlatformManager.Api_HostAddress}}/api/users?page=1&pageSize=20
 
-###
+### Tạo người dùng
 POST {{PlatformManager.Api_HostAddress}}/api/users
 Content-Type: application/json
 
@@ -48,61 +77,124 @@ Content-Type: application/json
   "UserName": "nguyen.van.a",
   "Email": "nguyen.van.a@example.com",
   "FullName": "Nguyễn Văn A",
-  "TempPassword": "TempPass@123",
+  "TempPassword": "{{tempPassword}}",
   "Roles": ["User"]
 }
 
-### Danh mục nhóm chỉ tiêu
+###############################################################################
+# DANH MỤC DTI — hợp đồng: doc/contracts/danh-muc-dti.md
+###############################################################################
+
+### DM-1 — Danh mục nhóm chỉ tiêu (6 nhóm seed)
 GET {{PlatformManager.Api_HostAddress}}/api/criteria-groups
 
-### Grid Danh mục DTI — "Live" (năm hiện tại + Tất cả), editable
-GET {{PlatformManager.Api_HostAddress}}/api/criteria?page=1&pageSize=100
+### DM-2 — Lưới, mặc định (year = năm hiện tại, period = all)
+GET {{PlatformManager.Api_HostAddress}}/api/criteria?page=1&pageSize=10
 
-### Grid Danh mục DTI — lịch sử 1 tháng cụ thể, read-only
-GET {{PlatformManager.Api_HostAddress}}/api/criteria?year=2026&period=month&periodValue=2026-08
+### DM-2 — lọc theo một TUẦN cụ thể; kỳ tuần thì ghi được (isEditable = true)
+GET {{PlatformManager.Api_HostAddress}}/api/criteria?year=2026&period=2026-W33&page=1&pageSize=100
 
-###
+### DM-2 — lọc theo THÁNG: chỉ đọc, editBlockedBy = ["PERIOD_NOT_WEEKLY"] (Q37)
+GET {{PlatformManager.Api_HostAddress}}/api/criteria?year=2026&period=2026-08
+
+### DM-2 — tìm kiếm: tên khớp CHỨA + không phân biệt dấu; mã khớp theo ĐOẠN (Q47 + Q59)
+GET {{PlatformManager.Api_HostAddress}}/api/criteria?search=ha tang
+
+### DM-3 — Tạo chỉ tiêu (`assessment` tuỳ chọn)
 POST {{PlatformManager.Api_HostAddress}}/api/criteria
 Content-Type: application/json
+X-XSRF-TOKEN: {{token}}
 
 {
-  "Code": "9.1",
-  "Name": "Chỉ tiêu thử nghiệm",
-  "GroupId": "00000000-0000-0000-0000-000000000000",
-  "MaxScore": 10
+  "code": "9.1",
+  "name": "Chỉ tiêu thử nghiệm",
+  "groupId": "00000000-0000-0000-0000-000000000000",
+  "maxScore": 10
 }
 
-### Sửa tay Tiến độ %/Ghi chú — luôn ghi vào "hôm nay", có guard chặn khi FE đang xem lịch sử
+### DM-4 — Sửa chỉ tiêu: MỘT request, `assessment` lồng, 4 + 6 trường (Q9)
+PUT {{PlatformManager.Api_HostAddress}}/api/criteria/00000000-0000-0000-0000-000000000000
+Content-Type: application/json
+X-XSRF-TOKEN: {{token}}
+
+{
+  "code": "9.1",
+  "name": "Chỉ tiêu thử nghiệm",
+  "groupId": "00000000-0000-0000-0000-000000000000",
+  "maxScore": 10,
+  "assessment": {
+    "period": "2026-W33",
+    "selfScore": 8,
+    "verifiedScore": 7.5,
+    "status": "Đang thực hiện",
+    "note": "Ghi chú thử"
+  }
+}
+
+### DM-6 — Sửa inline: ĐÚNG 2 trường
+# ⚠️ Q74: khoá VẮNG = giữ nguyên; khoá mang `null` = XOÁ TRẮNG. Đừng "điền cho đủ".
+# `version` không có thì BỎ HẲN KHOÁ, đừng gửi `null`.
 PUT {{PlatformManager.Api_HostAddress}}/api/criteria/00000000-0000-0000-0000-000000000000/assessment
 Content-Type: application/json
+X-XSRF-TOKEN: {{token}}
 
 {
-  "ProgressPercent": 75.5,
-  "Note": "Cập nhật tiến độ tuần này",
-  "ViewYear": 2026,
-  "ViewPeriod": "all",
-  "ViewPeriodValue": null
+  "period": "2026-W33",
+  "progressPercent": 75
 }
 
-### Import CSV mẫu (multipart) — xem doc/ERD/example_db_ver1.csv
-POST {{PlatformManager.Api_HostAddress}}/api/import/csv
-Content-Type: multipart/form-data; boundary=BOUNDARY
+### DM-5 — Xoá chỉ tiêu (BE quyết cứng hay mềm, trả `hardDeleted`)
+DELETE {{PlatformManager.Api_HostAddress}}/api/criteria/00000000-0000-0000-0000-000000000000
+X-XSRF-TOKEN: {{token}}
 
---BOUNDARY
-Content-Disposition: form-data; name="file"; filename="example_db_ver1.csv"
-Content-Type: text/csv
-
-< ../../../doc/ERD/example_db_ver1.csv
---BOUNDARY--
-
-### Dashboard — KPI/tiến độ nhóm/trend/bảng đầy đủ
-GET {{PlatformManager.Api_HostAddress}}/api/dashboard
-
-### Dashboard — danh sách kỳ có dữ liệu trong 1 năm
+### DM-8 / DB-3 — Năm và kỳ có dữ liệu
 GET {{PlatformManager.Api_HostAddress}}/api/dashboard/periods?year=2026
 
-### Báo cáo nhanh (HTML tiếng Việt)
-GET {{PlatformManager.Api_HostAddress}}/api/dashboard/report
+###############################################################################
+# IMPORT — hợp đồng: doc/contracts/danh-muc-dti.md DM-7
+###############################################################################
+
+### DM-7 bước 1 — bắt đầu import (job nền, trả jobId)
+# Đường dẫn file dưới đây trỏ bộ mẫu ẩn danh 62 dòng có sẵn trong repo.
+POST {{PlatformManager.Api_HostAddress}}/api/import
+Content-Type: multipart/form-data; boundary=BOUNDARY
+X-XSRF-TOKEN: {{token}}
+
+--BOUNDARY
+Content-Disposition: form-data; name="period"
+
+2026-W33
+--BOUNDARY
+Content-Disposition: form-data; name="file"; filename="dti-mau-an-danh-62-dong.csv"
+Content-Type: text/csv
+
+< ../../../spec/danh-muc-dti/dti-mau-an-danh-62-dong.csv
+--BOUNDARY--
+
+### DM-7 bước 2 — poll trạng thái (Pending | Running | Succeeded | Failed)
+GET {{PlatformManager.Api_HostAddress}}/api/import/00000000-0000-0000-0000-000000000000
+
+###############################################################################
+# DASHBOARD — hợp đồng: doc/contracts/dashboard.md
+###############################################################################
+
+### DB-1 — chế độ Tuần (bỏ trống date = tuần hiện tại)
+GET {{PlatformManager.Api_HostAddress}}/api/dashboard?mode=week
+
+### DB-1 — một tuần cụ thể
+GET {{PlatformManager.Api_HostAddress}}/api/dashboard?mode=week&date=2026-08-12
+
+### DB-1 — năm cũ, KHÔNG gửi date ⇒ tuần ISO CUỐI của năm đó (Q71)
+GET {{PlatformManager.Api_HostAddress}}/api/dashboard?mode=week&year=2025
+
+### DB-1 — Tháng / Năm
+GET {{PlatformManager.Api_HostAddress}}/api/dashboard?mode=month&date=2026-08-15
+
+### DB-4 — Xuất .xlsx (mode=year KHÔNG hỗ trợ ⇒ 400 EXPORT_MODE_UNSUPPORTED)
+# Nhánh thành công KHÔNG bọc envelope; nhánh lỗi thì VẪN bọc — kiểm Content-Type
+# trước khi coi body là file.
+GET {{PlatformManager.Api_HostAddress}}/api/dashboard/export?mode=week&date=2026-08-12
 
 ### Đăng xuất
 POST {{PlatformManager.Api_HostAddress}}/api/auth/logout
+X-XSRF-TOKEN: {{token}}

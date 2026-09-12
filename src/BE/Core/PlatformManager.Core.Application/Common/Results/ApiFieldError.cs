@@ -21,6 +21,22 @@ namespace PlatformManager.Core.Application.Common.Results;
 /// <para><b><see cref="Message"/> vẫn còn ở đây</b> dù mục tiêu là client tra theo mã: nó là
 /// <i>dev-facing + fallback</i>. Mã nào chưa có bản dịch thì client còn một câu đọc được thay vì
 /// một ô trống — thiếu lối thoát đó, mỗi mã mới thêm ở BE là một chỗ giao diện hiển thị rỗng.</para>
+///
+/// <para>⚠️ <b>Lời hứa "còn một câu đọc được" chỉ giữ được ở nơi NGUỒN CÓ SẴN MỘT CÂU</b> — tức
+/// lỗi FluentValidation, nơi <c>ValidationFailure.ErrorMessage</c> là một câu thật (thu hẹp
+/// 2026-09-11 theo core-review). <b>Với mã Identity thì <c>Message</c> bằng đúng <c>Code</c>, và đó
+/// là CHỦ ĐÍCH</b>: câu gốc của Identity là tiếng Anh, đẩy nó ra dây là mở lại đường rò chữ mà §4(c)
+/// của doc/huong_dan/wiki-core/be/16-i18n-va-ma-loi.md đã đóng — lý lẽ đầy đủ ở
+/// <see cref="IdentityFieldErrors.Build"/>.</para>
+///
+/// <para>Không có lỗ hổng hiển thị nào từ việc đó: đường lùi của kênh FE không dừng ở
+/// <c>message</c>. <c>ApiErrorMessageService.fieldMessage</c> tra bảng dịch theo <c>code</c> trước
+/// (bậc 1), chỉ dùng <c>message</c> khi nó KHÁC <c>code</c> (bậc 2), và còn một câu chung ở bậc 3.
+/// Mã Identity vì thế luôn rơi vào bậc 1 hoặc bậc 3, không bao giờ hiện ra dưới dạng mã trần.</para>
+///
+/// <para>Trước lượt thu hẹp này, đoạn trên và <see cref="IdentityFieldErrors"/> nói ngược nhau về
+/// cùng một trường — một bên hứa "luôn có câu", một bên đặt <c>Message = Code</c>. Sửa ở đây rẻ hơn
+/// refactor và <b>gỡ mâu thuẫn</b> thay vì để hai file cãi nhau (.claude/CLAUDE.md §5).</para>
 /// </summary>
 /// <param name="Code">Xem phần mô tả của record.</param>
 /// <param name="Message">Xem phần mô tả của record.</param>

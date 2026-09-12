@@ -1,13 +1,238 @@
-<!-- 🚧 KHUNG — hình dạng cuối cùng của trang này ở spec/danh-muc-dti/ui-spec.md §3 (V1…V12).
-     Giữ đúng hai vùng đã chốt và có thật ngay hôm nay: `.page-fill` (nửa đầu của chuỗi chiều cao,
-     styles.scss § .page-fill) và `.card > .title`. Không dựng trước toolbar/lưới/dialog: một khung
-     rỗng mang hình dạng của màn thật là thứ người đọc sau sẽ tưởng là màn thật. -->
-<div class="page-fill">
-  <section class="card dti-grid-card">
-    <div class="title">
-      <h2>{{ 'danh-muc-dti.title' | translate }}</h2>
-    </div>
+<!-- Vùng V1…V5 của spec/danh-muc-dti/ui-spec.md §3, cộng bốn hộp thoại của vòng 2: V9 (Thêm/Sửa),
+     V10 (xác nhận xoá), V11 (chọn file import), V12 (kết quả import).
 
-    <p class="muted">{{ 'danh-muc-dti.hint.underConstruction' | translate }}</p>
-  </section>
-</div>
+     `.page-fill` là NỬA ĐẦU của chuỗi chiều cao (nửa sau là `.grid-host` bên trong
+     <app-criteria-grid-table>) và nó nằm trên CHÍNH thẻ host (host: { class }), không bọc thêm
+     <div>: host vốn đã là con trực tiếp của <main> (đã là flex column, xem app.scss), nên `.card`
+     bên dưới vẫn khớp selector `.page-fill > .card` ở styles.scss. `.dti-grid-card` là class
+     page-local, không phải component. -->
+<section class="card dti-grid-card">
+  <!-- V2 — hàng tiêu đề. `aria-live="polite"` trên số lượng là BẮT BUỘC (a11y §3a): sau khi lọc,
+       con số này là bằng chứng DUY NHẤT mà người dùng trình đọc màn hình nhận được. -->
+  <div class="title">
+    <h2>{{ 'danh-muc-dti.title' | translate }}</h2>
+    <span class="muted" aria-live="polite">
+      {{ 'danh-muc-dti.count' | translate: { Count: feed.totalCount() } }}
+    </span>
+  </div>
+
+  <!-- V3 — băng thông báo, TỐI ĐA MỘT băng. Thứ tự ưu tiên (rỗng → chỉ đọc vì bộ lọc → nhắc kỳ
+       đích) là một quyết định, giải thích ở JSDoc của `DanhMucDtiPage`.
+       `NO_WRITE_PERMISSION` KHÔNG sinh băng nào (Q51). -->
+  @if (showEmptyCatalogueNotice()) {
+    <div class="notice">
+      <i class="pi pi-info-circle"></i>
+      <span>
+        @if (canWrite()) {
+          {{ 'danh-muc-dti.notice.emptyCatalogue' | translate }}
+        } @else {
+          {{ 'danh-muc-dti.notice.emptyCatalogueReadOnly' | translate }}
+        }
+      </span>
+    </div>
+  } @else if (blockNotices().length > 0) {
+    <div class="notice">
+      <i class="pi pi-info-circle"></i>
+      <span>
+        <!-- MỘT dòng cho MỖI mã, theo đúng thứ tự mảng. Đừng viết `editBlockedBy[0]`: shape mảng
+             là chỗ dành cho một điều kiện thứ tư về sau (§7.1a ràng buộc 2). -->
+        @for (code of blockNotices(); track code) {
+          <span class="notice-line">
+            @switch (code) {
+              @case ('PERIOD_NOT_WEEKLY') {
+                <!-- Q60 — lối thoát tuỳ NĂM, và năm thì đọc từ `isCurrentYear` của DM-2, KHÔNG
+                     suy từ đồng hồ máy khách. Năm hiện tại còn lối `Tất cả`; năm cũ thì không,
+                     vì `Tất cả` của năm cũ cũng chỉ đọc (T15). -->
+                @if (access().IsCurrentYear) {
+                  {{
+                    'danh-muc-dti.notice.periodNotWeekly'
+                      | translate: { Period: labels.selectedPeriodLabel() ?? '' }
+                  }}
+                } @else {
+                  {{
+                    'danh-muc-dti.notice.periodNotWeeklyPastYear'
+                      | translate: { Period: labels.selectedPeriodLabel() ?? '' }
+                  }}
+                }
+              }
+              @case ('PERIOD_OUT_OF_YEAR') {
+                {{
+                  'danh-muc-dti.notice.periodOutOfYear'
+                    | translate: { Year: filters.yearFilter(), CurrentYear: currentYearText }
+                }}
+              }
+              @default {
+                <!-- Mã LẠ vẫn coi là bị chặn: `isEditable` đã false, nên bỏ qua nó là đi ngược
+                     chiều an toàn (§7.1a ràng buộc 3). -->
+                {{ 'danh-muc-dti.notice.readOnlyUnknown' | translate }}
+              }
+            }
+          </span>
+        }
+      </span>
+    </div>
+  } @else if (targetPeriodNoticeKey(); as noticeKey) {
+    <!-- Băng "nhắc kỳ đích" (Q72). Ở chế độ `Tất cả`, đây là thứ DUY NHẤT nói trước rằng lời ghi
+         rơi vào tuần hiện tại chứ không vào tuần đang hiện trên dòng — ca hợp lệ theo thiết kế
+         nên không mã lỗi nào chặn. -->
+    <div class="notice">
+      <i class="pi pi-info-circle"></i>
+      <span>{{ noticeKey | translate: { Period: writeTargetLabel() } }}</span>
+    </div>
+  }
+
+  <!-- V4 — thanh công cụ. `<app-toolbar>` tự mang `.toolbar.no-print` trên host và tự dựng thứ tự
+       DOM (tìm kiếm → lọc → vạch ngăn → chip → hành động). Trang chỉ chiếu vào hai slot. -->
+  <app-toolbar
+    [searchValue]="filters.searchInput()"
+    (searchValueChange)="filters.onSearchValueChange($event)"
+    [searchPlaceholder]="'danh-muc-dti.toolbar.searchPlaceholder' | translate"
+    [searchAriaLabel]="'danh-muc-dti.toolbar.searchAriaLabel' | translate"
+    [hasFilter]="true"
+    [filterCount]="filters.activeFilterCount()"
+    [chips]="labels.filterChips()"
+    (chipRemove)="filters.removeFilter($event)"
+    (filterApply)="filters.applyFilters()"
+    (filterClear)="filters.clearFilters()"
+  >
+    <ng-container filter>
+      <div class="form-row">
+        <label for="dti-filter-group">{{ 'danh-muc-dti.filter.group' | translate }}</label>
+        <select id="dti-filter-group" [value]="filters.groupDraft()" (change)="filters.onGroupDraftChange($event)">
+          <option value="">{{ 'danh-muc-dti.filter.allGroups' | translate }}</option>
+          @for (group of filters.groups(); track group.Id) {
+            <option [value]="group.Id">{{ labels.groupOptionLabel(group) }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="form-row">
+        <label for="dti-filter-status">{{ 'danh-muc-dti.filter.status' | translate }}</label>
+        <select id="dti-filter-status" [value]="filters.statusDraft()" (change)="filters.onStatusDraftChange($event)">
+          <option value="">{{ 'danh-muc-dti.filter.allStatuses' | translate }}</option>
+          <!-- Bốn chuỗi tiếng Việt NGUYÊN VĂN đi thẳng lên API (Q4): mã rút gọn kiểu "xong" sẽ
+               nhận 400 CRITERIA.STATUS_INVALID. -->
+          @for (status of filters.statuses; track status) {
+            <option [value]="status">{{ status }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="form-row">
+        <label for="dti-filter-year">{{ 'danh-muc-dti.filter.year' | translate }}</label>
+        <select id="dti-filter-year" [value]="filters.yearDraft()" (change)="filters.onYearDraftChange($event)">
+          @for (year of filters.years(); track year) {
+            <option [value]="year">{{ year }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="form-row">
+        <label for="dti-filter-period">{{ 'danh-muc-dti.filter.period' | translate }}</label>
+        <select
+          id="dti-filter-period"
+          [value]="filters.periodDraft()"
+          [attr.title]="'danh-muc-dti.filter.periodHint' | translate"
+          (change)="filters.onPeriodDraftChange($event)"
+        >
+          <option value="all">{{ 'danh-muc-dti.filter.allPeriods' | translate }}</option>
+          @for (option of filters.periodChoices(); track option.Value) {
+            <option [value]="option.Value">{{ labels.periodOptionLabel(option) }}</option>
+          }
+        </select>
+      </div>
+    </ng-container>
+
+    <ng-container actions>
+      <!-- Hai nút render theo `canWrite` (Q39 — ẩn hẳn khi không có quyền), rồi `disabled` theo
+           `isEditable` (§5.5.1 — "không phải lúc này", nút ở nguyên chỗ và chỉ xám đi). -->
+      @if (canWrite()) {
+        <button type="button" class="btn" [disabled]="!writeEnabled()" (click)="importFlow.open()">
+          {{ 'danh-muc-dti.action.import' | translate }}
+        </button>
+        <button type="button" class="btn primary" [disabled]="!writeEnabled()" (click)="formFlow.openCreate()">
+          {{ 'danh-muc-dti.action.create' | translate }}
+        </button>
+      }
+    </ng-container>
+  </app-toolbar>
+
+  <!-- V5 — lưới. Tải HỎNG thì GỠ HẲN bảng rồi hiện khối lỗi: giữ lại dữ liệu của lượt trước là ca
+       nguy hiểm nhất (bảng hiện số của bộ lọc CŨ, trông y như kết quả của bộ lọc mới). -->
+  @if (feed.loadError(); as errorKey) {
+    <div class="notice bad">
+      <i class="pi pi-exclamation-triangle"></i>
+      <span>{{ errorKey | translate }}</span>
+      <button type="button" class="btn" (click)="reload()">{{ 'shared.action.retry' | translate }}</button>
+    </div>
+  } @else {
+    <app-criteria-grid-table
+      [rows]="feed.rows()"
+      [loading]="feed.loading()"
+      [totalCount]="feed.totalCount()"
+      [page]="filters.page()"
+      [pageSize]="filters.pageSize()"
+      [showPeriodColumn]="showPeriodColumn()"
+      [canWrite]="canWrite()"
+      [isEditable]="writeEnabled()"
+      [periodRangeLabels]="labels.periodRangeLabels()"
+      [localeId]="localeId()"
+      (pageChange)="onGridPageChange($event)"
+      (inlineSave)="onInlineSave($event)"
+      (editRow)="onEditRow($event)"
+      (deleteRow)="onDeleteRow($event)"
+    />
+  }
+</section>
+
+<!-- V9 — Thêm/Sửa chỉ tiêu. MỘT nút Lưu = MỘT request (DM-4): 4 trường danh mục + object
+     `assessment` sáu trường đi chung, vì tách đôi tạo ra cửa sổ hỏng nửa vời trong đó tên chỉ tiêu
+     đã đổi trong khi hộp thoại đang báo lỗi phần đánh giá. -->
+<app-criteria-form-dialog
+  [open]="formFlow.open()"
+  [editing]="formFlow.editing()"
+  [groups]="filters.groups()"
+  [owners]="formFlow.ownerOptions()"
+  [ownersFailed]="formFlow.ownersFailed()"
+  [ownersTruncated]="formFlow.ownersTruncated()"
+  [targetPeriodText]="formTargetText()"
+  [serverError]="formFlow.serverError()"
+  [saving]="formFlow.saving()"
+  (ownerSearch)="formFlow.searchOwners($event)"
+  (saved)="onFormSave($event)"
+  (closed)="formFlow.close()"
+/>
+
+<!-- V10 — xác nhận xoá. Câu hỏi CHỈ nói xoá chỉ tiêu nào; cứng hay mềm thì BE quyết và câu báo
+     kết quả mới nói (DM-5). Đoán trước bằng `assessmentId` là đoán theo KỲ ĐANG XEM, không theo
+     lịch sử. -->
+<app-confirm-dialog
+  #deleteDialog
+  severity="bad"
+  [confirmDanger]="true"
+  [title]="'danh-muc-dti.dialog.deleteTitle' | translate"
+  [description]="deleteMessage()"
+  [confirmLabel]="'danh-muc-dti.action.delete' | translate"
+  [confirmDisabled]="deleteFlow.deleting()"
+  (confirmed)="onDeleteConfirmed()"
+  (cancelled)="deleteFlow.cancel()"
+/>
+
+<!-- V11 — chọn file + kỳ đích. KHÔNG tự đóng khi bấm Nhập: import là thao tác chạy dài, và đóng
+     hộp thoại ngay khi gửi xong là báo "đã nhập" cho một việc chưa xảy ra. -->
+<app-import-dialog
+  [open]="importFlow.dialogOpen()"
+  [busy]="importFlow.busy()"
+  [errorMessage]="importFlow.errorMessage()"
+  [targetPeriodText]="importTargetText()"
+  (submitted)="onImportSubmit($event)"
+  (closed)="importFlow.close()"
+/>
+
+<!-- V12 — kết quả. Chỉ mở khi job `Succeeded`; `Failed` (lỗi hạ tầng) đi bằng toast, vì khi đó
+     `result` vắng mặt và không có gì để trình bày. Đóng V12 ⇒ lưới refetch. -->
+<app-import-result-dialog
+  [open]="importFlow.resultOpen()"
+  [result]="importFlow.result()"
+  (closed)="importFlow.closeResult()"
+/>

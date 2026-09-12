@@ -28,4 +28,24 @@ public sealed class ImportOptions
     /// </summary>
     [Range(1, long.MaxValue)]
     public long MaxFileSizeBytes { get; init; } = 10L * 1024 * 1024;
+
+    /// <summary>
+    /// Trần SỐ DÒNG dữ liệu (không kể header). Mặc định 20.000 — <b>Q75, chốt 2026-09-11</b>.
+    ///
+    /// <para><b>Vì sao trần này KHÔNG thừa dù đã có <see cref="MaxFileSizeBytes"/>:</b> hai trần
+    /// chặn hai thứ khác nhau — một cái chặn <i>byte đọc từ đĩa</i>, một cái chặn <i>đối tượng dựng
+    /// trong bộ nhớ</i>. Một file 200 KB gồm toàn dòng ngắn vẫn có thể mang nửa triệu dòng.</para>
+    ///
+    /// <para><b>Con số ĐO ra, không chọn tròn</b> (phép tính đầy đủ ở
+    /// doc/huong_dan/wiki-core/be/15-import-export.md §2): file tham chiếu thật có 62 dòng ≈ 19 KB
+    /// ⇒ một dòng ≈ 314 byte ⇒ trần dung lượng 10 MB còn cho lọt ≈ 33.000 dòng. Trần số dòng phải
+    /// nằm DƯỚI con số đó, nếu không nó không bao giờ chạy tới. Cận dưới là ca lớn nhất còn hợp lý
+    /// (≈ 12.000 dòng nếu về sau có người gộp nhiều đơn vị vào một file). 20.000 nằm giữa — dư
+    /// khoảng 320 lần so với ca dùng thật.</para>
+    ///
+    /// <para>⚠️ Core KHÔNG tự cắt dòng thừa: nạp một file bị cắt cụt mà không ai biết còn tệ hơn từ
+    /// chối nó. Bên gọi đọc trần này rồi TỪ CHỐI cả lượt.</para>
+    /// </summary>
+    [Range(1, int.MaxValue)]
+    public int MaxRows { get; init; } = 20_000;
 }

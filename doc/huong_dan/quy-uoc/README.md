@@ -104,8 +104,8 @@ tạo project mới, và hỏi người dùng nếu không chắc.
    [`../../Design/`](../../Design/) — đây là nguồn giao diện **duy nhất**
    (`.claude/CLAUDE.md` §7).
 5. Schema: nguồn chuẩn là [`../../cau-truc-database.md`](../../cau-truc-database.md)
-   (schema `core`, đang sống) + [`../../cau-truc-database-business.md`](../../cau-truc-database-business.md)
-   (schema `business`, đóng băng) + [`../../cau-truc-database.sql`](../../cau-truc-database.sql)
+   (schema `core`, đang sống) + [`../../cau-truc-database-dti.md`](../../cau-truc-database-dti.md)
+   (schema `business`, đang sống) + [`../../cau-truc-database.sql`](../../cau-truc-database.sql)
    (DDL viết tay EF không sinh được). Ba file, hai schema, **một** database —
    bảng trạng thái ở [`../../README.md`](../../README.md).
 

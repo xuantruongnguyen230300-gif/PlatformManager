@@ -1,0 +1,12 @@
+// Chỉ BỐ CỤC riêng. Khung bảng, viền, sọc dòng và `th` dính đầu đều đến từ `.tablewrap` /
+// `table` toàn cục ở src/styles.scss — không khai lại, và không có màu literal nào (G1 + G11).
+
+:host {
+  display: block;
+}
+
+// Dòng "không khớp bộ lọc" — chỉ căn chỗ; MÀU đến từ class `.muted` dùng chung.
+.detail-empty {
+  padding: var(--sp-5) var(--sp-4);
+  text-align: center;
+}

@@ -147,8 +147,9 @@
     }
   </div>
 
-  <!-- Chỉ còn lỗi KHÔNG gắn ô nào (vd 409 trùng tên đăng nhập, 403 thiếu quyền). Lỗi có `fields`
-       đã nằm dưới đúng ô ở trên rồi. -->
+  <!-- Lỗi KHÔNG gắn ô nào: `message` của envelope (409 trùng tên đăng nhập, 403 thiếu quyền) HOẶC
+       lỗi mức bản ghi `$record` (mã Identity mà BE chưa ánh xạ về ô nào — vd `CommonPassword`).
+       Lỗi có khoá ô đã nằm dưới đúng ô ở trên rồi. Thứ tự ưu tiên: xem `generalError`. -->
   @if (generalError(); as message) {
     <div class="form-error">{{ message }}</div>
   }

@@ -23,7 +23,8 @@ const POINTS: readonly ITrendPoint[] = [
  * Bốn nhóm phép kiểm, mỗi nhóm chặn một cách đọc sai số liệu hoặc một cách rò tài nguyên:
  *
  *  1. **Trục Y ghim `[0, 100]`** — trục tự co giãn biến biến động 2 điểm thành một vách đá.
- *  2. **Chỉ vẽ điểm CÓ dữ liệu**, và giá trị bị kẹp — không nội suy, không chèn `null`.
+ *  2. **Mỗi kỳ một ô trên trục**, kỳ rỗng giữ `null` để đường ngắt đúng chỗ (Q44), giá trị thật
+ *     thì bị kẹp `[0, 100]` — không nội suy, không `spanGaps`.
  *  3. **Màu là chuỗi literal đọc từ token lúc chạy.** `<canvas>` không phân giải `var(--x)`:
  *     truyền thẳng `'var(--brand)'` xuống chart.js thì nó vẽ ra màu mặc định và KHÔNG báo gì.
  *  4. **Chart bị huỷ khi component chết.** Rò canvas là lỗi kinh điển của chart.js trong Angular;
@@ -143,8 +144,8 @@ describe('TrendChart', () => {
   });
 
   // ---------------------------------------------------------------- dữ liệu
-  describe('🛑 chỉ vẽ điểm CÓ dữ liệu', () => {
-    it('số điểm vẽ ra đúng bằng số điểm truyền vào — không chèn thêm cho đủ 52 tuần', () => {
+  describe('🛑 mỗi kỳ một ô trên trục, kỳ rỗng giữ null (Q44)', () => {
+    it('số điểm vẽ ra đúng bằng số điểm truyền vào — không thêm, không bớt', () => {
       render({ points: POINTS.slice(0, 3) });
       const chart = chartComponent();
 
@@ -152,13 +153,37 @@ describe('TrendChart', () => {
       expect(chart.data.datasets[0].data.length).toBe(3);
     });
 
-    it('không có giá trị null nào lọt vào chuỗi', () => {
-      render({ points: POINTS });
+    /**
+     * 🛑 Đây là phép kiểm mà bản trước của file này khẳng định điều NGƯỢC LẠI (*"không có giá trị
+     * null nào lọt vào chuỗi"*). Lý do lật: trên trục **category** của `chart.js`, bỏ hẳn một điểm
+     * thì hai điểm kề nhau được nối THẲNG — không có ô nào cho kỳ bị bỏ, nên không có khoảng đứt
+     * nào để nhìn thấy. Chỉ `null` nằm đúng ô của kỳ mới ngắt được đường.
+     */
+    it('🛑 kỳ rỗng đi vào dataset dưới dạng null, GIỮ ĐÚNG ô của nó', () => {
+      render({
+        points: [
+          { Label: '06/07 – 12/07', Value: 68.9 },
+          { Label: '13/07 – 19/07', Value: null },
+          { Label: '20/07 – 26/07', Value: 74.4 },
+        ],
+      });
 
-      expect(chartComponent().data.datasets[0].data.every(Number.isFinite)).toBeTrue();
+      expect(chartComponent().data.datasets[0].data).toEqual([68.9, null, 74.4]);
     });
 
-    it('giá trị bị kẹp về [0, 100]', () => {
+    it('🛑 kỳ rỗng KHÔNG bị kẹp về 0 — 0 nghĩa là "đã đo và bằng không"', () => {
+      render({ points: [{ Label: 'a', Value: null }, { Label: 'b', Value: 0 }] });
+
+      expect(chartComponent().data.datasets[0].data).toEqual([null, 0]);
+    });
+
+    it('🛑 spanGaps TẮT — bật lên là nối liền qua đúng chỗ không có số liệu', () => {
+      render({ points: POINTS });
+
+      expect(chartComponent().data.datasets[0].spanGaps).toBeFalse();
+    });
+
+    it('giá trị THẬT bị kẹp về [0, 100]', () => {
       render({
         points: [
           { Label: 'a', Value: -20 },
@@ -213,6 +238,37 @@ describe('TrendChart', () => {
 
   // ---------------------------------------------------------------- trạng thái rỗng
   describe('không kỳ nào có số liệu', () => {
+    /**
+     * 🛑 Sau Q44 mảng gần như KHÔNG BAO GIỜ rỗng: ngay sau import, BE vẫn trả đủ 12 kỳ với `value`
+     * vắng mặt ở cả 12. Đo trạng thái rỗng bằng `points.length` khi đó sẽ vẽ ra một cặp trục trống
+     * hoàn toàn — đúng thứ trạng thái rỗng sinh ra để thay thế (ui-spec §5.3).
+     */
+    it('🛑 ĐỦ các kỳ nhưng KHÔNG kỳ nào có giá trị vẫn là trạng thái rỗng', () => {
+      const host = render({
+        points: [
+          { Label: '06/07 – 12/07', Value: null },
+          { Label: '13/07 – 19/07', Value: null },
+        ],
+      });
+
+      expect(host.querySelector('p-chart')).toBeNull();
+      expect(host.querySelector('.chart-wrap > p.muted')?.textContent?.trim()).toBe(
+        'Chưa có kỳ nào có dữ liệu để vẽ biểu đồ.',
+      );
+    });
+
+    it('đúng MỘT kỳ có giá trị thì VẪN vẽ — một điểm, không có đường', () => {
+      const host = render({
+        points: [
+          { Label: '06/07 – 12/07', Value: null },
+          { Label: '13/07 – 19/07', Value: 71.7 },
+        ],
+      });
+
+      expect(host.querySelector('p-chart canvas')).not.toBeNull();
+      expect(chartComponent().data.datasets[0].data).toEqual([null, 71.7]);
+    });
+
     it('hiện MỘT câu, KHÔNG vẽ cặp trục trống', () => {
       const host = render({ points: [] });
 
@@ -256,6 +312,19 @@ describe('TrendChart', () => {
       expect(rows[1].querySelectorAll('td').length).toBe(POINTS.length);
       expect(rows[0].querySelectorAll('td')[0].textContent?.trim()).toBe('06/07 – 12/07');
       expect(rows[1].querySelectorAll('td')[5].textContent?.trim()).toBe('82,1%');
+    });
+
+    it('kỳ rỗng trong bảng thay thế in `—`, KHÔNG in `0%`', () => {
+      const host = render({
+        points: [
+          { Label: '06/07 – 12/07', Value: null },
+          { Label: '13/07 – 19/07', Value: 71.7 },
+        ],
+      });
+      const cells = host.querySelectorAll('table.sr-only tbody tr')[1].querySelectorAll('td');
+
+      expect(cells[0].textContent?.trim()).toBe('—');
+      expect(cells[1].textContent?.trim()).toBe('71,7%');
     });
 
     it('🛑 bảng thay thế KHÔNG dùng display:none — nếu không trình đọc màn hình cũng bỏ qua', () => {

@@ -8,7 +8,7 @@ updated: "2026-08-29"
 component: "NoticeBanner"
 sources:
   - "src/FE/src/styles.scss"
-  - "src/FE/src/app/platform/trang-chu/pages/trang-chu/trang-chu.page.html"
+  - "src/FE/src/app/modules/dashboard/pages/dashboard/dashboard.page.html"
   - "src/FE/src/app/platform/phan-quyen/pages/phan-quyen/phan-quyen.page.html"
 ---
 
@@ -21,7 +21,7 @@ sources:
 
 `.notice` is a row flex with `align-items: flex-start` and gap `spacing.sp-3`, so a multi-line message stays indented past its icon. Box: fill `colors.tonal-bg`, border 1px `colors.line`, **`border-left: 4px solid colors.brand`**, radius `rounded.md`, padding `spacing.notice-padding`, `typography.notice`, and `margin-bottom: spacing.sp-5` so it can sit directly above content without a wrapper.
 
-The element itself is not fixed: the home screen ships a `<div class="notice">` wrapping a `<span>`, the permissions screen a `<p class="notice">` with the text as a direct child (`trang-chu.page.html:4-7`, `phan-quyen.page.html:97-101`). Both render identically — the rule sets no `display` on its text child.
+The element itself is not fixed: the Dashboard ships a `<div class="notice">` wrapping a `<span>`, the permissions screen a `<p class="notice">` with the text as a direct child (`dashboard.page.html:19-26`, `phan-quyen.page.html:151-154`). Both render identically — the rule sets no `display` on its text child.
 
 Three child contracts:
 
@@ -35,10 +35,10 @@ A severity class changes exactly two things — the fill and the left rule — a
 
 | Variant | Classes | Key values | When to use |
 | --- | --- | --- | --- |
-| Information (default) | `notice` | fill `colors.tonal-bg`, left rule and glyph `colors.brand` | A neutral state explanation. **Two shipped call sites**, both with `pi-info-circle` — the home screen's "no business module installed yet" line, and the resource tab of `/quan-tri/phan-quyen` stating that the matrix does not yet control anything. Count them rather than trusting this cell: `grep -rn 'class="notice' src/FE/src/app` |
+| Information (default) | `notice` | fill `colors.tonal-bg`, left rule and glyph `colors.brand` | A neutral state explanation. Shipped with `pi-info-circle` on the Dashboard — the first-run and the awaiting-progress lines, each carrying an inline `<a>` to `/danh-muc/dti` — and on the resource tab of `/quan-tri/phan-quyen`, stating that the matrix does not yet control anything. Count them rather than trusting this cell: `grep -rn 'class="notice' src/FE/src/app` |
 | Success | `notice ok` | fill `colors.good-bg`, left rule and glyph `colors.good` | A completed, persistent outcome worth keeping on screen. **No shipped call site today** |
-| Warning | `notice warn` | fill `colors.warn-bg`, left rule and glyph `colors.warn` | A deadline or an incomplete condition. **No shipped call site today** |
-| Danger | `notice bad` | fill `colors.bad-bg`, left rule and glyph `colors.bad` | A page-level failure the user must resolve. **No shipped call site today** |
+| Warning | `notice warn` | fill `colors.warn-bg`, left rule and glyph `colors.warn` | A deadline or an incomplete condition the user can still act on. Shipped three times — the app-level "new version available" strip (`app.html:10`) and both write-conflict banners on `/quan-tri/phan-quyen` (`phan-quyen.page.html:76`, `:126`), each pairing the banner with a Reload `.btn` |
+| Danger | `notice bad` | fill `colors.bad-bg`, left rule and glyph `colors.bad` | A page-level failure that removed the content behind it. Shipped on the Dashboard (`dashboard.page.html:9`) and on the user list (`quan-tri-nguoi-dung.page.html:69`), both with a Retry `.btn` and the grid gone rather than emptied |
 | With dismiss | `notice` + trailing `.icon-btn` | The button is pushed right by `margin-left: auto` | Any severity that the user may close. **No shipped call site today** |
 
 **A notice is for a persistent state, a toast is for a transient one.** Transient feedback goes through `Toast`; per-form validation goes through `.form-error` (`FormRow.md`) and, on the auth screens, `.login-error` (`AuthField.md`). The four severities do not change that split — they mean the *page* has something to say, at four levels of seriousness.
@@ -54,7 +54,7 @@ A severity class changes exactly two things — the fill and the left rule — a
 | active | **Not applicable** — not interactive, no `:active` rule |
 | disabled | **Not applicable** — not a form control |
 
-**Visibility is the real state.** A notice is present or absent; it never dims, collapses or animates. Both shipped instances are rendered unconditionally — the permissions one only in the sense that it sits inside the resource tab's `@else` branch, so it appears with the tab rather than with a state change. The pattern the component is built for is a banner gated by the same signal that changes the page's behaviour, so the explanation and the changed behaviour can never disagree; neither instance does that yet, and the permissions template carries a comment naming the condition for deleting it (the first endpoint to carry `[RequirePermission]`, `phan-quyen.page.html:92-96`).
+**Visibility is the real state.** A notice is present or absent; it never dims, collapses or animates. Both shipped instances are rendered unconditionally — the permissions one only in the sense that it sits inside the resource tab's `@else` branch, so it appears with the tab rather than with a state change. The pattern the component is built for is a banner gated by the same signal that changes the page's behaviour, so the explanation and the changed behaviour can never disagree; neither instance does that yet, and the permissions template carries a comment naming the condition for deleting it (the first endpoint to carry `[RequirePermission]`, `phan-quyen.page.html:146-150`).
 
 ## Tokens Used
 - `colors.tonal-bg`, `colors.good-bg`, `colors.warn-bg`, `colors.bad-bg` (fills); `colors.brand`, `colors.good`, `colors.warn`, `colors.bad` (left rule, glyph, links); `colors.line` (border); `colors.text` (body copy)
@@ -68,10 +68,15 @@ The `4px` left rule and the `margin-top: 2px` optical nudge on the glyph are lit
 ## Reference markup
 
 ```html
-<!-- shipped instance 1: home screen, default severity -->
+<!-- shipped instance 1: Dashboard (/trang-chu), default severity, copy through i18n
+     and an inline link rather than a button -->
 <div class="notice">
   <i class="pi pi-info-circle"></i>
-  <span>Chưa có module nghiệp vụ nào được cài đặt. Dùng menu bên trái để vào các chức năng quản trị hệ thống.</span>
+  <span
+    >{{ 'dashboard.notice.firstRunLead' | translate
+    }}<a routerLink="/danh-muc/dti">{{ 'dashboard.notice.catalogueLink' | translate }}</a
+    >{{ 'dashboard.notice.firstRunTail' | translate }}</span
+  >
 </div>
 
 <!-- shipped instance 2: /quan-tri/phan-quyen, resource tab. Same severity, <p> instead of
@@ -95,7 +100,7 @@ Copy — **mọi chỗ đều đi qua i18n** (đối chiếu 2026-09-06). Có **
 | Call site | Localization key | Ghi chú |
 | --- | --- | --- |
 | `app.html:10` | `shared.app.newVersion` | Dải "đã có phiên bản mới", kèm nút `shared.action.reload` |
-| `trang-chu.page.html:4` | `trang-chu.hint.noModules` | Màn chủ — chưa cài module nghiệp vụ |
+| `dashboard.page.html:19` | `dashboard.notice.firstRunLead` + `.catalogueLink` + `.firstRunTail` | Tổng quan DTI — năm đang chọn chưa có chỉ tiêu nào. Ba khoá vì câu có liên kết chèn giữa |
 | `phan-quyen.page.html:151` | `phan-quyen.hint.noEnforcement` | Tab tài nguyên — quyền lưu được nhưng chưa chặn gì |
 | `phan-quyen.page.html:76` | **khoá động** `messageKey` | Xung đột phiên bản, tab màn hình |
 | `phan-quyen.page.html:126` | **khoá động** `messageKey` | Xung đột phiên bản, tab tài nguyên |
@@ -119,11 +124,11 @@ nằm ở `public/i18n/{vi,en}.json`, tra theo khoá đang giữ.
 > ```
 
 
-Sources: `src/FE/src/styles.scss` (§ 5 `.notice`, `.notice > .pi`, `.notice > .icon-btn`, `.notice a`, `.notice.ok`, `.notice.warn`, `.notice.bad`), `src/FE/src/app/platform/trang-chu/pages/trang-chu/trang-chu.page.html:4-7`, `src/FE/src/app/platform/trang-chu/pages/trang-chu/trang-chu.page.scss` (confirms the page adds no local notice styling), `src/FE/src/app/platform/phan-quyen/pages/phan-quyen/phan-quyen.page.html:92-101` (the second instance, with the source comment recording when to remove it), `src/FE/src/app/platform/phan-quyen/pages/phan-quyen/phan-quyen.page.scss` (confirms the page adds no local notice styling either)
+Sources: `src/FE/src/styles.scss` (§ 5 `.notice`, `.notice > .pi`, `.notice > .icon-btn`, `.notice a`, `.notice.ok`, `.notice.warn`, `.notice.bad`), `src/FE/src/app/modules/dashboard/pages/dashboard/dashboard.page.html:19-26`, `src/FE/src/app/modules/dashboard/pages/dashboard/dashboard.page.scss` (confirms the page adds no local notice styling — `grep -c notice` returns 0), `src/FE/src/app/platform/phan-quyen/pages/phan-quyen/phan-quyen.page.html:146-154` (the second instance, with the source comment recording when to remove it), `src/FE/src/app/platform/phan-quyen/pages/phan-quyen/phan-quyen.page.scss` (which **does** add one local rule, `.notice .btn` — geometry only, for the text button the shared rule leaves no slot for)
 
 ## Do / Don't
 
-- ✅ Match the severity to what the message actually is. The home screen's line is **information**, not a complaint — the template comment says so explicitly, and it is why it uses the default rather than `.warn`.
+- ✅ Match the severity to what the message actually is. The Dashboard's awaiting-progress line is **information**, not a complaint — the template comment says so explicitly (`dashboard.page.html:28-30`), and it is why it uses the default rather than `.warn` or `.bad`.
 - ✅ Lead with the matching glyph. The icon is what lets a reader classify the strip before reading it; a bare `.notice` with no `pi` child loses that and leaves an unbalanced gap.
 - ✅ Keep a banner and the behaviour it explains driven by the same signal — a banner describing a restriction that is not actually applied is worse than no banner.
 - ✅ Put a dismiss control in as a plain `.icon-btn`; `margin-left: auto` is already in the rule, so nothing needs positioning at the call site.

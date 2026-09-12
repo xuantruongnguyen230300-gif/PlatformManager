@@ -6,16 +6,22 @@ verified: chua-doi-chieu
 
 # Luật nghiệp vụ — Danh mục DTI
 
-> ## 📐 ĐÍCH ĐẾN — CHƯA THI CÔNG (viết 2026-09-05, soát lại hiện trạng 2026-09-10)
+> ## 🚧 ĐÃ CHỐT — ĐANG THI CÔNG (viết 2026-09-05; vòng 1 thi công + soát lại 2026-09-10)
 >
-> **Không một luật nào dưới đây đã được hiện thực.** Nhưng câu *"không có dòng code nào của
-> tính năng này tồn tại"* của bản trước (đối chiếu 2026-09-08) **không còn đúng đều cho cả
-> hai phía** — đối chiếu lại 2026-09-10:
+> **Luật của đường ĐỌC đã hiện thực; luật của đường GHI thì chưa.** Câu *"không một luật nào
+> dưới đây đã được hiện thực"* của bản trước (2026-09-08) hết đúng từ 2026-09-10 — đối chiếu:
 >
-> - **BE — chưa có gì.** Không project `PlatformManager.Business.*` nào, schema `business`
->   chưa có bảng nào, chưa có migration nào. Module BE `DtiWeekly` gỡ 2026-08-29; thư mục
->   chứa rác build của nó (`src/BE/Modules/`) **đã xoá 2026-09-08** —
->   `doc/kien-truc-core-module.md:42`.
+> - **BE — vòng 1 đã thi công 2026-09-10: NỀN + toàn bộ đường ĐỌC.** Đủ 5 project
+>   `PlatformManager.Business.*`; 4 entity của §1.1–§1.5 và EF Configuration của chúng đã có;
+>   migration `20260910100110_ThemBangNghiepVuDti` đã sinh (schema **chưa** áp lên database
+>   nào — xem `doc/cau-truc-database-dti.md`); `BusinessSeeder` seed 6 nhóm của §1.6;
+>   key `dti.manage` của §6.5 đã khai ở host với `SeedRoles = [Admin]` (Q36).
+>   **Đường ĐỌC** DM-1 · DM-2 · DM-8 đã có endpoint thật.
+>
+>   **Chưa làm, có chủ đích (vòng 2):** toàn bộ đường GHI và import — DM-3…DM-7, tức §5.3
+>   (upsert theo kỳ đích + copy-forward), §5.5 (xoá), §6.1–§6.4 (import). Bốn entity đã mang
+>   sẵn bất biến của §2/§4 (khuôn mã, trần đoạn, 4 trạng thái) nhưng **không handler nào ghi**;
+>   `ImportJob` có bảng mà chưa có đường tạo.
 > - **FE — có KHUNG, chưa có màn thật (dựng 2026-09-09).** Thư mục
 >   `src/FE/src/app/modules/danh-muc-dti/` tồn tại và route `/danh-muc/dti` đã khai
 >   (`src/FE/src/app/app.routes.ts:40`), nhưng trang chỉ có hàng tiêu đề và một câu nói rõ
@@ -24,12 +30,13 @@ verified: chua-doi-chieu
 >   đó **không** mang một luật nào của file này — không entity, không công thức, không quy
 >   tắc kỳ, không lời gọi API.
 >
-> Mọi câu dưới đây vẫn là **luật phải hiện thực**, không phải mô tả hệ thống đang chạy.
+> Mọi câu dưới đây vẫn là **luật phải hiện thực** cho phần chưa làm; phần đã làm (đường đọc)
+> thì đọc như mô tả hành vi thật. Ranh giới hai phần: bảng ngay trên.
 >
-> **Đích đến kiến trúc: `PlatformManager.Business.*`** — entity vào
-> `Business.Domain`, feature vào `Business.Application/Criteria/`, EF Configuration vào
-> `Business.Persistence`, controller vào `Business.Api`. **KHÔNG** dựng lại
-> `Modules.DtiWeekly.*`. Ranh giới + thứ tự phụ thuộc: `doc/kien-truc-core-module.md`.
+> **Kiến trúc: `PlatformManager.Business.*`** — entity ở `Business.Domain`, feature ở
+> `Business.Application/{Criteria,CriteriaGroups,Dashboard}/`, EF Configuration ở
+> `Business.Persistence`, controller ở `Business.Api`. **KHÔNG** dựng lại `Modules.DtiWeekly.*`.
+> Ranh giới + thứ tự phụ thuộc: `doc/kien-truc-core-module.md`.
 
 **File này giữ gì:** mô hình dữ liệu, công thức, quy tắc kỳ, quy tắc ghi, quy tắc import,
 **quyền ghi** (§6.5) và **dấu vết ai sửa kỳ nào** (§5.6).
@@ -233,7 +240,7 @@ Không có FK nào đi ngược `core → business` — khớp luật "Core khô
 
 **Entity thứ tư của `Business.Domain`** (Q45, chốt 2026-09-10). Bảng *trạng thái tiến trình*,
 không phải dữ liệu nghiệp vụ — nhưng vẫn là bảng **nghiệp vụ**, không phải bảng Core (chốt
-2026-09-09, luật 3 ở `doc/cau-truc-database-business.md`).
+2026-09-09, luật 3 ở `doc/cau-truc-database-dti.md`).
 
 | Trường | Kiểu | Ghi chú |
 | --- | --- | --- |
@@ -243,12 +250,21 @@ không phải dữ liệu nghiệp vụ — nhưng vẫn là bảng **nghiệp v
 | `StoragePath` | `string(1000)` | NOT NULL — **đường dẫn** file tạm, không lưu nội dung file |
 | `Status` | `string(20)` | NOT NULL — `Pending` · `Running` · `Succeeded` · `Failed` (DM-7 bước 2) |
 | `ResultJson` | `text?` | `result` của DM-7 bước 2 |
-| `ErrorMessage` | `text?` | khi `Failed` — dev-facing |
+| `ErrorMessage` | `text?` | khi `Failed` — dev-facing, **không** để hiển thị |
+| **`ErrorCode`** | `string(100)?` | **MỚI (Q75, 2026-09-11)** — `businessCode` của lỗi CẢ FILE khi lỗi đó có mã nghiệp vụ (`IMPORT.FILE_TOO_MANY_ROWS`, `IMPORT.FILE_MISSING_COLUMN`). `NULL` với lỗi hạ tầng thuần. Ra dây qua `errorCode` của DM-7 bước 2 |
 | **`TargetWeekEnd`** | `date` | **MỚI (Q45)** — NOT NULL. **Chủ nhật của tuần ISO đích, ĐÃ quy đổi** — không bao giờ mang nghĩa `"all"` |
 
 Thừa kế `BaseEntity` như ba entity kia. **Không FK nào** — job độc lập với dữ liệu nó ghi ra.
-Bộ cột, trừ `TargetWeekEnd`, lấy nguyên từ hàng `ImportJobs` của bảng lịch sử ở
+Bộ cột, trừ `TargetWeekEnd` và `ErrorCode`, lấy nguyên từ hàng `ImportJobs` của bảng lịch sử ở
 `doc/cau-truc-database-business.md` §Danh sách bảng; index ở §1.4.
+
+> **Vì sao `ErrorCode` phải là một cột chứ không suy được từ `ErrorMessage`** (thêm 2026-09-11):
+> nhánh `Failed` trước đó chỉ có `ErrorMessage`, thứ hợp đồng khai thẳng là *dev-facing, KHÔNG để
+> hiển thị*. Nghĩa là mọi lỗi CẢ FILE — vượt trần số dòng, thiếu cột bắt buộc — **không có gì để FE
+> dịch thành câu cho người dùng đọc**. Một trần mà người dùng chạm phải nhưng không đọc được lý do
+> thì chẳng khác gì không có trần. Tách chuỗi mã ra khỏi câu văn là một phép đoán, nên nó là cột.
+>
+> Script áp cột: `src/BE/Business/PlatformManager.Business.Persistence/Migrations/sql/0004_import_jobs_error_code.sql`.
 
 **Vì sao phải LƯU tuần đích, và quy đổi lúc nào.** `period` của DM-7 được quy đổi **lúc nhận
 request**, không phải lúc job chạy: `"all"` nghĩa là *tuần hiện tại tại lúc người dùng bấm
@@ -314,10 +330,22 @@ chốt lại với người dùng, **không** sửa một bên cho khớp bên k
 kiểm **hình dạng**, không phải số tham chiếu nghiệp vụ. Số tham chiếu (đo từ file BA gửi) ở
 bảng §7.
 
-📐 **Cơ chế seed — CHƯA chốt, quyết lúc thi công:** `HasData` trong EF Configuration của
-`Business.Persistence`, hay một seeder riêng ở `Business.*`. Cả hai phải chạy lại được mà không
-nhân đôi nhóm (unique `Code`, §1.4, là lưới an toàn). Một yếu tố để cân: `HasData` buộc `Id`
-viết cứng trong code, không đi qua `EntityId.New()` như §1.1 quy định.
+🚧 **Cơ chế seed — ĐÃ CHỐT 2026-09-10 (Q67), ĐANG THI CÔNG: `BusinessSeeder` riêng ở
+`Business.Persistence`**, không dùng `HasData`.
+
+| | Chốt |
+| --- | --- |
+| Cơ chế | một seeder riêng, cùng khuôn `CoreSeeder` đang chạy ở `Core.Persistence` |
+| Sinh `Id` | qua `EntityId.New()` — đúng §1.1, không viết cứng Guid nào |
+| Chạy lại | phải idempotent: tra theo `Code` trước khi chèn. Unique partial `Code` (§1.4) là lưới an toàn thứ hai, **không** phải cơ chế chính |
+| Đổi bảng seed về sau | sửa seeder, **không** sinh migration mới |
+
+**Vì sao bỏ `HasData`:** nó buộc 6 `Guid` viết cứng trong code — ngược §1.1 (*UUID v7, sinh ở
+ứng dụng qua `EntityId.New()`*) — và biến mọi lần sửa bảng seed ở §1.6 thành một migration mới,
+trong khi bảng đó là **dữ liệu nghiệp vụ** BA có thể đổi, không phải lược đồ bảng.
+
+**Nghiệm thu:** chạy seeder **hai lần liên tiếp** trên cùng một DB ⇒ `GET /api/criteria-groups`
+trả đúng số hàng của bảng §1.6, không nhân đôi, và không nhóm nào đổi `Id` giữa hai lần.
 
 **Điều ĐÃ chốt: cơ chế nằm ở `Business.*`, KHÔNG ở Core** (không ở `CoreSeeder`). Tên nhóm là
 dữ liệu nghiệp vụ của đúng một sản phẩm, còn Core đi theo sang dự án thứ hai
@@ -431,6 +459,11 @@ Hai ca kiểm trên dữ liệu thật của BA (**file BA gửi tháng 8/2026**
 
 - Kiểu `int`, miền hợp lệ **0..100**. Ngoài miền ⇒ kẹp về biên, **không** báo lỗi khi sửa
   inline (bảo vệ chiều sâu: FE kẹp trước, BE kẹp lại).
+
+  > **Hệ quả đã thi hành 2026-09-11:** `CRITERIA.PROGRESS_PERCENT_INVALID` — mã mà
+  > `doc/contracts/danh-muc-dti.md` DM-6 từng liệt — **không được khai** trong catalog, vì không
+  > đường nào ném được nó. Card đã sửa theo dòng này. Đây là ca luật nghiệp vụ thắng hợp đồng
+  > đường dây khi hai bên nói ngược nhau.
 - **Nhập tay** khi sửa inline hoặc qua dialog. Không tự tính lại từ điểm.
 - Khởi tạo khi import: **để TRỐNG** (Q24) — xem §6.4. Không phải `0`, không suy từ điểm.
 - Đây là trường mà thanh tiến độ theo nhóm và biểu đồ đường trên Dashboard vẽ theo (Q11);
@@ -1060,6 +1093,45 @@ dữ liệu.
 > chính file gốc** — và câu lỗi sẽ trông như dữ liệu của BA sai, trong khi nó đúng theo quy
 > ước của họ. Đọc vào rồi vứt là cách duy nhất để hai quy ước cùng tồn tại được.
 
+#### Cột VẮNG KHỎI FILE ≠ ô TRỐNG trong một cột có mặt — **Q74 (chốt 2026-09-11)**
+
+Đây là hệ quả trực tiếp của §5.3 bước 2 (*"sao chép giá trị các trường **không nằm trong
+request**"*), nhưng bảng 11 cột ở trên không nói ra, và bỏ sót nó làm **mất dữ liệu im lặng**:
+
+| Trong file | Nghĩa của lời ghi | Kết quả |
+| --- | --- | --- |
+| Cột **có mặt**, ô trống (hoặc ghi `—`) | xoá trắng CÓ CHỦ ĐÍCH | ghi `null` |
+| Cột **vắng mặt** khỏi dòng header | trường không nằm trong lời ghi | copy-forward khi tạo bản ghi mới, giữ nguyên khi cập nhật |
+
+**Ca đo được (2026-09-11, chạy thật trên `platformmanager_dev`):** nạp một file chỉ có
+`Mã · Chỉ tiêu · Nhóm · Điểm tối đa · Tự đánh giá · Thẩm định` — đúng kiểu file *"số liệu tuần
+này"* mà BA hay gửi. Nếu bốn cột vắng mặt bị đọc như "gửi null" thì lượt nạp đó **xoá trắng**
+`Trạng thái`, `Phụ trách`, `Hạn xử lý` và `Minh chứng/Ghi chú` của kỳ đích. Không lỗi nào báo, và
+người dùng chỉ phát hiện khi mở lưới ra xem.
+
+**Hai vế, hai lý do tồn tại — bỏ vế nào cũng hỏng một chiều:**
+
+- **Vế "ô trống ⇒ xoá trắng"** là thứ vòng **export → sửa trong Excel → import** cần: file xuất
+  luôn có đủ 12 cột, nên xoá nội dung một ô trong Excel phải xoá được giá trị. Không có vế này thì
+  không có cách nào xoá một ô bằng đường nạp file.
+- **Vế "cột vắng ⇒ copy-forward"** bảo vệ file *"số liệu tuần này"* — kiểu file chỉ mang vài cột mà
+  BA gửi thường xuyên. Không có vế này thì mỗi lần nạp như vậy là một lần xoá trắng bốn cột.
+
+> 🧭 **Bài học đáng giữ, không phải chi tiết thi công:** bản cài đầu tiên gộp hai vế làm một, và
+> lỗi đó **lọt qua toàn bộ vòng đọc tài liệu** — nó chỉ lộ ra khi **chạy thật** trên
+> `platformmanager_dev` và nhìn dòng dữ liệu sau khi nạp. Một luật suy được từ §5.3 nhưng không
+> được VIẾT RA ở §6.2 là một luật mà người thi công phải tự suy lại, và lần suy sai không có cổng
+> nào bắt.
+
+🔴 **Áp cho CẢ BA đường ghi, không riêng import.** DM-3 và DM-4 nhận JSON, nên "cột vắng" ở đó là
+**khoá vắng mặt khỏi thân request**, còn "ô trống" là **khoá có mặt mang giá trị `null`**. Hai
+đường ghi trả lời khác nhau cho cùng một câu hỏi là đúng thứ §5.3 sinh ra để chặn.
+
+⚠️ **Hai cột `Mã` và `Nhóm` thì khác:** thiếu *header* của chúng là lỗi của **cả file**, không
+phải lỗi dòng — thiếu `Mã` thì không định danh được dòng nào, còn `Nhóm` bắt buộc ở mọi dòng nên
+thiếu header sẽ sinh đúng một lỗi giống hệt nhau cho từng dòng, và một danh sách như vậy không nói
+được điều gì mà một câu không nói được.
+
 ⚠️ **Ô công thức trong `.xlsx`/`.xls`:** NPOI trả **chuỗi công thức** chứ không phải kết quả
 nếu đọc thẳng `cell.ToString()` — ô `=B2*100` sẽ vào DB thành chữ `"B2*100"`. Phải đọc
 `CachedFormulaResultType` rồi lấy theo đúng kiểu. Đây là **lỗi im lặng**: không crash, không
@@ -1082,6 +1154,33 @@ bộ** trong file BA gửi, nên đường này sẽ không có ai thử cho t�
 | `Mã` rỗng | lỗi dòng đó |
 | `Mã` xuất hiện hai lần trong cùng file | lỗi dòng **thứ hai** |
 | Một đoạn của `Mã` quá 4 chữ số (Q58, §2) | lỗi dòng đó — `IMPORT.ROW_CODE_SEGMENT_TOO_LONG` |
+
+##### Năm tình huống lỗi dòng mà bảng trên bỏ sót — **Q73 (chốt 2026-09-11)**
+
+Bảng trên (và bảng mã ở `doc/contracts/danh-muc-dti.md` §`errors[].code`) **không phủ** năm ca
+dưới đây. Chúng vẫn phải có mã, vì cả ba lối xử lý còn lại đều tệ hơn: bỏ qua thì mất dữ liệu im
+lặng; để `DomainException` bay lên thì theo **Q64** cả file không dòng nào được ghi — một ô trống
+làm hỏng những dòng đúng còn lại; điền giá trị mặc định thì bịa số liệu, đúng thứ Q24 cấm.
+
+| Tình huống | Mã | `messageParams` |
+| --- | --- | --- |
+| Mã CHƯA CÓ trong hệ thống (⇒ phải tạo mới) nhưng cột `Chỉ tiêu` rỗng | `IMPORT.ROW_NAME_MISSING` | `Code` |
+| Như trên, cột `Điểm tối đa` rỗng / không phải số / `<= 0` | `IMPORT.ROW_MAX_SCORE_INVALID` | `Code`, `MaxScore` |
+| Ô `Tự đánh giá` có nội dung nhưng không đọc ra số | `IMPORT.ROW_SELF_SCORE_INVALID` | `Code`, `SelfScore` |
+| Ô `Thẩm định` có nội dung nhưng không đọc ra số | `IMPORT.ROW_VERIFIED_SCORE_INVALID` | `Code`, `VerifiedScore` |
+| Ô `Hạn xử lý` có nội dung nhưng không đọc ra ngày | `IMPORT.ROW_DEADLINE_INVALID` | `Code`, `Deadline` |
+
+Hai cột điểm dùng **hai mã rời**, cùng lý do đã ghi cho cặp `*_EXCEEDS_MAX`: câu người dùng đọc
+phải nói đúng ô nào cần sửa.
+
+**Người dùng duyệt NGUYÊN VĂN năm tên trên ngày 2026-09-11 (Q73).** Đổi tên thì đổi ở đúng hai
+chỗ: catalog `ImportErrors.cs` và bảng `errors[].code` của card — không có chỗ thứ ba giữ chuỗi này.
+
+> 🛑 **Đừng "dọn cho gọn" bằng cách bỏ năm mã này đi.** Lý do chúng tồn tại nằm ở giao của hai luật
+> đã chốt: §6.2 khai `Chỉ tiêu`/`Điểm tối đa` là bắt buộc **khi tạo mới**, còn **Q64** bắt cả lượt
+> nạp chạy trong MỘT giao dịch. Để `DomainException` của `Criteria.Create` bay lên thì job thành
+> `Failed` và theo Q64 **không dòng nào** được ghi — tức một ô trống ở một dòng làm hỏng toàn bộ
+> những dòng đúng còn lại. Năm mã này là thứ giữ cho một ô hỏng chỉ hỏng đúng một dòng.
 
 **Vì sao "nhóm lạ" là lỗi còn "phụ trách lạ" thì không:** nhóm là **danh mục đóng** do BA
 quản (6 nhóm), sai nhóm nghĩa là sai chính tả hoặc thừa khoảng trắng — tự tạo nhóm thứ 7 làm
@@ -1324,13 +1423,14 @@ Phân bố `Trạng thái`: `Hoàn thành` 26 · `Cần bổ sung minh chứng` 
 
 | Mục | Trạng thái | Đang ghi ở |
 | --- | --- | --- |
+| ~~**Tên năm mã lỗi dòng mới của đường import**~~ | **ĐÓNG 2026-09-11 bằng Q73** — người dùng duyệt nguyên văn cả năm tên | §6.3 · `doc/contracts/danh-muc-dti.md` §`errors[].code` |
 | Khe băng V3 — hai file phân loại theo **hai trục khác nhau** (phần còn lại sau Q51) | chờ người duyệt hợp nhất trục; **đừng tự gộp** | `spec/danh-muc-dti/ui-spec.md` §9 mục 4 · `doc/Design/Frontend/PlatformManager/Screens/02-danh-muc-dti.md` § Layout Blueprint |
 | ~~**Q56** — copy cho các mã lỗi người dùng thấy (`IMPORT.ROW_*`, `IMPORT.JOB_NOT_FOUND`, `CRITERIA.*`, `DASHBOARD.*`)~~ | **ĐÓNG 2026-09-10** — người dùng duyệt **nguyên văn** toàn bộ bảng copy | khu `doc/Design/` (§ Copy của màn tương ứng) |
 | ~~**Q54** — cách cho các nhãn khoảng ngày vừa trục biểu đồ Dashboard~~ | **ĐÓNG 2026-09-10** — duyệt phương án: nhãn ngang, tự lược bớt đều, nhãn tuần đang xem luôn hiện | khu `doc/Design/`; luật nhãn kỳ: `spec/dashboard-dti/business-rules.md` §Nhãn kỳ |
-| Cơ chế seed nhóm (Q42): `HasData` hay seeder riêng ở `Business.*` | 📐 quyết lúc thi công | §1.6 |
-| Dashboard — điều kiện nhận biết ca Q32 ở ui-spec lệch proxy của contract DB-1 | mở | `spec/dashboard-dti/ui-spec.md` · `doc/contracts/dashboard.md` DB-1 |
-| Dashboard — projection của export cần `OwnerName`/`Deadline` mà `table[]` của DB-1 không mang | mở | `doc/contracts/dashboard.md` DB-1 · DB-4 |
-| Dashboard — rate limit / cache của các endpoint | mở | `doc/contracts/dashboard.md` |
+| ~~Cơ chế seed nhóm (Q42): `HasData` hay seeder riêng ở `Business.*`~~ | **ĐÓNG 2026-09-10 bằng Q67** — `BusinessSeeder` riêng ở `Business.Persistence`, `Id` qua `EntityId.New()` | §1.6 |
+| ~~Dashboard — điều kiện nhận biết ca Q32 ở ui-spec lệch proxy của contract DB-1~~ | **ĐÓNG 2026-09-10 bằng Q69** — proxy đọc từ `kpi`, không từ `table` | `doc/contracts/dashboard.md` §0 · `spec/dashboard-dti/ui-spec.md` §5.3.1 |
+| ~~Dashboard — projection của export cần `OwnerName`/`Deadline` mà `table[]` của DB-1 không mang~~ | **ĐÓNG 2026-09-10 bằng Q68** — export có projection riêng; DB-1 giữ nguyên 9 cột | `doc/contracts/dashboard.md` DB-4 |
+| ~~Dashboard — rate limit / cache của các endpoint~~ | **ĐÓNG 2026-09-10 bằng Q70** — không policy riêng, không cache | `doc/contracts/dashboard.md` § Rate limit và cache |
 | ~~Lối thoát của `PERIOD_NOT_WEEKLY` khi đang xem năm cũ~~ | **ĐÓNG 2026-09-10 bằng Q60** — gợi ý thoát tuỳ năm đang xem | §8.3 · `spec/danh-muc-dti/ui-spec.md` §5.5.1 |
 | ~~Tìm kiếm khớp tiền tố hay chuỗi con~~ | **ĐÓNG 2026-09-10 bằng Q59** — tên chứa chuỗi, mã khớp theo đoạn | §8.3 · §1.2 |
 | ~~Mã chỉ tiêu **sai định dạng** (có chữ, đoạn rỗng như `4..2`) chưa có mã lỗi nào ở DM-3/DM-4; import cũng chưa có mã lỗi dòng cho mã sai định dạng hay quá 20 ký tự~~ | **ĐÓNG 2026-09-10 bằng Q65** — thêm `CRITERIA.CODE_FORMAT_INVALID`, `IMPORT.ROW_CODE_FORMAT_INVALID`, `IMPORT.ROW_CODE_TOO_LONG` | §2 · §6.3 · `doc/contracts/danh-muc-dti.md` DM-3 · DM-7 |
@@ -1375,6 +1475,16 @@ khác. Sổ các chốt ngày 2026-09-10 ở §8.3.
 | Import hỏng giữa chừng thì dòng đã ghi có bị hoàn tác không | **Q64** | **có** — cả lượt nạp chạy trong MỘT giao dịch; job `Failed` ⇒ không dòng nào được ghi | §6.3 |
 | Mã sai định dạng / quá 20 ký tự khi import chưa có mã lỗi nào | **Q65** | thêm ba mã: `CRITERIA.CODE_FORMAT_INVALID`, `IMPORT.ROW_CODE_FORMAT_INVALID`, `IMPORT.ROW_CODE_TOO_LONG` | §2 · `doc/contracts/danh-muc-dti.md` §2 |
 | FE biết "năm đang xem là năm hiện tại" từ đâu (cần cho Q60) | **Q66** | BE trả `isCurrentYear` trong DM-2 — **không** suy từ đồng hồ máy khách, cùng lý do Q40 | `doc/contracts/danh-muc-dti.md` DM-2 · §5.4 |
+| Cơ chế seed 6 nhóm chỉ tiêu (mục để ngỏ của Q42) | **Q67** | `BusinessSeeder` riêng ở `Business.Persistence`, `Id` qua `EntityId.New()`, idempotent theo `Code`; **không** `HasData` | §1.6 |
+| Export lấy `OwnerName`/`Deadline`/`ProgressPercent` ở đâu khi `table[]` của DB-1 không mang | **Q68** | projection **riêng** cho export; DB-1 giữ nguyên 9 cột; hai đường dùng chung object bộ lọc và luật §5.2 | `doc/contracts/dashboard.md` DB-4 |
+| FE nhận ra ca Q32 bằng trường nào trên dây | **Q69** | `kpi.totalCriteria > 0` **và** `kpi.overallProgress` vắng mặt — **không** dùng `table.length`, vì `table` bị bộ lọc còn `kpi` thì không | `doc/contracts/dashboard.md` §0 |
+| Rate limit / cache cho các endpoint Dashboard | **Q70** | không policy riêng (dựa `GlobalLimiter` sẵn có), không cache — dữ liệu đổi ngay sau mỗi lần sửa inline và mỗi lần import | `doc/contracts/dashboard.md` § Rate limit và cache |
+| DB-1 `mode=week` gửi `year` mà không gửi `date` | **Q71** | **tuần ISO CUỐI của năm đó**; `400 PERIOD_YEAR_MISMATCH` chỉ sinh khi gửi **cả** `date` lẫn `year` mà lệch | `doc/contracts/dashboard.md` DB-1 § Mã lỗi |
+| Năm tình huống lỗi dòng §6.3 bỏ sót cần mã gì | **Q73** (2026-09-11) | duyệt **nguyên văn** năm tên: `IMPORT.ROW_NAME_MISSING` · `ROW_MAX_SCORE_INVALID` · `ROW_SELF_SCORE_INVALID` · `ROW_VERIFIED_SCORE_INVALID` · `ROW_DEADLINE_INVALID`. Không có chúng thì theo Q64 một ô trống cuộn ngược cả file | §6.3 · `doc/contracts/danh-muc-dti.md` §`errors[].code` |
+| Cột vắng khỏi file nạp có khác ô trống không | **Q74** (2026-09-11) | **có** — cột vắng header ⇒ copy-forward; cột có header mà ô trống/ghi `—` ⇒ xoá trắng. Áp cho **cả ba** đường ghi; với DM-3/DM-4 là khoá vắng mặt khỏi JSON so với khoá mang `null` | §6.2 · §5.3 |
+| `progressPercent` ngoài miền: kẹp hay báo lỗi | **làm rõ 2026-09-11** | **KẸP** — §3.2 thắng; `CRITERIA.PROGRESS_PERCENT_INVALID` KHÔNG khai, vì không đường nào ném được nó | §3.2 · `doc/contracts/danh-muc-dti.md` DM-6 |
+| Trần SỐ DÒNG của file nạp | **Q75** (2026-09-11) | thêm trần, **cấu hình ở Core** cạnh trần dung lượng; mã lỗi `IMPORT.FILE_TOO_MANY_ROWS` (tiền tố `FILE_`, **không** `ROW_` — `ROW_` dành riêng cho lỗi một dòng) | `doc/huong_dan/wiki-core/be/15-import-export.md` §2 · `doc/contracts/danh-muc-dti.md` DM-7 |
+| FE biết kỳ nào là KỲ HIỆN TẠI từ đâu (cần cho băng V3 §5.5) | **Q72** | DM-2 trả `currentPeriod` + `currentPeriodLabel` ở khối quyền cấp màn — cùng lần đánh giá với `editBlockedBy`, không lấy từ DB-3, không từ đồng hồ máy khách | `doc/contracts/danh-muc-dti.md` DM-2 mục 3 |
 
 **Hai hạng mục CORE là điều kiện tiên quyết, không phải việc để sau** — cả hai đều phải xong
 **trước** khi bật đường ghi lên môi trường thật, và cả hai đi qua `core-reviewer`:

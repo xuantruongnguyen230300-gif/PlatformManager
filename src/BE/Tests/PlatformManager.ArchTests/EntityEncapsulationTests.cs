@@ -32,6 +32,11 @@ public class EntityEncapsulationTests
     private static readonly Assembly[] DomainAssemblies =
     [
         typeof(BaseEntity).Assembly,
+
+        // Thêm 2026-09-10 cùng lượt dựng Business.Domain — đây mới là nơi CÓ entity nghiệp vụ
+        // thật, tức nơi luật "field nghiệp vụ phải private set, mutate qua method có tên nghiệp
+        // vụ" thực sự có việc để làm.
+        typeof(PlatformManager.Business.Domain.Entities.Criteria).Assembly,
     ];
 
     [Fact]

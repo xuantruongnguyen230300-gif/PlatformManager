@@ -14,7 +14,7 @@ import {
 } from '@angular/core';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ApiFieldError } from '../../../../core/http/api-result.model';
-import { groupServerFieldErrors } from '../../../../core/http/server-field-errors';
+import { IServerFieldErrorView, groupServerFieldErrors } from '../../../../core/http/server-field-errors';
 import { ApiErrorMessageService } from '../../../../core/i18n/api-error-message.service';
 import { AutofocusDirective } from '../../../../shared/directives/autofocus.directive';
 import { ASSIGNABLE_ROLES, ICreateUserPayload, IUpdateUserPayload, IUser } from '../../models/quan-tri-nguoi-dung.model';
@@ -191,19 +191,33 @@ export class UserFormDialog {
         this.translate.instant(key as string) as string,
       ]),
     );
-    return {
-      ...groupServerFieldErrors(this.serverFieldErrors(), (error) => this.errorMessages.fieldMessage(error)),
-      ...local,
-    };
+    return { ...this.serverErrorView().byField, ...local };
   });
 
   /**
-   * Câu lỗi chung ở cuối form — CHỈ hiện khi không có lỗi ô nào. BE trả kèm cả `message`
-   * ("Dữ liệu không hợp lệ.") lẫn `fields`; hiện cả hai là lặp lại một thông tin bằng câu mơ hồ
-   * hơn ngay bên dưới câu cụ thể.
+   * Lỗi server đã dịch, TÁCH làm hai: theo ô và mức bản ghi. Một `computed` riêng vì `generalError`
+   * cũng cần nhánh `record` — tính hai lần ở hai chỗ là mở đường cho hai chỗ lệch nhau.
    */
-  protected readonly generalError = computed(() =>
-    Object.keys(this.fieldErrors()).length > 0 ? null : this.serverError(),
+  private readonly serverErrorView = computed<IServerFieldErrorView>(() => {
+    this.translate.currentLang();
+    return groupServerFieldErrors(this.serverFieldErrors(), (error) => this.errorMessages.fieldMessage(error));
+  });
+
+  /**
+   * Câu lỗi chung ở cuối form. Thứ tự ưu tiên — **cụ thể nhất trước**:
+   *
+   * 1. Lỗi mức BẢN GHI (`$record`) nếu có. Hiện VÔ ĐIỀU KIỆN, kể cả khi đã có lỗi ô: đây là chỗ
+   *    hiển thị DUY NHẤT của nó, không ô nào bind tới `$record`.
+   * 2. `message` của envelope, chỉ khi không có lỗi ô nào — BE trả kèm cả `message`
+   *    ("Dữ liệu không hợp lệ.") lẫn lỗi từng ô; hiện cả hai là lặp lại một thông tin bằng câu mơ
+   *    hồ hơn ngay bên dưới câu cụ thể.
+   *
+   * Bậc 1 thêm 2026-09-11. Thiếu nó, mọi mã Identity không nằm trong bảng ánh xạ ô của BE (ca đã
+   * gặp: `CommonPassword`) vừa không hiện được ở ô nào, vừa ĐẨY luôn bậc 2 xuống `null` — form từ
+   * chối mà không một chữ nào nói vì sao. Xem `core/http/server-field-errors.ts` §`$record`.
+   */
+  protected readonly generalError = computed(
+    () => this.serverErrorView().record ?? (Object.keys(this.fieldErrors()).length > 0 ? null : this.serverError()),
   );
 
   /**

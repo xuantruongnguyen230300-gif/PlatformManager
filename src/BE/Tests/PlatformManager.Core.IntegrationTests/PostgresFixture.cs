@@ -17,7 +17,8 @@ namespace PlatformManager.Core.IntegrationTests;
 /// Vì sao chọn nguồn .sql (quyết định 2026-08-19): như vậy test kiểm luôn tính đúng của chính
 /// file .sql sẽ được áp lên production. Dựng schema từ model EF sẽ test trên một schema KHÁC
 /// schema thật — mà đợt tối ưu A2 vừa rồi cho thấy khác biệt schema (index) đúng là thứ đáng
-/// quan tâm. Thêm file .sql mới (0008...) thì PHẢI thêm tên vào <see cref="MigrationScripts"/>,
+/// quan tâm. Thêm file .sql mới thì PHẢI thêm tên vào <see cref="CoreScripts"/> (script của Core) hoặc vào
+/// <see cref="ExtraScripts"/> của fixture con (script của tầng nghiệp vụ),
 /// nếu không schema test sẽ lệch schema thật đúng cái điều đang muốn tránh.
 ///
 /// Sửa 2026-08-24: đường dẫn TRƯỚC trỏ <c>doc/ERD/migrations</c> — thư mục đó đã xoá 2026-08-23
@@ -31,23 +32,67 @@ namespace PlatformManager.Core.IntegrationTests;
 /// theo chốt "migration thuộc host, Core ship .sql", các file .cs migration đã chuyển sang
 /// <c>src/BE/PlatformManager.Api/Persistence/Migrations/</c>, còn thư mục <c>sql/</c> Ở LẠI Core
 /// vì nó là ARTIFACT schema mà Corebase ship cho dự án sau. Đường dẫn trong
-/// <see cref="MigrationsSqlDirectorySegments"/> vì thế KHÔNG đổi, và 104 test của bộ này không bị
+/// <see cref="CoreSqlDirectory"/> vì thế KHÔNG đổi, và 104 test của bộ này không bị
 /// ảnh hưởng: chúng dựng schema từ .sql chứ không chạy migration C# bao giờ.
 /// </summary>
-public sealed class PostgresFixture : IAsyncLifetime
+public class PostgresFixture : IAsyncLifetime
 {
     /// <summary>
-    /// <para>Thứ tự CÓ Ý NGHĨA nếu có nhiều file — mỗi script là DELTA, chạy đúng thứ tự sinh ra.</para>
+    /// Thư mục chứa script schema của <b>Core</b> — cũng là thư mục dùng để dò gốc repo.
     ///
-    /// <para><b>Rút còn MỘT file ngày 2026-08-31</b> (baseline lại lịch sử migration — xem
-    /// <c>doc/cau-truc-database.md</c> §5.2). Sáu file 0003–0008 cũ đã xoá cùng lượt: chúng dựng
-    /// 5 bảng <c>business.*</c> của module DtiWeekly đã bị gỡ, và snapshot EF khi đó lệch khỏi
-    /// model tới mức lệnh sinh migration kế tiếp sẽ đẻ ra 5 lệnh <c>DropTable</c>.</para>
+    /// <para>⚠️ Phải khai TRƯỚC <see cref="CoreScripts"/>: trình khởi tạo trường static chạy theo
+    /// ĐÚNG thứ tự viết trong file, nên đặt sau thì danh sách nhận <c>null</c> và mọi test của bộ
+    /// này chết ở dòng đầu tiên bằng một <c>NullReferenceException</c> không liên quan gì tới
+    /// schema.</para>
     /// </summary>
-    private static readonly string[] MigrationScripts =
+    private static readonly string[] CoreSqlDirectory =
+        ["src", "BE", "Core", "PlatformManager.Core.Persistence", "Migrations", "sql"];
+
+    /// <summary>
+    /// Script schema của <b>Core</b>, ĐÚNG THỨ TỰ chạy — mỗi script là một DELTA.
+    ///
+    /// <para><b>Rút còn MỘT file ngày 2026-08-31</b> (baseline lại lịch sử migration —
+    /// doc/cau-truc-database.md §5.2). Sáu file 0003–0008 cũ đã xoá cùng lượt: chúng dựng 5 bảng
+    /// <c>business.*</c> của module DtiWeekly đã bị gỡ, và snapshot EF khi đó lệch khỏi model tới
+    /// mức lệnh sinh migration kế tiếp sẽ đẻ ra 5 lệnh <c>DropTable</c>.</para>
+    ///
+    /// <para>🛑 <b>CHỈ script của Core được nằm ở đây.</b> Tầng nghiệp vụ ship script của nó cạnh
+    /// chính nó và nối vào qua <see cref="ExtraScripts"/> — xem docstring ở đó cho lý do đầy đủ.</para>
+    /// </summary>
+    private static readonly MigrationScript[] CoreScripts =
     [
-        "0001_initial_baseline.sql",
+        new(CoreSqlDirectory, "0001_initial_baseline.sql"),
     ];
+
+    /// <summary>
+    /// Script schema của tầng NGHIỆP VỤ, do fixture con khai. Mặc định RỖNG.
+    ///
+    /// <para>🛑 <b>Đây là chỗ giữ lời hứa "bộ test Core chạy được nguyên vẹn khi CoreBase tách sang
+    /// dự án thứ hai".</b> Bản 2026-09-11 đầu tiên khai cứng ba file <c>.sql</c> của
+    /// <c>Business.Persistence</c> thẳng vào danh sách của lớp này; gỡ cây <c>src/BE/Business/</c>
+    /// đi thì <c>ApplyMigrationScriptsAsync</c> ném <see cref="FileNotFoundException"/> ngay ở
+    /// <c>InitializeAsync</c> — tức <b>toàn bộ</b> collection chết, không phải "vài test đỏ". Lỗi đó
+    /// do chính lượt ấy tạo ra và bị <c>core-reviewer</c> bắt (F5).</para>
+    ///
+    /// <para><b>Vì sao kế thừa chứ không phải một tham số:</b> Core không được biết tên
+    /// <c>Business</c> nào (<c>CoreMustNotKnowBusinessNameTests</c> canh đúng điều đó ở mã sản
+    /// phẩm, và cây test thì nên theo cùng tinh thần), trong khi danh sách script vẫn phải sống ĐÚNG
+    /// MỘT chỗ cho mỗi tầng. Fixture con khai danh sách của tầng mình; lớp này không biết có ai kế
+    /// thừa hay không.</para>
+    /// </summary>
+    protected virtual IEnumerable<MigrationScript> ExtraScripts => [];
+
+    /// <summary>Core trước, tầng nghiệp vụ sau — thứ tự CÓ Ý NGHĨA vì mỗi script là một delta.</summary>
+    private IEnumerable<MigrationScript> AllScripts => CoreScripts.Concat(ExtraScripts);
+
+    /// <summary>
+    /// Một script schema.
+    /// </summary>
+    /// <param name="DirectorySegments">
+    /// Đường dẫn tương đối từ GỐC REPO tới thư mục chứa script — fixture con khai thư mục của tầng
+    /// mình, nên nó không phải biết Core đặt script ở đâu.
+    /// </param>
+    protected sealed record MigrationScript(string[] DirectorySegments, string FileName);
 
     private PostgreSqlContainer? _container;
 
@@ -123,7 +168,7 @@ public sealed class PostgresFixture : IAsyncLifetime
 
     /// <summary>
     /// Dựng thêm một database <b>TRỐNG</b> trong CÙNG container: đủ schema (chạy đúng bộ
-    /// <see cref="MigrationScripts"/> như database chính) nhưng KHÔNG có một dòng dữ liệu seed nào.
+    /// <see cref="CoreScripts"/> + <see cref="ExtraScripts"/> như database chính) nhưng KHÔNG có một dòng dữ liệu seed nào.
     /// Trả về connection string trỏ tới nó.
     ///
     /// <para><b>Vì sao cần</b> (thêm 2026-09-01): bất biến "seeder KHÔNG chạy lúc host khởi động"
@@ -196,24 +241,24 @@ public sealed class PostgresFixture : IAsyncLifetime
         return new PlatformManagerDbContext(options, configurationAssemblies);
     }
 
-    private static readonly string[] MigrationsSqlDirectorySegments =
-        ["src", "BE", "Core", "PlatformManager.Core.Persistence", "Migrations", "sql"];
-
-    private static async Task ApplyMigrationScriptsAsync(string connectionString)
+    private async Task ApplyMigrationScriptsAsync(string connectionString)
     {
-        var migrationsDirectory = Path.Combine(FindRepositoryRoot(), Path.Combine(MigrationsSqlDirectorySegments));
+        var repositoryRoot = FindRepositoryRoot();
 
         await using var connection = new NpgsqlConnection(connectionString);
         await connection.OpenAsync();
 
-        foreach (var scriptName in MigrationScripts)
+        foreach (var script in AllScripts)
         {
-            var path = Path.Combine(migrationsDirectory, scriptName);
+            var directory = Path.Combine(repositoryRoot, Path.Combine(script.DirectorySegments));
+            var path = Path.Combine(directory, script.FileName);
+
             if (!File.Exists(path))
                 throw new FileNotFoundException(
-                    $"Thiếu script schema '{scriptName}' tại '{migrationsDirectory}'. Integration test dựng " +
+                    $"Thiếu script schema '{script.FileName}' tại '{directory}'. Integration test dựng " +
                     "schema từ chính file .sql của repo — đổi tên/di chuyển file thì phải cập nhật " +
-                    $"{nameof(PostgresFixture)}.{nameof(MigrationScripts)}.", path);
+                    $"{nameof(PostgresFixture)}.{nameof(CoreScripts)} (Core) hoặc " +
+                    $"{nameof(ExtraScripts)} (tầng nghiệp vụ).", path);
 
             await using var command = new NpgsqlCommand(await File.ReadAllTextAsync(path), connection)
             {
@@ -231,14 +276,14 @@ public sealed class PostgresFixture : IAsyncLifetime
 
         while (directory is not null)
         {
-            if (Directory.Exists(Path.Combine(directory.FullName, Path.Combine(MigrationsSqlDirectorySegments))))
+            if (Directory.Exists(Path.Combine(directory.FullName, Path.Combine(CoreSqlDirectory))))
                 return directory.FullName;
 
             directory = directory.Parent;
         }
 
         throw new DirectoryNotFoundException(
-            $"Không tìm thấy gốc repo (thư mục chứa {string.Join('/', MigrationsSqlDirectorySegments)}) " +
+            $"Không tìm thấy gốc repo (thư mục chứa {string.Join('/', CoreSqlDirectory)}) " +
             $"khi đi ngược từ '{AppContext.BaseDirectory}'.");
     }
 }

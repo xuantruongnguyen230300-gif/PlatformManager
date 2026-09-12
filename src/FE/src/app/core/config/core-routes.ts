@@ -1,9 +1,13 @@
 import { EnvironmentProviders, InjectionToken, makeEnvironmentProviders } from '@angular/core';
 
 /**
- * Ba đường dẫn mà tầng `core/` cần để CHUYỂN HƯỚNG. Khai theo **ngữ nghĩa** (màn đăng nhập / màn
- * đổi mật khẩu / màn mặc định), không theo chuỗi đường dẫn — vì chuỗi là thứ của riêng từng sản
- * phẩm dựng trên nền tảng này, còn LUẬT "chưa đăng nhập thì về màn đăng nhập" thì không.
+ * Ba đường dẫn mà tầng `core/` — **và `shared/`** — cần để trỏ tới ba màn hình nền tảng. Khai theo
+ * **ngữ nghĩa** (màn đăng nhập / màn đổi mật khẩu / màn mặc định), không theo chuỗi đường dẫn — vì
+ * chuỗi là thứ của riêng từng sản phẩm dựng trên nền tảng này, còn LUẬT "chưa đăng nhập thì về màn
+ * đăng nhập" thì không.
+ *
+ * Không chỉ guard đọc nó: `httpErrorInterceptor` đọc `signIn` (401 giữa phiên), và Topbar đọc
+ * `changePassword` cho một `routerLink`. 📖 `doc/huong_dan/quy-uoc/fe-routing-guard.md` §10.
  *
  * Vì sao phải tách: `core/` là CoreBase dùng lại cho sản phẩm khác (doc/kien-truc-core-module.md).
  * Sản phẩm sau có thể đặt `/login`, `/change-password`, `/home`, hoặc đường dẫn của một ngôn ngữ
@@ -21,7 +25,12 @@ export interface ICoreRoutes {
   readonly signIn: string;
 
   /**
-   * Màn đổi mật khẩu bắt buộc. Đích của `mustChangePasswordGuard` khi cờ `mustChangePassword` bật.
+   * Màn đổi mật khẩu.
+   *
+   * HAI người tiêu thụ, và đừng thu hẹp chú thích này về một: đích của `mustChangePasswordGuard`
+   * khi cờ `mustChangePassword` bật (luồng **ép buộc**), **và** đích của liên kết `Đổi mật khẩu`
+   * trên Topbar (luồng **tự nguyện** — lối vào duy nhất của app sau khi trang chủ cũ bị gỡ, xem
+   * `shared/components/topbar/topbar.ts`).
    */
   readonly changePassword: string;
 

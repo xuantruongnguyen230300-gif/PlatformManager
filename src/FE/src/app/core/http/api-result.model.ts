@@ -43,6 +43,20 @@ export type ApiErrorCode =
  */
 export interface ApiFieldError {
   code: string;
+  /**
+   * ⚠️ **KHÔNG phải lúc nào cũng là một câu** — đừng hiển thị thẳng trường này.
+   *
+   * Nó là fallback **chỉ ở nơi nguồn vốn đã có sẵn một câu**, tức nhánh FluentValidation. Với mã
+   * ASP.NET Core Identity, `IdentityFieldErrors.Build` đặt `message` **bằng chính `code`**
+   * (`src/BE/Core/PlatformManager.Core.Application/Common/Results/IdentityFieldErrors.cs`) — đó là
+   * **CHỦ ĐÍCH, không phải nợ chưa trả**: kênh có FE là kênh FE sở hữu câu chữ, BE không dựng bộ
+   * chữ thứ hai (`doc/huong_dan/wiki-core/be/16-i18n-va-ma-loi.md` §3). Lời hứa của trường này ở
+   * phía BE đã được thu hẹp đúng như vậy ngày 2026-09-11, nên hai file nay nói cùng một điều.
+   *
+   * Hệ quả cứng: nơi tiêu thụ DUY NHẤT được phép là `ApiErrorMessageService.fieldMessage`, và nó
+   * kiểm `message !== code` trước khi dùng. Viết `error.message` thẳng vào template là đẩy chuỗi
+   * `"CommonPassword"` ra màn hình — đã xảy ra thật, xem bậc 2 ở hàm đó.
+   */
   message: string;
   /**
    * Tham số của câu mà `code` trỏ tới (vd `{ MinLength: '12' }` cho `MinimumLengthValidator`) —

@@ -62,8 +62,7 @@ kỳ thao tác xoá hay viết code nào.**
 - Về sau, khi cấp tài khoản quản trị cho khách hàng thật, tài khoản đó chỉ
   giữ role `Admin` (không có `SuperAdmin`) — `SuperAdmin` là vai trò dành
   riêng cho tài khoản khởi tạo/vận hành hệ thống, không cấp đại trà.
-- **Mật khẩu bootstrap**: hardcode 1 giá trị tạm trong `DbSeeder.cs` (ví dụ
-  `SuperAdmin@123`) + cột mới `AppUser.MustChangePassword` (bool, default
+- **Mật khẩu bootstrap**: hardcode 1 giá trị tạm trong `DbSeeder.cs` + cột mới `AppUser.MustChangePassword` (bool, default
   `true` cho tài khoản này) — bắt buộc đổi mật khẩu ngay sau lần đăng nhập
   đầu tiên trước khi vào được bất kỳ màn hình nào khác. Áp dụng chung luôn
   cho MỌI user do Admin tạo qua màn "Quản trị người dùng" (tạo với mật khẩu

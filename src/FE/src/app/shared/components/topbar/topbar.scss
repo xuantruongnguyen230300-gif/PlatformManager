@@ -42,6 +42,15 @@
   .topbar-user-name {
     display: none;
   }
+
+  // Cùng breakpoint, cùng lý do: ở khổ hẹp, hai hành động tài khoản mang nhãn đầy đủ sẽ đẩy tiêu
+  // đề trang ra khỏi thanh. Icon ở lại, và `aria-label` trên CẢ HAI control giữ tên truy cập được.
+  //
+  // 🛑 Quy tắc này áp cho CẢ HAI nhãn, không riêng nhãn nào — ẩn một cái và để cái kia ở lại cho
+  // ra `[🔑][🚪 Đăng xuất]`, trông như một nút bị mất chữ chứ không như một lựa chọn.
+  .topbar-action-label {
+    display: none;
+  }
 }
 
 .sidebar-hamburger {

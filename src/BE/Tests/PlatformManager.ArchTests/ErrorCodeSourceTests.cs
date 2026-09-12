@@ -32,10 +32,10 @@ namespace PlatformManager.ArchTests;
 /// qua được T2. Đổi lại: chạy trong mili-giây, thấy được cả nhánh điều kiện, không cần dựng
 /// container. Khi refactor làm test đỏ oan thì sửa bộ dò ở đây, ĐỪNG nới luật cho xanh.</para>
 ///
-/// <para><b>Phạm vi quét</b> là <c>RepoSourceTree.ProductSourceFiles()</c> — hôm nay là Core + Api,
-/// đúng tập project sản phẩm đang tồn tại. Khi tầng <c>Business.*</c> ra đời, nó phải được thêm
-/// vào chính hàm đó (một chỗ, dùng chung cho mọi test quét nguồn); đừng chép một danh sách thư mục
-/// thứ hai vào file này.</para>
+/// <para><b>Phạm vi quét</b> là <c>RepoSourceTree.ProductSourceFiles()</c> — từ 2026-09-10 gồm
+/// Core + <b>Business</b> + host, tức đủ tập project sản phẩm. Tầng mới phải được thêm vào chính
+/// hàm đó (một chỗ, dùng chung cho mọi test quét nguồn); đừng chép một danh sách thư mục thứ hai
+/// vào file này.</para>
 /// </summary>
 public class ErrorCodeSourceTests
 {

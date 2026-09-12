@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>PlatformManager.Business.Domain</RootNamespace>
+    <AssemblyName>PlatformManager.Business.Domain</AssemblyName>
+  </PropertyGroup>
+
+  <!-- KHÔNG có PackageReference — entity nghiệp vụ chỉ cần BCL + BaseEntity/EntityId của
+       Core.Domain. Đúng cạnh duy nhất đã khai ở doc/kien-truc-core-module.md
+       §"Nguyên tắc phụ thuộc bắt buộc": Business.Domain → Core.Domain.
+
+       Hai lớp tiện ích trong Common/ (chuẩn hoá tên để tìm kiếm, dựng khoá sắp xếp mã) đặt ở
+       ĐÂY chứ không ở Core: luật của chúng là luật NGHIỆP VỤ của DTI (spec/danh-muc-dti/
+       business-rules.md §1.2 — Q47, Q53, Q58), và chính entity là nơi ghi hai cột đó nên
+       chúng phải nằm cùng tầng với entity. -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Core\PlatformManager.Core.Domain\PlatformManager.Core.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

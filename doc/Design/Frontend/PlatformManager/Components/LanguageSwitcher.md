@@ -4,7 +4,7 @@ scope: du-an
 verified: 2026-09-06
 project: "PlatformManager"
 status: "shipped"
-updated: "2026-09-08"
+updated: "2026-09-11"
 component: "LanguageSwitcher"
 sources:
   - "src/FE/src/app/shared/components/language-switcher/language-switcher.html"
@@ -90,7 +90,8 @@ Hôm nay có **đúng một** chỗ dùng: màn đăng nhập (`login.page.html:
 
 ### 📐 Nợ đã biết — người đã đăng nhập KHÔNG đổi được ngôn ngữ
 
-Vào rồi thì không có nút nào. Topbar hiện chỉ có: hamburger · logo · tên người dùng · Đăng xuất.
+Vào rồi thì không có nút nào. Topbar hiện chỉ có: hamburger · logo · tên người dùng · Đổi mật khẩu · Đăng xuất
+(hành động tài khoản thứ hai thêm 2026-09-11 — xem `Topbar.md` § Anatomy).
 
 **Chốt 2026-09-08 (quyết định người dùng): hoãn, và khi làm thì đặt vào MENU HỒ SƠ** (dropdown mở
 từ tên người dùng / avatar trên topbar) — **không** đặt trực tiếp lên topbar, **không** dựng một

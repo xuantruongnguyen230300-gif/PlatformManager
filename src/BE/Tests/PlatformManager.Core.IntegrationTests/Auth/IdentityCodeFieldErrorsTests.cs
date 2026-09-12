@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
 using PlatformManager.Core.Application.Common;
+using PlatformManager.Core.Application.Common.Results;
 using Xunit;
 
 namespace PlatformManager.Core.IntegrationTests.Auth;
@@ -34,6 +35,17 @@ public sealed class IdentityCodeFieldErrorsTests : IAsyncLifetime
     /// <summary>8 ký tự: qua được <c>MinimumLength(6)</c> của validator, thua
     /// <c>RequiredLength = 12</c> của Identity ⇒ đúng một mã <c>PasswordTooShort</c>.</summary>
     private const string TooShortForIdentity = "Zq7#kLm2";
+
+    /// <summary>
+    /// <b>12 ký tự — ĐỦ DÀI với <c>RequiredLength = 12</c>, nên <c>PasswordTooShort</c> KHÔNG
+    /// tham gia.</b> Thứ duy nhất còn chặn nó là bộ lọc mật khẩu phổ biến
+    /// (<c>.AddTop10000PasswordValidator&lt;AppUser&gt;()</c>, gói <c>CommonPasswordsValidator</c>,
+    /// hoạt động hoàn toàn offline bằng danh sách nhúng).
+    ///
+    /// <para>Độ dài đúng 12 là điều kiện để test này đo ĐÚNG thứ nó định đo: ngắn hơn thì
+    /// <c>PasswordTooShort</c> cũng bắn và ca kiểm không còn phân biệt được validator nào đã chặn.</para>
+    /// </summary>
+    private const string CommonButLongEnough = "qwerty123456";
 
     private readonly WebApplicationFactory<Program> _factory;
 
@@ -84,6 +96,50 @@ public sealed class IdentityCodeFieldErrorsTests : IAsyncLifetime
         // Contains chứ không so bằng phần tử [0]: bộ lọc mật khẩu phổ biến có thể thêm mã thứ hai
         // cho cùng ô, và test này không kiểm chính sách mật khẩu — nó kiểm ĐƯỜNG ĐI của mã.
         Assert.Contains("PasswordTooShort", newPasswordErrors);
+    }
+
+    /// <summary>
+    /// 🔴 <b>Ca THẬT ngày 2026-09-11, và là lưới DUY NHẤT bắt được nó trước người dùng.</b> Người
+    /// dùng đặt mật khẩu <c>qwerty123456</c> ⇒ Identity từ chối bằng mã <c>CommonPassword</c> ⇒ mã
+    /// đó không có trong allowlist ⇒ rơi về <c>$record</c> ⇒ <b>màn hình không hiện lý do nào</b>.
+    ///
+    /// <para><b>Vì sao test này mạnh hơn mọi test đơn vị của cùng chuyện:</b> nó <b>KHÔNG nhắc tên
+    /// mã nào cả</b>. Nó chỉ hỏi <i>"mật khẩu bị chính sách từ chối thì câu lỗi có về đúng ô
+    /// không"</i>. Nhờ vậy nó phủ luôn ca của validator thứ hai mà ai đó cắm thêm ngày mai — thứ mà
+    /// cả lưới phản chiếu <c>IdentityErrorDescriber</c> lẫn bảng <c>[InlineData]</c> đều mù, vì
+    /// validator bên thứ ba không có describer để phản chiếu và không ai nhớ gõ tên mã của nó vào
+    /// một file test.</para>
+    ///
+    /// <para><b>Không khẳng định tên mã</b> có chủ đích: đổi gói lọc mật khẩu sẽ đổi mã, nhưng
+    /// <i>"lỗi phải về ô mật khẩu mới"</i> thì không đổi. Khẳng định tên mã ở đây là buộc test phải
+    /// sửa mỗi lần đổi gói, trong khi bất biến thật vẫn nguyên.</para>
+    /// </summary>
+    [Fact(DisplayName = "Mật khẩu PHỔ BIẾN nhưng đủ dài → fieldErrors.NewPassword, KHÔNG rơi về $record")]
+    public async Task CommonPassword_MarksTheNewPasswordInput_NotTheRecordKey()
+    {
+        var client = await AdminApiTestClient.CreateLoggedInClientAsync(_factory, "fe-common", Roles.User);
+
+        var envelope = await ChangePasswordAsync(client, AdminApiTestClient.Password, CommonButLongEnough);
+
+        AssertChangePasswordFailedEnvelope(envelope);
+
+        var fieldErrors = envelope.GetProperty("fieldErrors");
+
+        // Có ô mật khẩu mới, và ô đó mang ít nhất một mã.
+        Assert.True(
+            fieldErrors.TryGetProperty("NewPassword", out var newPasswordErrors),
+            "Mật khẩu bị chính sách từ chối nhưng fieldErrors KHÔNG có khoá 'NewPassword' — câu lỗi " +
+            "sẽ hiện ở khối lỗi chung cuối form thay vì ngay dưới ô người dùng đang gõ. Đây đúng là " +
+            "ca 2026-09-11; sửa bằng một dòng trong IdentityFieldErrors.SlotByCode.");
+
+        Assert.NotEmpty(newPasswordErrors.EnumerateArray());
+
+        // Và KHÔNG rơi về khoá bản ghi — vế này mới là vế chống hồi quy: một bản sửa điền CẢ HAI
+        // chỗ vẫn làm khối lỗi chung hiện thừa một dòng.
+        Assert.False(
+            fieldErrors.TryGetProperty(IdentityFieldErrors.RecordKey, out _),
+            $"fieldErrors còn khoá '{IdentityFieldErrors.RecordKey}' — mã lỗi mật khẩu đang bị phân " +
+            "loại là lỗi mức BẢN GHI.");
     }
 
     // ── Hạ tầng test ─────────────────────────────────────────────────────────

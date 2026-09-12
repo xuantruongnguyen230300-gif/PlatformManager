@@ -21,11 +21,23 @@ public enum ImportFileRejection
 /// <param name="Rejection">Lý do từ chối; <see cref="ImportFileRejection.None"/> khi nhận.</param>
 /// <param name="FileSizeBytes">Dung lượng file thật.</param>
 /// <param name="MaxFileSizeBytes">Trần đang áp, đọc từ cấu hình.</param>
+/// <param name="MaxRows">
+/// Trần SỐ DÒNG dữ liệu đang áp (Q75) — <b>Core giữ con số, bên gọi thi hành</b>.
+///
+/// <para><b>Vì sao trần dòng đi ra đây thay vì được selector tự chặn như trần dung lượng:</b> số
+/// dòng chỉ biết được KHI ĐANG ĐỌC, mà việc đọc thì nằm ở vòng lặp của bên gọi. Đưa con số ra là
+/// cách duy nhất để Core vẫn sở hữu CHÍNH SÁCH trong khi bên gọi sở hữu MÃ LỖI — cùng ranh giới
+/// mà <see cref="ImportFileRejection"/> dựng cho trần dung lượng.</para>
+///
+/// <para>⚠️ Bên gọi phải TỪ CHỐI cả lượt khi vượt, KHÔNG cắt bớt dòng thừa: một file bị cắt cụt
+/// mà báo "thành công" để lại một kỳ thiếu dữ liệu và không ai biết.</para>
+/// </param>
 public sealed record ImportFileReaderSelection(
     IImportFileReader? Reader,
     ImportFileRejection Rejection,
     long FileSizeBytes,
-    long MaxFileSizeBytes)
+    long MaxFileSizeBytes,
+    int MaxRows)
 {
     /// <summary>Có reader để đọc tiếp hay không.</summary>
     public bool IsAccepted => Reader is not null;

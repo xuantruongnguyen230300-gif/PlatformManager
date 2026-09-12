@@ -1109,9 +1109,33 @@ nói về **bản ghi**, không về một ô.
 > **Vì sao ký tự `$`, không phải một từ tiếng Anh:** `$` không mở đầu được một định danh C#, nên
 > khoá này **không thể** trùng tên property nào do `NormalizeField` sinh ra. Chọn `"Record"` hay
 > `"General"` thì ngày có ai đặt một property tên như vậy, lỗi mức bản ghi sẽ ghi đè lỗi của một
-> ô thật — hỏng im lặng. Phía FE, union tên ô là kiểu literal đóng nên khoá lạ đơn giản không
-> bind vào ô nào; người dùng vẫn đọc câu ở `message`. Test canh:
+> ô thật — hỏng im lặng. Test canh:
 > `IdentityFieldErrorsTests.RecordKey_CannotCollide_WithAnyCSharpPropertyName`.
+>
+> > 🛑 **SỬA 2026-09-11 — nửa sau của đoạn này là một tiền đề SAI, và nó đã trả giá.** Bản trước
+> > viết tiếp: *"Phía FE, union tên ô là kiểu literal đóng nên khoá lạ đơn giản không bind vào ô
+> > nào; **người dùng vẫn đọc câu ở `message`**."*
+> >
+> > Vế đầu đúng, vế sau **không**. Hai lý do, cả hai đo được:
+> >
+> > 1. `fieldErrors[].message` của nhánh này **bằng chính `code`** — chính file này chốt như vậy ở
+> >    §3/§5.2, và `IdentityFieldErrors.Build` hiện thực đúng thế
+> >    (`src/BE/Core/PlatformManager.Core.Application/Common/Results/IdentityFieldErrors.cs:183`).
+> >    Nên "đọc câu ở `message`" thực tế là đọc chuỗi `"CommonPassword"`.
+> > 2. `message` **mức envelope** thì FE có hiện — nhưng chỉ khi **không** có lỗi ô nào. Sự có mặt
+> >    của khoá `$record` khiến form đếm là "đã có lỗi ô" và **ẩn** luôn câu chung. Khoá lạ vì vậy
+> >    không phải "mất chỗ tô đỏ" như đoạn trên hàm ý — nó **xoá sạch mọi lời giải thích**.
+> >
+> > Ca thật 2026-09-11: `CommonPassword` (từ `AddTop10000PasswordValidator`) chưa có trong
+> > `SlotByCode` ⇒ rơi về `$record` ⇒ người dùng thấy form từ chối và **không một chữ nào** nói vì
+> > sao. Đây là tiền đề khiến phía BE thấy an toàn khi dồn mã lạ về `$record`; để nguyên thì người
+> > thêm mã Identity tiếp theo vẫn suy luận từ nó.
+> >
+> > FE đã vá cả hai tầng (`groupServerFieldErrors` tách `$record`; `fieldMessage` có bậc chốt chặn
+> > `VALIDATION.UNKNOWN`) —
+> > [`../fe/09-forms-validation.md`](../fe/09-forms-validation.md) §`$record`. **Nhưng đừng coi đó
+> > là giấy phép dồn thêm mã về `$record`:** câu người dùng nhận khi ấy là câu CHUNG, không nói
+> > được việc cần làm. Mã mới vẫn phải vào `SlotByCode`.
 
 **✅ Tên field đã chọn cho hai form** (ràng buộc 1 + 2), khai cạnh nhau ở đúng một chỗ —
 `IdentityFormFields.ChangePassword` và `IdentityFormFields.UserForm`:

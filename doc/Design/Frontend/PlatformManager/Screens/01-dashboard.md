@@ -4,7 +4,7 @@ scope: du-an
 verified: khong-ap-dung
 project: "PlatformManager"
 status: "target — not built"
-updated: "2026-09-10"
+updated: "2026-09-11"
 flow: "DTI Dashboard"
 screens: ["DTI Dashboard"]
 source_routes: ["/trang-chu"]
@@ -103,7 +103,7 @@ directly — no dialog, no preview. Every write lives on the DTI catalogue
 ([`02-danh-muc-dti.md`](./02-danh-muc-dti.md)).
 
 > **Shell:** the app shell — skip link + `Sidebar` + `Topbar` + `main` + `Toast`
-> (`src/FE/src/app/app.html:16-39`), rendered because this route will not set
+> (`src/FE/src/app/app.html:18-41`), rendered because this route will not set
 > `data.noShell`. `../DESIGN.md` → Layout describes this shell.
 > **Sources:** `doc/Design/Frontend/PlatformManager/Prototypes/index.html`
 > § `#screen-dashboard` — the prototype the product owner approved point by point on
@@ -139,7 +139,7 @@ directly — no dialog, no preview. Every write lives on the DTI catalogue
 
 <!-- Region tree + structural measurements. Compose ONLY component names present in COMPONENTS.md. -->
 
-- **App shell** (`src/FE/src/app/app.html:16-39`) — surrounds the route; not part of its own template
+- **App shell** (`src/FE/src/app/app.html:18-41`) — surrounds the route; not part of its own template
   - Skip link, then `Sidebar`, then `.shell-content` → `Topbar` → `main#main-content`, then `Toast` outside the shell conditional
   - `main` is capped at `container-max-width` with `spacing.sp-5` padding; the regions below are its direct children
 - **Period toolbar** — `app-period-toolbar` → `<section class="toolbar no-print">`, the screen's first region and its primary control. `Toolbar` supplies the surface, so **no `.card` wrapper** (two stacked surfaces would give the bar a shadow and a second padding). Left to right:
@@ -497,7 +497,7 @@ column below is the code. The code left in it reaches the user as a `Toast` from
 
 - **≥981px (desktop default):** `.layout` is a `1.15fr 0.85fr` two-column grid; the KPI row is five equal columns; `main` is centred at `container-max-width` with `spacing.sp-5` padding.
 - **≤980px (tablet):** three things change at once. `.layout` collapses to a single column (§ `@media (max-width: 980px)` → `#screen-dashboard .layout`), so the group panel sits above the chart. The KPI row drops to **two** columns (§ `app-kpi-summary .kpis`). The group rows narrow their name column from 210px to 140px (§ `app-group-progress-list .group-row`). The shell's sidebar becomes an off-canvas drawer opened from the topbar hamburger.
-- **≤560px (mobile):** the KPI grid gap tightens to 8px and — because `app-kpi-tile` is `display: contents` — **all five** tiles span the full width rather than the intended four-in-two-columns-plus-one. That is defect **A1**, recorded as-drawn — `doc/Design/Frontend/PlatformManager/Prototypes/index.html` § `app-kpi-tile` and § `app-kpi-summary .kpis .card:last-child` (inside `@media (max-width: 560px)`). KPI values step down to 18px. Group-row name columns narrow again to 110px. The shell drops `main` padding and hides the user's name in the topbar.
+- **≤560px (mobile):** the KPI grid gap tightens to 8px and — because `app-kpi-tile` is `display: contents` — **all five** tiles span the full width rather than the intended four-in-two-columns-plus-one. That is defect **A1**, recorded as-drawn — `doc/Design/Frontend/PlatformManager/Prototypes/index.html` § `app-kpi-tile` and § `app-kpi-summary .kpis .card:last-child` (inside `@media (max-width: 560px)`). KPI values step down to 18px. Group-row name columns narrow again to 110px. The shell drops `main` padding and, in the topbar, hides the user's name **and both account labels** — the change-password and sign-out buttons keep only their glyphs (`Components/Topbar.md` § Variants, row *Compact user block*).
 - **Not responsive at any breakpoint:** the trend chart's height (a fixed 220px from phone to 4K) and the history rows' grid template, which has no breakpoint variant at all — see [`../Components/HistoryRow.md`](../Components/HistoryRow.md) § Normalize #1. The detail table does not restack; it scrolls horizontally inside `.tablewrap`, which is the `Table` contract.
 
 ### Iconography
@@ -512,6 +512,7 @@ globally and authors icons as `<i class="pi pi-*">` elements.
 | Open the filter panel | `pi pi-filter` | Leading, inside `<summary class="btn">` |
 | Open the navigation drawer (≤980px) | `pi pi-bars` | Shell topbar, left |
 | Collapse / expand the sidebar | `pi pi-angle-left` | Shell sidebar brand row |
+| Change password | `pi pi-key` | Shell topbar, right — first of the two account actions (added 2026-09-11) |
 | Sign out | `pi pi-sign-out` | Shell topbar, right |
 | Dismiss a toast | `pi pi-times` | Shell toast item, right |
 

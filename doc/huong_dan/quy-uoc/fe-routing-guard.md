@@ -1,7 +1,7 @@
 ---
 kind: luat
 scope: core
-verified: 2026-09-06
+verified: 2026-09-10
 ---
 
 # Routing & Guard — src/FE
@@ -68,6 +68,15 @@ Quy ước điều hướng và bảo vệ route cho Angular 20 standalone + zon
 | `/trang-chu` | `platform/trang-chu` | `authGuard` → `mustChangePasswordGuard` | có |
 | `/quan-tri/nguoi-dung` | `platform/quan-tri-nguoi-dung` | + `adminGuard` | có |
 | `/quan-tri/phan-quyen` | `platform/phan-quyen` | + `superAdminGuard` | có |
+| `/danh-muc/dti` | `modules/danh-muc-dti` | `authGuard` → `mustChangePasswordGuard` | có |
+| 🚧 `/tong-quan/dti` | `modules/dashboard` | `authGuard` → `mustChangePasswordGuard` | có |
+
+🚧 **`/tong-quan/dti` là route TẠM và nó sẽ BIẾN MẤT** — chốt Q3: màn Dashboard DTI **chiếm**
+`/trang-chu`, tức nó thay `platform/trang-chu/` chứ không đứng cạnh. Hoán đổi làm ở cuối vòng 2
+(vòng 1 màn còn thiếu nút `Xuất báo cáo`); hoán đổi khi màn chưa xong là làm hỏng bến an toàn của
+cả app. Điều kiện và bốn bước hoán đổi ghi tại chỗ trong
+`src/FE/src/app/modules/dashboard/dashboard.routes.ts` — **hai dòng cuối bảng này gộp làm một khi
+việc đó xong**, và `platform/trang-chu/` bị xoá (Q29).
 
 - **`/trang-chu` là route mặc định** — `''` và `**` đều redirect về đó.
 - 🛑 **Route mặc định KHÔNG được mang guard theo vai trò.** Nó là đích của mọi
@@ -76,10 +85,19 @@ Quy ước điều hướng và bảo vệ route cho Angular 20 standalone + zon
   cho đúng nhóm người bị đá về. Khoá bằng máy ở `app.routes.spec.ts`.
 - **Route đặt tiếng Việt không dấu**, khớp `doc/Design/.../UiInventory.md`. Không
   dùng `/login`.
-- **Hiện KHÔNG có màn nghiệp vụ nào** — `src/app/modules/` **không tồn tại** từ 2026-08-29 (module DTI
-  đã xoá để xây lại). Phép thử khi thêm màn mới: *"màn này có ý nghĩa với MỌI sản
-  phẩm dựng trên nền tảng, hay chỉ riêng domain nghiệp vụ hiện tại?"* — cái đầu vào
-  `platform/`, cái sau vào `modules/`, xem [`fe-architecture.md`](fe-architecture.md).
+- **`src/app/modules/` ĐÃ CÓ THẬT** (đối chiếu 2026-09-10) — hai màn nghiệp vụ DTI ở hai dòng cuối
+  bảng trên. Phép thử khi thêm màn mới: *"màn này có ý nghĩa với MỌI sản phẩm dựng trên nền tảng,
+  hay chỉ riêng domain nghiệp vụ hiện tại?"* — cái đầu vào `platform/`, cái sau vào `modules/`,
+  xem [`fe-architecture.md`](fe-architecture.md). Thêm vào `modules/` thì **phải** thêm tên thư
+  mục vào `BUSINESS_MODULES` ở `src/FE/eslint.config.js`, nếu không gate G8 là no-op cho chính
+  module đó mà `ng lint` vẫn xanh.
+
+  > 🔄 **LẬT 2026-09-10.** Gạch đầu dòng này từng khẳng định *"Hiện KHÔNG có màn nghiệp vụ nào —
+  > `src/app/modules/` **không tồn tại**"*. Hết đúng từ 2026-09-09, và cái giá của nó không phải
+  > một câu lỗi thời: bảng route ở trên khi đó liệt **5** route trong khi `app.routes.ts` có **7**,
+  > mà `src/FE/src/app/app.routes.spec.ts` lại tự khai là *"chốt chặn BẰNG MÁY cho bảng route ở
+  > §1"* — nghĩa là **máy và luật đếm khác nhau**, và bên đúng là máy. Một chốt chặn nói về một
+  > bảng nó không đọc thì nó chỉ chặn được thứ nó tự viết ra.*
 
 ## 2. Cấu trúc file — mỗi feature một `*.routes.ts`
 
@@ -103,13 +121,22 @@ export const routes: Routes = [
   { path: 'quan-tri/phan-quyen',
     loadChildren: () => import('./platform/phan-quyen/phan-quyen.routes').then(m => m.PHAN_QUYEN_ROUTES) },
 
+  // Màn NGHIỆP VỤ — `modules/`, không phải `platform/`.
+  { path: 'danh-muc/dti',
+    loadChildren: () => import('./modules/danh-muc-dti/danh-muc-dti.routes').then(m => m.DANH_MUC_DTI_ROUTES) },
+
+  // 🚧 TẠM — biến mất khi Dashboard chiếm `/trang-chu` (Q3), xem ghi chú ở §1.
+  { path: 'tong-quan/dti',
+    loadChildren: () => import('./modules/dashboard/dashboard.routes').then(m => m.DASHBOARD_ROUTES) },
+
   { path: '**', redirectTo: 'trang-chu' },
 ];
 ```
 
 *(🔄 LẬT 2026-09-06: khối trên trước đây **bỏ sót** `quan-tri/nguoi-dung` — đúng một route đang
-chạy thật, và là route có bảng route ở §1 liệt kê. Đã thêm lại; vẫn nên đối chiếu bằng lệnh ở
-đầu §1 thay vì tin khối này.)*
+chạy thật, và là route có bảng route ở §1 liệt kê. Đã thêm lại. 🔄 LẬT 2026-09-10: bỏ sót tiếp
+**hai** route nghiệp vụ, đúng cùng một kiểu. Vẫn nên đối chiếu bằng lệnh ở đầu §1 thay vì tin khối
+này — một khối mẫu chép tay đã sai hai lần thì lần thứ ba chỉ là vấn đề thời gian.)*
 
 Tên biến `routes` ở `app.routes.ts` là **ngoại lệ có chủ đích** — nó là bảng mục
 lục cấp app, không phải route của một feature. Route của feature theo
@@ -155,9 +182,12 @@ export const PHAN_QUYEN_ROUTES: Routes = [{
    > chữ đọc được. Kiểm bằng lệnh:
    >
    > ```bash
-   > grep -rn "title:" src/FE/src/app/platform/*/*.routes.ts
+   > grep -rn "title:" src/FE/src/app/*/*/*.routes.ts
    > # PASS: mọi giá trị có dạng '<màn>.routeTitle', không dòng nào là câu tiếng Việt
    > ```
+   >
+   > *(🔄 SỬA 2026-09-10: lệnh này trước đây neo cứng `platform/`, nên nó **không** soi hai màn
+   > nghiệp vụ trong `modules/` — quét hẹp hơn luật thì nó xanh vì mù. Nay soi cả hai tầng.)*
    >
    > **Ca khó mà chốt 2026-09-03 sinh ra cũng đã xử lý.** Đổi ngôn ngữ **trong phiên** không sinh
    > lần điều hướng nào, nên `updateTitle()` không chạy lại, mà `<title>` thì ghi thẳng vào DOM
@@ -326,8 +356,11 @@ bằng `replaceUrl: true` + `queryParamsHandling: 'merge'`, **không** giữ b�
 Màn hình mới theo ngay từ đầu; màn hình nào chưa theo thì di trú khi có dịp chạm vào. Kiểm:
 
 ```bash
-grep -rln "queryParams" src/FE/src/app/platform --include=*.page.ts
+grep -rln "queryParams" src/FE/src/app/platform src/FE/src/app/modules --include=*.page.ts
 ```
+
+*(🔄 SỬA 2026-09-10: lệnh này trước đây chỉ quét `platform/`. Cùng lỗi với lệnh ở §2 quy tắc 3 —
+`modules/` ra đời 2026-09-09 và không lệnh nào chạm tới nó.)*
 
 ## 9. Khi thêm màn hình mới — checklist
 
@@ -337,6 +370,10 @@ grep -rln "queryParams" src/FE/src/app/platform --include=*.page.ts
    `title` **ở cấp `Route`** (§2 quy tắc 3 — không đặt vào `data`).
 3. Khai guard **trong file đó**, đúng thứ tự §6.
 4. Thêm **một** dòng `loadChildren` vào `app.routes.ts`.
+4b. Màn thuộc `modules/` → thêm tên thư mục vào `BUSINESS_MODULES` ở `src/FE/eslint.config.js`.
+   Quên bước này thì gate **G8** là no-op cho chính module mới mà `ng lint` vẫn xanh — lý do đầy
+   đủ ở [`fe-architecture.md`](fe-architecture.md) §"Thêm một module nghiệp vụ mới". Màn
+   `platform/` bỏ qua bước này.
 5. Cần hiện trong sidebar → thêm bản ghi `SysMenus` + `SysMenuRoles` phía BE
    (`doc/contracts/meta-menu.md`), **không** hardcode vào FE.
 6. Route mới cần quyền riêng → contract BE phải có `[RequirePermission]` tương ứng;
@@ -384,6 +421,25 @@ thứ hai muốn dùng `/login`, `/change-password`, `/home` là **phải sửa 
 `core/`** — đúng thứ mà định nghĩa "CoreBase xong" loại trừ. Ràng buộc G9
 (`eslint.config.js`) cấm `core/` import ngược lên `platform/`, nên hợp đồng phải
 ở `core/`, còn giá trị thì app bơm vào.
+
+> ### Người tiêu thụ thứ ba, và nó KHÔNG phải một guard (bổ sung 2026-09-11)
+>
+> Mục này — và cả bảng seam ở [`fe-architecture.md`](fe-architecture.md) §Seam — mô tả
+> `CORE_ROUTES` là *"3 đường dẫn mà **guard** chuyển hướng tới"*. Nay có một người tiêu thụ khác
+> loại: **một liên kết UI** trong `shared/` — nút `Đổi mật khẩu` trên Topbar đọc
+> `CORE_ROUTES.changePassword` cho `routerLink` của nó
+> (`src/FE/src/app/shared/components/topbar/topbar.html:26`).
+>
+> **Hợp đồng KHÔNG đổi** — vẫn đúng ba đường dẫn, vẫn khai theo ngữ nghĩa. Thứ đổi là *ai đọc*:
+> từ "ba guard" thành "ba guard + một interceptor + một liên kết của app-shell". Ghi lại vì cái
+> tên `changePassword` trong `core-routes.ts` từng được chú thích là *"Đích của
+> `mustChangePasswordGuard`"* — đọc nguyên văn thì người sau sẽ tưởng thu hẹp nó về đúng luồng ép
+> buộc là an toàn, và điều đó sẽ làm chết một liên kết trên mọi màn hình.
+>
+> 🛑 Và đây là chỗ **`shared/` chịu cùng luật với `core/`**: nó cũng đi theo nền tảng sang sản phẩm
+> thứ hai. Chính `topbar.ts` đã một lần khai cứng `/dang-nhap` rồi lọt lưới vì phép kiểm khi đó
+> chỉ quét `core/` — nay có test canh ở
+> `src/FE/src/app/shared/components/topbar/topbar.spec.ts` § "đường dẫn đến từ CORE_ROUTES".
 
 Cùng lý do, `httpErrorInterceptor` cũng đọc `CORE_ROUTES.signIn` thay cho hằng
 `LOGIN_PATH` cũ — nó dùng đường dẫn ở **hai** chỗ: đích điều hướng khi phiên chết

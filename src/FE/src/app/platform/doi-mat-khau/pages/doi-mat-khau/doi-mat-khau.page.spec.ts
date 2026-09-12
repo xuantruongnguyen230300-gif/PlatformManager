@@ -196,6 +196,59 @@ describe('DoiMatKhauPage — lỗi theo từng ô', () => {
     expect(el<HTMLElement>('.login-error').textContent).toContain('Mật khẩu hiện tại không đúng.');
     expect(errorTexts().length).toBe(0);
   });
+
+  it('🛑 mật khẩu mới quá phổ biến → câu nói phải làm gì, DƯỚI ô mật khẩu mới', () => {
+    // Màn này đi qua ĐÚNG dàn `IPasswordValidator` như màn tạo người dùng: `ChangePasswordAsync`
+    // chạy `AddTop10000PasswordValidator`, nên `CommonPassword` phát ra ở đây y hệt. BE ánh xạ mã
+    // đó về ô mật khẩu MỚI — không phải ô mật khẩu hiện tại (bẫy 1 của `IdentityFieldErrors`).
+    spyOn(auth, 'changePassword').and.returnValue(
+      throwError(() =>
+        envelopeError('Đổi mật khẩu thất bại.', {
+          NewPassword: [{ code: 'CommonPassword', message: 'CommonPassword' }],
+        }),
+      ),
+    );
+
+    fill('currentPassword', 'MatKhauCu@1');
+    fill('newPassword', 'qwerty123456');
+    fill('confirmPassword', 'qwerty123456');
+    page.onSubmit();
+    fixture.detectChanges();
+
+    const newInput = el<HTMLInputElement>('#newPassword');
+    expect(newInput.getAttribute('aria-invalid')).toBe('true');
+    const text = el<HTMLElement>(`#${newInput.getAttribute('aria-describedby')}`).textContent ?? '';
+    expect(text).toContain('phổ biến');
+    expect(text)
+      .withContext('mã máy KHÔNG được lọt ra màn hình — đường lùi cũ trả thẳng `code`')
+      .not.toContain('CommonPassword');
+    expect(el<HTMLInputElement>('#currentPassword').hasAttribute('aria-invalid'))
+      .withContext('ô mật khẩu HIỆN TẠI người dùng gõ đúng — đừng tô đỏ nó')
+      .toBeFalse();
+  });
+
+  it('🛑 lỗi mức BẢN GHI (`$record`) vẫn hiện ở dải lỗi đầu form, không rơi vào lỗ đen', () => {
+    // Bảng ánh xạ mã → ô của BE là allowlist; mã Identity ngoài bảng rơi về `$record`. Trước bản
+    // vá 2026-09-11, khoá đó vừa không hiện dưới ô nào vừa làm dải lỗi đầu form biến mất.
+    spyOn(auth, 'changePassword').and.returnValue(
+      throwError(() =>
+        envelopeError('Đổi mật khẩu thất bại.', {
+          $record: [{ code: 'ConcurrencyFailure', message: 'ConcurrencyFailure' }],
+        }),
+      ),
+    );
+
+    fill('currentPassword', 'MatKhauCu@1');
+    fill('newPassword', 'MatKhauMoi@123');
+    fill('confirmPassword', 'MatKhauMoi@123');
+    page.onSubmit();
+    fixture.detectChanges();
+
+    const banner = el<HTMLElement>('.login-error');
+    expect(banner).withContext('không có dải lỗi = người dùng không biết vì sao bị từ chối').not.toBeNull();
+    expect(banner.textContent?.trim()).toBe('Giá trị này không được chấp nhận. Vui lòng kiểm tra lại.');
+    expect(errorTexts().length).withContext('`$record` không thuộc ô nào, đừng gắn bừa vào một ô').toBe(0);
+  });
 });
 
 /**

@@ -1,30 +1,291 @@
 {
+  "CRITERIA": {
+    "ASSESSMENT_CONFLICT": "Not saved — somebody else has just updated this criterion. Reopen it to see the latest figures, then edit again.",
+    "ASSESSMENT_SELF_SCORE_EXCEEDS_MAX": "The self-assessed score cannot be above the maximum score.",
+    "ASSESSMENT_VERIFIED_SCORE_EXCEEDS_MAX": "The verified score cannot be above the maximum score.",
+    "CODE_FORMAT_INVALID": "A criterion code holds digits and separating dots only — no empty segment, and no dot at the start or the end.",
+    "CODE_SEGMENT_TOO_LONG": "Each segment of the code (between dots) may hold at most {{MaxSegmentDigits}} digits.",
+    "DUPLICATE_CODE": "The criterion code \"{{Code}}\" already exists in the catalogue.",
+    "GROUP_NOT_FOUND": "The group you chose is no longer in the catalogue. Choose another group and save again.",
+    "NOT_FOUND": "This criterion is no longer in the catalogue — someone may have just deleted it.",
+    "OWNER_NOT_FOUND": "The owner you chose is no longer in the system. Choose another owner and save again."
+  },
+  "DASHBOARD": {
+    "EXPORT_MODE_UNSUPPORTED": "A report cannot be exported for the All (whole year) view yet. Choose a week or a month, then press Export report."
+  },
+  "IMPORT": {
+    "FILE_EMPTY": "The file has no data rows. Check the file and choose it again.",
+    "FILE_MISSING": "No file chosen. Choose a CSV or Excel file, then press Import data.",
+    "FILE_TOO_LARGE": "The file is too large to import. Remove embedded images or formatting, or split it into several files, then choose it again.",
+    "FILE_TOO_MANY_ROWS": "The file has too many rows to accept. Nothing was imported — split it into smaller files and import them one at a time.",
+    "FORMAT_UNSUPPORTED": "This file is not a CSV or Excel file (.csv, .xlsx, .xls), even if its name ends that way. Save it in the right format and choose it again.",
+    "JOB_NOT_FOUND": "This import could not be found — it may have passed its retention window. Please import the file again.",
+    "ROW_CODE_DUPLICATED_IN_FILE": "This code already appears on row {{FirstRowNumber}} of the same file.",
+    "ROW_CODE_FORMAT_INVALID": "A criterion code holds digits and separating dots only — no empty segment, and no dot at the start or the end.",
+    "ROW_CODE_MISSING": "The criterion code is missing.",
+    "ROW_CODE_SEGMENT_TOO_LONG": "Each segment of the code (between dots) may hold at most {{MaxSegmentDigits}} digits.",
+    "ROW_CODE_TOO_LONG": "The criterion code is longer than {{MaxLength}} characters.",
+    "ROW_DEADLINE_INVALID": "The due date is not a valid date.",
+    "ROW_GROUP_NOT_FOUND": "No group named \"{{GroupName}}\" was found (a typo, or extra spaces).",
+    "ROW_MAX_SCORE_INVALID": "The maximum score is not a valid number.",
+    "ROW_NAME_MISSING": "The criterion name is missing.",
+    "ROW_SELF_SCORE_EXCEEDS_MAX": "The self-assessed score ({{SelfScore}}) is above the maximum score ({{MaxScore}}).",
+    "ROW_SELF_SCORE_INVALID": "The self-assessed score is not a valid number.",
+    "ROW_STATUS_INVALID": "The status \"{{Status}}\" is not one of the four valid values.",
+    "ROW_VERIFIED_SCORE_EXCEEDS_MAX": "The verified score ({{VerifiedScore}}) is above the maximum score ({{MaxScore}}).",
+    "ROW_VERIFIED_SCORE_INVALID": "The verified score is not a valid number."
+  },
   "danh-muc-dti": {
     "routeTitle": "DTI catalogue",
     "title": "DTI catalogue",
-    "hint": {
-      "underConstruction": "This screen is still being built. The criteria list, filters and data-entry actions arrive in a coming update."
+    "count": "{{Count}} criteria",
+    "action": {
+      "create": "+ Add criterion",
+      "delete": "Delete",
+      "edit": "Edit",
+      "import": "Import CSV/Excel",
+      "save": "Save criterion"
+    },
+    "dialog": {
+      "createTitle": "Add criterion",
+      "deleteMessage": "Delete the criterion \"{{Code}} — {{Name}}\"?",
+      "deleteTitle": "Confirm",
+      "editTitle": "Edit criterion"
+    },
+    "error": {
+      "codeFormatInvalid": "A criterion code holds digits and separating dots only — no empty segment, and no dot at the start or the end.",
+      "codeRequired": "The criterion code is missing.",
+      "codeSegmentTooLong": "Each segment of the code (between dots) may hold at most 4 digits.",
+      "codeTooLong": "The criterion code is longer than 20 characters.",
+      "createFailed": "The criterion could not be added. Retry, or reload the page.",
+      "groupRequired": "No criteria group chosen.",
+      "loadFailed": "The criteria catalogue could not be loaded. Retry, or reload the page.",
+      "maxScoreInvalid": "The maximum score must be greater than 0.",
+      "nameRequired": "The criterion name is missing.",
+      "updateFailed": "The criterion could not be saved. Retry, or reload the page."
+    },
+    "field": {
+      "code": "Code",
+      "codePlaceholder": "e.g. 1.1",
+      "deadline": "Due date",
+      "group": "Group",
+      "groupPlaceholder": "Choose a criteria group",
+      "maxScore": "Max score",
+      "maxScorePlaceholder": "e.g. 10",
+      "name": "Criterion name",
+      "namePlaceholder": "Enter the full criterion name...",
+      "note": "Evidence/Notes",
+      "notePlaceholder": "Document number - date - summary, one item per line...",
+      "owner": "Owner",
+      "ownerLoadFailed": "The user list could not be loaded. You can still save the other fields.",
+      "ownerSearchAriaLabel": "Search for an owner",
+      "ownerSearchPlaceholder": "Search for an owner...",
+      "ownerUnassigned": "— Unassigned —",
+      "selfScore": "Self-assessed",
+      "selfScorePlaceholder": "e.g. 5",
+      "status": "Status",
+      "verifiedScore": "Verified",
+      "verifiedScorePlaceholder": "e.g. 5"
+    },
+    "filter": {
+      "allGroups": "All groups",
+      "allPeriods": "All (latest in the year)",
+      "allStatuses": "All statuses",
+      "chipGroup": "Group: {{Value}}",
+      "chipPeriod": "Period: {{Value}}",
+      "chipStatus": "Status: {{Value}}",
+      "chipYear": "Year: {{Value}}",
+      "group": "Criteria group",
+      "period": "Period in year",
+      "periodHint": "See the whole year rolled up (the latest record per criterion) or one specific period saved in the year. Every period states the dates it covers",
+      "status": "Status",
+      "year": "Assessment year"
+    },
+    "grid": {
+      "actions": "Actions",
+      "code": "Code",
+      "deadline": "Due date",
+      "diff": "Difference",
+      "empty": "No criterion matches the filter.",
+      "group": "Group",
+      "groupLabel": "{{Code}}. {{Name}}",
+      "maxScore": "Max score",
+      "name": "Name",
+      "note": "Evidence/Notes",
+      "owner": "Owner",
+      "period": "Period of the figures",
+      "progress": "Progress %",
+      "selfScore": "Self-assessment",
+      "status": "Status",
+      "verifiedScore": "Verified"
+    },
+    "import": {
+      "chosenFile": "Chosen: {{Name}}",
+      "fileLabel": "Choose a CSV/Excel file",
+      "jobFailed": "The import did not finish — the system hit a problem while processing the file. Check the file and import it again; if it still fails, tell your system administrator.",
+      "processing": "Processing the file…",
+      "progressReminder": "The Progress % column is left empty after an import — you fill it in per criterion. The dashboard only shows figures once Progress % exists.",
+      "resultTitle": "Import result",
+      "rowPrefix": "Row {{RowNumber}} — code \"{{Code}}\": ",
+      "rowPrefixNoCode": "Row {{RowNumber}}: ",
+      "startFailed": "The import could not be started. Check the file and try again.",
+      "submit": "Import data",
+      "summary": "{{TotalRows}} rows in total — {{SuccessCount}} succeeded, {{ErrorCount}} failed. {{CriteriaCreatedCount}} criteria were created automatically.",
+      "targetPeriod": "Importing into {{Period}}. Every row in the file is saved into this period.",
+      "title": "Import CSV/Excel"
+    },
+    "inline": {
+      "editNote": "Double-click to edit Evidence/Notes",
+      "editProgress": "Double-click to edit Progress %",
+      "notePrompt": "— double-click to add a note"
+    },
+    "notice": {
+      "emptyCatalogue": "The catalogue has no criteria yet. Use the \"Import CSV/Excel\" button above to load one from a file.",
+      "emptyCatalogueReadOnly": "The catalogue has no criteria yet.",
+      "periodNotWeekly": "You are viewing the rolled-up figures for {{Period}} — read only. Pick a specific week, or \"All (latest in the year)\", in the \"Period in year\" box to enter or edit figures.",
+      "periodNotWeeklyPastYear": "You are viewing the rolled-up figures for {{Period}} — read only. Pick a specific week in the \"Period in year\" box to enter or edit figures.",
+      "periodOutOfYear": "You are viewing figures for {{Year}} — read only. Pick a specific week in the \"Period in year\" box to enter or edit that week's figures, or switch the \"Assessment year\" box back to {{CurrentYear}}.",
+      "readOnlyUnknown": "The table is read only with the current filter.",
+      "targetPeriodCurrent": "You are entering data for {{Period}} — the current week.",
+      "targetPeriodPast": "You are entering data for {{Period}}. Anything you edit is saved into that week, not into the current week."
+    },
+    "period": {
+      "monthFull": "Month {{Ordinal}}/{{Year}} ({{From}} – {{To}})",
+      "monthOption": "Month {{Ordinal}}: {{From}} – {{To}}",
+      "shortRange": "{{From}} – {{To}}",
+      "weekFull": "Week {{Ordinal}}/{{Year}} ({{From}} – {{To}})",
+      "weekOption": "Week {{Ordinal}}: {{From}} – {{To}}"
+    },
+    "toast": {
+      "created": "The criterion has been added.",
+      "deletedHard": "The criterion has been removed from the catalogue.",
+      "deletedSoft": "The criterion has been deleted. Figures already saved for past periods are kept.",
+      "updated": "The criterion has been saved."
+    },
+    "toolbar": {
+      "searchAriaLabel": "Search by criterion code or name",
+      "searchPlaceholder": "Search by criterion code or name..."
     }
   },
   "dashboard": {
     "routeTitle": "DTI overview",
-    "title": "DTI overview",
     "action": {
+      "export": "Export report",
+      "exportFilteredTitle": "Download the Excel (.xlsx) file — ONLY the criteria currently filtered ({{Shown}}/{{Total}})",
+      "exportTitle": "Download the Excel (.xlsx) file for the period on screen — {{Period}}",
+      "exportYearUnsupported": "A report cannot be exported for the All (whole year) view yet. Choose a week or a month, then press Export report.",
       "viewPeriod": "View",
       "viewPeriodAriaLabel": "View the {{From}} – {{To}} period"
     },
+    "chart": {
+      "caption": "Overall progress",
+      "headingMonth": "Monthly progress chart",
+      "headingWeek": "Weekly progress chart",
+      "loading": "Loading the chart…",
+      "summary": "Line chart of overall progress across the saved periods, from {{From}} to {{To}}"
+    },
+    "error": {
+      "loadFailed": "The overview figures could not be loaded. Retry, or reload the page."
+    },
+    "filter": {
+      "allGroups": "All groups",
+      "allStatuses": "All statuses",
+      "chipGroup": "Group: {{Value}}",
+      "chipStatus": "Status: {{Value}}",
+      "group": "Criteria group",
+      "searchAriaLabel": "Search by criterion code or name",
+      "searchPlaceholder": "Search by criterion code or name...",
+      "sortAriaLabel": "Sort the list",
+      "sortByCode": "By criterion code",
+      "sortByDiff": "Largest difference",
+      "status": "Status"
+    },
+    "footer": {
+      "lead": "See the whole catalogue and enter or update data under ",
+      "link": "Catalogue > DTI",
+      "tail": "."
+    },
     "grid": {
+      "code": "Code",
+      "diff": "Difference",
+      "group": "Group",
       "groupAwaitingData": "No data yet",
+      "groupLabel": "{{Code}}. {{Name}}",
       "historyDateRange": "{{From}} – {{To}}",
       "historyFirstPeriod": "First period",
       "historyOverallLead": "Overall progress",
+      "maxScore": "Max score",
+      "name": "Criterion",
+      "note": "Evidence/Notes",
+      "selfScore": "Self-assessment",
+      "status": "Status",
+      "tableEmpty": "No criterion matches the filter.",
       "trendAriaLabelFallback": "Line chart of overall progress across the saved periods",
       "trendEmpty": "No saved period carries data to chart yet.",
       "trendPeriodHeader": "Period",
-      "trendValueHeader": "Overall progress"
+      "trendValueHeader": "Overall progress",
+      "verifiedScore": "Verified"
     },
-    "hint": {
-      "underConstruction": "This screen is still being built. The summary figures and trend charts arrive in a coming update."
+    "group": {
+      "empty": "No criteria group in this period yet.",
+      "heading": "Progress by group"
+    },
+    "history": {
+      "caption": "Older weeks are never overwritten",
+      "empty": "No period saved in this year yet.",
+      "heading": "Saved periods"
+    },
+    "kpi": {
+      "delta": {
+        "month": "Versus last month",
+        "week": "Versus last week",
+        "year": "Versus last year"
+      },
+      "done": "Completed",
+      "doneSub": "Criteria in the Completed status",
+      "doneValue": "{{Done}}/{{Total}}",
+      "flat": "No increase",
+      "flatSub": "Worth keeping an eye on",
+      "overall": {
+        "month": "Overall progress this month",
+        "week": "Overall progress this week",
+        "year": "Overall progress this year"
+      },
+      "overallSub": "Mean Progress %, weighted by Max score",
+      "up": "Criteria improved",
+      "upSub": "Improved since the previous period"
+    },
+    "notice": {
+      "awaitingProgressLead": "{{Count}} criteria are loaded, but none carries a Progress % yet. The group bars and the chart appear as soon as there are figures. Enter Progress % in ",
+      "awaitingProgressTail": ".",
+      "catalogueLink": "the DTI catalogue",
+      "firstRunLead": "No DTI data yet. Go to ",
+      "firstRunTail": " to import a file or add the first criterion."
+    },
+    "period": {
+      "currentMonth": "— Current month —",
+      "currentPeriod": "— Current period —",
+      "modeGroup": "View by week or by month",
+      "month": "Month",
+      "monthFull": "Month {{Ordinal}}/{{Year}} ({{From}} – {{To}})",
+      "monthOption": "Month {{Ordinal}} · {{From}} – {{ToShort}} · {{Progress}}",
+      "monthOptionNoData": "Month {{Ordinal}} · {{From}} – {{ToShort}}",
+      "periodAriaLabel": "See the whole year rolled up, or one specific period",
+      "viewing": "Viewing:",
+      "week": "Week",
+      "weekFull": "Week {{Ordinal}}/{{Year}} ({{From}} – {{To}})",
+      "weekOption": "Week {{Ordinal}} · {{From}} – {{ToShort}} · {{Progress}}",
+      "weekOptionNoData": "Week {{Ordinal}} · {{From}} – {{ToShort}}",
+      "wholeYear": "— All (rolled up by year) —",
+      "wholeYearBadge": "All · {{Year}}",
+      "yearAriaLabel": "Pick a year"
+    },
+    "state": {
+      "loading": "Loading figures…"
+    },
+    "table": {
+      "count": "{{Shown}}/{{Total}} criteria",
+      "heading": "{{Total}} DTI criteria"
     }
   }
 }

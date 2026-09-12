@@ -34,3 +34,11 @@
 
 # Cấu hình triển khai cục bộ, chưa phải bản dùng chung cho môi trường thật.
 /nginx.conf
+
+# Giá trị thật cho các request trong *.http — KHÔNG commit.
+# Mẫu được commit là `http-client.env.json.example`.
+# Thêm 2026-09-12 sau khi phát hiện mật khẩu SuperAdmin nằm công khai trong
+# `PlatformManager.Api.http` trên GitHub: file .http được commit, nên nó không
+# bao giờ được chứa giá trị thật.
+http-client.env.json
+**/http-client.env.json

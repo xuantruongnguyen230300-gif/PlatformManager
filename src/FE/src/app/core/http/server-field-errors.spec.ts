@@ -1,5 +1,5 @@
 import { ApiFieldError } from './api-result.model';
-import { groupServerFieldErrors } from './server-field-errors';
+import { RECORD_FIELD_KEY, groupServerFieldErrors } from './server-field-errors';
 
 /** Dịch giả lập — trả thẳng `message` để test đo phần GOM, không đo phần dịch. */
 const passthrough = (error: ApiFieldError): string => error.message;
@@ -26,8 +26,8 @@ describe('groupServerFieldErrors', () => {
       passthrough,
     );
 
-    expect(Object.keys(result)).toEqual(['Roles']);
-    expect(result['Roles']).toBe('Vai trò không hợp lệ. Vai trò trùng.');
+    expect(Object.keys(result.byField)).toEqual(['Roles']);
+    expect(result.byField['Roles']).toBe('Vai trò không hợp lệ. Vai trò trùng.');
   });
 
   it('chỉ cắt chỉ số Ở CUỐI khoá, giữ nguyên khoá không có chỉ số', () => {
@@ -39,9 +39,9 @@ describe('groupServerFieldErrors', () => {
       passthrough,
     );
 
-    expect(result['UserName']).toBe('Bắt buộc.');
+    expect(result.byField['UserName']).toBe('Bắt buộc.');
     // Chỉ số nằm giữa khoá KHÔNG bị cắt — nó là đường dẫn tới một ô khác, không phải cùng ô.
-    expect(result['Items[2].Code']).toBe('Thiếu mã.');
+    expect(result.byField['Items[2].Code']).toBe('Thiếu mã.');
   });
 
   it('gộp nhiều thông điệp của cùng một ô thành MỘT chuỗi', () => {
@@ -55,7 +55,7 @@ describe('groupServerFieldErrors', () => {
       passthrough,
     );
 
-    expect(result['TempPassword']).toBe('Tối thiểu 12 ký tự. Phải có chữ hoa.');
+    expect(result.byField['TempPassword']).toBe('Tối thiểu 12 ký tự. Phải có chữ hoa.');
   });
 
   it('dịch TỪNG lỗi qua callback — phần tử là mã + tham số, không phải câu dựng sẵn', () => {
@@ -66,14 +66,60 @@ describe('groupServerFieldErrors', () => {
       translate,
     );
 
-    expect(result['Email']).toBe('[MinimumLengthValidator] 12');
+    expect(result.byField['Email']).toBe('[MinimumLengthValidator] 12');
   });
 
-  it('trả object rỗng khi `fields` là null', () => {
-    expect(groupServerFieldErrors(null, passthrough)).toEqual({});
+  it('trả object rỗng khi `fieldErrors` là null', () => {
+    expect(groupServerFieldErrors(null, passthrough)).toEqual({ byField: {}, record: null });
   });
 
-  it('trả object rỗng khi `fields` là object rỗng — không ném', () => {
-    expect(groupServerFieldErrors({}, passthrough)).toEqual({});
+  it('trả object rỗng khi `fieldErrors` là object rỗng — không ném', () => {
+    expect(groupServerFieldErrors({}, passthrough)).toEqual({ byField: {}, record: null });
+  });
+
+  it('🛑 `$record` KHÔNG lẫn vào lỗi theo ô — nó ra nhánh `record` riêng', () => {
+    // Ca đã hỏng thật 2026-09-11: `CommonPassword` rơi về `$record` (BE chưa ánh xạ mã đó về ô
+    // nào), và khi khoá này còn nằm chung với lỗi theo ô thì nó hỏng HAI tầng cùng lúc — không
+    // template nào bind `$record` nên câu biến mất, mà sự có mặt của nó lại làm
+    // `generalError`/`errorMessage` của form trả `null`. Form từ chối, không một chữ nào giải thích.
+    //
+    // `CommonPassword` nay đã được BE ánh xạ về ô mật khẩu (`IdentityFieldErrors.SlotByCode`), nên
+    // test này dùng `ConcurrencyFailure` — một mã CỐ Ý không có trong bảng ánh xạ đó vì nó nói về
+    // BẢN GHI chứ không về một ô. Bảng kia là allowlist: mã Identity mới mặc định rơi về `$record`,
+    // nên nhánh này là đường sống, không phải ca lịch sử.
+    const result = groupServerFieldErrors(
+      {
+        [RECORD_FIELD_KEY]: [fieldError('ConcurrencyFailure', 'ConcurrencyFailure')],
+        Email: [fieldError('InvalidEmail', 'Email sai định dạng.')],
+      },
+      passthrough,
+    );
+
+    expect(Object.keys(result.byField))
+      .withContext('`$record` lọt vào `fields` = lỗ đen: không ô nào hiện nó, mà nó lại che câu chung')
+      .toEqual(['Email']);
+    expect(result.record).toBe('ConcurrencyFailure');
+  });
+
+  it('gộp nhiều lỗi mức bản ghi thành MỘT câu, y như gộp theo ô', () => {
+    const result = groupServerFieldErrors(
+      {
+        [RECORD_FIELD_KEY]: [
+          fieldError('ConcurrencyFailure', 'Bản ghi vừa đổi.'),
+          fieldError('DefaultError', 'Không rõ nguyên nhân.'),
+        ],
+      },
+      passthrough,
+    );
+
+    expect(result.byField).toEqual({});
+    expect(result.record).toBe('Bản ghi vừa đổi. Không rõ nguyên nhân.');
+  });
+
+  it('`record` là null khi envelope không có lỗi mức bản ghi — không phải chuỗi rỗng', () => {
+    // Chuỗi rỗng là falsy nhưng KHÁC null ở chỗ nó đi qua `??`; nơi gọi dùng
+    // `record ?? <câu chung>` nên một chuỗi rỗng sẽ CHIẾM CHỖ câu chung và hiện ra một khối lỗi
+    // trống. Khoá hành vi này lại.
+    expect(groupServerFieldErrors({ Email: [fieldError('InvalidEmail', 'x')] }, passthrough).record).toBeNull();
   });
 });

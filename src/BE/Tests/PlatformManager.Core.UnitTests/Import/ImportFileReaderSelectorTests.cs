@@ -16,10 +16,12 @@ public class ImportFileReaderSelectorTests
 {
     private const long TenMegabytes = 10L * 1024 * 1024;
 
-    private static ImportFileReaderSelector Selector(long maxBytes = TenMegabytes) =>
+    private const int DefaultMaxRows = 20_000;
+
+    private static ImportFileReaderSelector Selector(long maxBytes = TenMegabytes, int maxRows = DefaultMaxRows) =>
         new(
             [new CsvImportFileReader(), new XlsxImportFileReader(), new XlsImportFileReader()],
-            Options.Create(new ImportOptions { MaxFileSizeBytes = maxBytes }));
+            Options.Create(new ImportOptions { MaxFileSizeBytes = maxBytes, MaxRows = maxRows }));
 
     private static MemoryStream RealXlsx() => ImportTestFiles.Xlsx(sheet => sheet.WriteTextRow(0, "Mã"));
 
@@ -29,6 +31,45 @@ public class ImportFileReaderSelectorTests
     public void DefaultCap_IsTenMegabytes()
     {
         Assert.Equal(TenMegabytes, new ImportOptions().MaxFileSizeBytes);
+    }
+
+    /// <summary>
+    /// Đối xứng với <see cref="DefaultCap_IsTenMegabytes"/>. Con số 20.000 là ĐO RA chứ không chọn
+    /// tròn (Q75): file thật 62 dòng ≈ 19 KB ⇒ ~314 byte/dòng ⇒ trần dung lượng 10 MB còn cho lọt
+    /// ~33.000 dòng, nên trần dòng phải nằm DƯỚI con số đó mới thật sự chạy tới; cận dưới là ca lớn
+    /// nhất còn hợp lý (~12.000). Phép tính đầy đủ ở doc/huong_dan/wiki-core/be/15-import-export.md §2.
+    /// </summary>
+    [Fact(DisplayName = "Trần SỐ DÒNG mặc định của ImportOptions là 20.000 (chốt Q75)")]
+    public void DefaultRowCap_Is20000()
+    {
+        Assert.Equal(DefaultMaxRows, new ImportOptions().MaxRows);
+    }
+
+    /// <summary>
+    /// 🔴 <b>Đây là dây nối mà finding F4 chỉ ra là KHÔNG AI CANH.</b> Gãy dây ⇒ <c>MaxRows</c> về
+    /// <c>0</c> ⇒ <c>ImportRowLimitExceededException</c> ném ngay dòng đầu tiên ⇒ <b>mọi</b> file bị
+    /// từ chối, mà không một test nào khi đó đỏ.
+    ///
+    /// <para>Kiểm ở CẢ BA nhánh <c>return</c> của bộ chọn: giá trị cấu hình phải đi ra nguyên vẹn
+    /// kể cả khi lượt chọn bị TỪ CHỐI — bên gọi dựng câu lỗi từ chính con số đó.</para>
+    /// </summary>
+    [Fact(DisplayName = "MaxRows của cấu hình đi ra ở CẢ BA nhánh return của bộ chọn")]
+    public void MaxRows_IsCarried_OnEveryBranch()
+    {
+        const int configured = 7;
+
+        using var accepted = ImportTestFiles.Csv("Mã,Tên" + Environment.NewLine + "A1,X" + Environment.NewLine);
+        Assert.Equal(configured, Selector(maxRows: configured).Select(accepted, "bao-cao.csv").MaxRows);
+
+        using var unsupported = new MemoryStream([0x7F, 0x45, 0x4C, 0x46, 0x01, 0x02, 0x03, 0x04]);
+        var rejectedFormat = Selector(maxRows: configured).Select(unsupported, "bao-cao.bin");
+        Assert.Equal(ImportFileRejection.UnsupportedFormat, rejectedFormat.Rejection);
+        Assert.Equal(configured, rejectedFormat.MaxRows);
+
+        using var tooLarge = ImportTestFiles.Csv(new string('x', 4096));
+        var rejectedSize = Selector(maxBytes: 16, maxRows: configured).Select(tooLarge, "bao-cao.csv");
+        Assert.Equal(ImportFileRejection.FileTooLarge, rejectedSize.Rejection);
+        Assert.Equal(configured, rejectedSize.MaxRows);
     }
 
     [Fact(DisplayName = ".csv → CsvImportFileReader")]
